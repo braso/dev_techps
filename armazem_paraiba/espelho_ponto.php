@@ -1032,68 +1032,40 @@ JS;
 					selecionaMotorista();
 				});
 
-				function imprimir() {
-					const alvo = document.querySelector('div > div.portlet-title');
-					if (!alvo) {
-						alert('Conteúdo para impressão não encontrado.');
+				function imprimir(){
+					// Procurar tabelas de espelho e extrair o bloco .portlet correspondente
+					var tabelas = document.querySelectorAll('.espelho-cabecalho-info');
+					if(!tabelas || tabelas.length === 0){
+						alert('Nenhum espelho encontrado para impressão.');
 						return;
 					}
 
-					const conteudo = alvo.closest('.portlet') || alvo.parentElement;
-					const cloneConteudo = conteudo.cloneNode(true);
+					var blocos = [];
+					for(var i=0;i<tabelas.length;i++){
+						var t = tabelas[i];
+						var portlet = t.closest('.portlet');
+						if(portlet){
+							var clone = portlet.cloneNode(true);
+							// remover botões de impressão se existirem
+							var btns = clone.querySelectorAll('[data-acao-imprimir]');
+							for(var j=0;j<btns.length;j++){ if(btns[j] && btns[j].parentNode) btns[j].parentNode.removeChild(btns[j]); }
+							blocos.push(clone.outerHTML);
+						}
+					}
 
-					// Guarda a data/hora atual
-					const dataAtual = new Date().toLocaleString();
+					if(blocos.length === 0){ alert('Nenhum espelho válido encontrado para impressão.'); return; }
 
-					// Cabeçalho para a impressão
-					const logoEmpresa = '{$logoEmpresa}';
-					const cabecalhoHTML = '<header id="print-header">'
+					var conteudoCompleto = blocos.join('<div style="page-break-after: always;"></div>');
+					var dataAtual = new Date().toLocaleString();
+					var cabecalhoHTML = '<header id="print-header">'
 						+ '<img src="./imagens/logo_topo_cliente.png" alt="Logo Esquerda">'
 						+ '<h1>Espelho de {$rotulos["modulo"]}</h1>'
-						+ '<img src="./' + logoEmpresa + '" alt="Logo Direita">'
 						+ '</header>';
+					var rodapeHTML = "<footer id='print-footer'><div><strong>TECHPS®</strong></div><div><em>Gerado em: " + dataAtual + "</em></div></footer>";
 
-					// Rodapé para a impressão
-					const rodapeHTML = \`
-						<footer id='print-footer'>
-							<div><strong>TECHPS®</strong></div>
-							<div><em>Gerado em: \${dataAtual}</em></div>
-						</footer>\`;
-
-					// Abre janela de impressão
-					const janela = window.open('', '_blank');
-					janela.document.write(\`
-						<html>
-						<head>
-							<title>Impressão - Espelho de {$rotulos["modulo"]}</title>
-							<meta charset='utf-8'>
-							<link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css'>
-							<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css'>
-							<link rel='stylesheet' href='./css/impressao_espelho.css'>
-						</head>
-						<body>
-							\${cabecalhoHTML}
-							
-							<main class='conteudo-impressao'>
-								\${cloneConteudo.outerHTML}
-							</main>
-
-							\${rodapeHTML}
-							
-							<script>
-								// Executa após o conteúdo ser carregado na nova janela
-								window.onload = function() {
-									window.print();
-								};
-
-								// Fecha a aba quando o evento 'afterprint' é disparado
-								window.addEventListener('afterprint', () => {
-									window.close();
-								});
-							<\/script>
-						</body>
-						</html>
-					\`);
+					var janela = window.open('','_blank');
+					if(!janela){ alert('Popup bloqueado. Permita popups para este site e tente novamente.'); return; }
+					janela.document.write('<html><head><title>Impressão - Espelho de {$rotulos["modulo"]}</title><meta charset="utf-8"><link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"><link rel="stylesheet" href="./css/impressao_espelho.css"></head><body>' + cabecalhoHTML + '<main class="conteudo-impressao">' + conteudoCompleto + '</main>' + rodapeHTML + '<script>window.onload=function(){window.print();}; window.addEventListener("afterprint", function(){ window.close(); });<\/script></body></html>');
 					janela.document.close();
 				}
 			</script>
