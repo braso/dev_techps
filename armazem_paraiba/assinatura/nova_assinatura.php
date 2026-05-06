@@ -45,6 +45,20 @@ if(in_array($modoTela, ["avulso", "separar_paginas", "signatario_externo"], true
 // Carrega signatários externos para o modo específico
 $signatariosExternos = [];
 if($modoTela === "signatario_externo"){
+    // Garante que a tabela existe antes de consultar
+    mysqli_query($conn, "
+        CREATE TABLE IF NOT EXISTS signatarios_externos (
+            sign_nb_id        INT AUTO_INCREMENT PRIMARY KEY,
+            sign_tx_nome      VARCHAR(255)  NOT NULL,
+            sign_tx_rg        VARCHAR(30)   NULL,
+            sign_tx_cpf       VARCHAR(20)   NULL,
+            sign_tx_email     VARCHAR(255)  NULL,
+            sign_tx_telefone  VARCHAR(100)  NULL,
+            sign_tx_status    ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo',
+            sign_tx_dataCadastro DATETIME   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uk_cpf (sign_tx_cpf)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ");
     $resSign = mysqli_query($conn, "SELECT sign_nb_id, sign_tx_nome, sign_tx_email, sign_tx_cpf FROM signatarios_externos WHERE sign_tx_status = 'ativo' ORDER BY sign_tx_nome ASC");
     if($resSign){
         while($r = mysqli_fetch_assoc($resSign)){
@@ -1493,6 +1507,75 @@ if (isset($hasEnvPaths) && $hasEnvPaths) {
 <script src="<?php echo $baseAssets; ?>/contex20/assets/global/plugins/select2/js/i18n/pt-BR.js"></script>
 
 <script>
+    // ── Preenche nome e e-mail ao selecionar funcionário (modo avulso) ──────
+    function preencherDadosFuncionarioSelecionado() {
+        const sel = document.getElementById("funcionario_select");
+        const nome = document.getElementById("nome");
+        const email = document.getElementById("email");
+        const enti = document.getElementById("enti_nb_id");
+        if(!sel || !nome || !email) return;
+        const selectedValue = (sel.value || "").toString();
+        let opt = null;
+        if(sel.selectedOptions && sel.selectedOptions.length > 0){
+            opt = sel.selectedOptions[0];
+        } else if(sel.options && sel.options.length > 0){
+            opt = sel.options[sel.selectedIndex] || null;
+        }
+        if(!opt && selectedValue !== ""){
+            for(let i = 0; i < sel.options.length; i++){
+                if(sel.options[i] && sel.options[i].value === selectedValue){
+                    opt = sel.options[i];
+                    break;
+                }
+            }
+        }
+        if(!opt || selectedValue === ""){
+            nome.value = "";
+            email.value = "";
+            if(enti) enti.value = "";
+            return;
+        }
+        const n = opt.getAttribute("data-nome") || "";
+        const e = opt.getAttribute("data-email") || "";
+        nome.value = n;
+        email.value = e;
+        if(enti) enti.value = selectedValue;
+    }
+
+    // Inicializa Select2 no funcionario_select (jQuery já carregado aqui)
+    if(window.jQuery && jQuery.fn && typeof jQuery.fn.select2 === "function"){
+        const $func = jQuery("#funcionario_select");
+        if($func.length){
+            $func.select2({
+                placeholder: "Selecionar funcionário",
+                allowClear: true,
+                width: "100%",
+                language: "pt-BR",
+                minimumResultsForSearch: 0,
+                dropdownParent: jQuery("body")
+            });
+            $func.on("change select2:select select2:clear", preencherDadosFuncionarioSelecionado);
+        }
+
+        const $tipo = jQuery("#tipo_documento_avulso");
+        if($tipo.length){
+            $tipo.select2({
+                placeholder: "Selecione",
+                allowClear: true,
+                width: "100%",
+                language: "pt-BR",
+                minimumResultsForSearch: 0,
+                dropdownParent: jQuery("body")
+            });
+        }
+    } else {
+        // Fallback: evento nativo caso Select2 não esteja disponível
+        const funcionarioSelect = document.getElementById("funcionario_select");
+        if(funcionarioSelect){
+            funcionarioSelect.addEventListener("change", preencherDadosFuncionarioSelecionado);
+        }
+    }
+
     function handleFileSelectMultipage(input) {
         if (input.files && input.files[0]) {
             const file = input.files[0];
@@ -1557,71 +1640,8 @@ if (isset($hasEnvPaths) && $hasEnvPaths) {
         handlePdfExterno
     );
 
-    function preencherDadosFuncionarioSelecionado() {
-        const sel = document.getElementById("funcionario_select");
-        const nome = document.getElementById("nome");
-        const email = document.getElementById("email");
-        const enti = document.getElementById("enti_nb_id");
-        if(!sel || !nome || !email) return;
-        const selectedValue = (sel.value || "").toString();
-        let opt = null;
-        if(sel.selectedOptions && sel.selectedOptions.length > 0){
-            opt = sel.selectedOptions[0];
-        } else if(sel.options && sel.options.length > 0){
-            opt = sel.options[sel.selectedIndex] || null;
-        }
-        if(!opt && selectedValue !== ""){
-            for(let i = 0; i < sel.options.length; i++){
-                if(sel.options[i] && sel.options[i].value === selectedValue){
-                    opt = sel.options[i];
-                    break;
-                }
-            }
-        }
-        if(!opt){
-            nome.value = "";
-            email.value = "";
-            if(enti) enti.value = "";
-            return;
-        }
-        const n = opt.getAttribute("data-nome") || "";
-        const e = opt.getAttribute("data-email") || "";
-        nome.value = n || "";
-        email.value = e || "";
-        if(enti) enti.value = selectedValue;
-    }
-
-    const funcionarioSelect = document.getElementById("funcionario_select");
-    if(funcionarioSelect){
-        funcionarioSelect.addEventListener("change", preencherDadosFuncionarioSelecionado);
-    }
-
-    if(window.jQuery && jQuery.fn && typeof jQuery.fn.select2 === "function"){
-        const $func = jQuery("#funcionario_select");
-        if($func.length){
-            $func.select2({
-                placeholder: "Selecionar funcionário",
-                allowClear: true,
-                width: "100%",
-                language: "pt-BR",
-                minimumResultsForSearch: 0,
-                dropdownParent: jQuery("body")
-            });
-            $func.on("change select2:select select2:clear", preencherDadosFuncionarioSelecionado);
-        }
-
-        const $tipo = jQuery("#tipo_documento_avulso");
-        if($tipo.length){
-            $tipo.select2({
-                placeholder: "Selecione",
-                allowClear: true,
-                width: "100%",
-                language: "pt-BR",
-                minimumResultsForSearch: 0,
-                dropdownParent: jQuery("body")
-            });
-        }
-    }
+    // A inicialização do Select2 e os eventos do funcionario_select
+    // são feitos após o carregamento do jQuery/Select2 (ver bloco abaixo dos <script> externos)
 
 
     function atualizarLabelSepararEnviar() {
