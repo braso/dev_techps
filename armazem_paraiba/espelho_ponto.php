@@ -37,8 +37,8 @@
 		$rotulos = [
 			"ehTerceirizado" => $ehTerceirizado,
 			"modulo" => $ehTerceirizado ? "Produção" : "Ponto",
-			"funcionario" => $ehTerceirizado ? "Colaborador" : "Funcionário",
-			"funcionarioPlural" => $ehTerceirizado ? "Colaboradores" : "Funcionários"
+			"funcionario" => $ehTerceirizado ? "Médico" : "Funcionário",
+			"funcionarioPlural" => $ehTerceirizado ? "Médico" : "Funcionários"
 		];
 
 		return $rotulos;
@@ -53,8 +53,8 @@
 		return [
 			"ehTerceirizado" => $ehTerceirizado,
 			"modulo" => $ehTerceirizado ? "Produção" : "Ponto",
-			"funcionario" => $ehTerceirizado ? "Colaborador" : "Funcionário",
-			"funcionarioPlural" => $ehTerceirizado ? "Colaboradores" : "Funcionários"
+			"funcionario" => $ehTerceirizado ? "Médico" : "Funcionário",
+			"funcionarioPlural" => $ehTerceirizado ? "Médico" : "Funcionários"
 		];
 	}
 
@@ -774,6 +774,22 @@ JS;
 							$val = "";
 						}
 					}
+
+					// Se for terceirizado, reduzir a linha para as colunas solicitadas
+					if(!empty($rotulosMotorista["ehTerceirizado"]) && $rotulosMotorista["ehTerceirizado"]){
+						$primeiro = array_values($row)[0] ?? ""; // marcador de tolerância (posição 0)
+						$filtered = [];
+						$filtered[] = $primeiro; // coluna vazia/marcador
+						$filtered['data'] = $row['data'] ?? '';
+						$filtered['diaSemana'] = $row['diaSemana'] ?? '';
+						$filtered['inicioJornada'] = $row['inicioJornada'] ?? '';
+						$filtered['fimJornada'] = $row['fimJornada'] ?? '';
+						$filtered['jornadaPrevista'] = $row['jornadaPrevista'] ?? '';
+						// 'diffJornadaEfetiva' corresponde a "JORNADA EFETIVA"
+						$filtered['diffJornadaEfetiva'] = $row['diffJornadaEfetiva'] ?? $row['diffJornada'] ?? '';
+						$filtered['diffSaldo'] = $row['diffSaldo'] ?? '';
+						$row = $filtered;
+					}
 					if(strpos($row["inicioJornada"], "Batida início de jornada não registrada!") !== false){
 						$descFaltasNaoJustificadas = operarHorarios([$descFaltasNaoJustificadas, $row["jornadaPrevista"]], "+");
 						$qtdDiasNaoJustificados++;
@@ -844,6 +860,15 @@ JS;
 					"JORNADA PREVISTA", "JORNADA EFETIVA"/*, "MDC"*/, "INTERSTÍCIO", "H.E. {$motorista["enti_tx_percHESemanal"]}%", "H.E. {$motorista["enti_tx_percHEEx"]}%",
 					"ADICIONAL NOT."/*, "ESPERA INDENIZADA"*/, "SALDO DIÁRIO(**)"
 				];
+
+				// Se o motorista for terceirizado, exibe apenas as colunas solicitadas.
+				if(!empty(
+					$rotulosMotorista["ehTerceirizado"]
+				) && $rotulosMotorista["ehTerceirizado"]) {
+					$cabecalho = [
+						"", "DATA", "<div style='margin:11px'>DIA</div>", "INÍCIO JORNADA", "FIM JORNADA", "JORNADA PREVISTA", "JORNADA EFETIVA", "SALDO DIÁRIO(**)"
+					];
+				}
 
 				if(in_array($motorista["enti_tx_ocupacao"], ["Ajudante", "Motorista"])){
 					$cabecalho = array_merge(

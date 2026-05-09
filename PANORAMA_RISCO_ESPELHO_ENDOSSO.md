@@ -300,3 +300,28 @@ Prioridade de teste apos qualquer alteracao:
 2. Cadastro e consulta de endosso
 3. Painel consolidado por empresa
 4. Permissao e navegacao por perfil
+
+
+
+----------------------------------------------------------------------------
+----------------------------------------------------------------------------
+# BLOCO DE ALTERAÇÕES — ESPELHO DE PONTO
+## Ajuste de Visualização para usuários Terceirizados
+
+### Tipo
+Melhoria de Regra de Negócio
+
+### Módulo
+Espelho de Ponto
+
+### Objetivo
+Aplicar visualização simplificada no espelho de ponto para usuários terceirizados, exibindo apenas as colunas operacionais necessárias.
+
+---
+
+## Regra Aplicada
+
+A alteração é executada somente quando:
+
+```php
+$rotulosMotorista["ehTerceirizado"] === true
