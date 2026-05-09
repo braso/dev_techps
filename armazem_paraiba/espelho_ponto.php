@@ -1083,7 +1083,7 @@ JS;
 					var dataAtual = new Date().toLocaleString();
 					var cabecalhoHTML = '<header class="print-header">'
 						+ '<img src="./imagens/logo_topo_cliente.png" alt="Logo Esquerda">'
-						+ '<h1>Espelho de {$rotulos["modulo"]}</h1>'
+						+ '<h1>Registros</h1>'
 						+ '</header>';
 					var rodapeHTML = "<footer class='print-footer'><div><strong>TECHPS®</strong></div><div><em>Gerado em: " + dataAtual + "</em></div></footer>";
 					var paginasHTML = blocos.map(function(bloco){
@@ -1103,7 +1103,7 @@ JS;
 
 					var janela = window.open('','_blank');
 					if(!janela){ alert('Popup bloqueado. Permita popups para este site e tente novamente.'); return; }
-					janela.document.write('<html><head><title>Impressão - Espelho de {$rotulos["modulo"]}</title><meta charset="utf-8">' + estilosAtuais + '<link rel="stylesheet" href="./css/impressao_espelho.css">' + ajusteCorImpressao + '</head><body>' + paginasHTML + '<script>window.onload=function(){window.print();}; window.addEventListener("afterprint", function(){ window.close(); });<\/script></body></html>');
+					janela.document.write('<html><head><title>Impressão - Registros</title><meta charset="utf-8">' + estilosAtuais + '<link rel="stylesheet" href="./css/impressao_espelho.css">' + ajusteCorImpressao + '</head><body>' + paginasHTML + '<script>window.onload=function(){window.print();}; window.addEventListener("afterprint", function(){ window.close(); });<\/script></body></html>');
 					janela.document.close();
 				}
 
@@ -1153,7 +1153,7 @@ JS;
 					var dataAtual = new Date().toLocaleString();
 					var cabecalhoHTML = '<header class="print-header">'
 						+ '<img src="./imagens/logo_topo_cliente.png" alt="Logo Esquerda">'
-						+ '<h1>Espelho de {$rotulos["modulo"]}</h1>'
+						+ '<h1>Registros</h1>'
 						+ '</header>';
 					var rodapeHTML = "<footer class='print-footer'><div><strong>TECHPS®</strong></div><div><em>Gerado em: " + dataAtual + "</em></div></footer>";
 					var estilosAtuais = '';
@@ -1165,7 +1165,7 @@ JS;
 					var pagina = '<section class="print-page">' + cabecalhoHTML + '<main class="conteudo-impressao">' + bloco + '</main>' + rodapeHTML + '</section>';
 					var janela = window.open('','_blank');
 					if(!janela){ alert('Popup bloqueado. Permita popups para este site e tente novamente.'); return; }
-					janela.document.write('<html><head><title>Impressão - Espelho de {$rotulos["modulo"]}</title><meta charset="utf-8">' + estilosAtuais + '<link rel="stylesheet" href="./css/impressao_espelho.css">' + ajusteCorImpressao + '</head><body>' + pagina + '<script>window.onload=function(){window.print();}; window.addEventListener("afterprint", function(){ window.close(); });<\/script></body></html>');
+					janela.document.write('<html><head><title>Impressão - Registros</title><meta charset="utf-8">' + estilosAtuais + '<link rel="stylesheet" href="./css/impressao_espelho.css">' + ajusteCorImpressao + '</head><body>' + pagina + '<script>window.onload=function(){window.print();}; window.addEventListener("afterprint", function(){ window.close(); });<\/script></body></html>');
 					janela.document.close();
 				}
 			</script>
