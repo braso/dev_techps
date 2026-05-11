@@ -50,12 +50,24 @@
 		$ocupacaoNormalizada = strtolower($ocupacao);
 		$ehTerceirizado = in_array($ocupacaoNormalizada, ["terceirizado"], true);
 
-		return [
-			"ehTerceirizado" => $ehTerceirizado,
-			"modulo" => $ehTerceirizado ? "Produção" : "Ponto",
-			"funcionario" => $ehTerceirizado ? "Médico" : "Funcionário",
-			"funcionarioPlural" => $ehTerceirizado ? "Médico" : "Funcionários"
-		];
+			// Quando for terceirizado, tentar recuperar o nome do cargo cadastrado
+			$cargoNome = "Médico";
+			if($ehTerceirizado){
+				$tipoOperacao = $motorista["enti_tx_tipoOperacao"] ?? null;
+				if(!empty($tipoOperacao)){
+					$op = mysqli_fetch_assoc(query("SELECT oper_tx_nome FROM operacao WHERE oper_nb_id = '".intval($tipoOperacao)."' LIMIT 1;"));
+					if($op && !empty($op['oper_tx_nome'])){
+						$cargoNome = $op['oper_tx_nome'];
+					}
+				}
+			}
+
+			return [
+				"ehTerceirizado" => $ehTerceirizado,
+				"modulo" => $ehTerceirizado ? "Produção" : "Ponto",
+				"funcionario" => $ehTerceirizado ? $cargoNome : "Funcionário",
+				"funcionarioPlural" => $ehTerceirizado ? $cargoNome : "Funcionários"
+			];
 	}
 
 	function normalizarFiltroArray($valor): array{
