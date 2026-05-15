@@ -17,45 +17,53 @@
         index();
     }
 
-    function carregarJS(array $arquivos){
+    function carregarJS(array $arquivos, array $empresaIds = []){
+
+        $hasFiltersExceptEmpresa = !(empty($_POST["busca_ocupacao"]) && empty($_POST["operacao"]) && empty($_POST["busca_setor"]) && empty($_POST["busca_subsetor"]));
+        $isDetailView = !empty($_POST["modoDetalheEmpresa"]) && !empty($_POST["empresa"]);
+        
+        // Se tem filtros mas nenhuma empresa selecionada, mostra empresas; senão mostra funcionários se empresa foi selecionada
+        $showEmpresasInGrid = $hasFiltersExceptEmpresa && !$isDetailView;
 
         $linha = "linha = '<tr>'";
-        if(!empty($_POST["empresa"])){
-            $linha .= "+'<td>'+row.matricula+'</td>'
-                    +'<td>'+row.nome+'</td>'
-                    +'<td>'+(row.ocupacao?? '')+'</td>'
-                    +'<td>'+(row.tipoOperacaoNome?? '')+'</td>'
-                    +'<td>'+(row.setorNome?? '')+'</td>'
-                    +'<td>'+(row.subsetorNome?? '')+'</td>'
-                    +'<td class=\"'+(row.statusEndosso === 'E' ? 'endo' : (row.statusEndosso === 'EP' ? 'endo-parc' : 'nao-endo'))+'\">'
-                        +'<strong>'+row.statusEndosso+'</strong>'
+        if($isDetailView){
+            // Visualização de funcionários quando empresa está selecionada
+            $linha .= "+'<td>'+(row.matricula ?? row.enti_tx_matricula ?? '')+'</td>'
+                    +'<td>'+(row.nome ?? row.enti_tx_nome ?? '')+'</td>'
+                    +'<td>'+(row.ocupacao ?? row.enti_tx_ocupacao ?? '')+'</td>'
+                    +'<td>'+(row.tipoOperacaoNome ?? row.tipoOperacao ?? row.enti_tx_tipoOperacao ?? '')+'</td>'
+                    +'<td>'+(row.setorNome ?? row.setor ?? row.enti_tx_setor ?? '')+'</td>'
+                    +'<td>'+(row.subsetorNome ?? row.subsetor ?? row.enti_tx_subsetor ?? '')+'</td>'
+                    +'<td class=\"'+((row.statusEndosso ?? '') === 'E' ? 'endo' : ((row.statusEndosso ?? '') === 'EP' ? 'endo-parc' : 'nao-endo'))+'\">'
+                        +'<strong>'+(row.statusEndosso ?? '')+'</strong>'
                     +'</td>'
-                    +'<td>'+(row.jornadaPrevista == '00:00' ? '' : row.jornadaPrevista?? '')+'</td>'
-                    +'<td>'+(row.jornadaEfetiva == '00:00' ? '' : row.jornadaEfetiva?? '')+'</td>'
-                    +'<td>'+(row.HESemanal == '00:00' ? '' : row.HESemanal?? '')+'</td>'
-                    +'<td>'+(row.HESabado == '00:00' ? '' : row.HESabado?? '')+'</td>'
-                    +'<td>'+(row.adicionalNoturno == '00:00' ? '' : row.adicionalNoturno?? '')+'</td>'
-                    +'<td>'+(row.esperaIndenizada == '00:00' ? '' : row.esperaIndenizada?? '')+'</td>'
-                    +'<td id=\"'+(row.saldoAnterior > '00:00' ? 'saldo-final' : (row.saldoAnterior === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
+                    +'<td>'+(row.jornadaPrevista == '00:00' ? '' : (row.jornadaPrevista ?? ''))+'</td>'
+                    +'<td>'+(row.jornadaEfetiva == '00:00' ? '' : (row.jornadaEfetiva ?? ''))+'</td>'
+                    +'<td>'+(row.HESemanal == '00:00' ? '' : (row.HESemanal ?? row.he50APagar ?? ''))+'</td>'
+                    +'<td>'+(row.HESabado == '00:00' ? '' : (row.HESabado ?? row.he100APagar ?? ''))+'</td>'
+                    +'<td>'+(row.adicionalNoturno == '00:00' ? '' : (row.adicionalNoturno ?? ''))+'</td>'
+                    +'<td>'+(row.esperaIndenizada == '00:00' ? '' : (row.esperaIndenizada ?? ''))+'</td>'
+                    +'<td id=\"'+((row.saldoAnterior ?? '') > '00:00' ? 'saldo-final' : ((row.saldoAnterior ?? '') === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
                     +(row.saldoAnterior?? '')+'</td>'
                     +'<td>'+(row.saldoPeriodo > '00:00' ? '<strong>' + row.saldoPeriodo + '</strong>' : (row.saldoPeriodo ?? ''))+'</td>'
-                    +'<td id=\"'+(row.saldoFinal > '00:00' ? 'saldo-final' : (row.saldoFinal === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
+                    +'<td id=\"'+((row.saldoFinal ?? '') > '00:00' ? 'saldo-final' : ((row.saldoFinal ?? '') === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
                     +(row.saldoFinal?? '')+indicador+'</td>'
                 +'</tr>';";
         }else{
-            $linha .= "+'<td style=\"cursor: pointer;\" onclick=\"setAndSubmit(' + row.empr_nb_id + ')\">'+row.empr_tx_nome+'</td>'
+            // Visualização de empresas: clique abre os funcionários da empresa clicada
+            $linha .= "+'<td style=\"cursor: pointer;\" onclick=\"abrirDetalheEmpresa(' + row.empr_nb_id + ')\">'+(row.empr_tx_nome ?? row.nome ?? '')+'</td>'
                     +'<td>'+Math.round(row.percEndossado*10000)/100+'%</td>'
-                    +'<td>'+row.qtdFuncionarios+'</td>'
-                    +'<td>'+(row.totais.jornadaPrevista == '00:00' ? '' : row.totais.jornadaPrevista)+'</td>'
-                    +'<td>'+(row.totais.jornadaEfetiva == '00:00' ? '' : row.totais.jornadaEfetiva)+'</td>'
-                    +'<td>'+(row.totais.HESemanal == '00:00' ? '' : row.totais.HESemanal)+'</td>'
-                    +'<td>'+(row.totais.HESabado == '00:00' ? '' : row.totais.HESabado)+'</td>'
-                    +'<td>'+(row.totais.adicionalNoturno == '00:00' ? '' : row.totais.adicionalNoturno)+'</td>'
-                    +'<td>'+(row.totais.esperaIndenizada == '00:00' ? '' : row.totais.esperaIndenizada)+'</td>'
-                    +'<td id=\"'+(row.totais.saldoAnterior > '00:00' ? 'saldo-final' : (row.totais.saldoAnterior === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\" >'
-                    +(row.totais.saldoAnterior == '00:00' ? '' : row.totais.saldoAnterior)+'</td>'
+                    +'<td>'+(row.qtdMotoristas ?? row.qtdFuncionarios ?? 0)+'</td>'
+                    +'<td>'+(row.totais.jornadaPrevista == '00:00' ? '' : (row.totais.jornadaPrevista ?? ''))+'</td>'
+                    +'<td>'+(row.totais.jornadaEfetiva == '00:00' ? '' : (row.totais.jornadaEfetiva ?? ''))+'</td>'
+                    +'<td>'+(row.totais.HESemanal == '00:00' ? '' : (row.totais.HESemanal ?? row.totais.he50APagar ?? ''))+'</td>'
+                    +'<td>'+(row.totais.HESabado == '00:00' ? '' : (row.totais.HESabado ?? row.totais.he100APagar ?? ''))+'</td>'
+                    +'<td>'+(row.totais.adicionalNoturno == '00:00' ? '' : (row.totais.adicionalNoturno ?? ''))+'</td>'
+                    +'<td>'+(row.totais.esperaIndenizada == '00:00' ? '' : (row.totais.esperaIndenizada ?? ''))+'</td>'
+                    +'<td id=\"'+((row.totais.saldoAnterior ?? '') > '00:00' ? 'saldo-final' : ((row.totais.saldoAnterior ?? '') === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\" >'
+                    +(row.totais.saldoAnterior == '00:00' ? '' : (row.totais.saldoAnterior ?? ''))+'</td>'
                     +'<td>'+(row.totais.saldoPeriodo > '00:00' ? '<strong>' + row.totais.saldoPeriodo + '</strong>' : (row.totais.saldoPeriodo ?? ''))+'</td>'
-                    +'<td id=\"'+(row.totais.saldoFinal > '00:00' ? 'saldo-final' : (row.totais.saldoFinal === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
+                    +'<td id=\"'+((row.totais.saldoFinal ?? '') > '00:00' ? 'saldo-final' : ((row.totais.saldoFinal ?? '') === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
                     +(row.totais.saldoFinal ?? '')+indicador+'</td>'
                 +'</tr>';";
 
@@ -71,19 +79,56 @@
                 <input type='hidden' name='acao'>
                 <input type='hidden' name='campoAcao'>
                 <input type='hidden' name='empresa'>
+                <input type='hidden' name='empresaFiltro' value='".htmlspecialchars($_POST["empresaFiltro"] ?? ($_POST["empresa"] ?? ""), ENT_QUOTES, 'UTF-8')."'>
                 <input type='hidden' name='busca_dataMes'>
                 <input type='hidden' name='busca_dataInicio'>
                 <input type='hidden' name='busca_dataFim'>
                 <input type='hidden' name='busca_data'>
                 <input type='hidden' name='busca_ocupacao'>
+                <input type='hidden' name='operacao'>
+                <input type='hidden' name='busca_setor'>
+                <input type='hidden' name='busca_subsetor'>
+                <input type='hidden' name='modoDetalheEmpresa'>
+                <input type='hidden' name='manterFiltros'>
             </form>
             <script>
+                function copiarFiltrosAtuaisParaMyForm(){
+                    var targets = ['busca_ocupacao', 'operacao', 'busca_setor', 'busca_subsetor'];
+                    targets.forEach(function(target){
+                        var hidden = document.querySelector('.js-filtro-hidden[data-filter-name=\'' + target + '\']');
+                        if(hidden && document.myForm[target]){
+                            document.myForm[target].value = hidden.value || '';
+                        }
+                    });
+                    var empresaHidden = document.querySelector('.js-filtro-hidden[data-filter-name=\'empresa\']');
+                    if(empresaHidden && document.myForm.empresaFiltro){
+                        document.myForm.empresaFiltro.value = empresaHidden.value || '';
+                    }
+                    var dataMesInput = document.getElementById('busca_dataMes');
+                    if(dataMesInput && document.myForm.busca_dataMes){
+                        document.myForm.busca_dataMes.value = dataMesInput.value || '';
+                    }
+                }
+
                 function setAndSubmit(empresa){
                     document.myForm.acao.value = 'enviarForm()';
                     document.myForm.campoAcao.value = 'buscar';
-                    document.myForm.empresa.value = empresa;
-                    document.myForm.busca_dataMes.value = document.getElementById('busca_dataMes').value;
-                    document.myForm.busca_ocupacao.value = document.querySelector('[name=\"busca_ocupacao\"]').value;
+                    document.myForm.modoDetalheEmpresa.value = '';
+                    if(empresa !== ''){
+                        document.myForm.empresa.value = empresa;
+                    } else if(document.myForm.empresaFiltro && document.myForm.empresaFiltro.value !== ''){
+                        document.myForm.empresa.value = document.myForm.empresaFiltro.value;
+                    }
+                    copiarFiltrosAtuaisParaMyForm();
+                    document.myForm.submit();
+                }
+
+                function abrirDetalheEmpresa(empresaId) {
+                    document.myForm.acao.value = 'enviarForm()';
+                    document.myForm.campoAcao.value = 'buscar';
+                    document.myForm.modoDetalheEmpresa.value = '1';
+                    document.myForm.empresa.value = empresaId;
+                    copiarFiltrosAtuaisParaMyForm();
                     document.myForm.submit();
                 }
 
@@ -92,7 +137,14 @@
                     document.myForm.empresa.value = empresaInput ? empresaInput.value : '';
                     document.myForm.busca_dataInicio.value = document.getElementById('busca_dataInicio').value;
                     document.myForm.busca_dataFim.value = document.getElementById('busca_dataFim').value;
-                    document.myForm.busca_ocupacao.value = document.querySelector('[name=\"busca_ocupacao\"]').value;
+                    var ocupacaoEl = document.querySelector('[name=\"busca_ocupacao\"]');
+                    var operacaoEl = document.querySelector('[name=\"operacao\"]');
+                    var setorEl = document.querySelector('[name=\"busca_setor\"]');
+                    var subsetorEl = document.querySelector('[name=\"busca_subsetor\"]');
+                    document.myForm.busca_ocupacao.value = ocupacaoEl ? ocupacaoEl.value : '';
+                    document.myForm.operacao.value = operacaoEl ? operacaoEl.value : '';
+                    document.myForm.busca_setor.value = setorEl ? setorEl.value : '';
+                    document.myForm.busca_subsetor.value = subsetorEl ? subsetorEl.value : '';
                     document.myForm.acao.value = 'atualizar';
                     document.myForm.submit();
                 }
@@ -364,6 +416,8 @@
         include __DIR__.'/../check_permission.php';
         verificaPermissao('/paineis/saldo.php');
 
+        $empresaIds = []; // Inicializa para uso posterior
+
         if(empty($_POST["busca_dataMes"])){
             $_POST["busca_dataMes"] = date("Y-m"); 
         }
@@ -414,7 +468,14 @@
         }
 
         $empresaSelecionadas = [];
-        $empresaSelecionadasRaw = !empty($_POST["empresa"]) ? (string)$_POST["empresa"] : (!empty($_SESSION["user_nb_empresa"]) ? (string)$_SESSION["user_nb_empresa"] : "");
+        $empresaFiltroFoiEnviado = array_key_exists("empresaFiltro", $_POST) || array_key_exists("empresa", $_POST) || !empty($_POST["manterFiltros"]);
+        if(array_key_exists("empresaFiltro", $_POST)){
+            $empresaSelecionadasRaw = (string)$_POST["empresaFiltro"];
+        }elseif($empresaFiltroFoiEnviado){
+            $empresaSelecionadasRaw = (string)$_POST["empresa"];
+        }else{
+            $empresaSelecionadasRaw = !empty($_SESSION["user_nb_empresa"]) ? (string)$_SESSION["user_nb_empresa"] : "";
+        }
         if($empresaSelecionadasRaw !== ""){
             $empresaSelecionadas = array_values(array_filter(array_map('trim', explode(',', $empresaSelecionadasRaw)), function($v){ return $v !== ''; }));
         }
@@ -455,6 +516,9 @@
                 ."</label>";
         }
         $selectEmpresa .= "</div></div></div>";
+
+        // Se manterFiltros=1, reconhece os filtros mesmo que vazios no POST
+        $manterFiltros = !empty($_POST["manterFiltros"]);
 
         $ocupacaoSelecionadas = array_values(array_filter(array_map('trim', explode(',', (string)($_POST["busca_ocupacao"] ?? ""))), function($v){ return $v !== ''; }));
         $ocupacaoOpcoes = [
@@ -747,6 +811,21 @@
                     values.push(chk.value);
                 });
                 hidden.value = values.join(',');
+                // Sincroniza com myForm e sessionStorage
+                if(document.myForm){
+                    if(target === 'empresa' && document.myForm.empresaFiltro){
+                        document.myForm.empresaFiltro.value = hidden.value;
+                    } else if(document.myForm[target]){
+                        document.myForm[target].value = hidden.value;
+                    }
+                }
+                // Salva no sessionStorage para persistir entre navegações
+                var storageKey = 'filtro_' + target;
+                if(hidden.value){
+                    sessionStorage.setItem(storageKey, hidden.value);
+                } else {
+                    sessionStorage.removeItem(storageKey);
+                }
                 atualizarTitulo(target, values.length);
             }
             // Atualiza o título do filtro com a contagem de itens selecionados
@@ -866,6 +945,8 @@ HTML;
             "saldoFinal" 		=> "00:00"
         ];
 
+        $modoDetalheEmpresa = false;
+
         $periodoRelatorio = [
             "dataInicio" => "1900-01-01",
             "dataFim" => "1900-01-01"
@@ -874,7 +955,10 @@ HTML;
         
         if(!empty($_POST["acao"]) && $_POST["acao"] == "buscar" && empty($_POST["reloadOnly"])){
             $path .= "/".$_POST["busca_dataMes"];
-            if(!empty($_POST["empresa"])){
+
+            $modoDetalheEmpresa = !empty($_POST["modoDetalheEmpresa"]) && !empty($_POST["empresa"]);
+
+            if($modoDetalheEmpresa){
                 // Painel dos saldos dos motoristas de uma ou mais empresas (CSV)
                 $empresaIds = array_values(array_unique(array_filter(array_map('intval', explode(',', (string)$_POST["empresa"])) )));
                 if(empty($empresaIds)){
@@ -1062,19 +1146,45 @@ HTML;
                     $periodoRelatorio["dataFim"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataFim"])->format("d/m");
 
                     
-                    $pastaSaldos = dir($path);
-                    while($arquivo = $pastaSaldos->read()){
-                        if(!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresas"))){
-                            $arquivo = $path."/".$arquivo."/empresa_".$arquivo.".json";
+                    if($empresaFiltroFoiEnviado && empty($empresaSelecionadas)){
+                        $encontrado = true;
+                    }elseif(!empty($empresaSelecionadas)){
+                        foreach($empresaSelecionadas as $empresaIdSelecionada){
+                            $arquivo = $path."/".$empresaIdSelecionada."/empresa_".$empresaIdSelecionada.".json";
+                            if(!is_file($arquivo)){
+                                continue;
+                            }
                             $arquivos[] = $arquivo;
                             $json = json_decode(file_get_contents($arquivo), true);
+                            if(empty($json)){
+                                continue;
+                            }
                             foreach($totais as $key => $value){
                                 $totais[$key] = operarHorarios([$totais[$key], $json["totais"][$key]], "+");
                             }
                             $empresas[] = $json;
                         }
+                    }else{
+                        $pastaSaldos = dir($path);
+                        while($arquivo = $pastaSaldos->read()){
+                            if(!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresas"))){
+                                $arquivo = $path."/".$arquivo."/empresa_".$arquivo.".json";
+                                if(!is_file($arquivo)){
+                                    continue;
+                                }
+                                $arquivos[] = $arquivo;
+                                $json = json_decode(file_get_contents($arquivo), true);
+                                if(empty($json)){
+                                    continue;
+                                }
+                                foreach($totais as $key => $value){
+                                    $totais[$key] = operarHorarios([$totais[$key], $json["totais"][$key]], "+");
+                                }
+                                $empresas[] = $json;
+                            }
+                        }
+                        $pastaSaldos->close();
                     }
-                    $pastaSaldos->close();
                     
                     foreach($empresas as $empresa){
                         if($empresa["totais"]["saldoFinal"] === "00:00"){
@@ -1132,7 +1242,7 @@ HTML;
             $rowTotais = "<tr class='totais'>";
             $rowTitulos = "<tr id='titulos' class='titulos'>";
 
-            if(!empty($_POST["empresa"])){
+            if($modoDetalheEmpresa){
                 $rowTotais .= 
                     "<th colspan='2'>".$totais["empresaNome"]."</th>"
                     ."<th colspan='1'></th>"
@@ -1233,7 +1343,7 @@ HTML;
                 $rowTitulos .= 
                     "<th data-column='nome' data-order='asc'>Nome da Empresa/Filial</th>
                     <th data-column='percEndossados' data-order='asc'>% Endossados</th>
-                    <th data-column='qtdMotoristas' data-order='asc'>Qtd. Motoristas</th>
+                    <th data-column='qtdMotoristas' data-order='asc'>Qtd</th>
                     <th data-column='jornadaPrevista' data-order='asc'>Jornada Prevista</th>
                     <th data-column='JornadaEfetiva' data-order='asc'>Jornada Efetiva</th>
                     <th data-column='HESemanal' data-order='asc'>H.E. Semanal</th>
@@ -1254,7 +1364,7 @@ HTML;
             echo 
                 "<div class='script'>
                     <script>"
-                        .((!empty($_POST["empresa"]))? "document.getElementById('tabela1').style.display = 'table';": "")
+                        .($modoDetalheEmpresa ? "document.getElementById('tabela1').style.display = 'table';": "")
                         ."var porcentagemEndoTds = document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td');
                         var porcentagemNaEndoTds = document.getElementsByClassName('porcentagemNaEndo')[0].getElementsByTagName('td');
                         var porcentagemEndoPcTds = document.getElementsByClassName('porcentagemEndoPc')[0].getElementsByTagName('td');
@@ -1291,6 +1401,6 @@ HTML;
             }
         }
         
-        carregarJS($arquivos);
+        carregarJS($arquivos, !empty($empresaIds) ? $empresaIds : []);
         rodape();
     }
