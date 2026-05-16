@@ -18,6 +18,7 @@
     }
 
     function carregarJS(array $arquivos, array $empresaIds = []){
+        global $existeTerceirizado;
 
         $hasFiltersExceptEmpresa = !(empty($_POST["busca_ocupacao"]) && empty($_POST["operacao"]) && empty($_POST["busca_setor"]) && empty($_POST["busca_subsetor"]));
         $isDetailView = !empty($_POST["modoDetalheEmpresa"]) && !empty($_POST["empresa"]);
@@ -26,29 +27,49 @@
         $showEmpresasInGrid = $hasFiltersExceptEmpresa && !$isDetailView;
 
         $linha = "linha = '<tr>'";
+        $layoutCompacto = $isDetailView && !empty($existeTerceirizado);
+
         if($isDetailView){
             // Visualização de funcionários quando empresa está selecionada
-            $linha .= "+'<td>'+(row.matricula ?? row.enti_tx_matricula ?? '')+'</td>'
-                    +'<td>'+(row.nome ?? row.enti_tx_nome ?? '')+'</td>'
-                    +'<td>'+(row.ocupacao ?? row.enti_tx_ocupacao ?? '')+'</td>'
-                    +'<td>'+(row.tipoOperacaoNome ?? row.tipoOperacao ?? row.enti_tx_tipoOperacao ?? '')+'</td>'
-                    +'<td>'+(row.setorNome ?? row.setor ?? row.enti_tx_setor ?? '')+'</td>'
-                    +'<td>'+(row.subsetorNome ?? row.subsetor ?? row.enti_tx_subsetor ?? '')+'</td>'
-                    +'<td class=\"'+((row.statusEndosso ?? '') === 'E' ? 'endo' : ((row.statusEndosso ?? '') === 'EP' ? 'endo-parc' : 'nao-endo'))+'\">'
-                        +'<strong>'+(row.statusEndosso ?? '')+'</strong>'
-                    +'</td>'
-                    +'<td>'+(row.jornadaPrevista == '00:00' ? '' : (row.jornadaPrevista ?? ''))+'</td>'
-                    +'<td>'+(row.jornadaEfetiva == '00:00' ? '' : (row.jornadaEfetiva ?? ''))+'</td>'
-                    +'<td>'+(row.HESemanal == '00:00' ? '' : (row.HESemanal ?? row.he50APagar ?? ''))+'</td>'
-                    +'<td>'+(row.HESabado == '00:00' ? '' : (row.HESabado ?? row.he100APagar ?? ''))+'</td>'
-                    +'<td>'+(row.adicionalNoturno == '00:00' ? '' : (row.adicionalNoturno ?? ''))+'</td>'
-                    +'<td>'+(row.esperaIndenizada == '00:00' ? '' : (row.esperaIndenizada ?? ''))+'</td>'
-                    +'<td id=\"'+((row.saldoAnterior ?? '') > '00:00' ? 'saldo-final' : ((row.saldoAnterior ?? '') === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
-                    +(row.saldoAnterior?? '')+'</td>'
-                    +'<td>'+(row.saldoPeriodo > '00:00' ? '<strong>' + row.saldoPeriodo + '</strong>' : (row.saldoPeriodo ?? ''))+'</td>'
-                    +'<td id=\"'+((row.saldoFinal ?? '') > '00:00' ? 'saldo-final' : ((row.saldoFinal ?? '') === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
-                    +(row.saldoFinal?? '')+indicador+'</td>'
-                +'</tr>';";
+            if($layoutCompacto){
+                $linha .= "+'<td>'+(row.matricula ?? row.enti_tx_matricula ?? '')+'</td>'
+                        +'<td>'+(row.nome ?? row.enti_tx_nome ?? '')+'</td>'
+                        +'<td>'+(row.ocupacao ?? row.enti_tx_ocupacao ?? '')+'</td>'
+                        +'<td>'+(row.setorNome ?? row.setor ?? row.enti_tx_setor ?? '')+'</td>'
+                        +'<td>'+(row.subsetorNome ?? row.subsetor ?? row.enti_tx_subsetor ?? '')+'</td>'
+                        +'<td class=\"'+((row.statusEndosso ?? '') === 'E' ? 'endo' : ((row.statusEndosso ?? '') === 'EP' ? 'endo-parc' : 'nao-endo'))+'\">'
+                            +'<strong>'+(row.statusEndosso ?? '')+'</strong>'
+                        +'</td>'
+                        +'<td>'+(row.jornadaPrevista == '00:00' ? '' : (row.jornadaPrevista ?? ''))+'</td>'
+                        +'<td>'+(row.jornadaEfetiva == '00:00' ? '' : (row.jornadaEfetiva ?? ''))+'</td>'
+                        +'<td>'+(row.saldoAnterior ?? '')+'</td>'
+                        +'<td>'+(row.saldoPeriodo ?? '')+'</td>'
+                        +'<td id=\"'+((row.saldoFinal ?? '') > '00:00' ? 'saldo-final' : ((row.saldoFinal ?? '') === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
+                        +(row.saldoFinal ?? '')+indicador+'</td>'
+                    +'</tr>';";
+            }else{
+                $linha .= "+'<td>'+(row.matricula ?? row.enti_tx_matricula ?? '')+'</td>'
+                        +'<td>'+(row.nome ?? row.enti_tx_nome ?? '')+'</td>'
+                        +'<td>'+(row.ocupacao ?? row.enti_tx_ocupacao ?? '')+'</td>'
+                        +'<td>'+(row.tipoOperacaoNome ?? row.tipoOperacao ?? row.enti_tx_tipoOperacao ?? '')+'</td>'
+                        +'<td>'+(row.setorNome ?? row.setor ?? row.enti_tx_setor ?? '')+'</td>'
+                        +'<td>'+(row.subsetorNome ?? row.subsetor ?? row.enti_tx_subsetor ?? '')+'</td>'
+                        +'<td class=\"'+((row.statusEndosso ?? '') === 'E' ? 'endo' : ((row.statusEndosso ?? '') === 'EP' ? 'endo-parc' : 'nao-endo'))+'\">'
+                            +'<strong>'+(row.statusEndosso ?? '')+'</strong>'
+                        +'</td>'
+                        +'<td>'+(row.jornadaPrevista == '00:00' ? '' : (row.jornadaPrevista ?? ''))+'</td>'
+                        +'<td>'+(row.jornadaEfetiva == '00:00' ? '' : (row.jornadaEfetiva ?? ''))+'</td>'
+                        +'<td>'+(row.HESemanal == '00:00' ? '' : (row.HESemanal ?? row.he50APagar ?? ''))+'</td>'
+                        +'<td>'+(row.HESabado == '00:00' ? '' : (row.HESabado ?? row.he100APagar ?? ''))+'</td>'
+                        +'<td>'+(row.adicionalNoturno == '00:00' ? '' : (row.adicionalNoturno ?? ''))+'</td>'
+                        +'<td>'+(row.esperaIndenizada == '00:00' ? '' : (row.esperaIndenizada ?? ''))+'</td>'
+                        +'<td id=\"'+((row.saldoAnterior ?? '') > '00:00' ? 'saldo-final' : ((row.saldoAnterior ?? '') === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
+                        +(row.saldoAnterior?? '')+'</td>'
+                        +'<td>'+(row.saldoPeriodo > '00:00' ? '<strong>' + row.saldoPeriodo + '</strong>' : (row.saldoPeriodo ?? ''))+'</td>'
+                        +'<td id=\"'+((row.saldoFinal ?? '') > '00:00' ? 'saldo-final' : ((row.saldoFinal ?? '') === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
+                        +(row.saldoFinal?? '')+indicador+'</td>'
+                    +'</tr>';";
+            }
         }else{
             // Visualização de empresas: clique abre os funcionários da empresa clicada
             $linha .= "+'<td style=\"cursor: pointer;\" onclick=\"abrirDetalheEmpresa(' + row.empr_nb_id + ')\">'+(row.empr_tx_nome ?? row.nome ?? '')+'</td>'
@@ -992,6 +1013,7 @@ HTML;
                 $empresaNomes = [];
                 $latestMTime = 0;
                 $periodoRelatorioBruto = null;
+                $existeTerceirizado = false;
 
                 foreach($empresaIds as $empresaId){
                     $aEmpresa = mysqli_fetch_assoc(query(
@@ -1083,6 +1105,10 @@ HTML;
                             || (!empty($setorFiltro) && $rowSetor !== "" && !in_array($rowSetor, $setorFiltro, true))
                             || (!empty($subsetorFiltro) && $rowSubsetor !== "" && !in_array($rowSubsetor, $subsetorFiltro, true))){
                             continue;
+                        }
+
+                        if($rowOcupacao === "terceirizado"){
+                            $existeTerceirizado = true;
                         }
 
                         $statusEndosso = $saldosMotorista["statusEndosso"] ?? "";
@@ -1241,45 +1267,70 @@ HTML;
         if($encontrado){
             $rowTotais = "<tr class='totais'>";
             $rowTitulos = "<tr id='titulos' class='titulos'>";
+            $layoutCompacto = $modoDetalheEmpresa && !empty($existeTerceirizado);
 
             if($modoDetalheEmpresa){
-                $rowTotais .= 
-                    "<th colspan='2'>".$totais["empresaNome"]."</th>"
-                    ."<th colspan='1'></th>"
-                    ."<th colspan='1'></th>"
-                    ."<th colspan='1'></th>"
-                    ."<th colspan='1'></th>"
-                    ."<th colspan='1'></th>"
-                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["jornadaPrevista"] : $totais["jornadaPrevista"])."</th>"
-                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["jornadaEfetiva"] : $totais["jornadaEfetiva"])."</th>"
-                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["HESemanal"] : $totais["HESemanal"])."</th>"
-                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["HESabado"] : $totais["HESabado"])."</th>"
-                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["adicionalNoturno"] : $totais["adicionalNoturno"])."</th>"
-                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["esperaIndenizada"] : $totais["esperaIndenizada"])."</th>"
-                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["saldoAnterior"] : $totais["saldoAnterior"])."</th>"
-                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["saldoPeriodo"] : $totais["saldoPeriodo"])."</th>"
-                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["saldoFinal"] : $totais["saldoFinal"])."</th>";
-                ;
+                if($layoutCompacto){
+                    $rowTotais .= 
+                        "<th colspan='2'>".$totais["empresaNome"]."</th>"
+                        ."<th colspan='1'></th>"
+                        ."<th colspan='1'></th>"
+                        ."<th colspan='1'></th>"
+                        ."<th colspan='1'></th>"
+                        ."<th colspan='1'>".((($hasDetailFilter ? $totaisFiltrados["jornadaPrevista"] : $totais["jornadaPrevista"]) === '00:00') ? '' : ($hasDetailFilter ? $totaisFiltrados["jornadaPrevista"] : $totais["jornadaPrevista"]))."</th>"
+                        ."<th colspan='1'>".((($hasDetailFilter ? $totaisFiltrados["jornadaEfetiva"] : $totais["jornadaEfetiva"]) === '00:00') ? '' : ($hasDetailFilter ? $totaisFiltrados["jornadaEfetiva"] : $totais["jornadaEfetiva"]) )."</th>"
+                        ."<th colspan='1'>".((($hasDetailFilter ? $totaisFiltrados["saldoAnterior"] : $totais["saldoAnterior"]) === '00:00') ? '' : ($hasDetailFilter ? $totaisFiltrados["saldoAnterior"] : $totais["saldoAnterior"]) )."</th>"
+                        ."<th colspan='1'>".((($hasDetailFilter ? $totaisFiltrados["saldoPeriodo"] : $totais["saldoPeriodo"]) === '00:00') ? '' : ($hasDetailFilter ? $totaisFiltrados["saldoPeriodo"] : $totais["saldoPeriodo"]) )."</th>"
+                        ."<th colspan='1'>".((($hasDetailFilter ? $totaisFiltrados["saldoFinal"] : $totais["saldoFinal"]) === '00:00') ? '' : ($hasDetailFilter ? $totaisFiltrados["saldoFinal"] : $totais["saldoFinal"]) )."</th>";
 
-                $rowTitulos .= 
-                    "<th class='matricula'>Matrícula</th>
-                    <th class='nome'>Nome</th>
-                    <th class='ocupacao'>Ocupação</th>
-                    <th class='operacao'>Cargo</th>
-                    <th class='operacao'>Setor</th>
-                    <th class='operacao'>SubSetor</th>
-                    <th class='status'>Status Endosso</th>
-                    <th class='jornadaPrevista'>Jornada Prevista</th>
-                    <th class='jornadaEfetiva'>Jornada Efetiva</th>
-                    <th class='HESemanal'>H.E. Semanal</th>
-                    <th class='HEEx'>H.E. Ex.</th>
-                    <th class='adicionalNoturno'>Adicional Noturno</th>
-                    <th class='esperaIndenizada'>Espera Indenizada</th>
-                    <th class='saldoAnterior'>Saldo Anterior</th>
-                    <th class='saldoPeriodo'>Saldo Período</th>
-                    <th class='saldoFinal'>Saldo Bruto</th>
-                    "
-                ;
+                    $rowTitulos .= 
+                        "<th class='matricula'>Matrícula</th>
+                        <th class='nome'>Nome</th>
+                        <th class='ocupacao'>Ocupação</th>
+                        <th class='operacao'>Setor</th>
+                        <th class='operacao'>SubSetor</th>
+                        <th class='status'>Status Endosso</th>
+                        <th class='jornadaPrevista'>Jornada Prevista</th>
+                        <th class='jornadaEfetiva'>Jornada Efetiva</th>
+                        <th class='saldoAnterior'>Saldo Anterior</th>
+                        <th class='saldoPeriodo'>Saldo Período</th>
+                        <th class='saldoFinal'>Saldo Bruto</th>";
+                }else{
+                    $rowTotais .= 
+                        "<th colspan='2'>".$totais["empresaNome"]."</th>"
+                        ."<th colspan='1'></th>"
+                        ."<th colspan='1'></th>"
+                        ."<th colspan='1'></th>"
+                        ."<th colspan='1'></th>"
+                        ."<th colspan='1'></th>"
+                        ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["jornadaPrevista"] : $totais["jornadaPrevista"])."</th>"
+                        ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["jornadaEfetiva"] : $totais["jornadaEfetiva"])."</th>"
+                        ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["HESemanal"] : $totais["HESemanal"])."</th>"
+                        ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["HESabado"] : $totais["HESabado"])."</th>"
+                        ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["adicionalNoturno"] : $totais["adicionalNoturno"])."</th>"
+                        ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["esperaIndenizada"] : $totais["esperaIndenizada"])."</th>"
+                        ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["saldoAnterior"] : $totais["saldoAnterior"])."</th>"
+                        ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["saldoPeriodo"] : $totais["saldoPeriodo"])."</th>"
+                        ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["saldoFinal"] : $totais["saldoFinal"])."</th>";
+
+                    $rowTitulos .= 
+                        "<th class='matricula'>Matrícula</th>
+                        <th class='nome'>Nome</th>
+                        <th class='ocupacao'>Ocupação</th>
+                        <th class='operacao'>Cargo</th>
+                        <th class='operacao'>Setor</th>
+                        <th class='operacao'>SubSetor</th>
+                        <th class='status'>Status Endosso</th>
+                        <th class='jornadaPrevista'>Jornada Prevista</th>
+                        <th class='jornadaEfetiva'>Jornada Efetiva</th>
+                        <th class='HESemanal'>H.E. Semanal</th>
+                        <th class='HEEx'>H.E. Ex.</th>
+                        <th class='adicionalNoturno'>Adicional Noturno</th>
+                        <th class='esperaIndenizada'>Espera Indenizada</th>
+                        <th class='saldoAnterior'>Saldo Anterior</th>
+                        <th class='saldoPeriodo'>Saldo Período</th>
+                        <th class='saldoFinal'>Saldo Bruto</th>";
+                }
 
                 // $rowTotais .= 
                 //     "<th colspan='2'>{$totais["empresaNome"]}</th>
@@ -1401,6 +1452,8 @@ HTML;
             }
         }
         
+        // Torna a flag disponível no escopo global para que carregarJS() a veja
+        $GLOBALS['existeTerceirizado'] = $existeTerceirizado ?? false;
         carregarJS($arquivos, !empty($empresaIds) ? $empresaIds : []);
         rodape();
     }
