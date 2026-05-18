@@ -109,6 +109,7 @@
                 <input type='hidden' name='operacao'>
                 <input type='hidden' name='busca_setor'>
                 <input type='hidden' name='busca_subsetor'>
+                <input type='hidden' name='busca_usuario'>
                 <input type='hidden' name='modoDetalheEmpresa'>
                 <input type='hidden' name='manterFiltros'>
             </form>
@@ -174,6 +175,23 @@
                     window.print();
                 }
 
+                function obterFiltroCheckbox(nome){
+                    var valor = '';
+                    document.querySelectorAll('input.js-filtro-hidden').forEach(function(el){
+                        if(el.getAttribute('data-filter-name') === nome && !valor){
+                            valor = el.value || '';
+                        }
+                    });
+                    if(!valor){
+                        return [];
+                    }
+                    return valor.split(',').map(function(item){
+                        return item.trim();
+                    }).filter(function(item){
+                        return item !== '';
+                    });
+                }
+
                 $(document).ready(function(){
                     var tabela = $('#tabela-empresas tbody');
                     // Normaliza filtros vindos do PHP: aceita vazio ou valor único
@@ -181,6 +199,60 @@
                     var operacaoPermitidas = '".$_POST["operacao"]."';
                     var setorPermitidas = '".$_POST["busca_setor"]."';
                     var subSetorPermitidas = '".$_POST["busca_subsetor"]."';
+
+                    function normalizarFiltroTexto(txt){
+                        txt = (txt || '').toString().toLowerCase().trim();
+                        if(typeof txt.normalize === 'function'){
+                            txt = txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                        }
+                        return txt;
+                    }
+
+                    function aplicarBuscaDropdown(target){
+                        if(!target){
+                            return;
+                        }
+                        var input = null;
+                        document.querySelectorAll('.js-filtro-search').forEach(function(el){
+                            if(!input && el.getAttribute('data-target') === target){
+                                input = el;
+                            }
+                        });
+                        if(!input){
+                            return;
+                        }
+                        var termo = normalizarFiltroTexto(input.value || '');
+                        document.querySelectorAll('input.js-filtro-checkbox').forEach(function(chk){
+                            if(chk.getAttribute('data-target') !== target){
+                                return;
+                            }
+                            var label = chk.closest('label.js-filtro-item');
+                            if(!label){
+                                return;
+                            }
+                            var texto = normalizarFiltroTexto(label.textContent || '');
+                            label.style.display = (termo === '' || texto.indexOf(termo) !== -1) ? '' : 'none';
+                        });
+                    }
+
+                    function aplicarFiltroUsuarioSelecionado(){
+                        var selecionados = obterFiltroCheckbox('busca_usuario');
+                        $('#tabela-empresas tbody tr').each(function(){
+                            var rowUsuarioId = ($(this).data('usuarioId') || $(this).attr('data-usuario-id') || '').toString().trim();
+                            var rowUsuarioNome = normalizarFiltroTexto($(this).find('td').eq(1).text());
+                            var exibir = selecionados.length === 0 || selecionados.indexOf(rowUsuarioId) !== -1 || selecionados.indexOf(rowUsuarioNome) !== -1;
+                            $(this).toggle(exibir);
+                        });
+                    }
+
+                    window.aplicarFiltroUsuarioSelecionado = aplicarFiltroUsuarioSelecionado;
+
+                    function aplicarFiltroNomeUsuario(){
+                        if(!$('#tabela-empresas tbody tr').length){
+                            return;
+                        }
+                        aplicarFiltroUsuarioSelecionado();
+                    }
 
                     function normalizarOcupacao(valor){
                         var txt = (valor || '').toString().trim().toLowerCase();
@@ -247,11 +319,14 @@
                                     indicador = ' <i class=\"fa fa-minus\" style=\"color: gray;\"></i>';
                                 }
                                 console.log(row);
-                                if(row.idMotorista != undefined){
-                                    delete row.idMotorista;
-                                }
                                 {$linha}
                                 tabela.append(linha);
+                                var ultimaLinha = tabela.find('tr').last();
+                                if(ultimaLinha.length){
+                                    ultimaLinha.attr('data-usuario-id', (row.idMotorista ?? row.enti_nb_id ?? row.user_nb_id ?? row.matricula ?? row.enti_tx_matricula ?? ''));
+                                }
+                                aplicarBuscaDropdown('busca_usuario');
+                                aplicarFiltroNomeUsuario();
                             },
                             error: function(){
                                 console.log('Erro ao carregar os dados.');
@@ -407,7 +482,22 @@
                         }
                     });
 
+                    $(document).on('input keyup', '.js-filtro-search', function(){
+                        if($(this).attr('data-target') === 'busca_usuario'){
+                            aplicarBuscaDropdown('busca_usuario');
+                        }
+                    });
+
+                    $(document).on('change', 'input.js-filtro-checkbox', function(){
+                        if($(this).attr('data-target') === 'busca_usuario'){
+                            aplicarFiltroNomeUsuario();
+                        }
+                    });
+
                     ".$carregarDados."
+
+                    aplicarBuscaDropdown('busca_usuario');
+                    aplicarFiltroNomeUsuario();
                 });
 
                 //Variação dos campos de pesquisa{
@@ -499,6 +589,44 @@
         }
         if($empresaSelecionadasRaw !== ""){
             $empresaSelecionadas = array_values(array_filter(array_map('trim', explode(',', $empresaSelecionadasRaw)), function($v){ return $v !== ''; }));
+        }
+
+        $modoDetalheEmpresaFiltro = !empty($_POST["modoDetalheEmpresa"]) && !empty($_POST["empresa"]);
+        $usuarioSelecionados = array_values(array_filter(array_map('trim', explode(',', (string)($_POST["busca_usuario"] ?? ""))), function($v){ return $v !== ''; }));
+        $usuarioOpcoes = [];
+        $empresaIdsUsuarioFiltro = [];
+        if($modoDetalheEmpresaFiltro && !empty($_POST["empresa"])){
+            $empresaIdsUsuarioFiltro = array_values(array_filter(array_map('intval', explode(',', (string)$_POST["empresa"])), function($v){ return $v > 0; }));
+        }
+        if(empty($empresaIdsUsuarioFiltro)){
+            $empresaIdsUsuarioFiltro = array_values(array_filter(array_map('intval', $empresaSelecionadas), function($v){ return $v > 0; }));
+        }
+        if(empty($empresaIdsUsuarioFiltro) && !empty($_SESSION["user_nb_empresa"])){
+            $empresaIdsUsuarioFiltro = [intval($_SESSION["user_nb_empresa"])] ;
+        }
+        if(!empty($empresaIdsUsuarioFiltro)){
+            $resUsuariosFiltro = query(
+                "SELECT DISTINCT e.enti_nb_id, e.enti_tx_matricula, e.enti_tx_nome, u.user_tx_nome, u.user_tx_login
+                 FROM entidade e
+                 LEFT JOIN user u ON u.user_nb_entidade = e.enti_nb_id AND u.user_tx_status = 'ativo'
+                 WHERE e.enti_tx_status = 'ativo'
+                   AND e.enti_nb_empresa IN (".implode(',', $empresaIdsUsuarioFiltro).")
+                 ORDER BY COALESCE(NULLIF(u.user_tx_nome, ''), e.enti_tx_nome, u.user_tx_login, e.enti_tx_matricula) ASC"
+            );
+            while($resUsuariosFiltro && ($usuarioRow = mysqli_fetch_assoc($resUsuariosFiltro))){
+                $usuarioId = (string)intval($usuarioRow["enti_nb_id"]);
+                $usuarioNome = trim((string)($usuarioRow["user_tx_nome"] ?? ""));
+                if($usuarioNome === ''){
+                    $usuarioNome = trim((string)($usuarioRow["enti_tx_nome"] ?? $usuarioRow["user_tx_login"] ?? ""));
+                }
+                $usuarioMatricula = trim((string)($usuarioRow["enti_tx_matricula"] ?? ""));
+                if($usuarioMatricula !== ''){
+                    $usuarioNome = "[".$usuarioMatricula."] ".$usuarioNome;
+                }
+                if($usuarioId !== '' && $usuarioNome !== ''){
+                    $usuarioOpcoes[$usuarioId] = $usuarioNome;
+                }
+            }
         }
 
         $empresaOpcoes = [];
@@ -661,6 +789,46 @@
         if($temSubsetorVinculado){
             $campos[] = $selectSubsetor;
         }
+        $usuarioFiltroLabel = "Buscar usuário";
+        if(count($usuarioSelecionados) === 1){
+            $selKey = (string)$usuarioSelecionados[0];
+            if(isset($usuarioOpcoes[$selKey])){
+                $usuarioFiltroLabel = $usuarioOpcoes[$selKey];
+            }
+        }elseif(count($usuarioSelecionados) > 1){
+            $usuarioFiltroLabel = "Buscar usuário (".count($usuarioSelecionados).")";
+        }
+        $selectUsuario = "<div class='col-sm-3 margin-bottom-5 campo-fit-content'>"
+            ."<label>Buscar usuário</label>"
+            ."<div class='filtro-dropdown' data-filter-group='busca_usuario' style='position:relative; overflow:visible;'>"
+            ."<button type='button' class='btn btn-default btn-block filtro-dropdown-toggle js-filtro-toggle' data-target='busca_usuario' data-base-label='Buscar usuário' aria-expanded='false' "
+            .($modoDetalheEmpresaFiltro ? "" : "disabled='disabled' ")
+            ."style='display:flex; justify-content:space-between; align-items:center; gap:10px;'>"
+            ."<span class='js-filtro-label' style='text-align:left;'>".htmlspecialchars($usuarioFiltroLabel, ENT_QUOTES, 'UTF-8')."</span>"
+            ."<span class='caret'></span>"
+            ."</button>"
+            ."<div class='filtro-dropdown-menu' style='display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:1050; background:#fff; border:1px solid #d9d9d9; border-radius:8px; box-shadow:0 12px 30px rgba(0,0,0,.12); padding:10px; max-height:260px; overflow:auto;'>"
+            ."<input type='hidden' class='js-filtro-hidden' data-filter-name='busca_usuario' name='busca_usuario' value='".htmlspecialchars(implode(',', $usuarioSelecionados), ENT_QUOTES, 'UTF-8')."'>"
+            ."<div style='display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;'>"
+            ."<button type='button' class='btn btn-xs btn-default js-filtro-todos' data-target='busca_usuario' data-action='all'>Marcar todos</button>"
+            ."<button type='button' class='btn btn-xs btn-default js-filtro-todos' data-target='busca_usuario' data-action='none'>Desmarcar todos</button>"
+            ."</div>"
+            ."<input type='text' class='form-control input-sm js-filtro-search' data-target='busca_usuario' placeholder='Digite o nome do usuário' style='margin-bottom:10px;' autocomplete='off'>";
+
+        if(empty($usuarioOpcoes)){
+            $selectUsuario .= "<div style='color:#777;'>Sem usuários</div>";
+        }else{
+            foreach($usuarioOpcoes as $usuarioId => $usuarioNome){
+                $checked = in_array((string)$usuarioId, $usuarioSelecionados, true) ? "checked" : "";
+                $selectUsuario .= "<label class='js-filtro-item' style='display:block; margin-bottom:6px; font-weight:normal; cursor:pointer; line-height:1.2;'>"
+                    ."<input type='checkbox' class='js-filtro-checkbox' data-target='busca_usuario' value='".htmlspecialchars((string)$usuarioId, ENT_QUOTES, 'UTF-8')."' ".$checked." style='margin-right:6px; width:13px; height:13px; min-width:13px; min-height:13px; padding:0; vertical-align:middle; appearance:auto !important; -webkit-appearance:auto !important; -moz-appearance:auto !important;'>"
+                    .htmlspecialchars($usuarioNome, ENT_QUOTES, 'UTF-8')
+                    ."</label>";
+            }
+        }
+        $selectUsuario .= "</div></div></div>";
+
+        $campos[] = $selectUsuario;
         $campos[] = campo_mes("Mês*", "busca_dataMes", ($_POST["busca_dataMes"]?? date("Y-m")), 2);
 
 
@@ -695,7 +863,7 @@
                 var tabelaClone = tabelaOriginal.cloneNode(true);
                 
                 // Remove elementos problemáticos (mantém as classes de status)
-                tabelaClone.querySelectorAll('i.fa, script, style, link').forEach(el => el.remove());
+                tabelaClone.querySelectorAll('i.fa, script, style, link, input[type=\'checkbox\']').forEach(el => el.remove());
                 
                 // Cores fixas para substituir as variáveis CSS
                 var coresStatus = {
@@ -824,6 +992,25 @@
                 });
             }
 
+            function aplicarBuscaDropdown(target){
+                if(!target){ return; }
+                var input = document.querySelector('.js-filtro-search[data-target="' + target + '"]');
+                if(!input){ return; }
+                var termo = (input.value || '').toString().toLowerCase().trim();
+                if(typeof termo.normalize === 'function'){
+                    termo = termo.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                }
+                document.querySelectorAll('input.js-filtro-checkbox[data-target="' + target + '"]').forEach(function(chk){
+                    var label = chk.closest('label.js-filtro-item');
+                    if(!label){ return; }
+                    var texto = (label.textContent || '').toString().toLowerCase().trim();
+                    if(typeof texto.normalize === 'function'){
+                        texto = texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                    }
+                    label.style.display = (termo === '' || texto.indexOf(termo) !== -1) ? '' : 'none';
+                });
+            }
+
             function atualizarHidden(target){
                 var hidden = document.querySelector('.js-filtro-hidden[data-filter-name="' + target + '"]');
                 if(!hidden){ return; }
@@ -848,6 +1035,11 @@
                     sessionStorage.removeItem(storageKey);
                 }
                 atualizarTitulo(target, values.length);
+                if(target === 'busca_usuario'){
+                    if(typeof window.aplicarFiltroUsuarioSelecionado === 'function'){
+                        window.aplicarFiltroUsuarioSelecionado();
+                    }
+                }
             }
             // Atualiza o título do filtro com a contagem de itens selecionados
             function atualizarTitulo(target, count){
@@ -897,7 +1089,16 @@
                     var menu = btn.parentNode.querySelector('.filtro-dropdown-menu');
                     var isOpen = menu && menu.style.display === 'block';
                     fecharDropdowns();
-                    if(menu){ menu.style.display = isOpen ? 'none' : 'block'; }
+                    if(menu){
+                        menu.style.display = isOpen ? 'none' : 'block';
+                        if(!isOpen){
+                            var searchInput = menu.querySelector('.js-filtro-search');
+                            if(searchInput){
+                                searchInput.focus();
+                                aplicarBuscaDropdown(searchInput.getAttribute('data-target'));
+                            }
+                        }
+                    }
                 });
             });
 
@@ -911,6 +1112,15 @@
                     if(target){
                         atualizarHidden(target);
                     }
+                });
+            });
+
+            document.querySelectorAll('.js-filtro-search').forEach(function(input){
+                input.addEventListener('input', function(){
+                    aplicarBuscaDropdown(input.getAttribute('data-target'));
+                });
+                input.addEventListener('keyup', function(){
+                    aplicarBuscaDropdown(input.getAttribute('data-target'));
                 });
             });
 
