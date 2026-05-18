@@ -450,11 +450,11 @@ function index() {
 				$botoesVisiveis = [$botoes["inicioJornada"]];
 			} elseif ($tipoUltimo === 1 || $tipoUltimo === 4 || $tipoUltimo === 6 || $tipoUltimo === 8 || $tipoUltimo === 10 || $tipoUltimo === 12) {
 				$botoesVisiveis = [
-					$botoes["inicioRefeicao"],
+					//$botoes["inicioRefeicao"],
 					$botoes["fimJornada"]
 				];
 			} elseif ($tipoUltimo === 3) {
-				$botoesVisiveis = [$botoes["fimRefeicao"]];
+				//$botoesVisiveis = [$botoes["fimRefeicao"]];
 			} else {
 				$botoesVisiveis = [$botoes["inicioJornada"]];
 			}
