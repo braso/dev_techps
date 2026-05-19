@@ -1362,37 +1362,48 @@ HTML;
                 $logoEmpresa = $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/".$logoEmpresa;
 
                 if(!is_file($path."/empresas.json")){
-                    $empresaFallbackQuery = "SELECT empr_nb_id, empr_tx_nome FROM empresa WHERE empr_tx_status = 'ativo'";
-                    if(!empty($empresaSelecionadas)){
-                        $empresaFallbackQuery .= " AND empr_nb_id IN (".implode(',', array_map('intval', $empresaSelecionadas)).")";
+                    // Tenta gerar os dados reais chamando criar_relatorio_saldo()
+                    $dataMesRelatorio = DateTime::createFromFormat("Y-m", $_POST["busca_dataMes"] ?? date("Y-m"));
+                    if($dataMesRelatorio instanceof DateTime){
+                        $_POST["busca_dataMes"] = $dataMesRelatorio->format("Y-m-d H:i:s");
+                        criar_relatorio_saldo();
+                        unset($_POST["busca_dataMes"]);
                     }
-                    $empresaFallbackQuery .= " ORDER BY empr_tx_nome ASC";
-                    $resEmpresasFallback = query($empresaFallbackQuery);
-                    while($resEmpresasFallback && ($empresaFallback = mysqli_fetch_assoc($resEmpresasFallback))){
-                        $fallbackEmpresas[] = [
-                            "empr_nb_id" => (string)$empresaFallback["empr_nb_id"],
-                            "empr_tx_nome" => $empresaFallback["empr_tx_nome"],
-                            "percEndossado" => 0,
-                            "qtdMotoristas" => 0,
-                            "totais" => [
-                                "jornadaPrevista" => "00:00",
-                                "jornadaEfetiva" => "00:00",
-                                "HESemanal" => "00:00",
-                                "HESabado" => "00:00",
-                                "adicionalNoturno" => "00:00",
-                                "esperaIndenizada" => "00:00",
-                                "saldoAnterior" => "00:00",
-                                "saldoPeriodo" => "00:00",
-                                "saldoFinal" => "00:00"
-                            ]
-                        ];
-                    }
-                    if(!empty($fallbackEmpresas)){
-                        $encontrado = true;
-                        $dataInicioFallback = DateTime::createFromFormat("Y-m", $_POST["busca_dataMes"] ?? date("Y-m"));
-                        if($dataInicioFallback instanceof DateTime){
-                            $periodoRelatorio["dataInicio"] = $dataInicioFallback->format("d/m");
-                            $periodoRelatorio["dataFim"] = $dataInicioFallback->format("t/m");
+                    
+                    // Se após gerar ainda não existe, usa fallback com zeros
+                    if(!is_file($path."/empresas.json")){
+                        $empresaFallbackQuery = "SELECT empr_nb_id, empr_tx_nome FROM empresa WHERE empr_tx_status = 'ativo'";
+                        if(!empty($empresaSelecionadas)){
+                            $empresaFallbackQuery .= " AND empr_nb_id IN (".implode(',', array_map('intval', $empresaSelecionadas)).")";
+                        }
+                        $empresaFallbackQuery .= " ORDER BY empr_tx_nome ASC";
+                        $resEmpresasFallback = query($empresaFallbackQuery);
+                        while($resEmpresasFallback && ($empresaFallback = mysqli_fetch_assoc($resEmpresasFallback))){
+                            $fallbackEmpresas[] = [
+                                "empr_nb_id" => (string)$empresaFallback["empr_nb_id"],
+                                "empr_tx_nome" => $empresaFallback["empr_tx_nome"],
+                                "percEndossado" => 0,
+                                "qtdMotoristas" => 0,
+                                "totais" => [
+                                    "jornadaPrevista" => "00:00",
+                                    "jornadaEfetiva" => "00:00",
+                                    "HESemanal" => "00:00",
+                                    "HESabado" => "00:00",
+                                    "adicionalNoturno" => "00:00",
+                                    "esperaIndenizada" => "00:00",
+                                    "saldoAnterior" => "00:00",
+                                    "saldoPeriodo" => "00:00",
+                                    "saldoFinal" => "00:00"
+                                ]
+                            ];
+                        }
+                        if(!empty($fallbackEmpresas)){
+                            $encontrado = true;
+                            $dataInicioFallback = DateTime::createFromFormat("Y-m", $_POST["busca_dataMes"] ?? date("Y-m"));
+                            if($dataInicioFallback instanceof DateTime){
+                                $periodoRelatorio["dataInicio"] = $dataInicioFallback->format("d/m");
+                                $periodoRelatorio["dataFim"] = $dataInicioFallback->format("t/m");
+                            }
                         }
                     }
                 }
@@ -1711,6 +1722,6 @@ HTML;
         
         // Torna a flag disponível no escopo global para que carregarJS() a veja
         $GLOBALS['existeTerceirizado'] = $existeTerceirizado ?? false;
-        carregarJS($arquivos, !empty($empresaIds) ? $empresaIds : []);
+        carregarJS($arquivos, !empty($empresaIds) ? $empresaIds : [], $fallbackEmpresas ?? []);
         rodape();
     }
