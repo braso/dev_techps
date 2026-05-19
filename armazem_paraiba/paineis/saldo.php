@@ -17,7 +17,7 @@
         index();
     }
 
-    function carregarJS(array $arquivos, array $empresaIds = []){
+    function carregarJS(array $arquivos, array $empresaIds = [], array $fallbackEmpresas = []){
         global $existeTerceirizado;
 
         $hasFiltersExceptEmpresa = !(empty($_POST["busca_ocupacao"]) && empty($_POST["operacao"]) && empty($_POST["busca_setor"]) && empty($_POST["busca_subsetor"]));
@@ -93,6 +93,10 @@
         $carregarDados = "";
         foreach($arquivos as $arquivo){
             $carregarDados .= "carregarDados('".$arquivo."');";
+        }
+        $carregarFallbackEmpresas = "";
+        foreach($fallbackEmpresas as $empresaFallback){
+            $carregarFallbackEmpresas .= "processarLinha(".json_encode($empresaFallback, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).");";
         }
 
         echo
@@ -277,6 +281,50 @@
                     var subSetorFilter = toFilterArray(subSetorPermitidas);
 
                     console.log('Filtros ocupacao:', ocupacoesFilter);
+                    function processarLinha(row){
+                        row = row || {};
+                        console.log(row.saldoAnterior);
+
+                        // Normaliza valores das linhas para comparação (trim + lowercase)
+                        var rowOcup = normalizarOcupacao(row.ocupacao);
+                        var rowOper = (row.tipoOperacao || '').toString().trim().toLowerCase();
+                        var rowSet = (row.setor || '').toString().trim().toLowerCase();
+                        var rowSub = (row.subsetor || '').toString().trim().toLowerCase();
+
+                        if (
+                            (ocupacoesFilter.length > 0 && rowOcup !== '' && !ocupacoesFilter.includes(rowOcup)) ||
+                            (operacaoFilter.length > 0 && rowOper !== '' && !operacaoFilter.includes(rowOper)) ||
+                            (setorFilter.length > 0 && rowSet !== '' && !setorFilter.includes(rowSet)) ||
+                            (subSetorFilter.length > 0 && rowSub !== '' && !subSetorFilter.includes(rowSub))
+                        ) {
+                            return;
+                        }
+
+                        var saldoAnterior = horasParaMinutos(row.saldoAnterior !== undefined ? row.saldoAnterior : (row.totais ? row.totais.saldoAnterior : '00:00'));
+                        var saldoFinal = horasParaMinutos(row.saldoFinal !== undefined ? row.saldoFinal : (row.totais ? row.totais.saldoFinal : '00:00'));
+                        var indicador = '';
+                        if (saldoAnterior >= 0 && saldoFinal >= 0) {
+                            indicador = definirIndicador(saldoAnterior, saldoFinal);
+                        } else if (saldoAnterior >= 0 && saldoFinal <= 0) {
+                            indicador = definirIndicador(saldoAnterior, saldoFinal);
+                        } else if (saldoAnterior <= 0 && saldoFinal >= 0) {
+                            indicador = definirIndicador(saldoAnterior, saldoFinal);
+                        } else if (saldoAnterior <= 0 && saldoFinal <= 0) {
+                            indicador = definirIndicador(saldoAnterior, saldoFinal);
+                        } else {
+                            indicador = ' <i class=\"fa fa-minus\" style=\"color: gray;\"></i>';
+                        }
+                        console.log(row);
+                        {$linha}
+                        tabela.append(linha);
+                        var ultimaLinha = tabela.find('tr').last();
+                        if(ultimaLinha.length){
+                            ultimaLinha.attr('data-usuario-id', (row.idMotorista ?? row.enti_nb_id ?? row.user_nb_id ?? row.matricula ?? row.enti_tx_matricula ?? ''));
+                        }
+                        aplicarBuscaDropdown('busca_usuario');
+                        aplicarFiltroNomeUsuario();
+                    }
+
                     function carregarDados(urlArquivo){
                         $.ajax({
                             url: urlArquivo + '?v=' + new Date().getTime(),
@@ -286,51 +334,7 @@
                                 $.each(data, function(index, item){
                                     row[index] = item;
                                 });
-                                console.log(row.saldoAnterior);
-
-                                // Normaliza valores das linhas para comparação (trim + lowercase)
-                                var rowOcup = normalizarOcupacao(row.ocupacao);
-                                var rowOper = (row.tipoOperacao || '').toString().trim().toLowerCase();
-                                var rowSet = (row.setor || '').toString().trim().toLowerCase();
-                                var rowSub = (row.subsetor || '').toString().trim().toLowerCase();
-
-                                if (
-                                    (ocupacoesFilter.length > 0 && rowOcup !== '' && !ocupacoesFilter.includes(rowOcup)) ||
-                                    (operacaoFilter.length > 0 && rowOper !== '' && !operacaoFilter.includes(rowOper)) ||
-                                    (setorFilter.length > 0 && rowSet !== '' && !setorFilter.includes(rowSet)) ||
-                                    (subSetorFilter.length > 0 && rowSub !== '' && !subSetorFilter.includes(rowSub))
-                                ) {
-                                    return; // pula esta linha se qualquer filtro não permitir
-                                }
-
-                                var saldoAnterior = horasParaMinutos(row.saldoAnterior !== undefined ? row.saldoAnterior : row.totais.saldoAnterior);
-                                var saldoFinal = horasParaMinutos(row.saldoFinal !== undefined ? row.saldoFinal : row.totais.saldoFinal);
-                                var indicador = '';
-                                if (saldoAnterior >= 0 && saldoFinal >= 0) {
-                                    // Ambos os saldos são positivos
-                                    indicador = definirIndicador(saldoAnterior, saldoFinal);
-                                } else if (saldoAnterior >= 0 && saldoFinal <= 0) {
-                                    // Saldo anterior positivo e saldo final negativo
-                                    indicador = definirIndicador(saldoAnterior, saldoFinal);
-                                } else if (saldoAnterior <= 0 && saldoFinal >= 0) {
-                                    // Saldo anterior negativo e saldo final positivo
-                                    indicador = definirIndicador(saldoAnterior, saldoFinal);
-                                } else if (saldoAnterior <= 0 && saldoFinal <= 0) {
-                                    // Ambos os saldos são negativos
-                                    indicador = definirIndicador(saldoAnterior, saldoFinal);
-                                } else {
-                                    // Caso em que saldoAnterior é zero e saldoFinal é zero
-                                    indicador = ' <i class=\"fa fa-minus\" style=\"color: gray;\"></i>';
-                                }
-                                console.log(row);
-                                {$linha}
-                                tabela.append(linha);
-                                var ultimaLinha = tabela.find('tr').last();
-                                if(ultimaLinha.length){
-                                    ultimaLinha.attr('data-usuario-id', (row.idMotorista ?? row.enti_nb_id ?? row.user_nb_id ?? row.matricula ?? row.enti_tx_matricula ?? ''));
-                                }
-                                aplicarBuscaDropdown('busca_usuario');
-                                aplicarFiltroNomeUsuario();
+                                processarLinha(row);
                             },
                             error: function(){
                                 console.log('Erro ao carregar os dados.');
@@ -499,6 +503,7 @@
                     });
 
                     ".$carregarDados."
+                    ".$carregarFallbackEmpresas."
 
                     aplicarBuscaDropdown('busca_usuario');
                     aplicarFiltroNomeUsuario();
@@ -1346,6 +1351,7 @@ HTML;
             }else{
                 //Painel geral das empresas
                 $empresas = [];
+                $fallbackEmpresas = [];
                 $logoEmpresa = mysqli_fetch_assoc(query(
                     "SELECT empr_tx_logo FROM empresa
                     WHERE empr_tx_status = 'ativo'
@@ -1355,7 +1361,42 @@ HTML;
 
                 $logoEmpresa = $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/".$logoEmpresa;
 
-                
+                if(!is_file($path."/empresas.json")){
+                    $empresaFallbackQuery = "SELECT empr_nb_id, empr_tx_nome FROM empresa WHERE empr_tx_status = 'ativo'";
+                    if(!empty($empresaSelecionadas)){
+                        $empresaFallbackQuery .= " AND empr_nb_id IN (".implode(',', array_map('intval', $empresaSelecionadas)).")";
+                    }
+                    $empresaFallbackQuery .= " ORDER BY empr_tx_nome ASC";
+                    $resEmpresasFallback = query($empresaFallbackQuery);
+                    while($resEmpresasFallback && ($empresaFallback = mysqli_fetch_assoc($resEmpresasFallback))){
+                        $fallbackEmpresas[] = [
+                            "empr_nb_id" => (string)$empresaFallback["empr_nb_id"],
+                            "empr_tx_nome" => $empresaFallback["empr_tx_nome"],
+                            "percEndossado" => 0,
+                            "qtdMotoristas" => 0,
+                            "totais" => [
+                                "jornadaPrevista" => "00:00",
+                                "jornadaEfetiva" => "00:00",
+                                "HESemanal" => "00:00",
+                                "HESabado" => "00:00",
+                                "adicionalNoturno" => "00:00",
+                                "esperaIndenizada" => "00:00",
+                                "saldoAnterior" => "00:00",
+                                "saldoPeriodo" => "00:00",
+                                "saldoFinal" => "00:00"
+                            ]
+                        ];
+                    }
+                    if(!empty($fallbackEmpresas)){
+                        $encontrado = true;
+                        $dataInicioFallback = DateTime::createFromFormat("Y-m", $_POST["busca_dataMes"] ?? date("Y-m"));
+                        if($dataInicioFallback instanceof DateTime){
+                            $periodoRelatorio["dataInicio"] = $dataInicioFallback->format("d/m");
+                            $periodoRelatorio["dataFim"] = $dataInicioFallback->format("t/m");
+                        }
+                    }
+                }
+
                 if(is_dir($path) && is_file($path."/empresas.json")){
                     $encontrado = true;
                     $arquivoGeral = $path."/empresas.json";
