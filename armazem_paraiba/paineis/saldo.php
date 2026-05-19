@@ -132,16 +132,20 @@
                     }
                 }
 
-                function setAndSubmit(empresa){
+                function setAndSubmit(empresa, manterModoDetalhe){
                     document.myForm.acao.value = 'enviarForm()';
                     document.myForm.campoAcao.value = 'buscar';
-                    document.myForm.modoDetalheEmpresa.value = '';
                     if(empresa !== ''){
                         document.myForm.empresa.value = empresa;
                     } else if(document.myForm.empresaFiltro && document.myForm.empresaFiltro.value !== ''){
                         document.myForm.empresa.value = document.myForm.empresaFiltro.value;
                     }
                     copiarFiltrosAtuaisParaMyForm();
+                    if(manterModoDetalhe === true){
+                        document.myForm.modoDetalheEmpresa.value = '1';
+                    }else if(manterModoDetalhe === false){
+                        document.myForm.modoDetalheEmpresa.value = '';
+                    }
                     document.myForm.submit();
                 }
 
@@ -592,6 +596,7 @@
         }
 
         $modoDetalheEmpresaFiltro = !empty($_POST["modoDetalheEmpresa"]) && !empty($_POST["empresa"]);
+        $filtrosDetalheDesabilitados = !$modoDetalheEmpresaFiltro;
         $usuarioSelecionados = array_values(array_filter(array_map('trim', explode(',', (string)($_POST["busca_usuario"] ?? ""))), function($v){ return $v !== ''; }));
         $usuarioOpcoes = [];
         $empresaIdsUsuarioFiltro = [];
@@ -679,7 +684,7 @@
         $selectOcupacao = "<div class='col-sm-2 margin-bottom-5 campo-fit-content'>"
             ."<label>Ocupação</label>"
             ."<div class='filtro-compact' data-filter='busca_ocupacao' data-label='Ocupação' style='position:relative;'>"
-            ."<button type='button' class='btn btn-default btn-block js-filtro-toggle' style='display:flex;justify-content:space-between;align-items:center;'>"
+            ."<button type='button' class='btn btn-default btn-block js-filtro-toggle' " . ($filtrosDetalheDesabilitados ? "disabled='disabled' " : "") . "style='display:flex;justify-content:space-between;align-items:center;'>"
             ."<span class='filtro-label'>Ocupação".(count($ocupacaoSelecionadas) > 0 ? " (".count($ocupacaoSelecionadas).")" : "")."</span><span class='caret'></span></button>"
             ."<div class='filtro-dropdown-menu' style='display:none; position:absolute; left:0; right:0; z-index:1050; background:#fff; border:1px solid #d9d9d9; padding:8px; max-height:240px; overflow:auto;'>"
             ."<div style='margin-bottom:8px;'>"
@@ -690,7 +695,7 @@
         foreach($ocupacaoOpcoes as $ocupVal => $ocupLabel){
             $checked = in_array((string)$ocupVal, $ocupacaoSelecionadas, true) ? "checked" : "";
             $selectOcupacao .= "<label style='display:block;margin-bottom:6px;cursor:pointer;'>"
-                ."<input type='checkbox' class='js-filtro-checkbox' data-target='busca_ocupacao' value='".htmlspecialchars((string)$ocupVal, ENT_QUOTES, 'UTF-8')."' ".$checked." style='margin-right:6px;'>"
+                ."<input type='checkbox' class='js-filtro-checkbox' data-target='busca_ocupacao' value='".htmlspecialchars((string)$ocupVal, ENT_QUOTES, 'UTF-8')."' ".$checked." " . ($filtrosDetalheDesabilitados ? "disabled='disabled' " : "") . "style='margin-right:6px;'>"
                 .htmlspecialchars($ocupLabel, ENT_QUOTES, 'UTF-8')
                 ."</label>";
         }
@@ -705,7 +710,7 @@
         $selectOperacao = "<div class='col-sm-2 margin-bottom-5 campo-fit-content'>"
             ."<label>Cargo</label>"
             ."<div class='filtro-compact' data-filter='operacao' data-label='Cargo' style='position:relative;'>"
-            ."<button type='button' class='btn btn-default btn-block js-filtro-toggle' style='display:flex;justify-content:space-between;align-items:center;'>"
+            ."<button type='button' class='btn btn-default btn-block js-filtro-toggle' " . ($filtrosDetalheDesabilitados ? "disabled='disabled' " : "") . "style='display:flex;justify-content:space-between;align-items:center;'>"
             ."<span class='filtro-label'>Cargo".(count($operacaoSelecionadas) > 0 ? " (".count($operacaoSelecionadas).")" : "")."</span><span class='caret'></span></button>"
             ."<div class='filtro-dropdown-menu' style='display:none; position:absolute; left:0; right:0; z-index:1050; background:#fff; border:1px solid #d9d9d9; padding:8px; max-height:240px; overflow:auto;'>"
             ."<div style='margin-bottom:8px;'>"
@@ -716,7 +721,7 @@
         foreach($operacaoOpcoes as $operVal => $operLabel){
             $checked = in_array((string)$operVal, $operacaoSelecionadas, true) ? "checked" : "";
             $selectOperacao .= "<label style='display:block;margin-bottom:6px;cursor:pointer;'>"
-                ."<input type='checkbox' class='js-filtro-checkbox' data-target='operacao' value='".htmlspecialchars((string)$operVal, ENT_QUOTES, 'UTF-8')."' ".$checked." style='margin-right:6px;'>"
+                ."<input type='checkbox' class='js-filtro-checkbox' data-target='operacao' value='".htmlspecialchars((string)$operVal, ENT_QUOTES, 'UTF-8')."' ".$checked." " . ($filtrosDetalheDesabilitados ? "disabled='disabled' " : "") . "style='margin-right:6px;'>"
                 .htmlspecialchars($operLabel, ENT_QUOTES, 'UTF-8')
                 ."</label>";
         }
@@ -731,7 +736,7 @@
         $selectSetor = "<div class='col-sm-2 margin-bottom-5 campo-fit-content'>"
             ."<label>Setor</label>"
             ."<div class='filtro-compact' data-filter='busca_setor' data-label='Setor' style='position:relative;'>"
-            ."<button type='button' class='btn btn-default btn-block js-filtro-toggle' style='display:flex;justify-content:space-between;align-items:center;'>"
+            ."<button type='button' class='btn btn-default btn-block js-filtro-toggle' " . ($filtrosDetalheDesabilitados ? "disabled='disabled' " : "") . "style='display:flex;justify-content:space-between;align-items:center;'>"
             ."<span class='filtro-label'>Setor".(count($setorSelecionados) > 0 ? " (".count($setorSelecionados).")" : "")."</span><span class='caret'></span></button>"
             ."<div class='filtro-dropdown-menu' style='display:none; position:absolute; left:0; right:0; z-index:1050; background:#fff; border:1px solid #d9d9d9; padding:8px; max-height:240px; overflow:auto;'>"
             ."<div style='margin-bottom:8px;'>"
@@ -742,7 +747,7 @@
         foreach($setorOpcoes as $setorVal => $setorLabel){
             $checked = in_array((string)$setorVal, $setorSelecionados, true) ? "checked" : "";
             $selectSetor .= "<label style='display:block;margin-bottom:6px;cursor:pointer;'>"
-                ."<input type='checkbox' class='js-filtro-checkbox' data-target='busca_setor' value='".htmlspecialchars((string)$setorVal, ENT_QUOTES, 'UTF-8')."' ".$checked." style='margin-right:6px;'>"
+                ."<input type='checkbox' class='js-filtro-checkbox' data-target='busca_setor' value='".htmlspecialchars((string)$setorVal, ENT_QUOTES, 'UTF-8')."' ".$checked." " . ($filtrosDetalheDesabilitados ? "disabled='disabled' " : "") . "style='margin-right:6px;'>"
                 .htmlspecialchars($setorLabel, ENT_QUOTES, 'UTF-8')
                 ."</label>";
         }
@@ -761,7 +766,7 @@
             $selectSubsetor = "<div class='col-sm-2 margin-bottom-5 campo-fit-content'>"
                 ."<label>Subsetor</label>"
                 ."<div class='filtro-compact' data-filter='busca_subsetor' data-label='Subsetor' style='position:relative;'>"
-                ."<button type='button' class='btn btn-default btn-block js-filtro-toggle' style='display:flex;justify-content:space-between;align-items:center;'>"
+                ."<button type='button' class='btn btn-default btn-block js-filtro-toggle' " . ($filtrosDetalheDesabilitados ? "disabled='disabled' " : "") . "style='display:flex;justify-content:space-between;align-items:center;'>"
                 ."<span class='filtro-label'>Subsetor".(count($subsetorSelecionados) > 0 ? " (".count($subsetorSelecionados).")" : "")."</span><span class='caret'></span></button>"
                 ."<div class='filtro-dropdown-menu' style='display:none; position:absolute; left:0; right:0; z-index:1050; background:#fff; border:1px solid #d9d9d9; padding:8px; max-height:240px; overflow:auto;'>"
                 ."<div style='margin-bottom:8px;'>"
@@ -772,7 +777,7 @@
             foreach($subsetorOpcoes as $subsetorVal => $subsetorLabel){
                 $checked = in_array((string)$subsetorVal, $subsetorSelecionados, true) ? "checked" : "";
                 $selectSubsetor .= "<label style='display:block;margin-bottom:6px;cursor:pointer;'>"
-                    ."<input type='checkbox' class='js-filtro-checkbox' data-target='busca_subsetor' value='".htmlspecialchars((string)$subsetorVal, ENT_QUOTES, 'UTF-8')."' ".$checked." style='margin-right:6px;'>"
+                    ."<input type='checkbox' class='js-filtro-checkbox' data-target='busca_subsetor' value='".htmlspecialchars((string)$subsetorVal, ENT_QUOTES, 'UTF-8')."' ".$checked." " . ($filtrosDetalheDesabilitados ? "disabled='disabled' " : "") . "style='margin-right:6px;'>"
                     .htmlspecialchars($subsetorLabel, ENT_QUOTES, 'UTF-8')
                     ."</label>";
             }
@@ -835,7 +840,7 @@
 
         $botao_volta = "";
         if(!empty($_POST["empresa"])){
-            $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
+            $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\", false)'>Voltar</button>";
         }
         $botao_imprimir = "<button class='btn default' type='button' onclick='enviarDados()'>Imprimir</button>
         <script>
@@ -981,6 +986,7 @@
 
         echo abre_form();
         echo campo_hidden("reloadOnly", "");
+        echo campo_hidden("modoDetalheEmpresa", (!empty($_POST["modoDetalheEmpresa"]) ? "1" : ""));
         echo linha_form($campos);
         echo fecha_form($buttons);
         echo <<<'HTML'
