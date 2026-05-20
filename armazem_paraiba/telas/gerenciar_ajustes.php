@@ -82,8 +82,20 @@
 		if ($idSolicitacao <= 0) {
 			return [];
 		}
-		$res = query("SELECT s.*, e.enti_tx_nome AS motorista_nome, e.enti_tx_matricula AS motorista_matricula, e.enti_tx_cpf AS motorista_cpf, e.enti_tx_email AS motorista_email, m.macr_tx_nome, mo.moti_tx_nome, us.user_tx_nome AS solicitante_user_nome, ug.user_tx_nome AS superior_nome FROM solicitacoes_ajuste s JOIN entidade e ON s.id_motorista = e.enti_nb_id LEFT JOIN macroponto m ON s.id_macro = m.macr_nb_id LEFT JOIN motivo mo ON s.id_motivo = mo.moti_nb_id LEFT JOIN user us ON s.id_usuario_solicitante = us.user_nb_id LEFT JOIN user ug ON s.id_superior = ug.user_nb_id WHERE s.id = {$idSolicitacao} LIMIT 1");
-		return ($res instanceof mysqli_result) ? (mysqli_fetch_assoc($res) ?: []) : [];
+		$res = query("SELECT s.*, e.enti_tx_nome AS motorista_nome, e.enti_tx_matricula AS motorista_matricula, e.enti_tx_cpf AS motorista_cpf, e.enti_tx_email AS motorista_email, e.enti_tx_ocupacao, m.macr_tx_nome, mo.moti_tx_nome, us.user_tx_nome AS solicitante_user_nome, ug.user_tx_nome AS superior_nome FROM solicitacoes_ajuste s JOIN entidade e ON s.id_motorista = e.enti_nb_id LEFT JOIN macroponto m ON s.id_macro = m.macr_nb_id LEFT JOIN motivo mo ON s.id_motivo = mo.moti_nb_id LEFT JOIN user us ON s.id_usuario_solicitante = us.user_nb_id LEFT JOIN user ug ON s.id_superior = ug.user_nb_id WHERE s.id = {$idSolicitacao} LIMIT 1");
+		$resultado = ($res instanceof mysqli_result) ? (mysqli_fetch_assoc($res) ?: []) : [];
+		
+		// Converter motivo para terceirizados
+		if (!empty($resultado)) {
+			$ocupacaoNormalizada = strtolower(trim($resultado['enti_tx_ocupacao'] ?? ''));
+			if (in_array($ocupacaoNormalizada, ['terceirizado'], true) && isset($resultado['moti_tx_nome'])) {
+				if (preg_match('/ajuste\s+de\s+ponto/i', $resultado['moti_tx_nome'])) {
+					$resultado['moti_tx_nome'] = 'Ajuste de Jornada';
+				}
+			}
+		}
+		
+		return $resultado;
 	}
 
 	function ga_buscarEntidadePorUsuario(int $idUsuario): int {
