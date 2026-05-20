@@ -11,6 +11,73 @@
 
     require_once __DIR__."/funcoes_paineis.php";
     require __DIR__."/../funcoes_ponto.php";
+    require_once __DIR__."/../utils/Logger.php";
+
+    function registrar_bootstrap_local($mensagem, $contexto = []){
+        $agora = date('Y-m-d H:i:s');
+        $linha = $agora . ' ' . $mensagem . ' ' . json_encode($contexto, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL;
+        @file_put_contents(__DIR__ . '/../debug_log.txt', $linha, FILE_APPEND);
+        $logDir = __DIR__ . '/../logs';
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0755, true);
+        }
+        @file_put_contents($logDir . '/saldo_' . date('Y-m-d') . '.log', $linha, FILE_APPEND);
+    }
+
+    function registrar_erro_php_local($errno, $errstr, $errfile, $errline){
+        registrar_bootstrap_local('PHP_ERROR', [
+            'errno' => $errno,
+            'message' => $errstr,
+            'file' => $errfile,
+            'line' => $errline,
+            'usuario' => $_SESSION['user_nb_id'] ?? '',
+            'uri' => $_SERVER['REQUEST_URI'] ?? ''
+        ]);
+        return false;
+    }
+
+    function registrar_shutdown_local(){
+        $lastError = error_get_last();
+        if(!empty($lastError)){
+            $tiposIgnorados = [E_NOTICE, E_USER_NOTICE, E_DEPRECATED, E_USER_DEPRECATED];
+            if(!in_array($lastError['type'], $tiposIgnorados, true)){
+                registrar_bootstrap_local('PHP_SHUTDOWN', [
+                    'type' => $lastError['type'],
+                    'message' => $lastError['message'],
+                    'file' => $lastError['file'],
+                    'line' => $lastError['line'],
+                    'usuario' => $_SESSION['user_nb_id'] ?? '',
+                    'uri' => $_SERVER['REQUEST_URI'] ?? ''
+                ]);
+            }
+        }
+    }
+
+    // Wrapper seguro para logging: evita erros se a classe Logger não existir
+    function safe_log($level, $message, $context = []){
+        if(class_exists('Logger') && method_exists('Logger', 'log')){
+            try{
+                Logger::log($level, $message, $context);
+            }catch(Throwable $e){
+                // Silencia qualquer problema de logging
+            }
+        }
+    }
+
+    // Bootstrap de log: força criação do arquivo diário assim que a página é carregada
+    set_error_handler('registrar_erro_php_local');
+    register_shutdown_function('registrar_shutdown_local');
+    registrar_bootstrap_local('saldo.php carregado', [
+        'usuario' => $_SESSION['user_nb_id'] ?? '',
+        'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
+        'uri' => $_SERVER['REQUEST_URI'] ?? ''
+    ]);
+    safe_log('INFO', 'saldo.php carregado', [
+        'log_file' => class_exists('Logger') && method_exists('Logger', 'getLogFile') ? Logger::getLogFile() : '',
+        'usuario' => $_SESSION['user_nb_id'] ?? '',
+        'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
+        'uri' => $_SERVER['REQUEST_URI'] ?? ''
+    ]);
 
     function enviarForm(){
         $_POST["acao"] = $_POST["campoAcao"];
@@ -535,6 +602,17 @@
     function index(){
         include __DIR__.'/../check_permission.php';
         verificaPermissao('/paineis/saldo.php');
+        registrar_bootstrap_local('index() iniciado', [
+            'acao' => $_POST['acao'] ?? '',
+            'mes' => $_POST['busca_dataMes'] ?? date('Y-m'),
+            'usuario' => $_SESSION['user_nb_id'] ?? ''
+        ]);
+        safe_log('INFO', 'saldo.php aberto', [
+            'acao' => $_POST['acao'] ?? '',
+            'mes' => $_POST['busca_dataMes'] ?? date('Y-m'),
+            'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
+            'usuario' => $_SESSION['user_nb_id'] ?? ''
+        ]);
 
         $empresaIds = []; // Inicializa para uso posterior
 
@@ -623,7 +701,7 @@
                    AND e.enti_nb_empresa IN (".implode(',', $empresaIdsUsuarioFiltro).")
                  ORDER BY COALESCE(NULLIF(u.user_tx_nome, ''), e.enti_tx_nome, u.user_tx_login, e.enti_tx_matricula) ASC"
             );
-            while($resUsuariosFiltro && ($usuarioRow = mysqli_fetch_assoc($resUsuariosFiltro))){
+                while($resUsuariosFiltro && ($usuarioRow = mysqli_fetch_assoc($resUsuariosFiltro))){
                 $usuarioId = (string)intval($usuarioRow["enti_nb_id"]);
                 $usuarioNome = trim((string)($usuarioRow["user_tx_nome"] ?? ""));
                 if($usuarioNome === ''){
@@ -636,6 +714,11 @@
                 if($usuarioId !== '' && $usuarioNome !== ''){
                     $usuarioOpcoes[$usuarioId] = $usuarioNome;
                 }
+                // Log quantidade de usuários encontrados para filtro
+                safe_log('DEBUG', 'Usuarios filtro carregados', [
+                    'count' => count($usuarioOpcoes),
+                    'usuario_atual' => $_SESSION['user_nb_id'] ?? ($_SESSION['user_tx_login'] ?? '')
+                ]);
             }
         }
 
@@ -644,6 +727,7 @@
         while($empresaRow = mysqli_fetch_assoc($resEmpresasFiltro)){
             $empresaOpcoes[(string)intval($empresaRow["empr_nb_id"])] = $empresaRow["empr_tx_nome"];
         }
+        safe_log('DEBUG', 'Empresas filtro carregadas', ['count' => count($empresaOpcoes), 'usuario_atual' => $_SESSION['user_nb_id'] ?? ($_SESSION['user_tx_login'] ?? '')]);
 
         $empresaLabelBotao = "Empresa";
         if(count($empresaSelecionadas) === 1){
@@ -712,6 +796,7 @@
         while($operacaoRow = mysqli_fetch_assoc($resOperacaoFiltro)){
             $operacaoOpcoes[(string)intval($operacaoRow["oper_nb_id"])] = $operacaoRow["oper_tx_nome"];
         }
+        safe_log('DEBUG', 'Operacoes carregadas', ['count' => count($operacaoOpcoes), 'usuario_atual' => $_SESSION['user_nb_id'] ?? ($_SESSION['user_tx_login'] ?? '')]);
         $selectOperacao = "<div class='col-sm-2 margin-bottom-5 campo-fit-content'>"
             ."<label>Cargo</label>"
             ."<div class='filtro-compact' data-filter='operacao' data-label='Cargo' style='position:relative;'>"
@@ -738,6 +823,7 @@
         while($setorRow = mysqli_fetch_assoc($resSetorFiltro)){
             $setorOpcoes[(string)intval($setorRow["grup_nb_id"])] = $setorRow["grup_tx_nome"];
         }
+        safe_log('DEBUG', 'Setores carregados', ['count' => count($setorOpcoes), 'usuario_atual' => $_SESSION['user_nb_id'] ?? ($_SESSION['user_tx_login'] ?? '')]);
         $selectSetor = "<div class='col-sm-2 margin-bottom-5 campo-fit-content'>"
             ."<label>Setor</label>"
             ."<div class='filtro-compact' data-filter='busca_setor' data-label='Setor' style='position:relative;'>"
@@ -1196,6 +1282,8 @@ HTML;
         
         
         if(!empty($_POST["acao"]) && $_POST["acao"] == "buscar" && empty($_POST["reloadOnly"])){
+            // Registro não invasivo do início da busca
+            safe_log('INFO', 'Busca iniciada', ['mes' => $_POST['busca_dataMes'] ?? '', 'empresa' => $_POST['empresa'] ?? '']);
             $path .= "/".$_POST["busca_dataMes"];
 
             $modoDetalheEmpresa = !empty($_POST["modoDetalheEmpresa"]) && !empty($_POST["empresa"]);
@@ -1278,6 +1366,12 @@ HTML;
                         }
                     }
                     $pastaSaldosEmpresa->close();
+                // Log resumo dos arquivos encontrados para detalhe de empresa
+                safe_log('DEBUG', 'Arquivos de detalhe coletados', [
+                    'arquivos_count' => count($arquivos),
+                    'empresas' => $empresaNomes,
+                    'usuario_atual' => $_SESSION['user_nb_id'] ?? ($_SESSION['user_tx_login'] ?? '')
+                ]);
                 }
 
                 if($encontrado){
@@ -1362,11 +1456,15 @@ HTML;
                 $logoEmpresa = $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/".$logoEmpresa;
 
                 if(!is_file($path."/empresas.json")){
+                    // Loga ausência do arquivo e tenta gerar (comportamento original)
+                    safe_log('WARNING', 'empresas.json nao existe', ['path' => $path]);
                     // Tenta gerar os dados reais chamando criar_relatorio_saldo()
                     $dataMesRelatorio = DateTime::createFromFormat("Y-m", $_POST["busca_dataMes"] ?? date("Y-m"));
                     if($dataMesRelatorio instanceof DateTime){
+                        safe_log('INFO', 'Gerando relatorio', ['mes' => $_POST["busca_dataMes"] ?? '']);
                         $_POST["busca_dataMes"] = $dataMesRelatorio->format("Y-m-d H:i:s");
                         criar_relatorio_saldo();
+                        safe_log('INFO', 'Relatorio gerado', []);
                         unset($_POST["busca_dataMes"]);
                     }
                     
@@ -1399,6 +1497,12 @@ HTML;
                         }
                         if(!empty($fallbackEmpresas)){
                             $encontrado = true;
+                            // Log detalhes do fallback (empresas com zeros)
+                            safe_log('INFO', 'Fallback empresas criado', [
+                                'count' => count($fallbackEmpresas),
+                                'ids' => array_values(array_map(function($e){ return $e['empr_nb_id']; }, $fallbackEmpresas)),
+                                'usuario_atual' => $_SESSION['user_nb_id'] ?? ($_SESSION['user_tx_login'] ?? '')
+                            ]);
                             $dataInicioFallback = DateTime::createFromFormat("Y-m", $_POST["busca_dataMes"] ?? date("Y-m"));
                             if($dataInicioFallback instanceof DateTime){
                                 $periodoRelatorio["dataInicio"] = $dataInicioFallback->format("d/m");
@@ -1409,6 +1513,8 @@ HTML;
                 }
 
                 if(is_dir($path) && is_file($path."/empresas.json")){
+                    // Log não invasivo indicando que o arquivo geral foi encontrado
+                    safe_log('INFO', 'empresas.json encontrado - processando', ['path' => $path]);
                     $encontrado = true;
                     $arquivoGeral = $path."/empresas.json";
 
@@ -1478,6 +1584,12 @@ HTML;
                             }
                         }
                         $pastaSaldos->close();
+                    // Log resumo dos arquivos e empresas carregadas no modo geral
+                    safe_log('DEBUG', 'Empresas e arquivos carregados', [
+                        'arquivos_count' => count($arquivos),
+                        'empresas_count' => count($empresas),
+                        'usuario_atual' => $_SESSION['user_nb_id'] ?? ($_SESSION['user_tx_login'] ?? '')
+                    ]);
                     }
                     
                     foreach($empresas as $empresa){
@@ -1715,6 +1827,7 @@ HTML;
             ;
         }else{
             if(!empty($_POST["acao"]) && $_POST["acao"] == "buscar"){
+                safe_log('ERROR', 'Nenhum dado encontrado', ['mes' => $_POST['busca_dataMes'] ?? '', 'empresa' => $_POST['empresa'] ?? '']);
                 set_status("Não possui dados desse mês");
                 echo "<script>alert('Não Possui dados desse mês')</script>";
             }
