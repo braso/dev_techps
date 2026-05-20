@@ -59,7 +59,14 @@
             try{
                 Logger::log($level, $message, $context);
             }catch(Throwable $e){
-                // Silencia qualquer problema de logging
+                registrar_bootstrap_local('LOGGER_FALHOU', [
+                    'level' => $level,
+                    'message' => $message,
+                    'erro' => $e->getMessage(),
+                    'arquivo' => $e->getFile(),
+                    'linha' => $e->getLine(),
+                ]);
+                @error_log('LOGGER_FALHOU: ' . $e->getMessage());
             }
         }
     }
