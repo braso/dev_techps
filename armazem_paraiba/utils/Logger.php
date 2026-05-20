@@ -6,6 +6,7 @@
  */
 class Logger {
     private static $logDir = __DIR__ . '/../logs';
+    private static $fallbackLogFile = __DIR__ . '/../debug_log.txt';
     private static $maxFileSize = 5242880; // 5MB
     private static $logFile = null;
 
@@ -80,16 +81,18 @@ class Logger {
                 'context'   => $context
             ];
 
+            $entry['logFile'] = self::$logFile;
             $json = json_encode($entry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             $written = @file_put_contents(self::$logFile, $json . "\n", FILE_APPEND);
-            if($written === false){
+            if ($written === false) {
                 @touch(self::$logFile);
                 $written = @file_put_contents(self::$logFile, $json . "\n", FILE_APPEND);
             }
-            if($written === false){
+            if ($written === false && !empty(self::$fallbackLogFile)) {
                 @file_put_contents(self::$fallbackLogFile, $json . "\n", FILE_APPEND);
+                @error_log($json . "\n", 3, self::$fallbackLogFile);
             }
-            if($written === false){
+            if ($written === false) {
                 error_log('Logger failed to write file: ' . self::$logFile);
             }
         } catch (Throwable $e) {
