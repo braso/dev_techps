@@ -365,6 +365,7 @@
                     console.log('Filtros ocupacao:', ocupacoesFilter);
                     function processarLinha(row){
                         row = row || {};
+                        row.totais = row.totais || {};
                         console.log(row.saldoAnterior);
 
                         // Normaliza valores das linhas para comparação (trim + lowercase)
@@ -382,8 +383,8 @@
                             return;
                         }
 
-                        var saldoAnterior = horasParaMinutos(row.saldoAnterior !== undefined ? row.saldoAnterior : (row.totais ? row.totais.saldoAnterior : '00:00'));
-                        var saldoFinal = horasParaMinutos(row.saldoFinal !== undefined ? row.saldoFinal : (row.totais ? row.totais.saldoFinal : '00:00'));
+                        var saldoAnterior = horasParaMinutos(row.saldoAnterior !== undefined ? row.saldoAnterior : (row.totais.saldoAnterior || '00:00'));
+                        var saldoFinal = horasParaMinutos(row.saldoFinal !== undefined ? row.saldoFinal : (row.totais.saldoFinal || '00:00'));
                         var indicador = '';
                         if (saldoAnterior >= 0 && saldoFinal >= 0) {
                             indicador = definirIndicador(saldoAnterior, saldoFinal);
@@ -438,6 +439,9 @@
                     }
                     // Função para conversão de Horas para Minutos
                     function horasParaMinutos(horas) {
+                        if (!horas || typeof horas !== 'string' || horas.indexOf(':') === -1) {
+                            return 0;
+                        }
                         var partes = horas.split(':');
                         var horasNumeros = parseInt(partes[0], 10);  // Horas (pode ser positivo ou negativo)
                         var minutos = parseInt(partes[1], 10);       // Minutos
@@ -1311,7 +1315,8 @@ HTML;
                 }
 
                 $normalizarTxt = function($valor){
-                    return mb_strtolower(trim((string)$valor));
+                    $txt = trim((string)$valor);
+                    return function_exists('mb_strtolower') ? mb_strtolower($txt) : strtolower($txt);
                 };
                 $normalizarOcupacao = function($ocupacao) use ($normalizarTxt){
                     $txt = $normalizarTxt($ocupacao);
@@ -1473,17 +1478,7 @@ HTML;
                 if(!is_file($path."/empresas.json")){
                     // Loga ausência do arquivo e tenta gerar (comportamento original)
                     safe_log('WARNING', 'empresas.json nao existe', ['path' => $path]);
-                    // Tenta gerar os dados reais chamando criar_relatorio_saldo()
-                    $dataMesRelatorio = DateTime::createFromFormat("Y-m", $_POST["busca_dataMes"] ?? date("Y-m"));
-                    if($dataMesRelatorio instanceof DateTime){
-                        safe_log('INFO', 'Gerando relatorio', ['mes' => $_POST["busca_dataMes"] ?? '']);
-                        $_POST["busca_dataMes"] = $dataMesRelatorio->format("Y-m-d H:i:s");
-                        criar_relatorio_saldo();
-                        safe_log('INFO', 'Relatorio gerado', []);
-                        unset($_POST["busca_dataMes"]);
-                    }
-                    
-                    // Se após gerar ainda não existe, usa fallback com zeros
+                    // Mantém fluxo estável: se não existe, segue para fallback com zeros.
                     if(!is_file($path."/empresas.json")){
                         $empresaFallbackQuery = "SELECT empr_nb_id, empr_tx_nome FROM empresa WHERE empr_tx_status = 'ativo'";
                         if(!empty($empresaSelecionadas)){
