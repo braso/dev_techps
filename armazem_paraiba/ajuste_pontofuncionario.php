@@ -636,9 +636,43 @@
 
 		}
 
-		$rows[] = array_values(array_merge(["","","","","","","<b>TOTAL</b>"],$totalResumo));
+		$rows[] = array_values(array_merge(["","","","","","","<b>TOTAL</b>"], array_merge(array_slice($totalResumo, 0, -2), ["", ""])));
 
-		return montarTabelaPonto($cabecalho,$rows);
+		// Gerar tabela base
+		$tabelaHtml = montarTabelaPonto($cabecalho,$rows);
+
+		// Ocultar colunas para usuários terceirizados com CSS
+		$rotulos = apf_getRotulos();
+		if ($rotulos['ehTerceirizado']) {
+			// Índices das colunas a ocultar: INÍCIO REFEIÇÃO(4), FIM REFEIÇÃO(5), REFEIÇÃO(7), DESCANSO(8), JORNADA(9), INTERSTÍCIO(12), H.E. %(13,14), ADICIONAL NOT.(15)
+			// Usando nth-child CSS (1-indexed): 5, 6, 8, 9, 10, 13, 14, 15, 16
+			$cssOcultar = "
+			<style>
+				.tabela-espelho-ponto th:nth-child(5),
+				.tabela-espelho-ponto th:nth-child(6),
+				.tabela-espelho-ponto th:nth-child(8),
+				.tabela-espelho-ponto th:nth-child(9),
+				.tabela-espelho-ponto th:nth-child(10),
+				.tabela-espelho-ponto th:nth-child(13),
+				.tabela-espelho-ponto th:nth-child(14),
+				.tabela-espelho-ponto th:nth-child(15),
+				.tabela-espelho-ponto th:nth-child(16),
+				.tabela-espelho-ponto td:nth-child(5),
+				.tabela-espelho-ponto td:nth-child(6),
+				.tabela-espelho-ponto td:nth-child(8),
+				.tabela-espelho-ponto td:nth-child(9),
+				.tabela-espelho-ponto td:nth-child(10),
+				.tabela-espelho-ponto td:nth-child(13),
+				.tabela-espelho-ponto td:nth-child(14),
+				.tabela-espelho-ponto td:nth-child(15),
+				.tabela-espelho-ponto td:nth-child(16) {
+					display: none;
+				}
+			</style>";
+			$tabelaHtml = $cssOcultar . $tabelaHtml;
+		}
+
+		return $tabelaHtml;
 
 	}
 
