@@ -58,3 +58,6 @@ TEST_2026-05-20 01:08:23_6a0d098748455
 2026-05-19 22:37:36 index() iniciado {"acao":"buscar","mes":"2026-05","usuario":"141"}
 2026-05-19 22:37:46 index() iniciado {"acao":"buscar","mes":"2026-05","usuario":"141"}
 2026-05-19 22:37:51 index() iniciado {"acao":"buscar","mes":"2026-05","usuario":"141"}
+2026-05-19 22:43:35 index() iniciado {"acao":"","mes":"2026-05","usuario":"141"}
+2026-05-19 22:43:37 index() iniciado {"acao":"buscar","mes":"2026-05","usuario":"141"}
+2026-05-19 22:44:36 index() iniciado {"acao":"buscar","mes":"2026-05","usuario":"141"}
