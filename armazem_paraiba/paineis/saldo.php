@@ -1478,8 +1478,119 @@ HTML;
                 if(!is_file($path."/empresas.json")){
                     // Loga ausência do arquivo e tenta gerar (comportamento original)
                     safe_log('WARNING', 'empresas.json nao existe', ['path' => $path]);
-                    // Mantém fluxo estável: se não existe, segue para fallback com zeros.
+                    // Se o arquivo geral não existir, tenta montar a grade com JSONs reais por empresa.
                     if(!is_file($path."/empresas.json")){
+                        $latestMTimeFallback = 0;
+                        $periodoRelatorioBrutoFallback = null;
+
+                        if(!empty($empresaSelecionadas)){
+                            foreach($empresaSelecionadas as $empresaIdSelecionada){
+                                $empresaIdSelecionada = (string)intval($empresaIdSelecionada);
+                                if($empresaIdSelecionada === '' || $empresaIdSelecionada === '0'){
+                                    continue;
+                                }
+                                $arquivoEmpresa = $path."/".$empresaIdSelecionada."/empresa_".$empresaIdSelecionada.".json";
+                                if(!is_file($arquivoEmpresa)){
+                                    continue;
+                                }
+
+                                $jsonEmpresa = json_decode(file_get_contents($arquivoEmpresa), true);
+                                if(empty($jsonEmpresa) || empty($jsonEmpresa["totais"])){
+                                    continue;
+                                }
+
+                                $arquivos[] = $arquivoEmpresa;
+                                $empresas[] = $jsonEmpresa;
+                                foreach($totais as $key => $value){
+                                    $totais[$key] = operarHorarios([$totais[$key], $jsonEmpresa["totais"][$key] ?? "00:00"], "+");
+                                }
+
+                                $mtime = filemtime($arquivoEmpresa);
+                                if($mtime > $latestMTimeFallback){
+                                    $latestMTimeFallback = $mtime;
+                                }
+                                if($periodoRelatorioBrutoFallback === null && !empty($jsonEmpresa["dataInicio"]) && !empty($jsonEmpresa["dataFim"])){
+                                    $periodoRelatorioBrutoFallback = [
+                                        "dataInicio" => $jsonEmpresa["dataInicio"],
+                                        "dataFim" => $jsonEmpresa["dataFim"]
+                                    ];
+                                }
+                            }
+                        }elseif(is_dir($path)){
+                            $pastaSaldosFallback = dir($path);
+                            while($dirEmpresa = $pastaSaldosFallback->read()){
+                                if(empty($dirEmpresa) || in_array($dirEmpresa, [".", ".."], true) || !ctype_digit((string)$dirEmpresa)){
+                                    continue;
+                                }
+                                $arquivoEmpresa = $path."/".$dirEmpresa."/empresa_".$dirEmpresa.".json";
+                                if(!is_file($arquivoEmpresa)){
+                                    continue;
+                                }
+
+                                $jsonEmpresa = json_decode(file_get_contents($arquivoEmpresa), true);
+                                if(empty($jsonEmpresa) || empty($jsonEmpresa["totais"])){
+                                    continue;
+                                }
+
+                                $arquivos[] = $arquivoEmpresa;
+                                $empresas[] = $jsonEmpresa;
+                                foreach($totais as $key => $value){
+                                    $totais[$key] = operarHorarios([$totais[$key], $jsonEmpresa["totais"][$key] ?? "00:00"], "+");
+                                }
+
+                                $mtime = filemtime($arquivoEmpresa);
+                                if($mtime > $latestMTimeFallback){
+                                    $latestMTimeFallback = $mtime;
+                                }
+                                if($periodoRelatorioBrutoFallback === null && !empty($jsonEmpresa["dataInicio"]) && !empty($jsonEmpresa["dataFim"])){
+                                    $periodoRelatorioBrutoFallback = [
+                                        "dataInicio" => $jsonEmpresa["dataInicio"],
+                                        "dataFim" => $jsonEmpresa["dataFim"]
+                                    ];
+                                }
+                            }
+                            $pastaSaldosFallback->close();
+                        }
+
+                        if(!empty($empresas)){
+                            $encontrado = true;
+                            $dataEmissao = "Atualizado em: ".($latestMTimeFallback > 0 ? date("d/m/Y H:i", $latestMTimeFallback) : "");
+
+                            if($periodoRelatorioBrutoFallback !== null){
+                                $periodoRelatorio["dataInicio"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorioBrutoFallback["dataInicio"])->format("d/m");
+                                $periodoRelatorio["dataFim"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorioBrutoFallback["dataFim"])->format("d/m");
+                            }
+
+                            foreach($empresas as $empresa){
+                                $saldoFinalEmpresa = $empresa["totais"]["saldoFinal"] ?? "00:00";
+                                if($saldoFinalEmpresa === "00:00"){
+                                    $contagemSaldos["meta"]++;
+                                }elseif(!empty($saldoFinalEmpresa) && $saldoFinalEmpresa[0] == "-"){
+                                    $contagemSaldos["negativos"]++;
+                                }else{
+                                    $contagemSaldos["positivos"]++;
+                                }
+
+                                $percEndossadoEmpresa = $empresa["percEndossado"] ?? 0;
+                                if ($percEndossadoEmpresa === 1 || $percEndossadoEmpresa === "1") {
+                                    $contagemEndossos["E"]++;
+                                }elseif($percEndossadoEmpresa === 0 || $percEndossadoEmpresa === "0"){
+                                    $contagemEndossos["N"]++;
+                                }else{
+                                    $contagemEndossos["EP"]++;
+                                }
+                            }
+
+                            safe_log('INFO', 'Empresas reais carregadas sem empresas.json', [
+                                'count' => count($empresas),
+                                'arquivos_count' => count($arquivos),
+                                'path' => $path,
+                                'usuario_atual' => $_SESSION['user_nb_id'] ?? ($_SESSION['user_tx_login'] ?? '')
+                            ]);
+                        }
+
+                        // Se não houver JSON real, usa fallback com zeros.
+                        if(empty($empresas)){
                         $empresaFallbackQuery = "SELECT empr_nb_id, empr_tx_nome FROM empresa WHERE empr_tx_status = 'ativo'";
                         if(!empty($empresaSelecionadas)){
                             $empresaFallbackQuery .= " AND empr_nb_id IN (".implode(',', array_map('intval', $empresaSelecionadas)).")";
@@ -1518,6 +1629,7 @@ HTML;
                                 $periodoRelatorio["dataInicio"] = $dataInicioFallback->format("d/m");
                                 $periodoRelatorio["dataFim"] = $dataInicioFallback->format("t/m");
                             }
+                        }
                         }
                     }
                 }
