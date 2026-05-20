@@ -67,16 +67,24 @@
     // Bootstrap de log: força criação do arquivo diário assim que a página é carregada
     set_error_handler('registrar_erro_php_local');
     register_shutdown_function('registrar_shutdown_local');
+    
+    // Diagnóstico de caminhos de log
     registrar_bootstrap_local('saldo.php carregado', [
         'usuario' => $_SESSION['user_nb_id'] ?? '',
         'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
-        'uri' => $_SERVER['REQUEST_URI'] ?? ''
+        'uri' => $_SERVER['REQUEST_URI'] ?? '',
+        'cwd' => getcwd(),
+        'php_user' => get_current_user(),
+        'pid' => getmypid(),
     ]);
+    
     safe_log('INFO', 'saldo.php carregado', [
         'log_file' => class_exists('Logger') && method_exists('Logger', 'getLogFile') ? Logger::getLogFile() : '',
         'usuario' => $_SESSION['user_nb_id'] ?? '',
         'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
-        'uri' => $_SERVER['REQUEST_URI'] ?? ''
+        'uri' => $_SERVER['REQUEST_URI'] ?? '',
+        'php_version' => phpversion(),
+        'php_user' => get_current_user(),
     ]);
 
     function enviarForm(){

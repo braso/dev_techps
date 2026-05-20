@@ -7,14 +7,24 @@
 class Logger {
     private static $logDir = __DIR__ . '/../logs';
     private static $fallbackLogFile = __DIR__ . '/../debug_log.txt';
+    private static $diagnosticsFile = __DIR__ . '/../logger_diagnostics.txt';
     private static $maxFileSize = 5242880; // 5MB
     private static $logFile = null;
+    private static $initialized = false;
+    private static $diagnostics = [];
 
     /**
      * Inicializa o diretório de logs
      */
     private static function initialize() {
+        if (self::$initialized) {
+            return;
+        }
+        
         $today = date('Y-m-d');
+        self::$diagnostics['start_time'] = date('Y-m-d H:i:s');
+        self::$diagnostics['attempts'] = [];
+        
         $candidates = [
             [
                 'dir' => __DIR__ . '/../logs',
@@ -30,30 +40,69 @@ class Logger {
             ],
         ];
 
-        foreach ($candidates as $candidate) {
+        foreach ($candidates as $idx => $candidate) {
+            $attempt = [
+                'index' => $idx,
+                'dir' => $candidate['dir'],
+                'file' => $candidate['file'],
+                'is_dir' => is_dir($candidate['dir']),
+                'is_writable' => false,
+                'mkdir_attempted' => false,
+                'mkdir_result' => false,
+                'selected' => false,
+            ];
+            
             if (!is_dir($candidate['dir'])) {
-                @mkdir($candidate['dir'], 0755, true);
+                $attempt['mkdir_attempted'] = true;
+                $attempt['mkdir_result'] = @mkdir($candidate['dir'], 0755, true);
             }
 
             if (is_dir($candidate['dir']) && is_writable($candidate['dir'])) {
+                $attempt['is_writable'] = true;
                 self::$logDir = $candidate['dir'];
                 self::$logFile = $candidate['dir'] . DIRECTORY_SEPARATOR . $candidate['file'];
-                if (!file_exists(self::$logFile)) {
-                    @touch(self::$logFile);
-                }
+                @touch(self::$logFile);
                 if (file_exists(self::$logFile)) {
+                    $attempt['selected'] = true;
+                    self::$diagnostics['attempts'][] = $attempt;
+                    self::$diagnostics['selected_path'] = self::$logFile;
+                    self::$initialized = true;
+                    self::writeDiagnostics();
                     return;
                 }
             }
+            self::$diagnostics['attempts'][] = $attempt;
         }
 
         // Último recurso: diretório temporário padrão
-        self::$logDir = sys_get_temp_dir();
-        self::$logFile = self::$logDir . DIRECTORY_SEPARATOR . 'saldo_' . $today . '.log';
+        $tempPath = sys_get_temp_dir();
+        self::$logDir = $tempPath;
+        self::$logFile = $tempPath . DIRECTORY_SEPARATOR . 'saldo_' . $today . '.log';
         @touch(self::$logFile);
+        self::$diagnostics['selected_path'] = self::$logFile;
+        self::$diagnostics['fallback_to_temp'] = true;
+        self::$initialized = true;
+        
         if (!file_exists(self::$logFile)) {
             error_log('Logger failed to initialize any writable log file');
         }
+        
+        self::writeDiagnostics();
+    }
+    
+    /**
+     * Grava diagnostics em arquivo separado
+     */
+    private static function writeDiagnostics() {
+        $diagContent = "=== LOGGER DIAGNOSTICS ===\n";
+        $diagContent .= "Generated: " . date('Y-m-d H:i:s') . "\n";
+        $diagContent .= "PHP Version: " . phpversion() . "\n";
+        $diagContent .= "Current User: " . get_current_user() . "\n";
+        $diagContent .= "PID: " . getmypid() . "\n";
+        $diagContent .= json_encode(self::$diagnostics, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
+        $diagContent .= "=== END ===\n\n";
+        
+        @file_put_contents(self::$diagnosticsFile, $diagContent, FILE_APPEND);
     }
 
     /**
