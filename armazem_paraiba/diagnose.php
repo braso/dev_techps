@@ -108,6 +108,42 @@ foreach($writeTests as $nome => $arquivo){
     }
 }
 
+echo "\n=== TESTE DO LOGGER REAL ===\n";
+$loggerFile = __DIR__ . '/utils/Logger.php';
+echo "Logger path: $loggerFile\n";
+
+if(file_exists($loggerFile)){
+    require_once $loggerFile;
+    echo "Logger.php: ENCONTRADO\n";
+    if(class_exists('Logger')){
+        echo "Classe Logger: OK\n";
+        try {
+            Logger::info('diagnose_logger_test', [
+                'source' => 'diagnose.php',
+                'timestamp' => date('Y-m-d H:i:s')
+            ]);
+            $selectedLog = method_exists('Logger', 'getLogFile') ? Logger::getLogFile() : '(metodo getLogFile ausente)';
+            echo "Logger::info(): OK\n";
+            echo "Logger selected file: $selectedLog\n";
+            if(is_string($selectedLog) && file_exists($selectedLog)){
+                echo "Arquivo do Logger existe: SIM\n";
+                echo "Size: " . filesize($selectedLog) . " bytes\n";
+            } else {
+                echo "Arquivo do Logger existe: NÃO\n";
+            }
+        } catch (Throwable $e) {
+            echo "Logger::info(): FALHOU\n";
+            echo "Erro: " . $e->getMessage() . "\n";
+            echo "Arquivo: " . $e->getFile() . "\n";
+            echo "Linha: " . $e->getLine() . "\n";
+        }
+    } else {
+        echo "Classe Logger: NÃO ENCONTRADA\n";
+    }
+} else {
+    echo "Logger.php: NÃO ENCONTRADO\n";
+}
+
 echo "\n=== TESTE COM $_SESSION ===\n";
 session_start();
 echo "SESSION_ID: " . session_id() . "\n";
