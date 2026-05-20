@@ -44,3 +44,5 @@
 2026-05-19 21:04:50 index() iniciado {"acao":"","mes":"2026-05","usuario":"141"}
 2026-05-19 21:04:53 index() iniciado {"acao":"buscar","mes":"2026-05","usuario":"141"}
 2026-05-19 21:04:59 index() iniciado {"acao":"buscar","mes":"2026-05","usuario":"141"}
+2026-05-19 21:41:14 index() iniciado {"acao":"","mes":"2026-05","usuario":"141"}
+2026-05-19 21:41:16 index() iniciado {"acao":"buscar","mes":"2026-05","usuario":"141"}
