@@ -37,8 +37,8 @@
 		$rotulos = [
 			"ehTerceirizado" => $ehTerceirizado,
 			"modulo" => $ehTerceirizado ? "Produção" : "Ponto",
-			"funcionario" => $ehTerceirizado ? "Médico" : "Funcionário",
-			"funcionarioPlural" => $ehTerceirizado ? "Médico" : "Funcionários"
+			"funcionario" => $ehTerceirizado ? "Nome" : "Funcionário",
+			"funcionarioPlural" => $ehTerceirizado ? "Nome" : "Funcionários"
 		];
 
 		return $rotulos;

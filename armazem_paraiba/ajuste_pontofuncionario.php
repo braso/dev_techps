@@ -325,7 +325,7 @@
 								<td style="text-align:center;">' . date('d/m/Y', strtotime($s['data_ajuste'])) . '</td>
 								<td style="text-align:center;">' . $s['hora_ajuste'] . '</td>
 								<td>' . $s['macr_tx_nome'] . '</td>
-								<td>' . $s['moti_tx_nome'] . '</td>
+								<td>' . apf_formatarMotivoExibicao($s['moti_tx_nome']) . '</td>
 								<td>' . nl2br($s['justificativa']) . '</td>
 								<td style="font-size:9px;">' . $existente . '</td>
 							   </tr>';
@@ -490,7 +490,11 @@
 			$nomeMotivo = 'N/A';
 			if (!empty($row['id_motivo'])) {
 				$nomeMotivo = mysqli_fetch_assoc(query("SELECT moti_tx_nome FROM motivo WHERE moti_nb_id = {$row['id_motivo']} LIMIT 1"))['moti_tx_nome'] ?? 'N/A';
-				$nomeMotivo = apf_formatarMotivoExibicao(strval($nomeMotivo));
+				// Converter nome do motivo para terceirizados
+				$rotulos = apf_getRotulos();
+				if ($rotulos['ehTerceirizado'] && preg_match('/ajuste\s+de\s+ponto/i', $nomeMotivo)) {
+					$nomeMotivo = 'Ajuste de Jornada';
+				}
 			}
 
 			$linhas[] = [
@@ -636,9 +640,43 @@
 
 		}
 
-		$rows[] = array_values(array_merge(["","","","","","","<b>TOTAL</b>"],$totalResumo));
+		$rows[] = array_values(array_merge(["","","","","","","<b>TOTAL</b>"], array_merge(array_slice($totalResumo, 0, -2), ["", ""])));
 
-		return montarTabelaPonto($cabecalho,$rows);
+		// Gerar tabela base
+		$tabelaHtml = montarTabelaPonto($cabecalho,$rows);
+
+		// Ocultar colunas para usuários terceirizados com CSS
+		$rotulos = apf_getRotulos();
+		if ($rotulos['ehTerceirizado']) {
+			// Índices das colunas a ocultar: INÍCIO REFEIÇÃO(4), FIM REFEIÇÃO(5), REFEIÇÃO(7), DESCANSO(8), JORNADA(9), INTERSTÍCIO(12), H.E. %(13,14), ADICIONAL NOT.(15)
+			// Usando nth-child CSS (1-indexed): 5, 6, 8, 9, 10, 13, 14, 15, 16
+			$cssOcultar = "
+			<style>
+				.tabela-espelho-ponto th:nth-child(5),
+				.tabela-espelho-ponto th:nth-child(6),
+				.tabela-espelho-ponto th:nth-child(8),
+				.tabela-espelho-ponto th:nth-child(9),
+				.tabela-espelho-ponto th:nth-child(10),
+				.tabela-espelho-ponto th:nth-child(13),
+				.tabela-espelho-ponto th:nth-child(14),
+				.tabela-espelho-ponto th:nth-child(15),
+				.tabela-espelho-ponto th:nth-child(16),
+				.tabela-espelho-ponto td:nth-child(5),
+				.tabela-espelho-ponto td:nth-child(6),
+				.tabela-espelho-ponto td:nth-child(8),
+				.tabela-espelho-ponto td:nth-child(9),
+				.tabela-espelho-ponto td:nth-child(10),
+				.tabela-espelho-ponto td:nth-child(13),
+				.tabela-espelho-ponto td:nth-child(14),
+				.tabela-espelho-ponto td:nth-child(15),
+				.tabela-espelho-ponto td:nth-child(16) {
+					display: none;
+				}
+			</style>";
+			$tabelaHtml = $cssOcultar . $tabelaHtml;
+		}
+
+		return $tabelaHtml;
 
 	}
 
@@ -785,11 +823,14 @@
 				</button>
 			";
 
+			$nomeMotivo = mysqli_fetch_assoc(query("SELECT moti_tx_nome FROM motivo WHERE moti_nb_id = {$row['id_motivo']}"))['moti_tx_nome'] ?? '';
+			$nomeMotivo = apf_formatarMotivoExibicao($nomeMotivo);
+
 			$linhas[] = [
 				date('d/m/Y', strtotime($row['data_ajuste'])),
 				$row['hora_ajuste'],
 				mysqli_fetch_assoc(query("SELECT macr_tx_nome FROM macroponto WHERE macr_nb_id = {$row['id_macro']}"))['macr_tx_nome'] ?? '',
-				mysqli_fetch_assoc(query("SELECT moti_tx_nome FROM motivo WHERE moti_nb_id = {$row['id_motivo']}"))['moti_tx_nome'] ?? '',
+				$nomeMotivo,
 				substr($row['justificativa'], 0, 40),
 				date('d/m/Y H:i', strtotime($row['data_solicitacao'])),
 				$acoes
@@ -1150,9 +1191,9 @@
 			campo_data("Data*","data",$valData,2,"id='dataFiltro'"),
 			campo_hora("Hora*","hora",($_POST["hora"] ?? ""),2),
 
-			combo_bd("Tipo de Registro*","idMacro",($_POST["idMacro"] ?? ""),4,"macroponto","","ORDER BY macr_nb_id"),
+			combo_bd("Tipo de Registro*","idMacro",($_POST["idMacro"] ?? ""),4,"macroponto","", $rotulos['ehTerceirizado'] ? " AND macr_tx_nome IN ('Inicio de Jornada', 'Fim de Jornada') ORDER BY macr_nb_id" : "ORDER BY macr_nb_id"),
 
-			combo_bd("Motivo*","motivo",($_POST["motivo"] ?? ""),4,"motivo",""," AND moti_tx_tipo = 'Ajuste' ORDER BY moti_tx_nome"),
+			combo_bd("Motivo*","motivo",($_POST["motivo"] ?? ""),4,"motivo","", $rotulos['ehTerceirizado'] ? " AND moti_tx_tipo = 'Ajuste' AND moti_tx_nome = 'Ajuste de Jornada' ORDER BY moti_tx_nome" : " AND moti_tx_tipo = 'Ajuste' ORDER BY moti_tx_nome"),
 
 			"<div class='col-sm-12' style='margin-bottom:10px;'>
 				<div class='alert alert-info' style='margin-bottom:0; padding:10px;'>

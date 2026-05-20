@@ -74,52 +74,52 @@
 				WHERE empr_tx_Ehmatriz != 'sim';"
 			), MYSQLI_ASSOC);
 		$empresas = count($filiais);
-		echo "
-			<div class='container'>
-				<div class='row' style='display:flex; justify-content: center; align-items: flex-end;'>
+		// echo "
+		// 	<div class='container'>
+		// 		<div class='row' style='display:flex; justify-content: center; align-items: flex-end;'>
 
-					<div class='col-sm-2'>
-						<div class='panel panel-primary'>
-							<div class='panel-heading text-center' style='display: flex; align-items: center; justify-content: center; '>
-								<h3 class='panel-title' >
-									<span class='glyphicon glyphicon-user'></span> Funcionários Ativos
-								</h3>
-							</div>
-							<div class='panel-body text-center' style='display: flex; align-items: center; justify-content: center; height: 70px;'>
-								<h1 style='font-size: 28px; margin: 0;'>$ativos</h1>
-							</div>
-						</div>
-					</div>
+		// 			<div class='col-sm-2'>
+		// 				<div class='panel panel-primary'>
+		// 					<div class='panel-heading text-center' style='display: flex; align-items: center; justify-content: center; '>
+		// 						<h3 class='panel-title' >
+		// 							<span class='glyphicon glyphicon-user'></span> Funcionários Ativos
+		// 						</h3>
+		// 					</div>
+		// 					<div class='panel-body text-center' style='display: flex; align-items: center; justify-content: center; height: 70px;'>
+		// 						<h1 style='font-size: 28px; margin: 0;'>$ativos</h1>
+		// 					</div>
+		// 				</div>
+		// 			</div>
 
-					<div class='col-sm-2'>
-						<div class='panel panel-info'>
-							<div class='panel-heading text-center' style='display: flex; align-items: center; justify-content: center;'>
-								<h3 class='panel-title'>
-									<span class='glyphicon glyphicon-user'></span> Funcionários Inativos
-								</h3>
-							</div>
-							<div class='panel-body text-center' style='display: flex; align-items: center; justify-content: center; height: 70px;'>
-								<h1 style='font-size: 28px; margin: 0;'>$inativos</h1>
-							</div>
-						</div>
-					</div>
+		// 			<div class='col-sm-2'>
+		// 				<div class='panel panel-info'>
+		// 					<div class='panel-heading text-center' style='display: flex; align-items: center; justify-content: center;'>
+		// 						<h3 class='panel-title'>
+		// 							<span class='glyphicon glyphicon-user'></span> Funcionários Inativos
+		// 						</h3>
+		// 					</div>
+		// 					<div class='panel-body text-center' style='display: flex; align-items: center; justify-content: center; height: 70px;'>
+		// 						<h1 style='font-size: 28px; margin: 0;'>$inativos</h1>
+		// 					</div>
+		// 				</div>
+		// 			</div>
 
-					<div class='col-sm-2'>
-						<div class='panel panel-success'>
-							<div class='panel-heading text-center' style='display: flex; align-items: center; justify-content: center; min-height: 56px;'>
-								<h3 class='panel-title'>
-									<span class='glyphicon glyphicon-briefcase'></span> Filiais
-								</h3>
-							</div>
-							<div class='panel-body text-center' style='display: flex; align-items: center; justify-content: center; height: 70px;'>
-								<h1 style='font-size: 28px; margin: 0;'>$empresas</h1>
-							</div>
-						</div>
-					</div>
+		// 			<div class='col-sm-2'>
+		// 				<div class='panel panel-success'>
+		// 					<div class='panel-heading text-center' style='display: flex; align-items: center; justify-content: center; min-height: 56px;'>
+		// 						<h3 class='panel-title'>
+		// 							<span class='glyphicon glyphicon-briefcase'></span> Filiais
+		// 						</h3>
+		// 					</div>
+		// 					<div class='panel-body text-center' style='display: flex; align-items: center; justify-content: center; height: 70px;'>
+		// 						<h1 style='font-size: 28px; margin: 0;'>$empresas</h1>
+		// 					</div>
+		// 				</div>
+		// 			</div>
 
-				</div>
-			</div>
-		";
+		// 		</div>
+		// 	</div>
+		// ";
 		echo 
 			"<div id='boas-vindas' class='portlet light'>"
 				."<div style='text-align: center; align-content: center; height: 5em;'>"
@@ -127,15 +127,15 @@
 					."Período da ".$turnoAtual." iniciado às ".$horaEntrada."."
 				."</div>"
 				."<div class='obs'>"
-					."<p>Neste sistema, você encontra informações relacionadas a: "
-						."<ul>"
-							."<li>Registros;</li>"
-							."<li>Apontamentos de espelho de ponto;</li>"
-							."<li>Endosso;</li>"
-							."<li>Não conformidades;</li>"
-							."<li>Acesso aos relatórios dos serviços contratados.</li>"
-						."</ul>"
-					."</p>"
+					// ."<p>Neste sistema, você encontra informações relacionadas a: "
+					// 	."<ul>"
+					// 		."<li>Registros;</li>"
+					// 		."<li>Apontamentos de espelho de ponto;</li>"
+					// 		."<li>Endosso;</li>"
+					// 		."<li>Não conformidades;</li>"
+					// 		."<li>Acesso aos relatórios dos serviços contratados.</li>"
+					// 	."</ul>"
+					// ."</p>"
 				."</div>"
 				."<p>Em caso de dúvida, respondemos a partir de uma das formas de contato abaixo.</p>"
 				."<h4><b>Contatos:</b></h4>"
