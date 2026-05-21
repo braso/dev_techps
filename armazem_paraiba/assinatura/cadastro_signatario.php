@@ -20,11 +20,27 @@ mysqli_query($conn, "
         sign_tx_cpf       VARCHAR(20)   NULL,
         sign_tx_email     VARCHAR(255)  NULL,
         sign_tx_telefone  VARCHAR(100)  NULL,
+        sign_tx_nascimento DATE         NULL,
+        sign_tx_documento VARCHAR(500)  NULL,
         sign_tx_status    ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo',
         sign_tx_dataCadastro DATETIME   NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY uk_cpf (sign_tx_cpf)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ");
+
+// Garante que as colunas novas existem (caso a tabela já exista sem elas)
+mysqli_query($conn, "ALTER TABLE signatarios_externos ADD COLUMN IF NOT EXISTS sign_tx_nascimento DATE NULL AFTER sign_tx_telefone");
+mysqli_query($conn, "ALTER TABLE signatarios_externos ADD COLUMN IF NOT EXISTS sign_tx_documento VARCHAR(500) NULL AFTER sign_tx_nascimento");
+
+// Garante índices únicos para CPF, RG e E-mail
+mysqli_query($conn, "ALTER TABLE signatarios_externos ADD UNIQUE INDEX IF NOT EXISTS uk_rg (sign_tx_rg)");
+mysqli_query($conn, "ALTER TABLE signatarios_externos ADD UNIQUE INDEX IF NOT EXISTS uk_email (sign_tx_email)");
+
+// Garante que a pasta de documentos existe
+$pastaDocumentos = __DIR__ . "/docs";
+if (!is_dir($pastaDocumentos)) {
+    mkdir($pastaDocumentos, 0755, true);
+}
 
 // ── AÇÕES POST ────────────────────────────────────────────────────────────────
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
@@ -38,6 +54,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $cpf      = preg_replace('/\D/', '', trim($_POST["sign_tx_cpf"] ?? ""));
         $email    = trim($_POST["sign_tx_email"]    ?? "");
         $telefone = trim($_POST["sign_tx_telefone"] ?? "");
+        $nascimento = trim($_POST["sign_tx_nascimento"] ?? "");
         $status   = in_array($_POST["sign_tx_status"] ?? "", ["ativo","inativo"]) ? $_POST["sign_tx_status"] : "ativo";
 
         if ($nome === "") {
@@ -49,32 +66,95 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $rgEsc       = mysqli_real_escape_string($conn, $rg);
             $emailEsc    = mysqli_real_escape_string($conn, $email);
             $telefoneEsc = mysqli_real_escape_string($conn, $telefone);
+            $nascimentoEsc = mysqli_real_escape_string($conn, $nascimento);
 
-            if ($id > 0) {
-                $sql = "UPDATE signatarios_externos SET
-                            sign_tx_nome     = '$nomeEsc',
-                            sign_tx_rg       = '$rgEsc',
-                            sign_tx_cpf      = " . ($cpfEsc !== "" ? "'$cpfEsc'" : "NULL") . ",
-                            sign_tx_email    = '$emailEsc',
-                            sign_tx_telefone = '$telefoneEsc',
-                            sign_tx_status   = '$status'
-                        WHERE sign_nb_id = $id";
-                if (mysqli_query($conn, $sql)) {
-                    $_msg = "Signatário atualizado com sucesso.";
-                } else {
-                    $_msg     = "Erro ao atualizar: " . mysqli_error($conn);
+            // Validação de duplicidade (CPF, RG, E-mail)
+            $condId = $id > 0 ? " AND sign_nb_id != $id" : "";
+            
+            if ($cpf !== "") {
+                $dup = mysqli_fetch_assoc(mysqli_query($conn, "SELECT sign_nb_id FROM signatarios_externos WHERE sign_tx_cpf = '$cpfEsc' $condId LIMIT 1"));
+                if ($dup) {
+                    $_msg = "CPF já cadastrado.";
                     $_msgType = "error";
                 }
-            } else {
-                $sql = "INSERT INTO signatarios_externos
-                            (sign_tx_nome, sign_tx_rg, sign_tx_cpf, sign_tx_email, sign_tx_telefone, sign_tx_status)
-                        VALUES
-                            ('$nomeEsc', '$rgEsc', " . ($cpfEsc !== "" ? "'$cpfEsc'" : "NULL") . ", '$emailEsc', '$telefoneEsc', '$status')";
-                if (mysqli_query($conn, $sql)) {
-                    $_msg = "Signatário cadastrado com sucesso.";
-                } else {
-                    $_msg     = "Erro ao cadastrar: " . mysqli_error($conn);
+            }
+            if ($_msgType !== "error" && $rg !== "") {
+                $dup = mysqli_fetch_assoc(mysqli_query($conn, "SELECT sign_nb_id FROM signatarios_externos WHERE sign_tx_rg = '$rgEsc' $condId LIMIT 1"));
+                if ($dup) {
+                    $_msg = "RG já cadastrado.";
                     $_msgType = "error";
+                }
+            }
+            if ($_msgType !== "error" && $email !== "") {
+                $dup = mysqli_fetch_assoc(mysqli_query($conn, "SELECT sign_nb_id FROM signatarios_externos WHERE sign_tx_email = '$emailEsc' $condId LIMIT 1"));
+                if ($dup) {
+                    $_msg = "E-mail já cadastrado.";
+                    $_msgType = "error";
+                }
+            }
+
+            // Upload de documento com foto
+            $documentoNome = "";
+            if (!empty($_FILES["sign_documento"]["name"]) && $_FILES["sign_documento"]["error"] === UPLOAD_ERR_OK) {
+                $extensoesPermitidas = ["jpg", "jpeg", "png", "gif", "pdf", "bmp", "webp"];
+                $nomeOriginal = $_FILES["sign_documento"]["name"];
+                $extensao = strtolower(pathinfo($nomeOriginal, PATHINFO_EXTENSION));
+                
+                if (!in_array($extensao, $extensoesPermitidas)) {
+                    $_msg     = "Formato de arquivo não permitido. Use: " . implode(", ", $extensoesPermitidas);
+                    $_msgType = "error";
+                } elseif ($_FILES["sign_documento"]["size"] > 10 * 1024 * 1024) {
+                    $_msg     = "Arquivo muito grande. Máximo: 10MB.";
+                    $_msgType = "error";
+                } else {
+                    $pastaDocumentos = __DIR__ . "/docs";
+                    $nomeArquivo = uniqid("sign_") . "_" . preg_replace('/[^a-zA-Z0-9_\-\.]/', '_', $nomeOriginal);
+                    $caminhoDestino = $pastaDocumentos . "/" . $nomeArquivo;
+                    
+                    if (move_uploaded_file($_FILES["sign_documento"]["tmp_name"], $caminhoDestino)) {
+                        $documentoNome = $nomeArquivo;
+                    } else {
+                        $_msg     = "Erro ao fazer upload do documento.";
+                        $_msgType = "error";
+                    }
+                }
+            }
+
+            if ($_msgType !== "error") {
+                if ($id > 0) {
+                    $sqlDoc = "";
+                    if ($documentoNome !== "") {
+                        $docEsc = mysqli_real_escape_string($conn, $documentoNome);
+                        $sqlDoc = ", sign_tx_documento = '$docEsc'";
+                    }
+                    $sql = "UPDATE signatarios_externos SET
+                                sign_tx_nome     = '$nomeEsc',
+                                sign_tx_rg       = '$rgEsc',
+                                sign_tx_cpf      = " . ($cpfEsc !== "" ? "'$cpfEsc'" : "NULL") . ",
+                                sign_tx_email    = '$emailEsc',
+                                sign_tx_telefone = '$telefoneEsc',
+                                sign_tx_nascimento = " . ($nascimentoEsc !== "" ? "'$nascimentoEsc'" : "NULL") . ",
+                                sign_tx_status   = '$status'
+                                $sqlDoc
+                            WHERE sign_nb_id = $id";
+                    if (mysqli_query($conn, $sql)) {
+                        $_msg = "Signatário atualizado com sucesso.";
+                    } else {
+                        $_msg     = "Erro ao atualizar: " . mysqli_error($conn);
+                        $_msgType = "error";
+                    }
+                } else {
+                    $docEsc = mysqli_real_escape_string($conn, $documentoNome);
+                    $sql = "INSERT INTO signatarios_externos
+                                (sign_tx_nome, sign_tx_rg, sign_tx_cpf, sign_tx_email, sign_tx_telefone, sign_tx_nascimento, sign_tx_documento, sign_tx_status)
+                            VALUES
+                                ('$nomeEsc', '$rgEsc', " . ($cpfEsc !== "" ? "'$cpfEsc'" : "NULL") . ", '$emailEsc', '$telefoneEsc', " . ($nascimentoEsc !== "" ? "'$nascimentoEsc'" : "NULL") . ", " . ($docEsc !== "" ? "'$docEsc'" : "NULL") . ", '$status')";
+                    if (mysqli_query($conn, $sql)) {
+                        $_msg = "Signatário cadastrado com sucesso.";
+                    } else {
+                        $_msg     = "Erro ao cadastrar: " . mysqli_error($conn);
+                        $_msgType = "error";
+                    }
                 }
             }
         }
@@ -163,7 +243,7 @@ include_once "componentes/layout_header.php";
             <?php echo $editando ? "Editar Signatário" : "Novo Signatário"; ?>
         </h2>
 
-        <form method="POST" action="cadastro_signatario.php<?php echo $busca !== "" ? '?busca='.urlencode($busca) : ''; ?>">
+        <form method="POST" action="cadastro_signatario.php<?php echo $busca !== "" ? '?busca='.urlencode($busca) : ''; ?>" enctype="multipart/form-data">
             <input type="hidden" name="sign_acao" value="salvar">
             <?php if ($editando): ?>
                 <input type="hidden" name="sign_nb_id" value="<?php echo intval($editando['sign_nb_id']); ?>">
@@ -232,6 +312,30 @@ include_once "componentes/layout_header.php";
                         placeholder="(00) 00000-0000"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
                     <p class="text-xs text-gray-400 mt-1">Separe múltiplos números com vírgula.</p>
+                </div>
+
+                <!-- Data de Nascimento -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Data de Nascimento</label>
+                    <input type="date" name="sign_tx_nascimento"
+                        value="<?php echo htmlspecialchars($editando['sign_tx_nascimento'] ?? '', ENT_QUOTES); ?>"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+                </div>
+
+                <!-- Upload Documento com Foto -->
+                <div class="lg:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Documento com Foto</label>
+                    <input type="file" name="sign_documento" accept="image/*,.pdf" id="campo_documento"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    <p class="text-xs text-gray-400 mt-1">Formatos aceitos: JPG, PNG, GIF, PDF, WEBP. Máximo: 10MB.</p>
+                    <?php if (!empty($editando['sign_tx_documento'])): ?>
+                    <div class="mt-2 flex items-center gap-2 text-sm text-green-600">
+                        <i class="fas fa-file-circle-check"></i>
+                        <a href="docs/<?php echo htmlspecialchars($editando['sign_tx_documento']); ?>" target="_blank" class="hover:underline">
+                            <?php echo htmlspecialchars($editando['sign_tx_documento']); ?>
+                        </a>
+                    </div>
+                    <?php endif; ?>
                 </div>
 
             </div>

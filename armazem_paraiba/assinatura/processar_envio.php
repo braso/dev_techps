@@ -1342,8 +1342,13 @@ function assinatura_getBaseUrl(): string {
     return rtrim($proto . "://" . $host . $dir, "/");
 }
 
-function enviarEmailAssinatura($email, $nome, $token, $nomeArquivo, $idDoc, $funcao) {
+function enviarEmailAssinatura($email, $nome, $token, $nomeArquivo, $idDoc, $funcao, $externo = false) {
     global $mail; // Usa a instância global ou cria nova se necessário (melhor criar nova)
+    
+    // Detectar automaticamente se é signatário externo pela função
+    if (!$externo && stripos($funcao, 'externo') !== false) {
+        $externo = true;
+    }
     
     $base = assinatura_getBaseUrl();
     $baseUrl = rtrim($base !== "" ? $base : (defined("BASE_URL_ASSINATURA") ? (string)BASE_URL_ASSINATURA : ""), "/");
@@ -1406,11 +1411,11 @@ function enviarEmailAssinatura($email, $nome, $token, $nomeArquivo, $idDoc, $fun
                     </a>
                 </div>
 
-                <div style='text-align: center; margin: 0 0 35px 0;'>
+                " . (!$externo ? "<div style='text-align: center; margin: 0 0 35px 0;'>
                     <a href='$linkPlataforma' style='background-color: #16a34a; color: white; padding: 14px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px; display: inline-block;'>
                         Assinar pela Plataforma
                     </a>
-                </div>
+                </div>" : "") . "
                 
                 <div style='border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px;'>
                     <p style='font-size: 13px; color: #777; margin-bottom: 10px;'>
@@ -1419,9 +1424,9 @@ function enviarEmailAssinatura($email, $nome, $token, $nomeArquivo, $idDoc, $fun
                     <p style='font-size: 12px; color: #555; background: #f8f9fa; padding: 10px; border-radius: 4px; word-break: break-all; font-family: monospace; border: 1px solid #eee;'>
                         $linkAssinatura
                     </p>
-                    <p style='font-size: 12px; color: #777; margin: 10px 0 0 0;'>
-                        Alternativa: acesse a plataforma e assine em “Assinaturas Pendentes”: <a href='$linkPlataforma' style='color: #0056b3;'>$linkPlataforma</a>
-                    </p>
+                    " . (!$externo ? "<p style='font-size: 12px; color: #777; margin: 10px 0 0 0;'>
+                        Alternativa: acesse a plataforma e assine em &quot;Assinaturas Pendentes&quot;: <a href='$linkPlataforma' style='color: #0056b3;'>$linkPlataforma</a>
+                    </p>" : "") . "
                 </div>
 
                 <div style='margin-top: 30px; font-size: 12px; color: #777; text-align: justify; line-height: 1.5; border-top: 1px solid #eee; padding-top: 20px;'>
@@ -1444,7 +1449,7 @@ function enviarEmailAssinatura($email, $nome, $token, $nomeArquivo, $idDoc, $fun
         </div>";
 
         $mail->Body = $corpo;
-        $mail->AltBody = "Assine pelo link: $linkAssinatura\nOu acesse a plataforma (Assinaturas Pendentes): $linkPlataforma\nDocumento #$idDoc ($funcao).";
+        $mail->AltBody = "Assine pelo link: $linkAssinatura\n" . (!$externo ? "Ou acesse a plataforma (Assinaturas Pendentes): $linkPlataforma\n" : "") . "Documento #$idDoc ($funcao).";
         
         $mail->send();
         return true;

@@ -195,12 +195,22 @@ document.addEventListener('DOMContentLoaded', function() {
             const aceite = document.getElementById('aceite').checked;
 
             if (!nome || !cpf || !rg || !aceite) {
-                alert("Por favor, preencha todos os campos e aceite os termos.");
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Campos obrigatórios',
+                    text: 'Por favor, preencha todos os campos e aceite os termos.',
+                    confirmButtonColor: '#f59e0b'
+                });
                 return;
             }
 
             if (!currentPdfBytes) {
-                alert("Nenhum documento carregado para assinar.");
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Documento não carregado',
+                    text: 'Nenhum documento carregado para assinar.',
+                    confirmButtonColor: '#3b82f6'
+                });
                 return;
             }
 
@@ -539,7 +549,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     if (!container) {
                         console.error('Container principal não encontrado para exibir sucesso.');
-                        alert('Sucesso! Documento assinado. Protocolo: ' + data.protocolo);
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Documento Assinado!',
+                            text: 'Protocolo: ' + data.protocolo,
+                            confirmButtonColor: '#16a34a'
+                        });
                         return;
                     }
 
@@ -661,14 +676,32 @@ document.addEventListener('DOMContentLoaded', function() {
                     // link.click();
                     
                 } else {
-                    alert('Erro ao assinar: ' + data.message);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erro ao assinar',
+                        html: data.message || 'Erro desconhecido.',
+                        confirmButtonColor: '#dc2626'
+                    });
                     btnAssinar.disabled = false;
                     btnAssinar.textContent = "Assinar Documento";
                 }
 
             } catch (error) {
                 console.error('Erro:', error);
-                alert(error && error.message ? error.message : 'Ocorreu um erro ao processar o documento.');
+                var msgErro = error && error.message ? error.message : 'Ocorreu um erro ao processar o documento.';
+                
+                // Mensagem específica para CPF/RG não confere
+                var isCpfRg = msgErro.indexOf('CPF') !== -1 || msgErro.indexOf('RG') !== -1 || msgErro.indexOf('cadastro') !== -1;
+                
+                Swal.fire({
+                    icon: isCpfRg ? 'warning' : 'error',
+                    title: isCpfRg ? 'Dados não conferem' : 'Erro',
+                    html: isCpfRg 
+                        ? '<p style="font-size:14px;">' + msgErro + '</p><br><p style="font-size:12px; color:#666;">O <b>CPF</b> e <b>RG</b> devem ser <b>exatamente iguais</b> aos cadastrados na plataforma.</p>'
+                        : msgErro,
+                    confirmButtonColor: isCpfRg ? '#f59e0b' : '#dc2626',
+                    confirmButtonText: 'Entendi'
+                });
                 btnAssinar.disabled = false;
                 btnAssinar.textContent = "Assinar Documento";
             }
