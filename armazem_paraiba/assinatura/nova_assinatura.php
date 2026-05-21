@@ -612,17 +612,21 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                 $message = $_GET["message"] ?? "";
                 $status = in_array($status, ["success", "error"], true) ? $status : "error";
                 $messageSafe = htmlspecialchars((string)$message);
-                $cls = $status === "success"
-                    ? "bg-green-50 border-green-100 text-green-800"
-                    : "bg-red-50 border-red-100 text-red-800";
-                $titulo = $status === "success" ? "Sucesso" : "Erro";
+                $swalIcon = $status === "success" ? "success" : "error";
+                $swalTitle = $status === "success" ? "Enviado com sucesso!" : "Erro no envio";
+                $swalText = $messageSafe !== "" ? $messageSafe : ($status === "success" ? "O documento foi enviado para assinatura." : "Ocorreu um erro ao processar o envio.");
             ?>
-            <div class="<?php echo $cls; ?> border rounded-lg p-4 mb-6 text-sm">
-                <div class="font-bold"><?php echo $titulo; ?></div>
-                <?php if($messageSafe !== ""): ?>
-                    <div class="mt-1"><?php echo $messageSafe; ?></div>
-                <?php endif; ?>
-            </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    Swal.fire({
+                        icon: '<?php echo $swalIcon; ?>',
+                        title: '<?php echo $swalTitle; ?>',
+                        html: '<?php echo addslashes($swalText); ?>',
+                        confirmButtonColor: '<?php echo $status === "success" ? "#16a34a" : "#dc2626"; ?>',
+                        confirmButtonText: 'OK'
+                    });
+                });
+            </script>
         <?php endif; ?>
 
         <?php if($modoTela === "separar_paginas"): ?>
@@ -971,6 +975,16 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                                 <span id="fileName" class="block text-sm font-semibold text-blue-600 mt-2"></span>
                             </div>
                         </div>
+
+                        <!-- Preview do PDF no modo avulso -->
+                        <div id="pdfPreviewAvulso" class="hidden mt-4">
+                            <button type="button" id="btnVisualizarPdfAvulso" onclick="togglePreviewPdfAvulso()" class="w-full flex items-center justify-center gap-2 py-2 px-4 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors">
+                                <i class="fas fa-eye"></i> Visualizar Documento
+                            </button>
+                            <div id="pdfViewerAvulso" class="hidden mt-3 rounded-lg overflow-hidden border border-gray-200 shadow-sm" style="height: 400px;">
+                                <iframe id="pdfIframeAvulso" src="" class="w-full h-full" style="border: none;"></iframe>
+                            </div>
+                        </div>
                         
                         <div class="mt-6 text-center">
                             <button type="button" id="btnUpload" disabled class="bg-gray-300 text-white px-6 py-2.5 rounded-lg font-semibold shadow-sm cursor-not-allowed transition-all w-full sm:w-auto">
@@ -1201,6 +1215,13 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                         <p class="text-xs text-gray-400 mt-1">Apenas arquivos .pdf</p>
                         <span id="pdfNomeExterno" class="block text-sm font-semibold text-blue-600 mt-3"></span>
                     </div>
+
+                    <!-- Botão Visualizar e Preview do PDF -->
+                    <div id="pdfPreviewContainer" class="hidden mt-4">
+                        <button type="button" id="btnVisualizarPdf" onclick="abrirPdfNovaAba()" class="w-full flex items-center justify-center gap-2 py-2 px-4 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors">
+                            <i class="fas fa-external-link-alt"></i> Visualizar Documento
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Coluna direita: formulário -->
@@ -1346,6 +1367,16 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                                 </div>
                             </div>
 
+                            <!-- Container para signatários extras (governança) -->
+                            <div id="signatarios_extras_container"></div>
+
+                            <!-- Botão adicionar signatário (só governança) -->
+                            <div id="btn_add_signatario_wrapper" class="hidden">
+                                <button type="button" onclick="adicionarSignatario()" class="w-full flex items-center justify-center gap-2 py-2 px-4 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg text-sm font-medium hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                                    <i class="fas fa-plus-circle"></i> Adicionar Signatário
+                                </button>
+                            </div>
+
                             <button type="submit" id="btnEnviarExterno"
                                 class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all transform hover:-translate-y-0.5">
                                 <i class="fas fa-paper-plane mr-2 text-lg"></i>
@@ -1386,6 +1417,27 @@ function setModoExterno(modo) {
     const respEmail = document.getElementById('resp_email');
     respNome.required  = isGov;
     respEmail.required = isGov;
+    
+    // Desabilitar campos do responsável no modo simples para não enviar no POST
+    respNome.disabled  = !isGov;
+    respEmail.disabled = !isGov;
+    const respEntiId = document.getElementById('resp_enti_nb_id');
+    if (respEntiId) respEntiId.disabled = !isGov;
+    // Desabilitar os hidden fields de funcao e ordem do signatario[1]
+    const blocoInputs = blocoResp.querySelectorAll('input[name^="signatarios[1]"]');
+    blocoInputs.forEach(function(inp) { inp.disabled = !isGov; });
+
+    // Mostrar/ocultar botão de adicionar signatário
+    const btnAddWrapper = document.getElementById('btn_add_signatario_wrapper');
+    if (btnAddWrapper) btnAddWrapper.classList.toggle('hidden', !isGov);
+    
+    // Mostrar/ocultar signatários extras
+    const extrasContainer = document.getElementById('signatarios_extras_container');
+    if (extrasContainer) {
+        extrasContainer.classList.toggle('hidden', !isGov);
+        // Desabilitar/habilitar inputs extras
+        extrasContainer.querySelectorAll('input, select').forEach(function(inp) { inp.disabled = !isGov; });
+    }
 
     // Textos
     document.getElementById('ext_titulo').textContent    = isGov ? 'Envio com Governança' : 'Signatário Externo';
@@ -1398,26 +1450,173 @@ function setModoExterno(modo) {
 }
 
 // ── Preenche signatário externo ao selecionar ──────────────────────────────
+// Inicializar modo simples (desabilitar campos do responsável)
+setModoExterno('simples');
+
+// ── Adicionar/Remover signatários extras (governança) ──────────────────────
+var _signatarioCount = 2; // Já temos 0 (externo) e 1 (responsável)
+
+// Opções de funcionários para selects dinâmicos
+var _funcionariosOptions = '<option value="">— Selecionar —</option>';
+var respSelect = document.getElementById('resp_funcionario_select');
+if (respSelect) {
+    for (var i = 0; i < respSelect.options.length; i++) {
+        var o = respSelect.options[i];
+        _funcionariosOptions += '<option value="' + o.value + '" data-nome="' + (o.dataset.nome || '') + '" data-email="' + (o.dataset.email || '') + '">' + o.textContent + '</option>';
+    }
+}
+
+function adicionarSignatario() {
+    _signatarioCount++;
+    var idx = _signatarioCount - 1;
+    var ordem = _signatarioCount;
+    var container = document.getElementById('signatarios_extras_container');
+    if (!container) return;
+
+    var html = '<div class="border border-gray-200 rounded-xl p-4 bg-gray-50 mt-4 signatario-extra" id="signatario_extra_' + idx + '">'
+        + '<div class="flex items-center justify-between mb-3">'
+        + '<p class="text-xs font-semibold text-gray-600 uppercase flex items-center gap-1">'
+        + '<i class="fas fa-user"></i> ' + ordem + 'º Signatário'
+        + '</p>'
+        + '<button type="button" onclick="removerSignatario(' + idx + ')" class="text-red-400 hover:text-red-600 text-xs font-medium flex items-center gap-1 transition-colors">'
+        + '<i class="fas fa-trash-alt"></i> Remover'
+        + '</button>'
+        + '</div>'
+        + '<div class="mb-3">'
+        + '<label class="block text-xs font-medium text-gray-600 mb-1">Selecionar funcionário</label>'
+        + '<select onchange="preencherSignatarioExtra(this, ' + idx + ')" class="block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors">'
+        + _funcionariosOptions
+        + '</select>'
+        + '</div>'
+        + '<div class="grid grid-cols-1 gap-3">'
+        + '<div><label class="block text-xs font-medium text-gray-600 mb-1">Nome</label>'
+        + '<input type="text" name="signatarios[' + idx + '][nome]" required placeholder="Nome completo" class="block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors"></div>'
+        + '<div><label class="block text-xs font-medium text-gray-600 mb-1">E-mail</label>'
+        + '<input type="email" name="signatarios[' + idx + '][email]" required placeholder="email@exemplo.com" class="block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors"></div>'
+        + '</div>'
+        + '<input type="hidden" name="signatarios[' + idx + '][funcao]" value="Signatário">'
+        + '<input type="hidden" name="signatarios[' + idx + '][ordem]" value="' + ordem + '">'
+        + '<input type="hidden" name="signatarios[' + idx + '][enti_nb_id]" value="">'
+        + '</div>';
+
+    container.insertAdjacentHTML('beforeend', html);
+}
+
+function removerSignatario(idx) {
+    var el = document.getElementById('signatario_extra_' + idx);
+    if (el) el.remove();
+}
+
+function preencherSignatarioExtra(select, idx) {
+    var opt = select.options[select.selectedIndex];
+    var bloco = document.getElementById('signatario_extra_' + idx);
+    if (!bloco) return;
+    
+    var nomeInput = bloco.querySelector('input[name="signatarios[' + idx + '][nome]"]');
+    var emailInput = bloco.querySelector('input[name="signatarios[' + idx + '][email]"]');
+    var entiInput = bloco.querySelector('input[name="signatarios[' + idx + '][enti_nb_id]"]');
+    
+    if (nomeInput) {
+        nomeInput.value = opt.dataset.nome || '';
+        nomeInput.readOnly = (opt.value !== '');
+        nomeInput.classList.toggle('bg-gray-100', opt.value !== '');
+        nomeInput.classList.toggle('cursor-not-allowed', opt.value !== '');
+    }
+    if (emailInput) {
+        emailInput.value = opt.dataset.email || '';
+        emailInput.readOnly = (opt.value !== '');
+        emailInput.classList.toggle('bg-gray-100', opt.value !== '');
+        emailInput.classList.toggle('cursor-not-allowed', opt.value !== '');
+    }
+    if (entiInput) entiInput.value = opt.value || '';
+}
+
 document.getElementById('signatario_externo_select')?.addEventListener('change', function () {
     const opt = this.options[this.selectedIndex];
-    document.getElementById('ext_nome').value  = opt.dataset.nome  || '';
-    document.getElementById('ext_email').value = opt.dataset.email || '';
+    const nomeInput = document.getElementById('ext_nome');
+    const emailInput = document.getElementById('ext_email');
+    
+    nomeInput.value  = opt.dataset.nome  || '';
+    emailInput.value = opt.dataset.email || '';
     document.getElementById('sign_nb_id_hidden').value = opt.value || '';
+    
+    // Se selecionou um signatário cadastrado, travar os campos
+    if (opt.value && opt.value !== '') {
+        nomeInput.readOnly = true;
+        emailInput.readOnly = true;
+        nomeInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+        emailInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+        nomeInput.title = 'Campo preenchido automaticamente pelo signatário selecionado';
+        emailInput.title = 'Campo preenchido automaticamente pelo signatário selecionado';
+    } else {
+        // Se limpou a seleção, liberar os campos
+        nomeInput.readOnly = false;
+        emailInput.readOnly = false;
+        nomeInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
+        emailInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
+        nomeInput.title = '';
+        emailInput.title = '';
+    }
 });
 
 // ── Preenche responsável interno ao selecionar ────────────────────────────
 document.getElementById('resp_funcionario_select')?.addEventListener('change', function () {
     const opt = this.options[this.selectedIndex];
-    document.getElementById('resp_nome').value  = opt.dataset.nome  || '';
-    document.getElementById('resp_email').value = opt.dataset.email || '';
+    const respNome = document.getElementById('resp_nome');
+    const respEmail = document.getElementById('resp_email');
+    
+    respNome.value  = opt.dataset.nome  || '';
+    respEmail.value = opt.dataset.email || '';
     document.getElementById('resp_enti_nb_id').value = opt.value || '';
+    
+    // Travar campos se selecionou um funcionário
+    if (opt.value && opt.value !== '') {
+        respNome.readOnly = true;
+        respEmail.readOnly = true;
+        respNome.classList.add('bg-gray-100', 'cursor-not-allowed');
+        respEmail.classList.add('bg-gray-100', 'cursor-not-allowed');
+    } else {
+        respNome.readOnly = false;
+        respEmail.readOnly = false;
+        respNome.classList.remove('bg-gray-100', 'cursor-not-allowed');
+        respEmail.classList.remove('bg-gray-100', 'cursor-not-allowed');
+    }
 });
 
-// ── Mostra nome do PDF selecionado ─────────────────────────────────────────
+// ── Mostra nome do PDF selecionado e habilita preview ──────────────────────
+var _pdfBlobUrl = null;
+
 function handlePdfExterno(input) {
     const span = document.getElementById('pdfNomeExterno');
+    const previewContainer = document.getElementById('pdfPreviewContainer');
+    
     if (input.files && input.files[0]) {
         span.textContent = input.files[0].name;
+        
+        // Criar URL temporária para o PDF
+        if (_pdfBlobUrl) URL.revokeObjectURL(_pdfBlobUrl);
+        _pdfBlobUrl = URL.createObjectURL(input.files[0]);
+        
+        // Mostrar botão de visualizar
+        if (previewContainer) {
+            previewContainer.classList.remove('hidden');
+        }
+    } else {
+        span.textContent = '';
+        if (previewContainer) {
+            previewContainer.classList.add('hidden');
+        }
+        if (_pdfBlobUrl) {
+            URL.revokeObjectURL(_pdfBlobUrl);
+            _pdfBlobUrl = null;
+        }
+    }
+}
+
+// ── Abre o PDF em nova aba ─────────────────────────────────────────────────
+function abrirPdfNovaAba() {
+    if (_pdfBlobUrl) {
+        window.open(_pdfBlobUrl, '_blank');
     }
 }
 
@@ -1533,6 +1732,13 @@ if (isset($hasEnvPaths) && $hasEnvPaths) {
             nome.value = "";
             email.value = "";
             if(enti) enti.value = "";
+            // Liberar campos para edição manual
+            nome.readOnly = false;
+            email.readOnly = false;
+            nome.classList.remove('bg-gray-100', 'cursor-not-allowed');
+            email.classList.remove('bg-gray-100', 'cursor-not-allowed');
+            nome.title = '';
+            email.title = '';
             return;
         }
         const n = opt.getAttribute("data-nome") || "";
@@ -1540,6 +1746,13 @@ if (isset($hasEnvPaths) && $hasEnvPaths) {
         nome.value = n;
         email.value = e;
         if(enti) enti.value = selectedValue;
+        // Travar campos para não permitir edição
+        nome.readOnly = true;
+        email.readOnly = true;
+        nome.classList.add('bg-gray-100', 'cursor-not-allowed');
+        email.classList.add('bg-gray-100', 'cursor-not-allowed');
+        nome.title = 'Campo preenchido automaticamente pelo funcionário selecionado';
+        email.title = 'Campo preenchido automaticamente pelo funcionário selecionado';
     }
 
     // Inicializa Select2 no funcionario_select (jQuery já carregado aqui)
@@ -1608,6 +1821,25 @@ if (isset($hasEnvPaths) && $hasEnvPaths) {
             const url = URL.createObjectURL(file);
             const pdfPreview = document.getElementById('pdfPreview');
             if(pdfPreview) pdfPreview.src = url;
+
+            // Preview na drop zone (antes de carregar)
+            const previewAvulso = document.getElementById('pdfPreviewAvulso');
+            const iframeAvulso = document.getElementById('pdfIframeAvulso');
+            if (previewAvulso) previewAvulso.classList.remove('hidden');
+            if (iframeAvulso) iframeAvulso.src = url;
+        }
+    }
+
+    function togglePreviewPdfAvulso() {
+        const viewer = document.getElementById('pdfViewerAvulso');
+        const btn = document.getElementById('btnVisualizarPdfAvulso');
+        if (!viewer) return;
+        if (viewer.classList.contains('hidden')) {
+            viewer.classList.remove('hidden');
+            if (btn) btn.innerHTML = '<i class="fas fa-eye-slash"></i> Ocultar Documento';
+        } else {
+            viewer.classList.add('hidden');
+            if (btn) btn.innerHTML = '<i class="fas fa-eye"></i> Visualizar Documento';
         }
     }
 

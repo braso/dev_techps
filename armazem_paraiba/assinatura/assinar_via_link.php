@@ -462,6 +462,8 @@ $cadastro_ok = (strlen($cpfDigitsCad) === 11 && $rgNormCad !== '');
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         /* Ajuste específico para o iframe */
         #pdfPreview {

@@ -39,6 +39,8 @@ if($empresaTitulo === "" && isset($conn) && ($conn instanceof mysqli)){
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- Custom Style -->
     <link rel="stylesheet" href="<?php echo $baseAssinatura; ?>/style.css">
     <style>

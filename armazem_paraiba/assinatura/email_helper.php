@@ -207,6 +207,9 @@ function enviarEmailProximo($email, $nome, $token, $nomeArquivo, $idDoc, $funcao
         logDebug("Enviando email para próximo: $email");
     }
     
+    // Detectar se é signatário externo pela função
+    $externo = (stripos($funcao, 'externo') !== false);
+    
     $mail = new PHPMailer(true);
     try {
         configurarSMTP($mail);
@@ -271,11 +274,13 @@ function enviarEmailProximo($email, $nome, $token, $nomeArquivo, $idDoc, $funcao
                 </a>
             </div>
 
+            " . (!$externo ? "
             <div style='text-align: center; margin: 0 0 35px 0;'>
                 <a href='{$linkPlataforma}' style='background-color: #16a34a; color: white; padding: 14px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px; display: inline-block;'>
                     Assinar pela Plataforma
                 </a>
             </div>
+            " : "") . "
 
             <div style='border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px;'>
                 <p style='font-size: 13px; color: #777; margin-bottom: 10px;'>
