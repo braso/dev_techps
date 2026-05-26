@@ -1397,9 +1397,12 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                             <div id="signatarios_extras_container"></div>
 
                             <!-- Botão adicionar signatário -->
-                            <div id="btn_add_signatario_wrapper">
-                                <button type="button" onclick="adicionarSignatario()" class="w-full flex items-center justify-center gap-2 py-2 px-4 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg text-sm font-medium hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
-                                    <i class="fas fa-plus-circle"></i> Adicionar Signatário
+                            <div id="btn_add_signatario_wrapper" class="flex gap-2">
+                                <button type="button" onclick="adicionarSignatario('interno')" class="flex-1 flex items-center justify-center gap-2 py-2 px-4 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg text-sm font-medium hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                                    <i class="fas fa-user-plus"></i> + Interno
+                                </button>
+                                <button type="button" onclick="adicionarSignatario('externo')" class="flex-1 flex items-center justify-center gap-2 py-2 px-4 border-2 border-dashed border-purple-300 text-purple-500 rounded-lg text-sm font-medium hover:border-purple-400 hover:text-purple-600 hover:bg-purple-50 transition-colors">
+                                    <i class="fas fa-user-tie"></i> + Externo
                                 </button>
                             </div>
 
@@ -1550,26 +1553,46 @@ if (respSelect) {
     }
 }
 
-function adicionarSignatario() {
+// Opções de signatários externos para selects dinâmicos
+var _externosOptions = '<option value="">— Selecionar cadastrado —</option>';
+var extSelect = document.getElementById('signatario_externo_select');
+if (extSelect) {
+    for (var i = 0; i < extSelect.options.length; i++) {
+        var o = extSelect.options[i];
+        _externosOptions += '<option value="' + o.value + '" data-nome="' + (o.dataset.nome || '') + '" data-email="' + (o.dataset.email || '') + '" data-cpf="' + (o.dataset.cpf || '') + '">' + o.textContent + '</option>';
+    }
+}
+
+function adicionarSignatario(tipo) {
+    tipo = tipo || 'interno';
     _signatarioCount++;
     var idx = _signatarioCount - 1;
     var ordem = _signatarioCount;
     var container = document.getElementById('signatarios_extras_container');
     if (!container) return;
 
-    var html = '<div class="border border-gray-200 rounded-xl p-4 bg-gray-50 mt-4 signatario-extra" id="signatario_extra_' + idx + '">'
+    var isExterno = (tipo === 'externo');
+    var corBorda = isExterno ? 'border-purple-100' : 'border-gray-200';
+    var corFundo = isExterno ? 'bg-purple-50/40' : 'bg-gray-50';
+    var icone = isExterno ? 'fa-user-tie' : 'fa-user';
+    var labelTipo = isExterno ? 'Externo' : 'Interno';
+    var selectOptions = isExterno ? _externosOptions : _funcionariosOptions;
+    var selectLabel = isExterno ? 'Selecionar signatário externo' : 'Selecionar funcionário';
+    var funcaoDefault = isExterno ? 'Signatário Externo' : 'Signatário';
+
+    var html = '<div class="border ' + corBorda + ' rounded-xl p-4 ' + corFundo + ' mt-4 signatario-extra" id="signatario_extra_' + idx + '">'
         + '<div class="flex items-center justify-between mb-3">'
         + '<p class="text-xs font-semibold text-gray-600 uppercase flex items-center gap-1">'
-        + '<i class="fas fa-user"></i> ' + ordem + 'º Signatário'
+        + '<i class="fas ' + icone + '"></i> ' + ordem + 'º Signatário <span class="text-xs font-normal text-gray-400">(' + labelTipo + ')</span>'
         + '</p>'
         + '<button type="button" onclick="removerSignatario(' + idx + ')" class="text-red-400 hover:text-red-600 text-xs font-medium flex items-center gap-1 transition-colors">'
         + '<i class="fas fa-trash-alt"></i> Remover'
         + '</button>'
         + '</div>'
         + '<div class="mb-3">'
-        + '<label class="block text-xs font-medium text-gray-600 mb-1">Selecionar funcionário</label>'
+        + '<label class="block text-xs font-medium text-gray-600 mb-1">' + selectLabel + '</label>'
         + '<select onchange="preencherSignatarioExtra(this, ' + idx + ')" class="block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors">'
-        + _funcionariosOptions
+        + selectOptions
         + '</select>'
         + '</div>'
         + '<div class="grid grid-cols-1 gap-3">'
@@ -1578,8 +1601,8 @@ function adicionarSignatario() {
         + '<div><label class="block text-xs font-medium text-gray-600 mb-1">E-mail</label>'
         + '<input type="email" name="signatarios[' + idx + '][email]" required placeholder="email@exemplo.com" class="block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors"></div>'
         + '<div><label class="block text-xs font-medium text-gray-600 mb-1">Papel na Assinatura</label>'
-        + '<select name="signatarios[' + idx + '][funcao]" onchange="toggleOutroPapel(this)" class="block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors">'
-        + '<option value="Signatário">Signatário</option>'
+        + '<select name="signatarios[' + idx + '][funcao]" data-original-name="signatarios[' + idx + '][funcao]" onchange="toggleOutroPapel(this)" class="block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors">'
+        + '<option value="' + funcaoDefault + '">' + (isExterno ? 'Signatário' : 'Signatário') + '</option>'
         + '<option value="Testemunha">Testemunha</option>'
         + '<option value="Responsável">Responsável</option>'
         + '<option value="Representante Legal">Representante Legal</option>'
@@ -1588,7 +1611,7 @@ function adicionarSignatario() {
         + '<option value="Parte Contratada">Parte Contratada</option>'
         + '<option value="__outro__">Outro (digitar)</option>'
         + '</select>'
-        + '<input type="text" class="hidden mt-2 block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors" placeholder="Digite o papel..." data-papel-outro="' + idx + '">'
+        + '<input type="text" class="hidden mt-2 block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors" placeholder="Digite o papel..." data-papel-outro="' + idx + '" name="">'
         + '</div>'
         + '</div>'
         + '<input type="hidden" name="signatarios[' + idx + '][ordem]" value="' + ordem + '">'
