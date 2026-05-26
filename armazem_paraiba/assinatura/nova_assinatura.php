@@ -1305,8 +1305,21 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                                         <input type="email" id="ext_email" name="signatarios[0][email]" required placeholder="email@exemplo.com"
                                             class="block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors">
                                     </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Papel na Assinatura</label>
+                                        <select name="signatarios[0][funcao]" id="ext_funcao" onchange="toggleOutroPapel(this)" class="block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors">
+                                            <option value="Signatário Externo">Signatário</option>
+                                            <option value="Testemunha">Testemunha</option>
+                                            <option value="Responsável">Responsável</option>
+                                            <option value="Representante Legal">Representante Legal</option>
+                                            <option value="Fiador">Fiador</option>
+                                            <option value="Parte Contratante">Parte Contratante</option>
+                                            <option value="Parte Contratada">Parte Contratada</option>
+                                            <option value="__outro__">Outro (digitar)</option>
+                                        </select>
+                                        <input type="text" class="hidden mt-2 block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors" placeholder="Digite o papel..." data-papel-outro="0">
+                                    </div>
                                 </div>
-                                <input type="hidden" name="signatarios[0][funcao]" value="Signatário Externo">
                                 <input type="hidden" name="signatarios[0][ordem]" value="1">
                                 <input type="hidden" name="signatarios[0][enti_nb_id]" value="">
                             </div>
@@ -1354,8 +1367,21 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                                         <input type="email" id="resp_email" name="signatarios[1][email]" placeholder="email@empresa.com"
                                             class="block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors">
                                     </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Papel na Assinatura</label>
+                                        <select name="signatarios[1][funcao]" onchange="toggleOutroPapel(this)" class="block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors">
+                                            <option value="Responsável">Responsável</option>
+                                            <option value="Testemunha">Testemunha</option>
+                                            <option value="Signatário">Signatário</option>
+                                            <option value="Representante Legal">Representante Legal</option>
+                                            <option value="Fiador">Fiador</option>
+                                            <option value="Parte Contratante">Parte Contratante</option>
+                                            <option value="Parte Contratada">Parte Contratada</option>
+                                            <option value="__outro__">Outro (digitar)</option>
+                                        </select>
+                                        <input type="text" class="hidden mt-2 block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors" placeholder="Digite o papel..." data-papel-outro="1">
+                                    </div>
                                 </div>
-                                <input type="hidden" name="signatarios[1][funcao]" value="Responsável">
                                 <input type="hidden" name="signatarios[1][ordem]" value="2">
                                 <input type="hidden" id="resp_enti_nb_id" name="signatarios[1][enti_nb_id]" value="">
 
@@ -1370,8 +1396,8 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                             <!-- Container para signatários extras (governança) -->
                             <div id="signatarios_extras_container"></div>
 
-                            <!-- Botão adicionar signatário (só governança) -->
-                            <div id="btn_add_signatario_wrapper" class="hidden">
+                            <!-- Botão adicionar signatário -->
+                            <div id="btn_add_signatario_wrapper">
                                 <button type="button" onclick="adicionarSignatario()" class="w-full flex items-center justify-center gap-2 py-2 px-4 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg text-sm font-medium hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
                                     <i class="fas fa-plus-circle"></i> Adicionar Signatário
                                 </button>
@@ -1427,16 +1453,16 @@ function setModoExterno(modo) {
     const blocoInputs = blocoResp.querySelectorAll('input[name^="signatarios[1]"]');
     blocoInputs.forEach(function(inp) { inp.disabled = !isGov; });
 
-    // Mostrar/ocultar botão de adicionar signatário
-    const btnAddWrapper = document.getElementById('btn_add_signatario_wrapper');
-    if (btnAddWrapper) btnAddWrapper.classList.toggle('hidden', !isGov);
+    // Mostrar/ocultar botão de adicionar signatário (sempre visível)
+    var btnAddWrapper = document.getElementById('btn_add_signatario_wrapper');
+    if (btnAddWrapper) btnAddWrapper.classList.remove('hidden');
     
     // Mostrar/ocultar signatários extras
-    const extrasContainer = document.getElementById('signatarios_extras_container');
+    var extrasContainer = document.getElementById('signatarios_extras_container');
     if (extrasContainer) {
-        extrasContainer.classList.toggle('hidden', !isGov);
-        // Desabilitar/habilitar inputs extras
-        extrasContainer.querySelectorAll('input, select').forEach(function(inp) { inp.disabled = !isGov; });
+        extrasContainer.classList.remove('hidden');
+        // Habilitar inputs extras
+        extrasContainer.querySelectorAll('input, select').forEach(function(inp) { inp.disabled = false; });
     }
 
     // Textos
@@ -1452,6 +1478,64 @@ function setModoExterno(modo) {
 // ── Preenche signatário externo ao selecionar ──────────────────────────────
 // Inicializar modo simples (desabilitar campos do responsável)
 setModoExterno('simples');
+
+// ── Toggle campo "Outro" no papel da assinatura ────────────────────────────
+function toggleOutroPapel(selectEl) {
+    var inputOutro = selectEl.parentElement.querySelector('input[data-papel-outro]');
+    if (!inputOutro) return;
+    
+    if (selectEl.value === '__outro__') {
+        inputOutro.classList.remove('hidden');
+        inputOutro.required = true;
+        inputOutro.focus();
+        // Mudar o name do select para não enviar "__outro__"
+        selectEl.name = '';
+        inputOutro.name = selectEl.getAttribute('data-original-name') || selectEl.dataset.originalName || '';
+        // Salvar o name original
+        if (!selectEl.dataset.originalName) {
+            // Pegar do name antes de limpar
+        }
+    } else {
+        inputOutro.classList.add('hidden');
+        inputOutro.required = false;
+        inputOutro.value = '';
+        inputOutro.name = '';
+        // Restaurar name do select
+        if (selectEl.dataset.originalName) {
+            selectEl.name = selectEl.dataset.originalName;
+        }
+    }
+}
+
+// Inicializar data-original-name em todos os selects de funcao
+document.querySelectorAll('select[name*="funcao"]').forEach(function(sel) {
+    sel.dataset.originalName = sel.name;
+    var inputOutro = sel.parentElement.querySelector('input[data-papel-outro]');
+    if (inputOutro) inputOutro.name = '';
+});
+
+// Sobrescrever toggleOutroPapel com versão correta
+function toggleOutroPapel(selectEl) {
+    var inputOutro = selectEl.parentElement.querySelector('input[data-papel-outro]');
+    if (!inputOutro) return;
+    
+    if (selectEl.value === '__outro__') {
+        inputOutro.classList.remove('hidden');
+        inputOutro.required = true;
+        inputOutro.name = selectEl.dataset.originalName || selectEl.name;
+        selectEl.dataset.savedName = selectEl.name;
+        selectEl.name = '';
+        inputOutro.focus();
+    } else {
+        inputOutro.classList.add('hidden');
+        inputOutro.required = false;
+        inputOutro.value = '';
+        inputOutro.name = '';
+        if (selectEl.dataset.savedName || selectEl.dataset.originalName) {
+            selectEl.name = selectEl.dataset.originalName || selectEl.dataset.savedName;
+        }
+    }
+}
 
 // ── Adicionar/Remover signatários extras (governança) ──────────────────────
 var _signatarioCount = 2; // Já temos 0 (externo) e 1 (responsável)
@@ -1493,8 +1577,20 @@ function adicionarSignatario() {
         + '<input type="text" name="signatarios[' + idx + '][nome]" required placeholder="Nome completo" class="block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors"></div>'
         + '<div><label class="block text-xs font-medium text-gray-600 mb-1">E-mail</label>'
         + '<input type="email" name="signatarios[' + idx + '][email]" required placeholder="email@exemplo.com" class="block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors"></div>'
+        + '<div><label class="block text-xs font-medium text-gray-600 mb-1">Papel na Assinatura</label>'
+        + '<select name="signatarios[' + idx + '][funcao]" onchange="toggleOutroPapel(this)" class="block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors">'
+        + '<option value="Signatário">Signatário</option>'
+        + '<option value="Testemunha">Testemunha</option>'
+        + '<option value="Responsável">Responsável</option>'
+        + '<option value="Representante Legal">Representante Legal</option>'
+        + '<option value="Fiador">Fiador</option>'
+        + '<option value="Parte Contratante">Parte Contratante</option>'
+        + '<option value="Parte Contratada">Parte Contratada</option>'
+        + '<option value="__outro__">Outro (digitar)</option>'
+        + '</select>'
+        + '<input type="text" class="hidden mt-2 block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors" placeholder="Digite o papel..." data-papel-outro="' + idx + '">'
         + '</div>'
-        + '<input type="hidden" name="signatarios[' + idx + '][funcao]" value="Signatário">'
+        + '</div>'
         + '<input type="hidden" name="signatarios[' + idx + '][ordem]" value="' + ordem + '">'
         + '<input type="hidden" name="signatarios[' + idx + '][enti_nb_id]" value="">'
         + '</div>';
