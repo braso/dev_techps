@@ -1393,7 +1393,7 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                                 </div>
                             </div>
 
-                            <!-- Container para signatários extras (governança) -->
+                            <!-- Container ordenável para signatários (2º em diante) -->
                             <div id="signatarios_extras_container"></div>
 
                             <!-- Botão adicionar signatário -->
@@ -1580,14 +1580,16 @@ function adicionarSignatario(tipo) {
     var selectLabel = isExterno ? 'Selecionar signatário externo' : 'Selecionar funcionário';
     var funcaoDefault = isExterno ? 'Signatário Externo' : 'Signatário';
 
-    var html = '<div class="border ' + corBorda + ' rounded-xl p-4 ' + corFundo + ' mt-4 signatario-extra" id="signatario_extra_' + idx + '">'
+    var html = '<div class="border ' + corBorda + ' rounded-xl p-4 ' + corFundo + ' mt-4 signatario-extra signatario-ordenavel" id="signatario_extra_' + idx + '">'
         + '<div class="flex items-center justify-between mb-3">'
-        + '<p class="text-xs font-semibold text-gray-600 uppercase flex items-center gap-1">'
-        + '<i class="fas ' + icone + '"></i> ' + ordem + 'º Signatário <span class="text-xs font-normal text-gray-400">(' + labelTipo + ')</span>'
+        + '<p class="text-xs font-semibold text-gray-600 uppercase flex items-center gap-1 signatario-label">'
+        + '<i class="fas ' + icone + '"></i> <span class="signatario-ordem-label">' + ordem + 'º</span> Signatário <span class="text-xs font-normal text-gray-400">(' + labelTipo + ')</span>'
         + '</p>'
-        + '<button type="button" onclick="removerSignatario(' + idx + ')" class="text-red-400 hover:text-red-600 text-xs font-medium flex items-center gap-1 transition-colors">'
-        + '<i class="fas fa-trash-alt"></i> Remover'
-        + '</button>'
+        + '<div class="flex items-center gap-1">'
+        + '<button type="button" onclick="moverSignatario(this, \'up\')" class="p-1 text-gray-400 hover:text-blue-600 transition-colors" title="Mover para cima"><i class="fas fa-chevron-up"></i></button>'
+        + '<button type="button" onclick="moverSignatario(this, \'down\')" class="p-1 text-gray-400 hover:text-blue-600 transition-colors" title="Mover para baixo"><i class="fas fa-chevron-down"></i></button>'
+        + '<button type="button" onclick="removerSignatario(' + idx + ')" class="p-1 text-red-400 hover:text-red-600 transition-colors" title="Remover"><i class="fas fa-trash-alt"></i></button>'
+        + '</div>'
         + '</div>'
         + '<div class="mb-3">'
         + '<label class="block text-xs font-medium text-gray-600 mb-1">' + selectLabel + '</label>'
@@ -1614,16 +1616,59 @@ function adicionarSignatario(tipo) {
         + '<input type="text" class="hidden mt-2 block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors" placeholder="Digite o papel..." data-papel-outro="' + idx + '" name="">'
         + '</div>'
         + '</div>'
-        + '<input type="hidden" name="signatarios[' + idx + '][ordem]" value="' + ordem + '">'
+        + '<input type="hidden" class="signatario-ordem-input" name="signatarios[' + idx + '][ordem]" value="' + ordem + '">'
         + '<input type="hidden" name="signatarios[' + idx + '][enti_nb_id]" value="">'
         + '</div>';
 
     container.insertAdjacentHTML('beforeend', html);
+    recalcularOrdens();
 }
 
 function removerSignatario(idx) {
     var el = document.getElementById('signatario_extra_' + idx);
     if (el) el.remove();
+    recalcularOrdens();
+}
+
+// ── Mover signatário para cima ou para baixo ───────────────────────────────
+function moverSignatario(btn, direcao) {
+    var bloco = btn.closest('.signatario-ordenavel');
+    if (!bloco) return;
+    var container = document.getElementById('signatarios_extras_container');
+    if (!container) return;
+
+    if (direcao === 'up') {
+        var anterior = bloco.previousElementSibling;
+        if (anterior && anterior.classList.contains('signatario-ordenavel')) {
+            container.insertBefore(bloco, anterior);
+        }
+    } else {
+        var proximo = bloco.nextElementSibling;
+        if (proximo && proximo.classList.contains('signatario-ordenavel')) {
+            container.insertBefore(proximo, bloco);
+        }
+    }
+    recalcularOrdens();
+}
+
+// ── Recalcular ordens de todos os signatários ──────────────────────────────
+function recalcularOrdens() {
+    var container = document.getElementById('signatarios_extras_container');
+    if (!container) return;
+    var blocos = container.querySelectorAll('.signatario-ordenavel');
+    // O 1º signatário (externo) é fixo com ordem 1, bloco_responsavel é ordem 2
+    // Os extras começam na ordem 2 (se modo simples) ou 3 (se governança)
+    var blocoResp = document.getElementById('bloco_responsavel');
+    var respVisivel = blocoResp && !blocoResp.classList.contains('hidden');
+    var ordemBase = respVisivel ? 3 : 2;
+
+    for (var i = 0; i < blocos.length; i++) {
+        var ordem = ordemBase + i;
+        var labelEl = blocos[i].querySelector('.signatario-ordem-label');
+        var inputOrdem = blocos[i].querySelector('.signatario-ordem-input');
+        if (labelEl) labelEl.textContent = ordem + 'º';
+        if (inputOrdem) inputOrdem.value = ordem;
+    }
 }
 
 function preencherSignatarioExtra(select, idx) {

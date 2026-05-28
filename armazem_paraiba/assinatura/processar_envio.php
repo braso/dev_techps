@@ -293,6 +293,15 @@ if(
     redirectTo($redirect_to, "error", "Nenhum signatário informado");
 }
 
+// Filtrar signatários vazios (removidos no frontend mas que ainda vieram no POST)
+if (!empty($signatarios) && is_array($signatarios)) {
+    $signatarios = array_values(array_filter($signatarios, function($sig) {
+        $nome = trim(strval($sig['nome'] ?? ''));
+        $email = trim(strval($sig['email'] ?? ''));
+        return $nome !== '' && $email !== '';
+    }));
+}
+
 if($modo_envio === "funcionarios"){
     ensureAssinaturaTables($conn);
 
@@ -1283,10 +1292,16 @@ if(move_uploaded_file($fileTmpPath, $dest_path)) {
     if (mysqli_stmt_execute($stmt)) {
         $id_solicitacao = mysqli_insert_id($conn);
         
-        // 2. Insere os Assinantes
+        // 2. Normalizar ordens para serem sequenciais (1, 2, 3...)
+        // Ordena signatários pela ordem informada para manter a sequência desejada
+        usort($signatarios, function($a, $b) {
+            return intval($a['ordem'] ?? 0) - intval($b['ordem'] ?? 0);
+        });
+        
+        // 3. Insere os Assinantes com ordens sequenciais
         foreach ($signatarios as $index => $sig) {
             $tokenAssinante = bin2hex(random_bytes(32));
-            $ordem = $sig['ordem'] ?? ($index + 1);
+            $ordem = $index + 1; // Sempre sequencial: 1, 2, 3...
             $funcao = $sig['funcao'] ?? 'Signatário';
             $entiNbId = intval($sig["enti_nb_id"] ?? 0);
             $salvarDoc = strtolower(trim(strval($sig["salvar_documento_funcionario"] ?? "nao"))) === "sim" ? "sim" : "nao";
