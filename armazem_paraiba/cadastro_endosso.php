@@ -343,7 +343,7 @@
 		$totalResumo["saldoAnterior"] = $saldoAnterior;
             $totalResumo["saldoBruto"]       = $saldoBruto;
 		
-		$_POST["extraPago"] = operarHorarios([$totalResumo["saldoBruto"], $descFaltasNaoJustificadas], "-");
+		$_POST["extraPago"] = operarHorarios([$diffSaldo[0] != "-" ? $diffSaldo : "00:00", $descFaltasNaoJustificadas], "-");
 		if($_POST["extraPago"][0] == "-"){
 			$_POST["extraPago"] = "00:00";
 		}
@@ -516,7 +516,12 @@ function cadastrar(){
     $he50      = strip_tags($totalResumo["he50"]);
     $he100     = strip_tags($totalResumo["he100"]);
     $saldoBruto = operarHorarios([$saldoAnterior, $diffSaldo], "+");
-    $max50Auto = operarHorarios([$saldoBruto, $descFaltasNaoJustificadas], "-");
+    
+    // O limite de pagamento é baseado no saldo do PERÍODO (diffSaldo), não no saldoBruto.
+    // Isso garante que HE gerada no período seja paga mesmo que o saldo acumulado anterior seja negativo.
+    // Ex: saldoAnterior=-261:46, diffSaldo=+03:03 → deve pagar as 03:03 de HE do período.
+    $baseParaLimite = $diffSaldo[0] != "-" ? $diffSaldo : "00:00";
+    $max50Auto = operarHorarios([$baseParaLimite, $descFaltasNaoJustificadas], "-");
     if($max50Auto[0] == "-"){ $max50Auto = "00:00"; }
     $pagarExtras = (!empty($_POST["pagar_horas"]) && $_POST["pagar_horas"] == "sim");
     $limitToApply = "00:00";
@@ -538,17 +543,25 @@ function cadastrar(){
     }
 
     $saldoPeriodoParaCalculo = $diffSaldo;
-    // Ensure diffSaldo is treated as 00:00 if it is equivalent
-    $diffSaldoClean = operarHorarios([$diffSaldo], "+");
-    if($diffSaldoClean == "00:00" && $saldoBruto[0] != "-"){
-        $saldoPeriodoParaCalculo = $saldoBruto;
-    }
+    // Se o período foi positivo, usa o diffSaldo para calcular pagamento.
+    // Isso garante que mesmo com saldoBruto negativo (acumulado anterior),
+    // as HE geradas no período atual sejam pagas corretamente.
 
     $pagarHEExComPerNeg = ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao") == "sim";
     $extraManualDiscount = "00:00";
 
-    if($pagarExtras || ($pagarHEExComPerNeg && $he100 != "00:00")){
-        // $saldoPeriodoParaCalculo = $saldoBruto; // REMOVIDO: Devemos manter o saldo do período original para que a função saiba se é negativo ou positivo.
+    // HE 100% (domingo/feriado/extraordinária) SEMPRE deve ser paga — não vai para banco de horas.
+    // Se há HE100 no período e o período é positivo, força o pagamento independente de "pagar_horas".
+    $temHE100NoPeriodo = ($he100 != "00:00" && $diffSaldo[0] != "-");
+    if($temHE100NoPeriodo && !$pagarExtras){
+        // Força pagamento da HE100 até o limite do diffSaldo positivo
+        $limitHE100Forcado = operarHorarios([$he100, $baseParaLimite], "-")[0] != "-" ? $baseParaLimite : $he100;
+        if($limitToApply == "00:00"){
+            $limitToApply = $limitHE100Forcado;
+        }
+    }
+
+    if($pagarExtras || $temHE100NoPeriodo || ($pagarHEExComPerNeg && $he100 != "00:00")){
 		$limitParaCalculo = $limitToApply;
 		
 		// Se pagarHEExComPerNeg está ativo, paga HE100 independente do sinal do período.
@@ -572,7 +585,7 @@ function cadastrar(){
             }
 		}
 
-        $aPagar = calcularHorasAPagar($saldoPeriodoParaCalculo, $saldoBruto, $he50, $he100, $limitParaCalculo, ($pagarExtras ? "sim" : ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao")));
+        $aPagar = calcularHorasAPagar($saldoPeriodoParaCalculo, $saldoBruto, $he50, $he100, $limitParaCalculo, ($pagarExtras || $temHE100NoPeriodo ? "sim" : ($motorista["para_tx_pagarHEExComPerNeg"]?? "nao")));
     }else{
         $aPagar = ["00:00", "00:00"];
     }
