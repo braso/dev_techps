@@ -11,162 +11,51 @@
 
     require_once __DIR__."/funcoes_paineis.php";
     require __DIR__."/../funcoes_ponto.php";
-    require_once __DIR__."/../utils/Logger.php";
-
-    function registrar_bootstrap_local($mensagem, $contexto = []){
-        $agora = date('Y-m-d H:i:s');
-        $linha = $agora . ' ' . $mensagem . ' ' . json_encode($contexto, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL;
-        @file_put_contents(__DIR__ . '/../debug_log.txt', $linha, FILE_APPEND);
-        $logDir = __DIR__ . '/../logs';
-        if (!is_dir($logDir)) {
-            @mkdir($logDir, 0755, true);
-        }
-        @file_put_contents($logDir . '/saldo_' . date('Y-m-d') . '.log', $linha, FILE_APPEND);
-    }
-
-    function registrar_erro_php_local($errno, $errstr, $errfile, $errline){
-        registrar_bootstrap_local('PHP_ERROR', [
-            'errno' => $errno,
-            'message' => $errstr,
-            'file' => $errfile,
-            'line' => $errline,
-            'usuario' => $_SESSION['user_nb_id'] ?? '',
-            'uri' => $_SERVER['REQUEST_URI'] ?? ''
-        ]);
-        return false;
-    }
-
-    function registrar_shutdown_local(){
-        $lastError = error_get_last();
-        if(!empty($lastError)){
-            $tiposIgnorados = [E_NOTICE, E_USER_NOTICE, E_DEPRECATED, E_USER_DEPRECATED];
-            if(!in_array($lastError['type'], $tiposIgnorados, true)){
-                registrar_bootstrap_local('PHP_SHUTDOWN', [
-                    'type' => $lastError['type'],
-                    'message' => $lastError['message'],
-                    'file' => $lastError['file'],
-                    'line' => $lastError['line'],
-                    'usuario' => $_SESSION['user_nb_id'] ?? '',
-                    'uri' => $_SERVER['REQUEST_URI'] ?? ''
-                ]);
-            }
-        }
-    }
-
-    // Wrapper seguro para logging: evita erros se a classe Logger não existir
-    function safe_log($level, $message, $context = []){
-        if(class_exists('Logger') && method_exists('Logger', 'log')){
-            try{
-                Logger::log($level, $message, $context);
-            }catch(Throwable $e){
-                registrar_bootstrap_local('LOGGER_FALHOU', [
-                    'level' => $level,
-                    'message' => $message,
-                    'erro' => $e->getMessage(),
-                    'arquivo' => $e->getFile(),
-                    'linha' => $e->getLine(),
-                ]);
-                @error_log('LOGGER_FALHOU: ' . $e->getMessage());
-            }
-        }
-    }
-
-    // Bootstrap de log: força criação do arquivo diário assim que a página é carregada
-    set_error_handler('registrar_erro_php_local');
-    register_shutdown_function('registrar_shutdown_local');
-    
-    // Diagnóstico de caminhos de log
-    registrar_bootstrap_local('saldo.php carregado', [
-        'usuario' => $_SESSION['user_nb_id'] ?? '',
-        'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
-        'uri' => $_SERVER['REQUEST_URI'] ?? '',
-        'cwd' => getcwd(),
-        'php_user' => get_current_user(),
-        'pid' => getmypid(),
-    ]);
-    
-    safe_log('INFO', 'saldo.php carregado', [
-        'log_file' => class_exists('Logger') && method_exists('Logger', 'getLogFile') ? Logger::getLogFile() : '',
-        'usuario' => $_SESSION['user_nb_id'] ?? '',
-        'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
-        'uri' => $_SERVER['REQUEST_URI'] ?? '',
-        'php_version' => phpversion(),
-        'php_user' => get_current_user(),
-    ]);
 
     function enviarForm(){
         $_POST["acao"] = $_POST["campoAcao"];
         index();
     }
 
-    function carregarJS(array $arquivos, array $empresaIds = [], array $fallbackEmpresas = []){
-        global $existeTerceirizado;
-
-        $hasFiltersExceptEmpresa = !(empty($_POST["busca_ocupacao"]) && empty($_POST["operacao"]) && empty($_POST["busca_setor"]) && empty($_POST["busca_subsetor"]));
-        $isDetailView = !empty($_POST["modoDetalheEmpresa"]) && !empty($_POST["empresa"]);
-        
-        // Se tem filtros mas nenhuma empresa selecionada, mostra empresas; senão mostra funcionários se empresa foi selecionada
-        $showEmpresasInGrid = $hasFiltersExceptEmpresa && !$isDetailView;
+    function carregarJS(array $arquivos){
 
         $linha = "linha = '<tr>'";
-        $layoutCompacto = $isDetailView && !empty($existeTerceirizado);
-
-        if($isDetailView){
-            // Visualização de funcionários quando empresa está selecionada
-            if($layoutCompacto){
-                $linha .= "+'<td>'+(row.matricula ?? row.enti_tx_matricula ?? '')+'</td>'
-                        +'<td>'+(row.nome ?? row.enti_tx_nome ?? '')+'</td>'
-                        +'<td>'+(row.ocupacao ?? row.enti_tx_ocupacao ?? '')+'</td>'
-                        +'<td>'+(row.setorNome ?? row.setor ?? row.enti_tx_setor ?? '')+'</td>'
-                        +'<td>'+(row.subsetorNome ?? row.subsetor ?? row.enti_tx_subsetor ?? '')+'</td>'
-                        +'<td class=\"'+((row.statusEndosso ?? '') === 'E' ? 'endo' : ((row.statusEndosso ?? '') === 'EP' ? 'endo-parc' : 'nao-endo'))+'\">'
-                            +'<strong>'+(row.statusEndosso ?? '')+'</strong>'
-                        +'</td>'
-                        +'<td>'+(row.jornadaPrevista == '00:00' ? '' : (row.jornadaPrevista ?? ''))+'</td>'
-                        +'<td>'+(row.jornadaEfetiva == '00:00' ? '' : (row.jornadaEfetiva ?? ''))+'</td>'
-                        +'<td>'+(row.saldoAnterior ?? '')+'</td>'
-                        +'<td>'+(row.saldoPeriodo ?? '')+'</td>'
-                        +'<td id=\"'+((row.saldoFinal ?? '') > '00:00' ? 'saldo-final' : ((row.saldoFinal ?? '') === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
-                        +(row.saldoFinal ?? '')+indicador+'</td>'
-                    +'</tr>';";
-            }else{
-                $linha .= "+'<td>'+(row.matricula ?? row.enti_tx_matricula ?? '')+'</td>'
-                        +'<td>'+(row.nome ?? row.enti_tx_nome ?? '')+'</td>'
-                        +'<td>'+(row.ocupacao ?? row.enti_tx_ocupacao ?? '')+'</td>'
-                        +'<td>'+(row.tipoOperacaoNome ?? row.tipoOperacao ?? row.enti_tx_tipoOperacao ?? '')+'</td>'
-                        +'<td>'+(row.setorNome ?? row.setor ?? row.enti_tx_setor ?? '')+'</td>'
-                        +'<td>'+(row.subsetorNome ?? row.subsetor ?? row.enti_tx_subsetor ?? '')+'</td>'
-                        +'<td class=\"'+((row.statusEndosso ?? '') === 'E' ? 'endo' : ((row.statusEndosso ?? '') === 'EP' ? 'endo-parc' : 'nao-endo'))+'\">'
-                            +'<strong>'+(row.statusEndosso ?? '')+'</strong>'
-                        +'</td>'
-                        +'<td>'+(row.jornadaPrevista == '00:00' ? '' : (row.jornadaPrevista ?? ''))+'</td>'
-                        +'<td>'+(row.jornadaEfetiva == '00:00' ? '' : (row.jornadaEfetiva ?? ''))+'</td>'
-                        +'<td>'+(row.HESemanal == '00:00' ? '' : (row.HESemanal ?? row.he50APagar ?? ''))+'</td>'
-                        +'<td>'+(row.HESabado == '00:00' ? '' : (row.HESabado ?? row.he100APagar ?? ''))+'</td>'
-                        +'<td>'+(row.adicionalNoturno == '00:00' ? '' : (row.adicionalNoturno ?? ''))+'</td>'
-                        +'<td>'+(row.esperaIndenizada == '00:00' ? '' : (row.esperaIndenizada ?? ''))+'</td>'
-                        +'<td id=\"'+((row.saldoAnterior ?? '') > '00:00' ? 'saldo-final' : ((row.saldoAnterior ?? '') === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
-                        +(row.saldoAnterior?? '')+'</td>'
-                        +'<td>'+(row.saldoPeriodo > '00:00' ? '<strong>' + row.saldoPeriodo + '</strong>' : (row.saldoPeriodo ?? ''))+'</td>'
-                        +'<td id=\"'+((row.saldoFinal ?? '') > '00:00' ? 'saldo-final' : ((row.saldoFinal ?? '') === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
-                        +(row.saldoFinal?? '')+indicador+'</td>'
-                    +'</tr>';";
-            }
+        if(!empty($_POST["empresa"])){
+            $linha .= "+'<td>'+row.matricula+'</td>'
+                    +'<td>'+row.nome+'</td>'
+                    +'<td>'+(row.ocupacao?? '')+'</td>'
+                    +'<td>'+(row.tipoOperacaoNome?? '')+'</td>'
+                    +'<td>'+(row.setorNome?? '')+'</td>'
+                    +'<td>'+(row.subsetorNome?? '')+'</td>'
+                    +'<td class=\"'+(row.statusEndosso === 'E' ? 'endo' : (row.statusEndosso === 'EP' ? 'endo-parc' : 'nao-endo'))+'\">'
+                        +'<strong>'+row.statusEndosso+'</strong>'
+                    +'</td>'
+                    +'<td>'+(row.jornadaPrevista == '00:00' ? '' : row.jornadaPrevista?? '')+'</td>'
+                    +'<td>'+(row.jornadaEfetiva == '00:00' ? '' : row.jornadaEfetiva?? '')+'</td>'
+                    +'<td>'+(row.HESemanal == '00:00' ? '' : row.HESemanal?? '')+'</td>'
+                    +'<td>'+(row.HESabado == '00:00' ? '' : row.HESabado?? '')+'</td>'
+                    +'<td>'+(row.adicionalNoturno == '00:00' ? '' : row.adicionalNoturno?? '')+'</td>'
+                    +'<td>'+(row.esperaIndenizada == '00:00' ? '' : row.esperaIndenizada?? '')+'</td>'
+                    +'<td id=\"'+(row.saldoAnterior > '00:00' ? 'saldo-final' : (row.saldoAnterior === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
+                    +(row.saldoAnterior?? '')+'</td>'
+                    +'<td>'+(row.saldoPeriodo > '00:00' ? '<strong>' + row.saldoPeriodo + '</strong>' : (row.saldoPeriodo ?? ''))+'</td>'
+                    +'<td id=\"'+(row.saldoFinal > '00:00' ? 'saldo-final' : (row.saldoFinal === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
+                    +(row.saldoFinal?? '')+indicador+'</td>'
+                +'</tr>';";
         }else{
-            // Visualização de empresas: clique abre os funcionários da empresa clicada
-            $linha .= "+'<td style=\"cursor: pointer;\" onclick=\"abrirDetalheEmpresa(' + row.empr_nb_id + ')\">'+(row.empr_tx_nome ?? row.nome ?? '')+'</td>'
+            $linha .= "+'<td style=\"cursor: pointer;\" onclick=\"setAndSubmit(' + row.empr_nb_id + ')\">'+row.empr_tx_nome+'</td>'
                     +'<td>'+Math.round(row.percEndossado*10000)/100+'%</td>'
-                    +'<td>'+(row.qtdMotoristas ?? row.qtdFuncionarios ?? 0)+'</td>'
-                    +'<td>'+(row.totais.jornadaPrevista == '00:00' ? '' : (row.totais.jornadaPrevista ?? ''))+'</td>'
-                    +'<td>'+(row.totais.jornadaEfetiva == '00:00' ? '' : (row.totais.jornadaEfetiva ?? ''))+'</td>'
-                    +'<td>'+(row.totais.HESemanal == '00:00' ? '' : (row.totais.HESemanal ?? row.totais.he50APagar ?? ''))+'</td>'
-                    +'<td>'+(row.totais.HESabado == '00:00' ? '' : (row.totais.HESabado ?? row.totais.he100APagar ?? ''))+'</td>'
-                    +'<td>'+(row.totais.adicionalNoturno == '00:00' ? '' : (row.totais.adicionalNoturno ?? ''))+'</td>'
-                    +'<td>'+(row.totais.esperaIndenizada == '00:00' ? '' : (row.totais.esperaIndenizada ?? ''))+'</td>'
-                    +'<td id=\"'+((row.totais.saldoAnterior ?? '') > '00:00' ? 'saldo-final' : ((row.totais.saldoAnterior ?? '') === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\" >'
-                    +(row.totais.saldoAnterior == '00:00' ? '' : (row.totais.saldoAnterior ?? ''))+'</td>'
+                    +'<td>'+row.qtdFuncionarios+'</td>'
+                    +'<td>'+(row.totais.jornadaPrevista == '00:00' ? '' : row.totais.jornadaPrevista)+'</td>'
+                    +'<td>'+(row.totais.jornadaEfetiva == '00:00' ? '' : row.totais.jornadaEfetiva)+'</td>'
+                    +'<td>'+(row.totais.HESemanal == '00:00' ? '' : row.totais.HESemanal)+'</td>'
+                    +'<td>'+(row.totais.HESabado == '00:00' ? '' : row.totais.HESabado)+'</td>'
+                    +'<td>'+(row.totais.adicionalNoturno == '00:00' ? '' : row.totais.adicionalNoturno)+'</td>'
+                    +'<td>'+(row.totais.esperaIndenizada == '00:00' ? '' : row.totais.esperaIndenizada)+'</td>'
+                    +'<td id=\"'+(row.totais.saldoAnterior > '00:00' ? 'saldo-final' : (row.totais.saldoAnterior === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\" >'
+                    +(row.totais.saldoAnterior == '00:00' ? '' : row.totais.saldoAnterior)+'</td>'
                     +'<td>'+(row.totais.saldoPeriodo > '00:00' ? '<strong>' + row.totais.saldoPeriodo + '</strong>' : (row.totais.saldoPeriodo ?? ''))+'</td>'
-                    +'<td id=\"'+((row.totais.saldoFinal ?? '') > '00:00' ? 'saldo-final' : ((row.totais.saldoFinal ?? '') === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
+                    +'<td id=\"'+(row.totais.saldoFinal > '00:00' ? 'saldo-final' : (row.totais.saldoFinal === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
                     +(row.totais.saldoFinal ?? '')+indicador+'</td>'
                 +'</tr>';";
 
@@ -176,71 +65,25 @@
         foreach($arquivos as $arquivo){
             $carregarDados .= "carregarDados('".$arquivo."');";
         }
-        $carregarFallbackEmpresas = "";
-        foreach($fallbackEmpresas as $empresaFallback){
-            $carregarFallbackEmpresas .= "processarLinha(".json_encode($empresaFallback, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).");";
-        }
 
         echo
             "<form name='myForm' method='post' action='".htmlspecialchars($_SERVER["PHP_SELF"])."'>
                 <input type='hidden' name='acao'>
                 <input type='hidden' name='campoAcao'>
                 <input type='hidden' name='empresa'>
-                <input type='hidden' name='empresaFiltro' value='".htmlspecialchars($_POST["empresaFiltro"] ?? ($_POST["empresa"] ?? ""), ENT_QUOTES, 'UTF-8')."'>
                 <input type='hidden' name='busca_dataMes'>
                 <input type='hidden' name='busca_dataInicio'>
                 <input type='hidden' name='busca_dataFim'>
                 <input type='hidden' name='busca_data'>
                 <input type='hidden' name='busca_ocupacao'>
-                <input type='hidden' name='operacao'>
-                <input type='hidden' name='busca_setor'>
-                <input type='hidden' name='busca_subsetor'>
-                <input type='hidden' name='busca_usuario'>
-                <input type='hidden' name='modoDetalheEmpresa'>
-                <input type='hidden' name='manterFiltros'>
             </form>
             <script>
-                function copiarFiltrosAtuaisParaMyForm(){
-                    var targets = ['busca_ocupacao', 'operacao', 'busca_setor', 'busca_subsetor'];
-                    targets.forEach(function(target){
-                        var hidden = document.querySelector('.js-filtro-hidden[data-filter-name=\'' + target + '\']');
-                        if(hidden && document.myForm[target]){
-                            document.myForm[target].value = hidden.value || '';
-                        }
-                    });
-                    var empresaHidden = document.querySelector('.js-filtro-hidden[data-filter-name=\'empresa\']');
-                    if(empresaHidden && document.myForm.empresaFiltro){
-                        document.myForm.empresaFiltro.value = empresaHidden.value || '';
-                    }
-                    var dataMesInput = document.getElementById('busca_dataMes');
-                    if(dataMesInput && document.myForm.busca_dataMes){
-                        document.myForm.busca_dataMes.value = dataMesInput.value || '';
-                    }
-                }
-
-                function setAndSubmit(empresa, manterModoDetalhe){
+                function setAndSubmit(empresa){
                     document.myForm.acao.value = 'enviarForm()';
                     document.myForm.campoAcao.value = 'buscar';
-                    if(empresa !== ''){
-                        document.myForm.empresa.value = empresa;
-                    } else if(document.myForm.empresaFiltro && document.myForm.empresaFiltro.value !== ''){
-                        document.myForm.empresa.value = document.myForm.empresaFiltro.value;
-                    }
-                    copiarFiltrosAtuaisParaMyForm();
-                    if(manterModoDetalhe === true){
-                        document.myForm.modoDetalheEmpresa.value = '1';
-                    }else if(manterModoDetalhe === false){
-                        document.myForm.modoDetalheEmpresa.value = '';
-                    }
-                    document.myForm.submit();
-                }
-
-                function abrirDetalheEmpresa(empresaId) {
-                    document.myForm.acao.value = 'enviarForm()';
-                    document.myForm.campoAcao.value = 'buscar';
-                    document.myForm.modoDetalheEmpresa.value = '1';
-                    document.myForm.empresa.value = empresaId;
-                    copiarFiltrosAtuaisParaMyForm();
+                    document.myForm.empresa.value = empresa;
+                    document.myForm.busca_dataMes.value = document.getElementById('busca_dataMes').value;
+                    document.myForm.busca_ocupacao.value = document.querySelector('[name=\"busca_ocupacao\"]').value;
                     document.myForm.submit();
                 }
 
@@ -249,37 +92,13 @@
                     document.myForm.empresa.value = empresaInput ? empresaInput.value : '';
                     document.myForm.busca_dataInicio.value = document.getElementById('busca_dataInicio').value;
                     document.myForm.busca_dataFim.value = document.getElementById('busca_dataFim').value;
-                    var ocupacaoEl = document.querySelector('[name=\"busca_ocupacao\"]');
-                    var operacaoEl = document.querySelector('[name=\"operacao\"]');
-                    var setorEl = document.querySelector('[name=\"busca_setor\"]');
-                    var subsetorEl = document.querySelector('[name=\"busca_subsetor\"]');
-                    document.myForm.busca_ocupacao.value = ocupacaoEl ? ocupacaoEl.value : '';
-                    document.myForm.operacao.value = operacaoEl ? operacaoEl.value : '';
-                    document.myForm.busca_setor.value = setorEl ? setorEl.value : '';
-                    document.myForm.busca_subsetor.value = subsetorEl ? subsetorEl.value : '';
+                    document.myForm.busca_ocupacao.value = document.querySelector('[name=\"busca_ocupacao\"]').value;
                     document.myForm.acao.value = 'atualizar';
                     document.myForm.submit();
                 }
 
                 function imprimir(){
                     window.print();
-                }
-
-                function obterFiltroCheckbox(nome){
-                    var valor = '';
-                    document.querySelectorAll('input.js-filtro-hidden').forEach(function(el){
-                        if(el.getAttribute('data-filter-name') === nome && !valor){
-                            valor = el.value || '';
-                        }
-                    });
-                    if(!valor){
-                        return [];
-                    }
-                    return valor.split(',').map(function(item){
-                        return item.trim();
-                    }).filter(function(item){
-                        return item !== '';
-                    });
                 }
 
                 $(document).ready(function(){
@@ -289,60 +108,6 @@
                     var operacaoPermitidas = '".$_POST["operacao"]."';
                     var setorPermitidas = '".$_POST["busca_setor"]."';
                     var subSetorPermitidas = '".$_POST["busca_subsetor"]."';
-
-                    function normalizarFiltroTexto(txt){
-                        txt = (txt || '').toString().toLowerCase().trim();
-                        if(typeof txt.normalize === 'function'){
-                            txt = txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                        }
-                        return txt;
-                    }
-
-                    function aplicarBuscaDropdown(target){
-                        if(!target){
-                            return;
-                        }
-                        var input = null;
-                        document.querySelectorAll('.js-filtro-search').forEach(function(el){
-                            if(!input && el.getAttribute('data-target') === target){
-                                input = el;
-                            }
-                        });
-                        if(!input){
-                            return;
-                        }
-                        var termo = normalizarFiltroTexto(input.value || '');
-                        document.querySelectorAll('input.js-filtro-checkbox').forEach(function(chk){
-                            if(chk.getAttribute('data-target') !== target){
-                                return;
-                            }
-                            var label = chk.closest('label.js-filtro-item');
-                            if(!label){
-                                return;
-                            }
-                            var texto = normalizarFiltroTexto(label.textContent || '');
-                            label.style.display = (termo === '' || texto.indexOf(termo) !== -1) ? '' : 'none';
-                        });
-                    }
-
-                    function aplicarFiltroUsuarioSelecionado(){
-                        var selecionados = obterFiltroCheckbox('busca_usuario');
-                        $('#tabela-empresas tbody tr').each(function(){
-                            var rowUsuarioId = ($(this).data('usuarioId') || $(this).attr('data-usuario-id') || '').toString().trim();
-                            var rowUsuarioNome = normalizarFiltroTexto($(this).find('td').eq(1).text());
-                            var exibir = selecionados.length === 0 || selecionados.indexOf(rowUsuarioId) !== -1 || selecionados.indexOf(rowUsuarioNome) !== -1;
-                            $(this).toggle(exibir);
-                        });
-                    }
-
-                    window.aplicarFiltroUsuarioSelecionado = aplicarFiltroUsuarioSelecionado;
-
-                    function aplicarFiltroNomeUsuario(){
-                        if(!$('#tabela-empresas tbody tr').length){
-                            return;
-                        }
-                        aplicarFiltroUsuarioSelecionado();
-                    }
 
                     function normalizarOcupacao(valor){
                         var txt = (valor || '').toString().trim().toLowerCase();
@@ -363,51 +128,6 @@
                     var subSetorFilter = toFilterArray(subSetorPermitidas);
 
                     console.log('Filtros ocupacao:', ocupacoesFilter);
-                    function processarLinha(row){
-                        row = row || {};
-                        row.totais = row.totais || {};
-                        console.log(row.saldoAnterior);
-
-                        // Normaliza valores das linhas para comparação (trim + lowercase)
-                        var rowOcup = normalizarOcupacao(row.ocupacao);
-                        var rowOper = (row.tipoOperacao || '').toString().trim().toLowerCase();
-                        var rowSet = (row.setor || '').toString().trim().toLowerCase();
-                        var rowSub = (row.subsetor || '').toString().trim().toLowerCase();
-
-                        if (
-                            (ocupacoesFilter.length > 0 && rowOcup !== '' && !ocupacoesFilter.includes(rowOcup)) ||
-                            (operacaoFilter.length > 0 && rowOper !== '' && !operacaoFilter.includes(rowOper)) ||
-                            (setorFilter.length > 0 && rowSet !== '' && !setorFilter.includes(rowSet)) ||
-                            (subSetorFilter.length > 0 && rowSub !== '' && !subSetorFilter.includes(rowSub))
-                        ) {
-                            return;
-                        }
-
-                        var saldoAnterior = horasParaMinutos(row.saldoAnterior !== undefined ? row.saldoAnterior : (row.totais.saldoAnterior || '00:00'));
-                        var saldoFinal = horasParaMinutos(row.saldoFinal !== undefined ? row.saldoFinal : (row.totais.saldoFinal || '00:00'));
-                        var indicador = '';
-                        if (saldoAnterior >= 0 && saldoFinal >= 0) {
-                            indicador = definirIndicador(saldoAnterior, saldoFinal);
-                        } else if (saldoAnterior >= 0 && saldoFinal <= 0) {
-                            indicador = definirIndicador(saldoAnterior, saldoFinal);
-                        } else if (saldoAnterior <= 0 && saldoFinal >= 0) {
-                            indicador = definirIndicador(saldoAnterior, saldoFinal);
-                        } else if (saldoAnterior <= 0 && saldoFinal <= 0) {
-                            indicador = definirIndicador(saldoAnterior, saldoFinal);
-                        } else {
-                            indicador = ' <i class=\"fa fa-minus\" style=\"color: gray;\"></i>';
-                        }
-                        console.log(row);
-                        {$linha}
-                        tabela.append(linha);
-                        var ultimaLinha = tabela.find('tr').last();
-                        if(ultimaLinha.length){
-                            ultimaLinha.attr('data-usuario-id', (row.idMotorista ?? row.enti_nb_id ?? row.user_nb_id ?? row.matricula ?? row.enti_tx_matricula ?? ''));
-                        }
-                        aplicarBuscaDropdown('busca_usuario');
-                        aplicarFiltroNomeUsuario();
-                    }
-
                     function carregarDados(urlArquivo){
                         $.ajax({
                             url: urlArquivo + '?v=' + new Date().getTime(),
@@ -417,7 +137,48 @@
                                 $.each(data, function(index, item){
                                     row[index] = item;
                                 });
-                                processarLinha(row);
+                                console.log(row.saldoAnterior);
+
+                                // Normaliza valores das linhas para comparação (trim + lowercase)
+                                var rowOcup = normalizarOcupacao(row.ocupacao);
+                                var rowOper = (row.tipoOperacao || '').toString().trim().toLowerCase();
+                                var rowSet = (row.setor || '').toString().trim().toLowerCase();
+                                var rowSub = (row.subsetor || '').toString().trim().toLowerCase();
+
+                                if (
+                                    (ocupacoesFilter.length > 0 && rowOcup !== '' && !ocupacoesFilter.includes(rowOcup)) ||
+                                    (operacaoFilter.length > 0 && rowOper !== '' && !operacaoFilter.includes(rowOper)) ||
+                                    (setorFilter.length > 0 && rowSet !== '' && !setorFilter.includes(rowSet)) ||
+                                    (subSetorFilter.length > 0 && rowSub !== '' && !subSetorFilter.includes(rowSub))
+                                ) {
+                                    return; // pula esta linha se qualquer filtro não permitir
+                                }
+
+                                var saldoAnterior = horasParaMinutos(row.saldoAnterior !== undefined ? row.saldoAnterior : row.totais.saldoAnterior);
+                                var saldoFinal = horasParaMinutos(row.saldoFinal !== undefined ? row.saldoFinal : row.totais.saldoFinal);
+                                var indicador = '';
+                                if (saldoAnterior >= 0 && saldoFinal >= 0) {
+                                    // Ambos os saldos são positivos
+                                    indicador = definirIndicador(saldoAnterior, saldoFinal);
+                                } else if (saldoAnterior >= 0 && saldoFinal <= 0) {
+                                    // Saldo anterior positivo e saldo final negativo
+                                    indicador = definirIndicador(saldoAnterior, saldoFinal);
+                                } else if (saldoAnterior <= 0 && saldoFinal >= 0) {
+                                    // Saldo anterior negativo e saldo final positivo
+                                    indicador = definirIndicador(saldoAnterior, saldoFinal);
+                                } else if (saldoAnterior <= 0 && saldoFinal <= 0) {
+                                    // Ambos os saldos são negativos
+                                    indicador = definirIndicador(saldoAnterior, saldoFinal);
+                                } else {
+                                    // Caso em que saldoAnterior é zero e saldoFinal é zero
+                                    indicador = ' <i class=\"fa fa-minus\" style=\"color: gray;\"></i>';
+                                }
+                                console.log(row);
+                                if(row.idMotorista != undefined){
+                                    delete row.idMotorista;
+                                }
+                                {$linha}
+                                tabela.append(linha);
                             },
                             error: function(){
                                 console.log('Erro ao carregar os dados.');
@@ -439,9 +200,6 @@
                     }
                     // Função para conversão de Horas para Minutos
                     function horasParaMinutos(horas) {
-                        if (!horas || typeof horas !== 'string' || horas.indexOf(':') === -1) {
-                            return 0;
-                        }
                         var partes = horas.split(':');
                         var horasNumeros = parseInt(partes[0], 10);  // Horas (pode ser positivo ou negativo)
                         var minutos = parseInt(partes[1], 10);       // Minutos
@@ -576,23 +334,7 @@
                         }
                     });
 
-                    $(document).on('input keyup', '.js-filtro-search', function(){
-                        if($(this).attr('data-target') === 'busca_usuario'){
-                            aplicarBuscaDropdown('busca_usuario');
-                        }
-                    });
-
-                    $(document).on('change', 'input.js-filtro-checkbox', function(){
-                        if($(this).attr('data-target') === 'busca_usuario'){
-                            aplicarFiltroNomeUsuario();
-                        }
-                    });
-
                     ".$carregarDados."
-                    ".$carregarFallbackEmpresas."
-
-                    aplicarBuscaDropdown('busca_usuario');
-                    aplicarFiltroNomeUsuario();
                 });
 
                 //Variação dos campos de pesquisa{
@@ -621,19 +363,6 @@
     function index(){
         include __DIR__.'/../check_permission.php';
         verificaPermissao('/paineis/saldo.php');
-        registrar_bootstrap_local('index() iniciado', [
-            'acao' => $_POST['acao'] ?? '',
-            'mes' => $_POST['busca_dataMes'] ?? date('Y-m'),
-            'usuario' => $_SESSION['user_nb_id'] ?? ''
-        ]);
-        safe_log('INFO', 'saldo.php aberto', [
-            'acao' => $_POST['acao'] ?? '',
-            'mes' => $_POST['busca_dataMes'] ?? date('Y-m'),
-            'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
-            'usuario' => $_SESSION['user_nb_id'] ?? ''
-        ]);
-
-        $empresaIds = []; // Inicializa para uso posterior
 
         if(empty($_POST["busca_dataMes"])){
             $_POST["busca_dataMes"] = date("Y-m"); 
@@ -685,60 +414,9 @@
         }
 
         $empresaSelecionadas = [];
-        $empresaFiltroFoiEnviado = array_key_exists("empresaFiltro", $_POST) || array_key_exists("empresa", $_POST) || !empty($_POST["manterFiltros"]);
-        if(array_key_exists("empresaFiltro", $_POST)){
-            $empresaSelecionadasRaw = (string)$_POST["empresaFiltro"];
-        }elseif($empresaFiltroFoiEnviado){
-            $empresaSelecionadasRaw = (string)$_POST["empresa"];
-        }else{
-            $empresaSelecionadasRaw = !empty($_SESSION["user_nb_empresa"]) ? (string)$_SESSION["user_nb_empresa"] : "";
-        }
+        $empresaSelecionadasRaw = !empty($_POST["empresa"]) ? (string)$_POST["empresa"] : (!empty($_SESSION["user_nb_empresa"]) ? (string)$_SESSION["user_nb_empresa"] : "");
         if($empresaSelecionadasRaw !== ""){
             $empresaSelecionadas = array_values(array_filter(array_map('trim', explode(',', $empresaSelecionadasRaw)), function($v){ return $v !== ''; }));
-        }
-
-        $modoDetalheEmpresaFiltro = !empty($_POST["modoDetalheEmpresa"]) && !empty($_POST["empresa"]);
-        $filtrosDetalheDesabilitados = !$modoDetalheEmpresaFiltro;
-        $usuarioSelecionados = array_values(array_filter(array_map('trim', explode(',', (string)($_POST["busca_usuario"] ?? ""))), function($v){ return $v !== ''; }));
-        $usuarioOpcoes = [];
-        $empresaIdsUsuarioFiltro = [];
-        if($modoDetalheEmpresaFiltro && !empty($_POST["empresa"])){
-            $empresaIdsUsuarioFiltro = array_values(array_filter(array_map('intval', explode(',', (string)$_POST["empresa"])), function($v){ return $v > 0; }));
-        }
-        if(empty($empresaIdsUsuarioFiltro)){
-            $empresaIdsUsuarioFiltro = array_values(array_filter(array_map('intval', $empresaSelecionadas), function($v){ return $v > 0; }));
-        }
-        if(empty($empresaIdsUsuarioFiltro) && !empty($_SESSION["user_nb_empresa"])){
-            $empresaIdsUsuarioFiltro = [intval($_SESSION["user_nb_empresa"])] ;
-        }
-        if(!empty($empresaIdsUsuarioFiltro)){
-            $resUsuariosFiltro = query(
-                "SELECT DISTINCT e.enti_nb_id, e.enti_tx_matricula, e.enti_tx_nome, u.user_tx_nome, u.user_tx_login
-                 FROM entidade e
-                 LEFT JOIN user u ON u.user_nb_entidade = e.enti_nb_id AND u.user_tx_status = 'ativo'
-                 WHERE e.enti_tx_status = 'ativo'
-                   AND e.enti_nb_empresa IN (".implode(',', $empresaIdsUsuarioFiltro).")
-                 ORDER BY COALESCE(NULLIF(u.user_tx_nome, ''), e.enti_tx_nome, u.user_tx_login, e.enti_tx_matricula) ASC"
-            );
-                while($resUsuariosFiltro && ($usuarioRow = mysqli_fetch_assoc($resUsuariosFiltro))){
-                $usuarioId = (string)intval($usuarioRow["enti_nb_id"]);
-                $usuarioNome = trim((string)($usuarioRow["user_tx_nome"] ?? ""));
-                if($usuarioNome === ''){
-                    $usuarioNome = trim((string)($usuarioRow["enti_tx_nome"] ?? $usuarioRow["user_tx_login"] ?? ""));
-                }
-                $usuarioMatricula = trim((string)($usuarioRow["enti_tx_matricula"] ?? ""));
-                if($usuarioMatricula !== ''){
-                    $usuarioNome = "[".$usuarioMatricula."] ".$usuarioNome;
-                }
-                if($usuarioId !== '' && $usuarioNome !== ''){
-                    $usuarioOpcoes[$usuarioId] = $usuarioNome;
-                }
-                // Log quantidade de usuários encontrados para filtro
-                safe_log('DEBUG', 'Usuarios filtro carregados', [
-                    'count' => count($usuarioOpcoes),
-                    'usuario_atual' => $_SESSION['user_nb_id'] ?? ($_SESSION['user_tx_login'] ?? '')
-                ]);
-            }
         }
 
         $empresaOpcoes = [];
@@ -746,7 +424,6 @@
         while($empresaRow = mysqli_fetch_assoc($resEmpresasFiltro)){
             $empresaOpcoes[(string)intval($empresaRow["empr_nb_id"])] = $empresaRow["empr_tx_nome"];
         }
-        safe_log('DEBUG', 'Empresas filtro carregadas', ['count' => count($empresaOpcoes), 'usuario_atual' => $_SESSION['user_nb_id'] ?? ($_SESSION['user_tx_login'] ?? '')]);
 
         $empresaLabelBotao = "Empresa";
         if(count($empresaSelecionadas) === 1){
@@ -779,9 +456,6 @@
         }
         $selectEmpresa .= "</div></div></div>";
 
-        // Se manterFiltros=1, reconhece os filtros mesmo que vazios no POST
-        $manterFiltros = !empty($_POST["manterFiltros"]);
-
         $ocupacaoSelecionadas = array_values(array_filter(array_map('trim', explode(',', (string)($_POST["busca_ocupacao"] ?? ""))), function($v){ return $v !== ''; }));
         $ocupacaoOpcoes = [
             "Motorista" => "Motorista",
@@ -792,7 +466,7 @@
         $selectOcupacao = "<div class='col-sm-2 margin-bottom-5 campo-fit-content'>"
             ."<label>Ocupação</label>"
             ."<div class='filtro-compact' data-filter='busca_ocupacao' data-label='Ocupação' style='position:relative;'>"
-            ."<button type='button' class='btn btn-default btn-block js-filtro-toggle' " . ($filtrosDetalheDesabilitados ? "disabled='disabled' " : "") . "style='display:flex;justify-content:space-between;align-items:center;'>"
+            ."<button type='button' class='btn btn-default btn-block js-filtro-toggle' style='display:flex;justify-content:space-between;align-items:center;'>"
             ."<span class='filtro-label'>Ocupação".(count($ocupacaoSelecionadas) > 0 ? " (".count($ocupacaoSelecionadas).")" : "")."</span><span class='caret'></span></button>"
             ."<div class='filtro-dropdown-menu' style='display:none; position:absolute; left:0; right:0; z-index:1050; background:#fff; border:1px solid #d9d9d9; padding:8px; max-height:240px; overflow:auto;'>"
             ."<div style='margin-bottom:8px;'>"
@@ -803,7 +477,7 @@
         foreach($ocupacaoOpcoes as $ocupVal => $ocupLabel){
             $checked = in_array((string)$ocupVal, $ocupacaoSelecionadas, true) ? "checked" : "";
             $selectOcupacao .= "<label style='display:block;margin-bottom:6px;cursor:pointer;'>"
-                ."<input type='checkbox' class='js-filtro-checkbox' data-target='busca_ocupacao' value='".htmlspecialchars((string)$ocupVal, ENT_QUOTES, 'UTF-8')."' ".$checked." " . ($filtrosDetalheDesabilitados ? "disabled='disabled' " : "") . "style='margin-right:6px;'>"
+                ."<input type='checkbox' class='js-filtro-checkbox' data-target='busca_ocupacao' value='".htmlspecialchars((string)$ocupVal, ENT_QUOTES, 'UTF-8')."' ".$checked." style='margin-right:6px;'>"
                 .htmlspecialchars($ocupLabel, ENT_QUOTES, 'UTF-8')
                 ."</label>";
         }
@@ -815,11 +489,10 @@
         while($operacaoRow = mysqli_fetch_assoc($resOperacaoFiltro)){
             $operacaoOpcoes[(string)intval($operacaoRow["oper_nb_id"])] = $operacaoRow["oper_tx_nome"];
         }
-        safe_log('DEBUG', 'Operacoes carregadas', ['count' => count($operacaoOpcoes), 'usuario_atual' => $_SESSION['user_nb_id'] ?? ($_SESSION['user_tx_login'] ?? '')]);
         $selectOperacao = "<div class='col-sm-2 margin-bottom-5 campo-fit-content'>"
             ."<label>Cargo</label>"
             ."<div class='filtro-compact' data-filter='operacao' data-label='Cargo' style='position:relative;'>"
-            ."<button type='button' class='btn btn-default btn-block js-filtro-toggle' " . ($filtrosDetalheDesabilitados ? "disabled='disabled' " : "") . "style='display:flex;justify-content:space-between;align-items:center;'>"
+            ."<button type='button' class='btn btn-default btn-block js-filtro-toggle' style='display:flex;justify-content:space-between;align-items:center;'>"
             ."<span class='filtro-label'>Cargo".(count($operacaoSelecionadas) > 0 ? " (".count($operacaoSelecionadas).")" : "")."</span><span class='caret'></span></button>"
             ."<div class='filtro-dropdown-menu' style='display:none; position:absolute; left:0; right:0; z-index:1050; background:#fff; border:1px solid #d9d9d9; padding:8px; max-height:240px; overflow:auto;'>"
             ."<div style='margin-bottom:8px;'>"
@@ -830,7 +503,7 @@
         foreach($operacaoOpcoes as $operVal => $operLabel){
             $checked = in_array((string)$operVal, $operacaoSelecionadas, true) ? "checked" : "";
             $selectOperacao .= "<label style='display:block;margin-bottom:6px;cursor:pointer;'>"
-                ."<input type='checkbox' class='js-filtro-checkbox' data-target='operacao' value='".htmlspecialchars((string)$operVal, ENT_QUOTES, 'UTF-8')."' ".$checked." " . ($filtrosDetalheDesabilitados ? "disabled='disabled' " : "") . "style='margin-right:6px;'>"
+                ."<input type='checkbox' class='js-filtro-checkbox' data-target='operacao' value='".htmlspecialchars((string)$operVal, ENT_QUOTES, 'UTF-8')."' ".$checked." style='margin-right:6px;'>"
                 .htmlspecialchars($operLabel, ENT_QUOTES, 'UTF-8')
                 ."</label>";
         }
@@ -842,11 +515,10 @@
         while($setorRow = mysqli_fetch_assoc($resSetorFiltro)){
             $setorOpcoes[(string)intval($setorRow["grup_nb_id"])] = $setorRow["grup_tx_nome"];
         }
-        safe_log('DEBUG', 'Setores carregados', ['count' => count($setorOpcoes), 'usuario_atual' => $_SESSION['user_nb_id'] ?? ($_SESSION['user_tx_login'] ?? '')]);
         $selectSetor = "<div class='col-sm-2 margin-bottom-5 campo-fit-content'>"
             ."<label>Setor</label>"
             ."<div class='filtro-compact' data-filter='busca_setor' data-label='Setor' style='position:relative;'>"
-            ."<button type='button' class='btn btn-default btn-block js-filtro-toggle' " . ($filtrosDetalheDesabilitados ? "disabled='disabled' " : "") . "style='display:flex;justify-content:space-between;align-items:center;'>"
+            ."<button type='button' class='btn btn-default btn-block js-filtro-toggle' style='display:flex;justify-content:space-between;align-items:center;'>"
             ."<span class='filtro-label'>Setor".(count($setorSelecionados) > 0 ? " (".count($setorSelecionados).")" : "")."</span><span class='caret'></span></button>"
             ."<div class='filtro-dropdown-menu' style='display:none; position:absolute; left:0; right:0; z-index:1050; background:#fff; border:1px solid #d9d9d9; padding:8px; max-height:240px; overflow:auto;'>"
             ."<div style='margin-bottom:8px;'>"
@@ -857,7 +529,7 @@
         foreach($setorOpcoes as $setorVal => $setorLabel){
             $checked = in_array((string)$setorVal, $setorSelecionados, true) ? "checked" : "";
             $selectSetor .= "<label style='display:block;margin-bottom:6px;cursor:pointer;'>"
-                ."<input type='checkbox' class='js-filtro-checkbox' data-target='busca_setor' value='".htmlspecialchars((string)$setorVal, ENT_QUOTES, 'UTF-8')."' ".$checked." " . ($filtrosDetalheDesabilitados ? "disabled='disabled' " : "") . "style='margin-right:6px;'>"
+                ."<input type='checkbox' class='js-filtro-checkbox' data-target='busca_setor' value='".htmlspecialchars((string)$setorVal, ENT_QUOTES, 'UTF-8')."' ".$checked." style='margin-right:6px;'>"
                 .htmlspecialchars($setorLabel, ENT_QUOTES, 'UTF-8')
                 ."</label>";
         }
@@ -876,7 +548,7 @@
             $selectSubsetor = "<div class='col-sm-2 margin-bottom-5 campo-fit-content'>"
                 ."<label>Subsetor</label>"
                 ."<div class='filtro-compact' data-filter='busca_subsetor' data-label='Subsetor' style='position:relative;'>"
-                ."<button type='button' class='btn btn-default btn-block js-filtro-toggle' " . ($filtrosDetalheDesabilitados ? "disabled='disabled' " : "") . "style='display:flex;justify-content:space-between;align-items:center;'>"
+                ."<button type='button' class='btn btn-default btn-block js-filtro-toggle' style='display:flex;justify-content:space-between;align-items:center;'>"
                 ."<span class='filtro-label'>Subsetor".(count($subsetorSelecionados) > 0 ? " (".count($subsetorSelecionados).")" : "")."</span><span class='caret'></span></button>"
                 ."<div class='filtro-dropdown-menu' style='display:none; position:absolute; left:0; right:0; z-index:1050; background:#fff; border:1px solid #d9d9d9; padding:8px; max-height:240px; overflow:auto;'>"
                 ."<div style='margin-bottom:8px;'>"
@@ -887,7 +559,7 @@
             foreach($subsetorOpcoes as $subsetorVal => $subsetorLabel){
                 $checked = in_array((string)$subsetorVal, $subsetorSelecionados, true) ? "checked" : "";
                 $selectSubsetor .= "<label style='display:block;margin-bottom:6px;cursor:pointer;'>"
-                    ."<input type='checkbox' class='js-filtro-checkbox' data-target='busca_subsetor' value='".htmlspecialchars((string)$subsetorVal, ENT_QUOTES, 'UTF-8')."' ".$checked." " . ($filtrosDetalheDesabilitados ? "disabled='disabled' " : "") . "style='margin-right:6px;'>"
+                    ."<input type='checkbox' class='js-filtro-checkbox' data-target='busca_subsetor' value='".htmlspecialchars((string)$subsetorVal, ENT_QUOTES, 'UTF-8')."' ".$checked." style='margin-right:6px;'>"
                     .htmlspecialchars($subsetorLabel, ENT_QUOTES, 'UTF-8')
                     ."</label>";
             }
@@ -904,53 +576,13 @@
         if($temSubsetorVinculado){
             $campos[] = $selectSubsetor;
         }
-        $usuarioFiltroLabel = "Buscar usuário";
-        if(count($usuarioSelecionados) === 1){
-            $selKey = (string)$usuarioSelecionados[0];
-            if(isset($usuarioOpcoes[$selKey])){
-                $usuarioFiltroLabel = $usuarioOpcoes[$selKey];
-            }
-        }elseif(count($usuarioSelecionados) > 1){
-            $usuarioFiltroLabel = "Buscar usuário (".count($usuarioSelecionados).")";
-        }
-        $selectUsuario = "<div class='col-sm-3 margin-bottom-5 campo-fit-content'>"
-            ."<label>Buscar usuário</label>"
-            ."<div class='filtro-dropdown' data-filter-group='busca_usuario' style='position:relative; overflow:visible;'>"
-            ."<button type='button' class='btn btn-default btn-block filtro-dropdown-toggle js-filtro-toggle' data-target='busca_usuario' data-base-label='Buscar usuário' aria-expanded='false' "
-            .($modoDetalheEmpresaFiltro ? "" : "disabled='disabled' ")
-            ."style='display:flex; justify-content:space-between; align-items:center; gap:10px;'>"
-            ."<span class='js-filtro-label' style='text-align:left;'>".htmlspecialchars($usuarioFiltroLabel, ENT_QUOTES, 'UTF-8')."</span>"
-            ."<span class='caret'></span>"
-            ."</button>"
-            ."<div class='filtro-dropdown-menu' style='display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:1050; background:#fff; border:1px solid #d9d9d9; border-radius:8px; box-shadow:0 12px 30px rgba(0,0,0,.12); padding:10px; max-height:260px; overflow:auto;'>"
-            ."<input type='hidden' class='js-filtro-hidden' data-filter-name='busca_usuario' name='busca_usuario' value='".htmlspecialchars(implode(',', $usuarioSelecionados), ENT_QUOTES, 'UTF-8')."'>"
-            ."<div style='display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;'>"
-            ."<button type='button' class='btn btn-xs btn-default js-filtro-todos' data-target='busca_usuario' data-action='all'>Marcar todos</button>"
-            ."<button type='button' class='btn btn-xs btn-default js-filtro-todos' data-target='busca_usuario' data-action='none'>Desmarcar todos</button>"
-            ."</div>"
-            ."<input type='text' class='form-control input-sm js-filtro-search' data-target='busca_usuario' placeholder='Digite o nome do usuário' style='margin-bottom:10px;' autocomplete='off'>";
-
-        if(empty($usuarioOpcoes)){
-            $selectUsuario .= "<div style='color:#777;'>Sem usuários</div>";
-        }else{
-            foreach($usuarioOpcoes as $usuarioId => $usuarioNome){
-                $checked = in_array((string)$usuarioId, $usuarioSelecionados, true) ? "checked" : "";
-                $selectUsuario .= "<label class='js-filtro-item' style='display:block; margin-bottom:6px; font-weight:normal; cursor:pointer; line-height:1.2;'>"
-                    ."<input type='checkbox' class='js-filtro-checkbox' data-target='busca_usuario' value='".htmlspecialchars((string)$usuarioId, ENT_QUOTES, 'UTF-8')."' ".$checked." style='margin-right:6px; width:13px; height:13px; min-width:13px; min-height:13px; padding:0; vertical-align:middle; appearance:auto !important; -webkit-appearance:auto !important; -moz-appearance:auto !important;'>"
-                    .htmlspecialchars($usuarioNome, ENT_QUOTES, 'UTF-8')
-                    ."</label>";
-            }
-        }
-        $selectUsuario .= "</div></div></div>";
-
-        $campos[] = $selectUsuario;
         $campos[] = campo_mes("Mês*", "busca_dataMes", ($_POST["busca_dataMes"]?? date("Y-m")), 2);
 
 
 
         $botao_volta = "";
         if(!empty($_POST["empresa"])){
-            $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\", false)'>Voltar</button>";
+            $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
         }
         $botao_imprimir = "<button class='btn default' type='button' onclick='enviarDados()'>Imprimir</button>
         <script>
@@ -978,7 +610,7 @@
                 var tabelaClone = tabelaOriginal.cloneNode(true);
                 
                 // Remove elementos problemáticos (mantém as classes de status)
-                tabelaClone.querySelectorAll('i.fa, script, style, link, input[type=\'checkbox\']').forEach(el => el.remove());
+                tabelaClone.querySelectorAll('i.fa, script, style, link').forEach(el => el.remove());
                 
                 // Cores fixas para substituir as variáveis CSS
                 var coresStatus = {
@@ -1096,7 +728,6 @@
 
         echo abre_form();
         echo campo_hidden("reloadOnly", "");
-        echo campo_hidden("modoDetalheEmpresa", (!empty($_POST["modoDetalheEmpresa"]) ? "1" : ""));
         echo linha_form($campos);
         echo fecha_form($buttons);
         echo <<<'HTML'
@@ -1108,25 +739,6 @@
                 });
             }
 
-            function aplicarBuscaDropdown(target){
-                if(!target){ return; }
-                var input = document.querySelector('.js-filtro-search[data-target="' + target + '"]');
-                if(!input){ return; }
-                var termo = (input.value || '').toString().toLowerCase().trim();
-                if(typeof termo.normalize === 'function'){
-                    termo = termo.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                }
-                document.querySelectorAll('input.js-filtro-checkbox[data-target="' + target + '"]').forEach(function(chk){
-                    var label = chk.closest('label.js-filtro-item');
-                    if(!label){ return; }
-                    var texto = (label.textContent || '').toString().toLowerCase().trim();
-                    if(typeof texto.normalize === 'function'){
-                        texto = texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                    }
-                    label.style.display = (termo === '' || texto.indexOf(termo) !== -1) ? '' : 'none';
-                });
-            }
-
             function atualizarHidden(target){
                 var hidden = document.querySelector('.js-filtro-hidden[data-filter-name="' + target + '"]');
                 if(!hidden){ return; }
@@ -1135,27 +747,7 @@
                     values.push(chk.value);
                 });
                 hidden.value = values.join(',');
-                // Sincroniza com myForm e sessionStorage
-                if(document.myForm){
-                    if(target === 'empresa' && document.myForm.empresaFiltro){
-                        document.myForm.empresaFiltro.value = hidden.value;
-                    } else if(document.myForm[target]){
-                        document.myForm[target].value = hidden.value;
-                    }
-                }
-                // Salva no sessionStorage para persistir entre navegações
-                var storageKey = 'filtro_' + target;
-                if(hidden.value){
-                    sessionStorage.setItem(storageKey, hidden.value);
-                } else {
-                    sessionStorage.removeItem(storageKey);
-                }
                 atualizarTitulo(target, values.length);
-                if(target === 'busca_usuario'){
-                    if(typeof window.aplicarFiltroUsuarioSelecionado === 'function'){
-                        window.aplicarFiltroUsuarioSelecionado();
-                    }
-                }
             }
             // Atualiza o título do filtro com a contagem de itens selecionados
             function atualizarTitulo(target, count){
@@ -1205,16 +797,7 @@
                     var menu = btn.parentNode.querySelector('.filtro-dropdown-menu');
                     var isOpen = menu && menu.style.display === 'block';
                     fecharDropdowns();
-                    if(menu){
-                        menu.style.display = isOpen ? 'none' : 'block';
-                        if(!isOpen){
-                            var searchInput = menu.querySelector('.js-filtro-search');
-                            if(searchInput){
-                                searchInput.focus();
-                                aplicarBuscaDropdown(searchInput.getAttribute('data-target'));
-                            }
-                        }
-                    }
+                    if(menu){ menu.style.display = isOpen ? 'none' : 'block'; }
                 });
             });
 
@@ -1228,15 +811,6 @@
                     if(target){
                         atualizarHidden(target);
                     }
-                });
-            });
-
-            document.querySelectorAll('.js-filtro-search').forEach(function(input){
-                input.addEventListener('input', function(){
-                    aplicarBuscaDropdown(input.getAttribute('data-target'));
-                });
-                input.addEventListener('keyup', function(){
-                    aplicarBuscaDropdown(input.getAttribute('data-target'));
                 });
             });
 
@@ -1292,8 +866,6 @@ HTML;
             "saldoFinal" 		=> "00:00"
         ];
 
-        $modoDetalheEmpresa = false;
-
         $periodoRelatorio = [
             "dataInicio" => "1900-01-01",
             "dataFim" => "1900-01-01"
@@ -1301,13 +873,8 @@ HTML;
         
         
         if(!empty($_POST["acao"]) && $_POST["acao"] == "buscar" && empty($_POST["reloadOnly"])){
-            // Registro não invasivo do início da busca
-            safe_log('INFO', 'Busca iniciada', ['mes' => $_POST['busca_dataMes'] ?? '', 'empresa' => $_POST['empresa'] ?? '']);
             $path .= "/".$_POST["busca_dataMes"];
-
-            $modoDetalheEmpresa = !empty($_POST["modoDetalheEmpresa"]) && !empty($_POST["empresa"]);
-
-            if($modoDetalheEmpresa){
+            if(!empty($_POST["empresa"])){
                 // Painel dos saldos dos motoristas de uma ou mais empresas (CSV)
                 $empresaIds = array_values(array_unique(array_filter(array_map('intval', explode(',', (string)$_POST["empresa"])) )));
                 if(empty($empresaIds)){
@@ -1315,8 +882,7 @@ HTML;
                 }
 
                 $normalizarTxt = function($valor){
-                    $txt = trim((string)$valor);
-                    return function_exists('mb_strtolower') ? mb_strtolower($txt) : strtolower($txt);
+                    return mb_strtolower(trim((string)$valor));
                 };
                 $normalizarOcupacao = function($ocupacao) use ($normalizarTxt){
                     $txt = $normalizarTxt($ocupacao);
@@ -1342,7 +908,6 @@ HTML;
                 $empresaNomes = [];
                 $latestMTime = 0;
                 $periodoRelatorioBruto = null;
-                $existeTerceirizado = false;
 
                 foreach($empresaIds as $empresaId){
                     $aEmpresa = mysqli_fetch_assoc(query(
@@ -1386,12 +951,6 @@ HTML;
                         }
                     }
                     $pastaSaldosEmpresa->close();
-                // Log resumo dos arquivos encontrados para detalhe de empresa
-                safe_log('DEBUG', 'Arquivos de detalhe coletados', [
-                    'arquivos_count' => count($arquivos),
-                    'empresas' => $empresaNomes,
-                    'usuario_atual' => $_SESSION['user_nb_id'] ?? ($_SESSION['user_tx_login'] ?? '')
-                ]);
                 }
 
                 if($encontrado){
@@ -1442,10 +1001,6 @@ HTML;
                             continue;
                         }
 
-                        if($rowOcupacao === "terceirizado"){
-                            $existeTerceirizado = true;
-                        }
-
                         $statusEndosso = $saldosMotorista["statusEndosso"] ?? "";
                         if(isset($contagemEndossos[$statusEndosso])){
                             $contagemEndossos[$statusEndosso]++;
@@ -1465,7 +1020,6 @@ HTML;
             }else{
                 //Painel geral das empresas
                 $empresas = [];
-                $fallbackEmpresas = [];
                 $logoEmpresa = mysqli_fetch_assoc(query(
                     "SELECT empr_tx_logo FROM empresa
                     WHERE empr_tx_status = 'ativo'
@@ -1475,168 +1029,8 @@ HTML;
 
                 $logoEmpresa = $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/".$logoEmpresa;
 
-                if(!is_file($path."/empresas.json")){
-                    // Loga ausência do arquivo e tenta gerar (comportamento original)
-                    safe_log('WARNING', 'empresas.json nao existe', ['path' => $path]);
-                    // Se o arquivo geral não existir, tenta montar a grade com JSONs reais por empresa.
-                    if(!is_file($path."/empresas.json")){
-                        $latestMTimeFallback = 0;
-                        $periodoRelatorioBrutoFallback = null;
-
-                        if(!empty($empresaSelecionadas)){
-                            foreach($empresaSelecionadas as $empresaIdSelecionada){
-                                $empresaIdSelecionada = (string)intval($empresaIdSelecionada);
-                                if($empresaIdSelecionada === '' || $empresaIdSelecionada === '0'){
-                                    continue;
-                                }
-                                $arquivoEmpresa = $path."/".$empresaIdSelecionada."/empresa_".$empresaIdSelecionada.".json";
-                                if(!is_file($arquivoEmpresa)){
-                                    continue;
-                                }
-
-                                $jsonEmpresa = json_decode(file_get_contents($arquivoEmpresa), true);
-                                if(empty($jsonEmpresa) || empty($jsonEmpresa["totais"])){
-                                    continue;
-                                }
-
-                                $arquivos[] = $arquivoEmpresa;
-                                $empresas[] = $jsonEmpresa;
-                                foreach($totais as $key => $value){
-                                    $totais[$key] = operarHorarios([$totais[$key], $jsonEmpresa["totais"][$key] ?? "00:00"], "+");
-                                }
-
-                                $mtime = filemtime($arquivoEmpresa);
-                                if($mtime > $latestMTimeFallback){
-                                    $latestMTimeFallback = $mtime;
-                                }
-                                if($periodoRelatorioBrutoFallback === null && !empty($jsonEmpresa["dataInicio"]) && !empty($jsonEmpresa["dataFim"])){
-                                    $periodoRelatorioBrutoFallback = [
-                                        "dataInicio" => $jsonEmpresa["dataInicio"],
-                                        "dataFim" => $jsonEmpresa["dataFim"]
-                                    ];
-                                }
-                            }
-                        }elseif(is_dir($path)){
-                            $pastaSaldosFallback = dir($path);
-                            while($dirEmpresa = $pastaSaldosFallback->read()){
-                                if(empty($dirEmpresa) || in_array($dirEmpresa, [".", ".."], true) || !ctype_digit((string)$dirEmpresa)){
-                                    continue;
-                                }
-                                $arquivoEmpresa = $path."/".$dirEmpresa."/empresa_".$dirEmpresa.".json";
-                                if(!is_file($arquivoEmpresa)){
-                                    continue;
-                                }
-
-                                $jsonEmpresa = json_decode(file_get_contents($arquivoEmpresa), true);
-                                if(empty($jsonEmpresa) || empty($jsonEmpresa["totais"])){
-                                    continue;
-                                }
-
-                                $arquivos[] = $arquivoEmpresa;
-                                $empresas[] = $jsonEmpresa;
-                                foreach($totais as $key => $value){
-                                    $totais[$key] = operarHorarios([$totais[$key], $jsonEmpresa["totais"][$key] ?? "00:00"], "+");
-                                }
-
-                                $mtime = filemtime($arquivoEmpresa);
-                                if($mtime > $latestMTimeFallback){
-                                    $latestMTimeFallback = $mtime;
-                                }
-                                if($periodoRelatorioBrutoFallback === null && !empty($jsonEmpresa["dataInicio"]) && !empty($jsonEmpresa["dataFim"])){
-                                    $periodoRelatorioBrutoFallback = [
-                                        "dataInicio" => $jsonEmpresa["dataInicio"],
-                                        "dataFim" => $jsonEmpresa["dataFim"]
-                                    ];
-                                }
-                            }
-                            $pastaSaldosFallback->close();
-                        }
-
-                        if(!empty($empresas)){
-                            $encontrado = true;
-                            $dataEmissao = "Atualizado em: ".($latestMTimeFallback > 0 ? date("d/m/Y H:i", $latestMTimeFallback) : "");
-
-                            if($periodoRelatorioBrutoFallback !== null){
-                                $periodoRelatorio["dataInicio"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorioBrutoFallback["dataInicio"])->format("d/m");
-                                $periodoRelatorio["dataFim"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorioBrutoFallback["dataFim"])->format("d/m");
-                            }
-
-                            foreach($empresas as $empresa){
-                                $saldoFinalEmpresa = $empresa["totais"]["saldoFinal"] ?? "00:00";
-                                if($saldoFinalEmpresa === "00:00"){
-                                    $contagemSaldos["meta"]++;
-                                }elseif(!empty($saldoFinalEmpresa) && $saldoFinalEmpresa[0] == "-"){
-                                    $contagemSaldos["negativos"]++;
-                                }else{
-                                    $contagemSaldos["positivos"]++;
-                                }
-
-                                $percEndossadoEmpresa = $empresa["percEndossado"] ?? 0;
-                                if ($percEndossadoEmpresa === 1 || $percEndossadoEmpresa === "1") {
-                                    $contagemEndossos["E"]++;
-                                }elseif($percEndossadoEmpresa === 0 || $percEndossadoEmpresa === "0"){
-                                    $contagemEndossos["N"]++;
-                                }else{
-                                    $contagemEndossos["EP"]++;
-                                }
-                            }
-
-                            safe_log('INFO', 'Empresas reais carregadas sem empresas.json', [
-                                'count' => count($empresas),
-                                'arquivos_count' => count($arquivos),
-                                'path' => $path,
-                                'usuario_atual' => $_SESSION['user_nb_id'] ?? ($_SESSION['user_tx_login'] ?? '')
-                            ]);
-                        }
-
-                        // Se não houver JSON real, usa fallback com zeros.
-                        if(empty($empresas)){
-                        $empresaFallbackQuery = "SELECT empr_nb_id, empr_tx_nome FROM empresa WHERE empr_tx_status = 'ativo'";
-                        if(!empty($empresaSelecionadas)){
-                            $empresaFallbackQuery .= " AND empr_nb_id IN (".implode(',', array_map('intval', $empresaSelecionadas)).")";
-                        }
-                        $empresaFallbackQuery .= " ORDER BY empr_tx_nome ASC";
-                        $resEmpresasFallback = query($empresaFallbackQuery);
-                        while($resEmpresasFallback && ($empresaFallback = mysqli_fetch_assoc($resEmpresasFallback))){
-                            $fallbackEmpresas[] = [
-                                "empr_nb_id" => (string)$empresaFallback["empr_nb_id"],
-                                "empr_tx_nome" => $empresaFallback["empr_tx_nome"],
-                                "percEndossado" => 0,
-                                "qtdMotoristas" => 0,
-                                "totais" => [
-                                    "jornadaPrevista" => "00:00",
-                                    "jornadaEfetiva" => "00:00",
-                                    "HESemanal" => "00:00",
-                                    "HESabado" => "00:00",
-                                    "adicionalNoturno" => "00:00",
-                                    "esperaIndenizada" => "00:00",
-                                    "saldoAnterior" => "00:00",
-                                    "saldoPeriodo" => "00:00",
-                                    "saldoFinal" => "00:00"
-                                ]
-                            ];
-                        }
-                        if(!empty($fallbackEmpresas)){
-                            $encontrado = true;
-                            // Log detalhes do fallback (empresas com zeros)
-                            safe_log('INFO', 'Fallback empresas criado', [
-                                'count' => count($fallbackEmpresas),
-                                'ids' => array_values(array_map(function($e){ return $e['empr_nb_id']; }, $fallbackEmpresas)),
-                                'usuario_atual' => $_SESSION['user_nb_id'] ?? ($_SESSION['user_tx_login'] ?? '')
-                            ]);
-                            $dataInicioFallback = DateTime::createFromFormat("Y-m", $_POST["busca_dataMes"] ?? date("Y-m"));
-                            if($dataInicioFallback instanceof DateTime){
-                                $periodoRelatorio["dataInicio"] = $dataInicioFallback->format("d/m");
-                                $periodoRelatorio["dataFim"] = $dataInicioFallback->format("t/m");
-                            }
-                        }
-                        }
-                    }
-                }
-
+                
                 if(is_dir($path) && is_file($path."/empresas.json")){
-                    // Log não invasivo indicando que o arquivo geral foi encontrado
-                    safe_log('INFO', 'empresas.json encontrado - processando', ['path' => $path]);
                     $encontrado = true;
                     $arquivoGeral = $path."/empresas.json";
 
@@ -1668,51 +1062,19 @@ HTML;
                     $periodoRelatorio["dataFim"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataFim"])->format("d/m");
 
                     
-                    if($empresaFiltroFoiEnviado && empty($empresaSelecionadas)){
-                        $encontrado = true;
-                    }elseif(!empty($empresaSelecionadas)){
-                        foreach($empresaSelecionadas as $empresaIdSelecionada){
-                            $arquivo = $path."/".$empresaIdSelecionada."/empresa_".$empresaIdSelecionada.".json";
-                            if(!is_file($arquivo)){
-                                continue;
-                            }
+                    $pastaSaldos = dir($path);
+                    while($arquivo = $pastaSaldos->read()){
+                        if(!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresas"))){
+                            $arquivo = $path."/".$arquivo."/empresa_".$arquivo.".json";
                             $arquivos[] = $arquivo;
                             $json = json_decode(file_get_contents($arquivo), true);
-                            if(empty($json)){
-                                continue;
-                            }
                             foreach($totais as $key => $value){
                                 $totais[$key] = operarHorarios([$totais[$key], $json["totais"][$key]], "+");
                             }
                             $empresas[] = $json;
                         }
-                    }else{
-                        $pastaSaldos = dir($path);
-                        while($arquivo = $pastaSaldos->read()){
-                            if(!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresas"))){
-                                $arquivo = $path."/".$arquivo."/empresa_".$arquivo.".json";
-                                if(!is_file($arquivo)){
-                                    continue;
-                                }
-                                $arquivos[] = $arquivo;
-                                $json = json_decode(file_get_contents($arquivo), true);
-                                if(empty($json)){
-                                    continue;
-                                }
-                                foreach($totais as $key => $value){
-                                    $totais[$key] = operarHorarios([$totais[$key], $json["totais"][$key]], "+");
-                                }
-                                $empresas[] = $json;
-                            }
-                        }
-                        $pastaSaldos->close();
-                    // Log resumo dos arquivos e empresas carregadas no modo geral
-                    safe_log('DEBUG', 'Empresas e arquivos carregados', [
-                        'arquivos_count' => count($arquivos),
-                        'empresas_count' => count($empresas),
-                        'usuario_atual' => $_SESSION['user_nb_id'] ?? ($_SESSION['user_tx_login'] ?? '')
-                    ]);
                     }
+                    $pastaSaldos->close();
                     
                     foreach($empresas as $empresa){
                         if($empresa["totais"]["saldoFinal"] === "00:00"){
@@ -1769,70 +1131,45 @@ HTML;
         if($encontrado){
             $rowTotais = "<tr class='totais'>";
             $rowTitulos = "<tr id='titulos' class='titulos'>";
-            $layoutCompacto = $modoDetalheEmpresa && !empty($existeTerceirizado);
 
-            if($modoDetalheEmpresa){
-                if($layoutCompacto){
-                    $rowTotais .= 
-                        "<th colspan='2'>".$totais["empresaNome"]."</th>"
-                        ."<th colspan='1'></th>"
-                        ."<th colspan='1'></th>"
-                        ."<th colspan='1'></th>"
-                        ."<th colspan='1'></th>"
-                        ."<th colspan='1'>".((($hasDetailFilter ? $totaisFiltrados["jornadaPrevista"] : $totais["jornadaPrevista"]) === '00:00') ? '' : ($hasDetailFilter ? $totaisFiltrados["jornadaPrevista"] : $totais["jornadaPrevista"]))."</th>"
-                        ."<th colspan='1'>".((($hasDetailFilter ? $totaisFiltrados["jornadaEfetiva"] : $totais["jornadaEfetiva"]) === '00:00') ? '' : ($hasDetailFilter ? $totaisFiltrados["jornadaEfetiva"] : $totais["jornadaEfetiva"]) )."</th>"
-                        ."<th colspan='1'>".((($hasDetailFilter ? $totaisFiltrados["saldoAnterior"] : $totais["saldoAnterior"]) === '00:00') ? '' : ($hasDetailFilter ? $totaisFiltrados["saldoAnterior"] : $totais["saldoAnterior"]) )."</th>"
-                        ."<th colspan='1'>".((($hasDetailFilter ? $totaisFiltrados["saldoPeriodo"] : $totais["saldoPeriodo"]) === '00:00') ? '' : ($hasDetailFilter ? $totaisFiltrados["saldoPeriodo"] : $totais["saldoPeriodo"]) )."</th>"
-                        ."<th colspan='1'>".((($hasDetailFilter ? $totaisFiltrados["saldoFinal"] : $totais["saldoFinal"]) === '00:00') ? '' : ($hasDetailFilter ? $totaisFiltrados["saldoFinal"] : $totais["saldoFinal"]) )."</th>";
+            if(!empty($_POST["empresa"])){
+                $rowTotais .= 
+                    "<th colspan='2'>".$totais["empresaNome"]."</th>"
+                    ."<th colspan='1'></th>"
+                    ."<th colspan='1'></th>"
+                    ."<th colspan='1'></th>"
+                    ."<th colspan='1'></th>"
+                    ."<th colspan='1'></th>"
+                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["jornadaPrevista"] : $totais["jornadaPrevista"])."</th>"
+                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["jornadaEfetiva"] : $totais["jornadaEfetiva"])."</th>"
+                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["HESemanal"] : $totais["HESemanal"])."</th>"
+                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["HESabado"] : $totais["HESabado"])."</th>"
+                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["adicionalNoturno"] : $totais["adicionalNoturno"])."</th>"
+                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["esperaIndenizada"] : $totais["esperaIndenizada"])."</th>"
+                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["saldoAnterior"] : $totais["saldoAnterior"])."</th>"
+                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["saldoPeriodo"] : $totais["saldoPeriodo"])."</th>"
+                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["saldoFinal"] : $totais["saldoFinal"])."</th>";
+                ;
 
-                    $rowTitulos .= 
-                        "<th class='matricula'>Matrícula</th>
-                        <th class='nome'>Nome</th>
-                        <th class='ocupacao'>Ocupação</th>
-                        <th class='operacao'>Setor</th>
-                        <th class='operacao'>SubSetor</th>
-                        <th class='status'>Status Endosso</th>
-                        <th class='jornadaPrevista'>Jornada Prevista</th>
-                        <th class='jornadaEfetiva'>Jornada Efetiva</th>
-                        <th class='saldoAnterior'>Saldo Anterior</th>
-                        <th class='saldoPeriodo'>Saldo Período</th>
-                        <th class='saldoFinal'>Saldo Bruto</th>";
-                }else{
-                    $rowTotais .= 
-                        "<th colspan='2'>".$totais["empresaNome"]."</th>"
-                        ."<th colspan='1'></th>"
-                        ."<th colspan='1'></th>"
-                        ."<th colspan='1'></th>"
-                        ."<th colspan='1'></th>"
-                        ."<th colspan='1'></th>"
-                        ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["jornadaPrevista"] : $totais["jornadaPrevista"])."</th>"
-                        ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["jornadaEfetiva"] : $totais["jornadaEfetiva"])."</th>"
-                        ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["HESemanal"] : $totais["HESemanal"])."</th>"
-                        ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["HESabado"] : $totais["HESabado"])."</th>"
-                        ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["adicionalNoturno"] : $totais["adicionalNoturno"])."</th>"
-                        ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["esperaIndenizada"] : $totais["esperaIndenizada"])."</th>"
-                        ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["saldoAnterior"] : $totais["saldoAnterior"])."</th>"
-                        ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["saldoPeriodo"] : $totais["saldoPeriodo"])."</th>"
-                        ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["saldoFinal"] : $totais["saldoFinal"])."</th>";
-
-                    $rowTitulos .= 
-                        "<th class='matricula'>Matrícula</th>
-                        <th class='nome'>Nome</th>
-                        <th class='ocupacao'>Ocupação</th>
-                        <th class='operacao'>Cargo</th>
-                        <th class='operacao'>Setor</th>
-                        <th class='operacao'>SubSetor</th>
-                        <th class='status'>Status Endosso</th>
-                        <th class='jornadaPrevista'>Jornada Prevista</th>
-                        <th class='jornadaEfetiva'>Jornada Efetiva</th>
-                        <th class='HESemanal'>H.E. Semanal</th>
-                        <th class='HEEx'>H.E. Ex.</th>
-                        <th class='adicionalNoturno'>Adicional Noturno</th>
-                        <th class='esperaIndenizada'>Espera Indenizada</th>
-                        <th class='saldoAnterior'>Saldo Anterior</th>
-                        <th class='saldoPeriodo'>Saldo Período</th>
-                        <th class='saldoFinal'>Saldo Bruto</th>";
-                }
+                $rowTitulos .= 
+                    "<th class='matricula'>Matrícula</th>
+                    <th class='nome'>Nome</th>
+                    <th class='ocupacao'>Ocupação</th>
+                    <th class='operacao'>Cargo</th>
+                    <th class='operacao'>Setor</th>
+                    <th class='operacao'>SubSetor</th>
+                    <th class='status'>Status Endosso</th>
+                    <th class='jornadaPrevista'>Jornada Prevista</th>
+                    <th class='jornadaEfetiva'>Jornada Efetiva</th>
+                    <th class='HESemanal'>H.E. Semanal</th>
+                    <th class='HEEx'>H.E. Ex.</th>
+                    <th class='adicionalNoturno'>Adicional Noturno</th>
+                    <th class='esperaIndenizada'>Espera Indenizada</th>
+                    <th class='saldoAnterior'>Saldo Anterior</th>
+                    <th class='saldoPeriodo'>Saldo Período</th>
+                    <th class='saldoFinal'>Saldo Bruto</th>
+                    "
+                ;
 
                 // $rowTotais .= 
                 //     "<th colspan='2'>{$totais["empresaNome"]}</th>
@@ -1896,7 +1233,7 @@ HTML;
                 $rowTitulos .= 
                     "<th data-column='nome' data-order='asc'>Nome da Empresa/Filial</th>
                     <th data-column='percEndossados' data-order='asc'>% Endossados</th>
-                    <th data-column='qtdMotoristas' data-order='asc'>Qtd</th>
+                    <th data-column='qtdMotoristas' data-order='asc'>Qtd. Motoristas</th>
                     <th data-column='jornadaPrevista' data-order='asc'>Jornada Prevista</th>
                     <th data-column='JornadaEfetiva' data-order='asc'>Jornada Efetiva</th>
                     <th data-column='HESemanal' data-order='asc'>H.E. Semanal</th>
@@ -1917,7 +1254,7 @@ HTML;
             echo 
                 "<div class='script'>
                     <script>"
-                        .($modoDetalheEmpresa ? "document.getElementById('tabela1').style.display = 'table';": "")
+                        .((!empty($_POST["empresa"]))? "document.getElementById('tabela1').style.display = 'table';": "")
                         ."var porcentagemEndoTds = document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td');
                         var porcentagemNaEndoTds = document.getElementsByClassName('porcentagemNaEndo')[0].getElementsByTagName('td');
                         var porcentagemEndoPcTds = document.getElementsByClassName('porcentagemEndoPc')[0].getElementsByTagName('td');
@@ -1949,14 +1286,11 @@ HTML;
             ;
         }else{
             if(!empty($_POST["acao"]) && $_POST["acao"] == "buscar"){
-                safe_log('ERROR', 'Nenhum dado encontrado', ['mes' => $_POST['busca_dataMes'] ?? '', 'empresa' => $_POST['empresa'] ?? '']);
                 set_status("Não possui dados desse mês");
                 echo "<script>alert('Não Possui dados desse mês')</script>";
             }
         }
         
-        // Torna a flag disponível no escopo global para que carregarJS() a veja
-        $GLOBALS['existeTerceirizado'] = $existeTerceirizado ?? false;
-        carregarJS($arquivos, !empty($empresaIds) ? $empresaIds : [], $fallbackEmpresas ?? []);
+        carregarJS($arquivos);
         rodape();
     }
