@@ -17,6 +17,7 @@ deployment:
     - export PBTRANSPORTES=/home/devtechpsgj/public_html/dev/pb_transportes
     - export LEMON=/home/devtechpsgj/public_html/dev/lemon
     - export DEVTRANSCOPEL=/home/devtechpsgj/public_html/dev/devtranscopel
+    - export QUALY=/home/devtechpsgj/public_html/dev/qualy
 
 
     # Copiando diret贸rios
@@ -31,4 +32,5 @@ deployment:
     - /bin/cp -R $DOMAIN $PBTRANSPORTES
     - /bin/cp -R $DOMAIN $DEVTRANSCOPEL
     - /bin/cp -R $DOMAIN $LEMON
+    - /bin/cp -R $DOMAIN $QUALY
     
