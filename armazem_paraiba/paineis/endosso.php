@@ -357,6 +357,11 @@
             $_POST["busca_data"] = date("Y-m");
         }
 
+        $botao_volta = "";
+        $botao_imprimir = "";
+        $botao_baixar_txt = "";
+        $botaoAtualizarPainel = "";
+
         // $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
         //position: absolute; top: 101px; left: 420px;
         $temSubsetorVinculado = false;
@@ -377,7 +382,6 @@
             $fields[] = combo_bd("!Subsetor", 	"busca_subsetor", 	($_POST["busca_subsetor"]?? ""), 	2, "sbgrupos_documentos", "", " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC");
         }
         
-        $botao_volta = "";
         if(!empty($_POST["empresa"])){
             $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
         }
@@ -518,9 +522,80 @@
         if(!empty($_SESSION["user_tx_nivel"]) && is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
             $botaoAtualizarPainel = "<a class='btn btn-warning' onclick='atualizarPainel()'> Atualizar Painel</a>";
         }
+        if(!empty($_POST["empresa"])){
+            $botao_baixar_txt = "<button class='btn default' type='button' onclick='exportarAdicionalNoturno()'>Baixar TXT Ad.Not.</button>
+            <script>
+            function exportarAdicionalNoturno() {
+                var empresaId = '" . intval($_POST['empresa']) . "';
+                var buscaData = '" . ($_POST['busca_data'] ?? '') . "';
+                if (!empresaId || !buscaData) {
+                    alert('Empresa e competência são obrigatórias');
+                    return;
+                }
+                var competencia = buscaData.replace('-', '');
+                
+                var linhas = [];
+                var tabela = document.querySelector('#tabela-empresas tbody');
+                if (!tabela) {
+                    alert('Tabela de resultados não encontrada.');
+                    return;
+                }
+                var tableRows = tabela.querySelectorAll('tr');
+                tableRows.forEach(function(tr) {
+                    var tds = tr.cells;
+                    if (tds.length < 12) return; 
+                    var matricula = (tds[0]?.innerText || tds[0]?.textContent || '').trim();
+                    var statusEndosso = (tds[6]?.innerText || tds[6]?.textContent || '').trim();
+                    // Pega o valor e remove ':' (ex: 00:36 -> 0036)
+                    var adNot = (tds[11]?.innerText || tds[11]?.textContent || '').trim().replace(':', '');
+                    
+                    if ((statusEndosso === 'E' || statusEndosso === 'EP') && matricula !== '' && adNot !== '' && parseInt(adNot) > 0) {
+                        linhas.push({
+                            matricula: matricula,
+                            adicionalNoturno: adNot,
+                            statusEndosso: statusEndosso // For debugging/verification, not strictly needed for TXT
+                        });
+                    }
+                });
+
+                if (linhas.length === 0) {
+                    alert('Nenhum registro endossado com adicional noturno encontrado para exportar.');
+                    return;
+                }
+
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = 'export_adicional_noturno.php';
+                
+                var empresaInput = document.createElement('input'); 
+                empresaInput.type = 'hidden';
+                empresaInput.name = 'empresa';
+                empresaInput.value = empresaId;
+                form.appendChild(empresaInput);
+
+                var competenciaInput = document.createElement('input');
+                competenciaInput.type = 'hidden';
+                competenciaInput.name = 'competencia';
+                competenciaInput.value = competencia;
+                form.appendChild(competenciaInput);
+
+                var dadosInput = document.createElement('input');
+                dadosInput.type = 'hidden';
+                dadosInput.name = 'dados';
+                dadosInput.value = JSON.stringify(linhas);
+                form.appendChild(dadosInput);
+
+                document.body.appendChild(form);
+                form.submit();
+                document.body.removeChild(form);
+            }
+            </script>";
+        }
+
         $buttons = [
             botao("Buscar", "index", "", "", "", "", "btn btn-info"),
             $botao_imprimir,
+            $botao_baixar_txt,
             $botao_volta,
             $botaoAtualizarPainel
         ];
