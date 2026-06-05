@@ -606,8 +606,14 @@ function cadastrar(){
     // Final = Anterior + (Período - Total Pago)
     // Se pagou tudo, período fica 0 e final = anterior
     $totalPago = operarHorarios([$aPagar[0], $aPagar[1]], "+");
-    $periodoRestante = operarHorarios([$diffSaldo, $totalPago], "-");
-    if($periodoRestante[0] === "-"){ $periodoRestante = "00:00"; }
+    if($totalPago !== "00:00"){
+        // Houve pagamento: período restante = período - pago
+        $periodoRestante = operarHorarios([$diffSaldo, $totalPago], "-");
+        if($periodoRestante[0] === "-"){ $periodoRestante = "00:00"; }
+    } else {
+        // Sem pagamento: período fica inalterado
+        $periodoRestante = $diffSaldo;
+    }
     $saldoFinal = operarHorarios([$saldoAnterior, $periodoRestante], "+");
 			
 			$totalResumo["desconto_manual"] = "00:00";
