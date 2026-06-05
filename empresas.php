@@ -14,7 +14,7 @@
         "COMAV"					=> "comav",
         "FTQZA"		            => "feijao_turqueza",
         "FSLOG"	                => "fs_log_transportes",
-        "HNTP"                    => "hn_transportes",
+        "HNTP"                  => "hn_transportes",
         "IFRN"                  => "ifrn",
         "JRJ"	                => "jrj_organizacao",
         "LOGSYNC"	            => "logsync_techps",
@@ -27,17 +27,17 @@
         "TECHPS"				=> "techps",
         "DEMO"			        => "techps_demo",
         "TPGAS"			        => "trampolim_gas",
-        "TRANSCOPEL"			    => "transcopel",
-        "PBTRANSP"		            => "pb_transportes",
+        "TRANSCOPEL"			=> "transcopel",
+        "PBTRANSP"		        => "pb_transportes",
         "ODTGA"		            => "odontotangara",
         "CLGRL"		            => "clinica_gerlane",
         "IROL"		            => "iraneide_oliveira",
         "MD"		            => "midia_digital",
         "ENOVE"                 => "enove",
-        "TMILITAO"                 => "t_militao",
+        "TMILITAO"              => "t_militao",
         "LAUTO"                 => "lauto",
-        "DEMO"                 => "demo",
-        "GST"                 => "gst"
+        "DEMO"                  => "demo",
+        "GST"                   => "gst"
 
     ];
 
@@ -57,7 +57,7 @@
         "nh_transportes" 	=> "NH Transportes",
         "opafrutas" 		=> "Opafrutas",
         "pkf_medeiros" 		=> "PKF Medeiros",
-        "qualy_transportes"             =>  "Qualy Transportes",
+        "qualy_transportes" =>  "Qualy Transportes",
         "sao_lucas" 	    => "São Lucas",
         "techps" 			=> "TechPS",
         "techps_demo" 		=> "TechPS (Demo)",
@@ -69,11 +69,10 @@
         "iraneide_oliveira" => "Iraneide Oliveira",
         "midia_digital"     => "Midia Digital",
         "enove"             => "Enove",
-        "t_militao"         => "T Militao",
-        
+        "t_militao"         => "T Militao",       
         "lauto"             => "L Auto Cargo",
-        "demo"             => "Demo",
-        "gst"             => "GST"
+        "demo"              => "Demo",
+        "gst"               => "GST"
     ];
 
     $empresa_array = array_values($empresas); //Utilizado nos arquivos que importam este.

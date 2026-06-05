@@ -786,13 +786,14 @@ if($modo_envio === "avulso" && $avulsoDestino === "todos"){
                 : ($safeBase !== "" ? $safeBase : "documento");
         $descricaoEmpresa = "Documento enviado para todos os funcionários.";
         $dataCadastroEmpresa = date("Y-m-d H:i:s");
+        $dataVencimentoEmpresa = !empty($_POST["data_vencimento"]) ? $_POST["data_vencimento"] : null;
         $visibilidadeEmpresa = "sim";
         $stmtEmpresa = mysqli_prepare(
             $conn,
             "INSERT INTO documento_empresa
                 (empr_nb_id, docu_tx_nome, docu_tx_descricao, docu_tx_dataCadastro, docu_tx_datavencimento, docu_tx_tipo, docu_nb_sbgrupo, docu_tx_usuarioCadastro, docu_tx_assinado, docu_tx_visivel, docu_tx_caminho)
             VALUES
-                (?, ?, ?, ?, NULL, NULLIF(?,0), NULL, ?, 'nao', ?, ?)"
+                (?, ?, ?, ?, ?, NULLIF(?,0), NULL, ?, 'nao', ?, ?)"
         );
         if(!$stmtEmpresa){
             @unlink($destEmpresaAbs);
@@ -801,11 +802,12 @@ if($modo_envio === "avulso" && $avulsoDestino === "todos"){
         }
         mysqli_stmt_bind_param(
             $stmtEmpresa,
-            "isssiiss",
+            "issssiss",
             $empresaId,
             $docNomeEmpresa,
             $descricaoEmpresa,
             $dataCadastroEmpresa,
+            $dataVencimentoEmpresa,
             $tipoDocumentoId,
             $usuarioCadastro,
             $visibilidadeEmpresa,
