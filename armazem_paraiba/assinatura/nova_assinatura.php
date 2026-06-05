@@ -35,7 +35,7 @@ if(in_array($modoTela, ["avulso", "funcionarios", "separar_paginas", "signatario
 $tiposDocumentos = [];
 if(in_array($modoTela, ["avulso", "separar_paginas", "signatario_externo"], true)){
     $tiposDocumentos = mysqli_fetch_all(query(
-        "SELECT tipo_nb_id, tipo_tx_nome
+        "SELECT tipo_nb_id, tipo_tx_nome, tipo_tx_vencimento
         FROM tipos_documentos
         WHERE tipo_tx_status = 'ativo'
         ORDER BY tipo_tx_nome ASC"
@@ -1178,6 +1178,16 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
 <?php endif; ?>
 
 <?php if($modoTela === "signatario_externo"): ?>
+<?php
+// Carregar empresas para o select
+$empresasAssinatura = [];
+$resEmpresas = mysqli_query($conn, "SELECT empr_nb_id, empr_tx_nome FROM empresa WHERE empr_tx_status = 'ativo' ORDER BY empr_tx_nome ASC");
+if($resEmpresas){
+    while($rowEmp = mysqli_fetch_assoc($resEmpresas)){
+        $empresasAssinatura[] = $rowEmp;
+    }
+}
+?>
 <div class="font-sans">
     <div class="max-w-4xl mx-auto px-4 py-8">
 
@@ -1245,17 +1255,68 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <i class="fas fa-folder-open text-gray-400"></i>
                                     </div>
-                                    <select name="tipo_documento" required
+                                    <select name="tipo_documento" required id="ext_tipo_documento"
+                                        onchange="verificarVencimentoExterno(this)"
                                         class="pl-10 block w-full rounded-lg border-gray-300 bg-gray-50 border focus:bg-white focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 transition-colors">
                                         <option value="">Selecione</option>
-                                        <?php foreach($tiposDocumentos as $t): ?>
-                                            <?php $tid = intval($t["tipo_nb_id"]); $tnome = htmlspecialchars(trim($t["tipo_tx_nome"])); ?>
+                                        <?php foreach($tiposDocumentos as $t): 
+                                            $tid = intval($t["tipo_nb_id"]); 
+                                            $tnome = htmlspecialchars(trim($t["tipo_tx_nome"])); 
+                                            $tvenc = $t["tipo_tx_vencimento"] ?? "nao";
+                                        ?>
                                             <?php if($tid > 0 && $tnome !== ""): ?>
-                                                <option value="<?php echo $tid; ?>"><?php echo $tnome; ?></option>
+                                                <option value="<?php echo $tid; ?>" data-vencimento="<?php echo $tvenc; ?>"><?php echo $tnome; ?></option>
                                             <?php endif; ?>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
+                            </div>
+
+                            <!-- Data de Vencimento (condicional) -->
+                            <div id="ext_vencimento_wrapper" class="hidden">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Data de Vencimento <span class="text-red-500">*</span></label>
+                                <input type="date" name="data_vencimento" id="ext_data_vencimento"
+                                    class="block w-full rounded-lg border-gray-300 bg-gray-50 border focus:bg-white focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 transition-colors">
+                                <p class="text-xs text-gray-400 mt-1">Este tipo de documento exige data de vencimento.</p>
+                            </div>
+
+                            <!-- Empresa -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Empresa</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fas fa-building text-gray-400"></i>
+                                    </div>
+                                    <select name="empresa_id" id="ext_empresa_id" required
+                                        class="pl-10 block w-full rounded-lg border-gray-300 bg-gray-50 border focus:bg-white focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 transition-colors">
+                                        <option value="">Selecione a empresa</option>
+                                        <?php foreach($empresasAssinatura as $emp): ?>
+                                            <option value="<?php echo intval($emp['empr_nb_id']); ?>"><?php echo htmlspecialchars($emp['empr_tx_nome']); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Salvar na pasta da empresa -->
+                            <div>
+                                <label class="flex items-start gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white cursor-pointer">
+                                    <input type="checkbox" name="salvar_documentos_empresa" value="sim" checked class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                    <div>
+                                        <div class="text-sm font-semibold text-gray-800">Salvar na pasta da empresa</div>
+                                        <div class="text-xs text-gray-500">O documento será salvo na pasta de documentos da empresa selecionada.</div>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <!-- Validar ICP-Brasil -->
+                            <div>
+                                <label class="flex items-start gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white cursor-pointer">
+                                    <input type="checkbox" name="validar_icp" value="sim" class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                    <div>
+                                        <div class="text-sm font-semibold text-gray-800">Validar com ICP-Brasil</div>
+                                        <div class="text-xs text-gray-500">Aplica validação/carimbo do tempo ICP-Brasil, elevando o nível de confiança jurídica.</div>
+                                    </div>
+                                </label>
                             </div>
 
                             <!-- ── BLOCO SIGNATÁRIO EXTERNO ── -->
@@ -1427,6 +1488,23 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
 
 <script>
 // ── Modo simples / governança ──────────────────────────────────────────────
+function verificarVencimentoExterno(select) {
+    var opt = select.options[select.selectedIndex];
+    var wrapper = document.getElementById('ext_vencimento_wrapper');
+    var input = document.getElementById('ext_data_vencimento');
+    if (!wrapper || !input) return;
+    
+    var exigeVencimento = opt && opt.dataset.vencimento === 'sim';
+    if (exigeVencimento) {
+        wrapper.classList.remove('hidden');
+        input.required = true;
+    } else {
+        wrapper.classList.add('hidden');
+        input.required = false;
+        input.value = '';
+    }
+}
+
 function setModoExterno(modo) {
     const isGov = modo === 'governanca';
     document.getElementById('ext_modo_envio').value = isGov ? 'governanca' : 'avulso';
