@@ -107,8 +107,8 @@
                 "/assinatura/nova_assinatura.php"   => "Nova Assinatura",
                 "/assinatura/governanca.php"        => "Assinatura com Governança",
                 "/assinatura/documentos.php"        => "Documentos",
-                 "/assinatura/consultar.php"        => "Consultar",
-                
+                "/assinatura/consultar.php"         => "Consultar",
+                "/assinatura/cadastro_signatario.php" => "Signatários Externos",
             ],
 			// "suporte" => [
 			// 	"/#" 		=> "Perguntas Frequentes", 
@@ -203,7 +203,8 @@ if ($showComunicado) {
             "Jornada Aberta" => "fa fa-road",
             "Não Conformidades Jurídicas" => "fa fa-balance-scale",
             "Saldo" => "fa fa-chart-line",
-            "Pontos" => "fa fa-list-alt"
+            "Pontos" => "fa fa-list-alt",
+            "Signatários Externos" => "fa fa-address-card"
         ];
         foreach($paginas as $title => $secao){
             $children = "";
