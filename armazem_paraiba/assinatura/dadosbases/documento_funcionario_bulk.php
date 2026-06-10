@@ -9,6 +9,10 @@ if(($_SERVER["REQUEST_METHOD"] ?? "") !== "POST"){
 	exit;
 }
 
+
+
+
+
 $raw = file_get_contents("php://input");
 $payload = json_decode($raw, true);
 if(!is_array($payload)){

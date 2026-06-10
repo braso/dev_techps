@@ -8,6 +8,9 @@ $incluirInativos = ($_GET["incluirInativos"] ?? $_POST["incluirInativos"] ?? "na
 
 $where = $incluirInativos ? "1" : "t.tipo_tx_status = 'ativo'";
 
+
+
+
 $sql =
 	"SELECT
 		t.tipo_nb_id,
