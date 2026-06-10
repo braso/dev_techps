@@ -39,9 +39,6 @@ deployment:
     - export GST=/home/tech1694/public_html/gestaodeponto/gst
 
 
-
-
-
     - /bin/cp -R $GENERAL $GENERALDEPLOY
     
     - /bin/cp -R $DOMAIN $BRASO

@@ -13,6 +13,8 @@ $whereSetor = [];
 $typesSetor = "";
 $varsSetor = [];
 
+
+
 if(in_array($statusSetor, ["ativo", "inativo"], true)){
 	$whereSetor[] = "g.grup_tx_status = ?";
 	$typesSetor .= "s";

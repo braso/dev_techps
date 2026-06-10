@@ -11,6 +11,9 @@ $where = [];
 $types = "";
 $vars = [];
 
+
+
+
 if(in_array($status, ["ativo", "inativo"], true)){
 	$where[] = "enti_tx_status = ?";
 	$types .= "s";
