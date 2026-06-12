@@ -1110,20 +1110,38 @@
 					$totalIntersticio = operarHorarios([$intersticioDiario, $totalNaoJornada->format("H:i")], "+");
 
 					$icone = "";
-					$interMinimo = "08:00";
+					$interMinimo = "08:00";   // mínimo ininterrupto
+					$interTotal  = "11:00";   // mínimo total (com intervalos do dia)
 					if($motorista["para_tx_adi5322"] == "sim" && operarHorarios([$intersticioDiario, "11:00"], "-")[0] == "-"){
 						$interMinimo = "11:00";
 					}
 
-					if(operarHorarios([$intersticioDiario, $interMinimo], "-")[0] == "-"){
-						$restante = operarHorarios([$interMinimo, $intersticioDiario], "-");
-						$title = "Interstício Mínimo de {$interMinimo} ininterruptos não respeitado, faltaram {$restante}.";
-						if(operarHorarios([$totalIntersticio, $interMinimo], "-")[0] != "-"){
-							$title .= "\nInterstício remanescente compensado com intervalos do dia (".$totalNaoJornada->format("H:i").").";
+					// Viola se o descanso ininterrupto for menor que o mínimo exigido
+					$violaIninterrupto = operarHorarios([$intersticioDiario, $interMinimo], "-")[0] == "-";
+					// Viola se o interstício total (ininterrupto + intervalos do dia) não atingir 11h
+					$violaTotal = operarHorarios([$totalIntersticio, $interTotal], "-")[0] == "-";
+
+					if($violaIninterrupto || $violaTotal){
+						$mensagens = [];
+
+						if($violaIninterrupto){
+							$restante = operarHorarios([$interMinimo, $intersticioDiario], "-");
+							$msg = "Interstício Mínimo de {$interMinimo} ininterruptos não respeitado, faltaram {$restante}.";
+							if(operarHorarios([$totalIntersticio, $interMinimo], "-")[0] != "-"){
+								$msg .= "\nInterstício remanescente compensado com intervalos do dia (".$totalNaoJornada->format("H:i").").";
+							}
+							$mensagens[] = $msg;
 						}
+
+						if($violaTotal){
+							$restanteTotal = operarHorarios([$interTotal, $totalIntersticio], "-");
+							$mensagens[] = "Interstício total de {$interTotal} não respeitado, faltaram {$restanteTotal}.";
+						}
+
+						$title = implode("\n", $mensagens);
 						$icone .= "<a><i style='color:red;' title='{$title}' class='color_red fa fa-warning'></i></a>";
 					}
-					unset($restante);
+					unset($restante, $restanteTotal);
 
 					$aRetorno["intersticio"] = $icone." ".$totalIntersticio;
 				}else{
