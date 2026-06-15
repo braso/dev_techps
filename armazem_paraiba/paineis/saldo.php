@@ -21,6 +21,7 @@
 
         $linha = "linha = '<tr>'";
         $modoDetalheJS = (!empty($_POST["empresa"]) && ($_POST["empresa_modo"] ?? "") === "detalhe");
+        // $modoTerceirizado é passado via variável JS global antes de carregarJS ser chamado
         if($modoDetalheJS){
             $linha .= "+'<td>'+row.matricula+'</td>'
                     +'<td>'+row.nome+'</td>'
@@ -33,10 +34,10 @@
                     +'</td>'
                     +'<td>'+(row.jornadaPrevista == '00:00' ? '' : row.jornadaPrevista?? '')+'</td>'
                     +'<td>'+(row.jornadaEfetiva == '00:00' ? '' : row.jornadaEfetiva?? '')+'</td>'
-                    +'<td>'+(row.HESemanal == '00:00' ? '' : row.HESemanal?? '')+'</td>'
-                    +'<td>'+(row.HESabado == '00:00' ? '' : row.HESabado?? '')+'</td>'
-                    +'<td>'+(row.adicionalNoturno == '00:00' ? '' : row.adicionalNoturno?? '')+'</td>'
-                    +'<td>'+(row.esperaIndenizada == '00:00' ? '' : row.esperaIndenizada?? '')+'</td>'
+                    +(modoTerceirizado ? '' : '<td>'+(row.HESemanal == '00:00' ? '' : row.HESemanal?? '')+'</td>')
+                    +(modoTerceirizado ? '' : '<td>'+(row.HESabado == '00:00' ? '' : row.HESabado?? '')+'</td>')
+                    +(modoTerceirizado ? '' : '<td>'+(row.adicionalNoturno == '00:00' ? '' : row.adicionalNoturno?? '')+'</td>')
+                    +(modoTerceirizado ? '' : '<td>'+(row.esperaIndenizada == '00:00' ? '' : row.esperaIndenizada?? '')+'</td>')
                     +'<td id=\"'+(row.saldoAnterior > '00:00' ? 'saldo-final' : (row.saldoAnterior === '00:00' ? 'saldo-zero' : 'saldo-negativo'))+'\">'
                     +(row.saldoAnterior?? '')+'</td>'
                     +'<td>'+(row.saldoPeriodo > '00:00' ? '<strong>' + row.saldoPeriodo + '</strong>' : (row.saldoPeriodo ?? ''))+'</td>'
@@ -927,6 +928,7 @@ HTML;
             "dataFim" => "1900-01-01"
         ];
         $modoDetalhe = false;
+        $modoTerceirizado = false;
         
         
         if(!empty($_POST["acao"]) && $_POST["acao"] == "buscar" && empty($_POST["reloadOnly"])){
@@ -1044,6 +1046,32 @@ HTML;
                         if($k !== "empresaNome"){
                             $totaisFiltrados[$k] = "00:00";
                         }
+                    }
+
+                    // Detecta se todos os funcionários (após filtro) são terceirizados
+                    $modoTerceirizado = false;
+                    $countFiltrados = 0;
+                    $countTerceirizados = 0;
+                    foreach($motoristas as $saldosMotorista){
+                        $rowOcupacao = $normalizarOcupacao($saldosMotorista["ocupacao"] ?? "");
+                        $rowOperacao = $normalizarTxt($saldosMotorista["tipoOperacao"] ?? "");
+                        $rowSetor = $normalizarTxt($saldosMotorista["setor"] ?? "");
+                        $rowSubsetor = $normalizarTxt($saldosMotorista["subsetor"] ?? "");
+                        if((!empty($ocupacaoFiltro) && $rowOcupacao !== "" && !in_array($rowOcupacao, $ocupacaoFiltro, true))
+                            || (!empty($operacaoFiltro) && $rowOperacao !== "" && !in_array($rowOperacao, $operacaoFiltro, true))
+                            || (!empty($setorFiltro) && $rowSetor !== "" && !in_array($rowSetor, $setorFiltro, true))
+                            || (!empty($subsetorFiltro) && $rowSubsetor !== "" && !in_array($rowSubsetor, $subsetorFiltro, true))){
+                            continue;
+                        }
+                        $countFiltrados++;
+                        if($rowOcupacao === "terceirizado"){ $countTerceirizados++; }
+                    }
+                    if($countFiltrados > 0 && $countFiltrados === $countTerceirizados){
+                        $modoTerceirizado = true;
+                    }
+                    // Também ativa modo terceirizado se o filtro de ocupação só tem terceirizado
+                    if(!$modoTerceirizado && count($ocupacaoFiltro) > 0 && $ocupacaoFiltro === ["terceirizado"]){
+                        $modoTerceirizado = true;
                     }
 
                     foreach($motoristas as $saldosMotorista){
@@ -1187,6 +1215,7 @@ HTML;
 
         echo 
             "<script>
+                var modoTerceirizado = ".($modoTerceirizado ? 'true' : 'false').";
                 var endossos = {
                     'totais': {
                         'E': ".$contagemEndossos["E"].",
@@ -1227,10 +1256,10 @@ HTML;
                     ."<th colspan='1'></th>"
                     ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["jornadaPrevista"] : $totais["jornadaPrevista"])."</th>"
                     ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["jornadaEfetiva"] : $totais["jornadaEfetiva"])."</th>"
-                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["HESemanal"] : $totais["HESemanal"])."</th>"
-                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["HESabado"] : $totais["HESabado"])."</th>"
-                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["adicionalNoturno"] : $totais["adicionalNoturno"])."</th>"
-                    ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["esperaIndenizada"] : $totais["esperaIndenizada"])."</th>"
+                    .(!$modoTerceirizado ? "<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["HESemanal"] : $totais["HESemanal"])."</th>" : "")
+                    .(!$modoTerceirizado ? "<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["HESabado"] : $totais["HESabado"])."</th>" : "")
+                    .(!$modoTerceirizado ? "<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["adicionalNoturno"] : $totais["adicionalNoturno"])."</th>" : "")
+                    .(!$modoTerceirizado ? "<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["esperaIndenizada"] : $totais["esperaIndenizada"])."</th>" : "")
                     ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["saldoAnterior"] : $totais["saldoAnterior"])."</th>"
                     ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["saldoPeriodo"] : $totais["saldoPeriodo"])."</th>"
                     ."<th colspan='1'>".($hasDetailFilter ? $totaisFiltrados["saldoFinal"] : $totais["saldoFinal"])."</th>";
@@ -1245,15 +1274,14 @@ HTML;
                     <th class='operacao'>SubSetor</th>
                     <th class='status'>Status Endosso</th>
                     <th class='jornadaPrevista'>Jornada Prevista</th>
-                    <th class='jornadaEfetiva'>Jornada Efetiva</th>
-                    <th class='HESemanal'>H.E. Semanal</th>
-                    <th class='HEEx'>H.E. Ex.</th>
-                    <th class='adicionalNoturno'>Adicional Noturno</th>
-                    <th class='esperaIndenizada'>Espera Indenizada</th>
-                    <th class='saldoAnterior'>Saldo Anterior</th>
+                    <th class='jornadaEfetiva'>Jornada Efetiva</th>"
+                    .(!$modoTerceirizado ? "<th class='HESemanal'>H.E. Semanal</th>" : "")
+                    .(!$modoTerceirizado ? "<th class='HEEx'>H.E. Ex.</th>" : "")
+                    .(!$modoTerceirizado ? "<th class='adicionalNoturno'>Adicional Noturno</th>" : "")
+                    .(!$modoTerceirizado ? "<th class='esperaIndenizada'>Espera Indenizada</th>" : "")
+                    ."<th class='saldoAnterior'>Saldo Anterior</th>
                     <th class='saldoPeriodo'>Saldo Período</th>
-                    <th class='saldoFinal'>Saldo Bruto</th>
-                    "
+                    <th class='saldoFinal'>Saldo Bruto</th>"
                 ;
 
                 // $rowTotais .= 
