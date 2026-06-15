@@ -4,3 +4,11 @@ arquivos/*
 paineis/arquivos/*
 paineis_old/*
 diaDetalhePonto.php
+
+#patas ornilio  
+/posiitron
+# Ignorar dependências do Node.js
+node_modules/
+# Ignorar arquivos de configuração de dependências (se não quiser versionar)
+package-lock.json
+package.json

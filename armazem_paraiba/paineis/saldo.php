@@ -17,10 +17,11 @@
         index();
     }
 
-    function carregarJS(array $arquivos){
+    function carregarJS(array $arquivos, array $empresasSemDados = []){
 
         $linha = "linha = '<tr>'";
-        if(!empty($_POST["empresa"])){
+        $modoDetalheJS = (!empty($_POST["empresa"]) && ($_POST["empresa_modo"] ?? "") === "detalhe");
+        if($modoDetalheJS){
             $linha .= "+'<td>'+row.matricula+'</td>'
                     +'<td>'+row.nome+'</td>'
                     +'<td>'+(row.ocupacao?? '')+'</td>'
@@ -62,8 +63,21 @@
         }
 
         $carregarDados = "";
+        // Linhas de empresas zeradas (sem JSON no mês) renderizadas via PHP
+        $linhasEmpresasZeradas = "";
         foreach($arquivos as $arquivo){
             $carregarDados .= "carregarDados('".$arquivo."');";
+        }
+        // Quando não há JSONs mas há empresas do banco (sem dados no mês, modo empresa)
+        if(empty($arquivos) && !$modoDetalheJS && !empty($empresasSemDados)){
+            foreach($empresasSemDados as $emp){
+                $linhasEmpresasZeradas .= "<tr>"
+                    ."<td style='cursor:pointer;' onclick=\"setAndSubmit(".intval($emp["empr_nb_id"]).")\">".htmlspecialchars($emp["empr_tx_nome"], ENT_QUOTES)."</td>"
+                    ."<td>0%</td>"
+                    ."<td>0</td>"
+                    ."<td>00:00</td><td>00:00</td><td>00:00</td><td>00:00</td><td>00:00</td><td>00:00</td><td>00:00</td><td>00:00</td><td>00:00</td>"
+                    ."</tr>";
+            }
         }
 
         echo
@@ -71,19 +85,52 @@
                 <input type='hidden' name='acao'>
                 <input type='hidden' name='campoAcao'>
                 <input type='hidden' name='empresa'>
+                <input type='hidden' name='empresa_filtro' value='".htmlspecialchars($_POST["empresa_filtro"] ?? "", ENT_QUOTES)."'>
+                <input type='hidden' name='empresa_modo'>
                 <input type='hidden' name='busca_dataMes'>
                 <input type='hidden' name='busca_dataInicio'>
                 <input type='hidden' name='busca_dataFim'>
                 <input type='hidden' name='busca_data'>
                 <input type='hidden' name='busca_ocupacao'>
+                <input type='hidden' name='operacao'>
+                <input type='hidden' name='busca_setor'>
+                <input type='hidden' name='busca_subsetor'>
             </form>
             <script>
                 function setAndSubmit(empresa){
                     document.myForm.acao.value = 'enviarForm()';
                     document.myForm.campoAcao.value = 'buscar';
                     document.myForm.empresa.value = empresa;
+                    document.myForm.empresa_modo.value = 'detalhe';
                     document.myForm.busca_dataMes.value = document.getElementById('busca_dataMes').value;
-                    document.myForm.busca_ocupacao.value = document.querySelector('[name=\"busca_ocupacao\"]').value;
+                    // Salva a seleção atual do filtro de empresas para restaurar ao voltar
+                    var hiddenEmpresa = document.querySelector('.js-filtro-hidden[data-filter-name=\"empresa\"]');
+                    document.myForm.empresa_filtro.value = hiddenEmpresa ? hiddenEmpresa.value : '';
+                    // Copia todos os outros filtros para preservar ao voltar
+                    var filtros = ['busca_ocupacao','operacao','busca_setor','busca_subsetor'];
+                    filtros.forEach(function(nome){
+                        var origem = document.querySelector('.js-filtro-hidden[data-filter-name=\"' + nome + '\"]');
+                        var destino = document.querySelector('form[name=\"myForm\"] [name=\"' + nome + '\"]');
+                        if(origem && destino){ destino.value = origem.value; }
+                    });
+                    document.myForm.submit();
+                }
+
+                function voltarParaEmpresas(){
+                    document.myForm.acao.value = 'enviarForm()';
+                    document.myForm.campoAcao.value = 'buscar';
+                    document.myForm.empresa_modo.value = 'filtro';
+                    document.myForm.busca_dataMes.value = document.getElementById('busca_dataMes').value;
+                    // Restaura a seleção original de empresas do filtro (salva em empresa_filtro)
+                    var empresaFiltroInput = document.querySelector('form[name=\"myForm\"] [name=\"empresa_filtro\"]');
+                    document.myForm.empresa.value = empresaFiltroInput ? empresaFiltroInput.value : '';
+                    // Copia os demais filtros (já populados com $_POST correto)
+                    var filtros = ['busca_ocupacao','operacao','busca_setor','busca_subsetor'];
+                    filtros.forEach(function(nome){
+                        var origem = document.querySelector('.js-filtro-hidden[data-filter-name=\"' + nome + '\"]');
+                        var destino = document.querySelector('form[name=\"myForm\"] [name=\"' + nome + '\"]');
+                        if(origem && destino){ destino.value = origem.value; }
+                    });
                     document.myForm.submit();
                 }
 
@@ -414,7 +461,14 @@
         }
 
         $empresaSelecionadas = [];
-        $empresaSelecionadasRaw = !empty($_POST["empresa"]) ? (string)$_POST["empresa"] : (!empty($_SESSION["user_nb_empresa"]) ? (string)$_SESSION["user_nb_empresa"] : "");
+        // Em modo detalhe, usa empresa_filtro para popular o checklist (preserva seleção original)
+        // Em modo normal, usa empresa diretamente
+        $empresaModoAtual = $_POST["empresa_modo"] ?? "";
+        if($empresaModoAtual === "detalhe" && !empty($_POST["empresa_filtro"])){
+            $empresaSelecionadasRaw = (string)$_POST["empresa_filtro"];
+        } else {
+            $empresaSelecionadasRaw = !empty($_POST["empresa"]) ? (string)$_POST["empresa"] : (!empty($_SESSION["user_nb_empresa"]) ? (string)$_SESSION["user_nb_empresa"] : "");
+        }
         if($empresaSelecionadasRaw !== ""){
             $empresaSelecionadas = array_values(array_filter(array_map('trim', explode(',', $empresaSelecionadasRaw)), function($v){ return $v !== ''; }));
         }
@@ -581,8 +635,8 @@
 
 
         $botao_volta = "";
-        if(!empty($_POST["empresa"])){
-            $botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
+        if(!empty($_POST["empresa"]) && ($_POST["empresa_modo"] ?? "") === "detalhe"){
+            $botao_volta = "<button class='btn default' type='button' onclick='voltarParaEmpresas()'>Voltar</button>";
         }
         $botao_imprimir = "<button class='btn default' type='button' onclick='enviarDados()'>Imprimir</button>
         <script>
@@ -839,6 +893,8 @@ HTML;
 
         
         $arquivos = [];
+        $empresas = [];
+        $logoEmpresa = "";
         $dataEmissao = ""; //Utilizado no HTML
         $encontrado = false;
         $path = "./arquivos/saldos";
@@ -870,11 +926,13 @@ HTML;
             "dataInicio" => "1900-01-01",
             "dataFim" => "1900-01-01"
         ];
+        $modoDetalhe = false;
         
         
         if(!empty($_POST["acao"]) && $_POST["acao"] == "buscar" && empty($_POST["reloadOnly"])){
             $path .= "/".$_POST["busca_dataMes"];
-            if(!empty($_POST["empresa"])){
+            $modoDetalhe = (!empty($_POST["empresa"]) && ($_POST["empresa_modo"] ?? "") === "detalhe");
+            if($modoDetalhe){
                 // Painel dos saldos dos motoristas de uma ou mais empresas (CSV)
                 $empresaIds = array_values(array_unique(array_filter(array_map('intval', explode(',', (string)$_POST["empresa"])) )));
                 if(empty($empresaIds)){
@@ -1030,44 +1088,46 @@ HTML;
                 $logoEmpresa = $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/".$logoEmpresa;
 
                 
+                $encontrado = true; // Sempre mostra o grid, mesmo sem dados no mês
+                $dataEmissao = "";
+
+                // IDs das empresas selecionadas no filtro
+                $empresasFiltroIds = [];
+                if(!empty($_POST["empresa"]) && ($_POST["empresa_modo"] ?? "") !== "detalhe"){
+                    $empresasFiltroIds = array_values(array_unique(array_filter(array_map('intval', explode(',', (string)$_POST["empresa"])), function($v){ return $v > 0; })));
+                }
+
                 if(is_dir($path) && is_file($path."/empresas.json")){
-                    $encontrado = true;
                     $arquivoGeral = $path."/empresas.json";
 
                     $dataArquivo = date("d/m/Y", filemtime($arquivoGeral));
-                    $horaArquivo = date("H:i", filemtime($arquivoGeral));
-
-                    $dataAtual = date("d/m/Y");
-                    $horaAtual = date("H:i");
-                    if($dataArquivo != $dataAtual){
+                    if($dataArquivo != date("d/m/Y")){
                         $alertaEmissao = "<i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
                     } else {
-                        // Datas iguais: compara as horas
-                        // if ($horaArquivo < $horaAtual) {
-                        //     $alertaEmissao = "<i style='color:red;' title='As informações do painel podem estar desatualizadas.' class='fa fa-warning'></i>";
-                        // } else {
-                            $alertaEmissao = "";
-                        // }
+                        $alertaEmissao = "";
                     }
 
-                    $dataEmissao = $alertaEmissao ." Atualizado em: ".date("d/m/Y H:i", filemtime($arquivoGeral)); //Utilizado no HTML.
+                    $dataEmissao = $alertaEmissao ." Atualizado em: ".date("d/m/Y H:i", filemtime($arquivoGeral));
                     $arquivoGeral = json_decode(file_get_contents($arquivoGeral), true);
 
                     $periodoRelatorio = [
                         "dataInicio" => $arquivoGeral["dataInicio"],
                         "dataFim" => $arquivoGeral["dataFim"]
                     ];
-
                     $periodoRelatorio["dataInicio"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataInicio"])->format("d/m");
                     $periodoRelatorio["dataFim"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataFim"])->format("d/m");
 
-                    
+                    // Lê os JSONs das empresas da pasta do mês
                     $pastaSaldos = dir($path);
                     while($arquivo = $pastaSaldos->read()){
                         if(!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresas"))){
-                            $arquivo = $path."/".$arquivo."/empresa_".$arquivo.".json";
-                            $arquivos[] = $arquivo;
-                            $json = json_decode(file_get_contents($arquivo), true);
+                            if(!empty($empresasFiltroIds) && !in_array(intval($arquivo), $empresasFiltroIds, true)){
+                                continue;
+                            }
+                            $arquivoJson = $path."/".$arquivo."/empresa_".$arquivo.".json";
+                            if(!is_file($arquivoJson)){ continue; }
+                            $arquivos[] = $arquivoJson;
+                            $json = json_decode(file_get_contents($arquivoJson), true);
                             foreach($totais as $key => $value){
                                 $totais[$key] = operarHorarios([$totais[$key], $json["totais"][$key]], "+");
                             }
@@ -1075,7 +1135,7 @@ HTML;
                         }
                     }
                     $pastaSaldos->close();
-                    
+
                     foreach($empresas as $empresa){
                         if($empresa["totais"]["saldoFinal"] === "00:00"){
                             $contagemSaldos["meta"]++;
@@ -1084,8 +1144,7 @@ HTML;
                         }else{
                             $contagemSaldos["positivos"]++;
                         }
-
-                        if ($empresa["percEndossado"] === 1) {
+                        if($empresa["percEndossado"] === 1){
                             $contagemEndossos["E"]++;
                         }elseif($empresa["percEndossado"] === 0){
                             $contagemEndossos["N"]++;
@@ -1093,6 +1152,32 @@ HTML;
                             $contagemEndossos["EP"]++;
                         }
                     }
+                }else{
+                    // Sem dados no mês: monta grid com empresas do banco todas zeradas
+                    $dataEmissao = "<i style='color:orange;' title='Sem dados gerados para este mês.'  class='fa fa-warning'></i> Sem dados para este mês";
+
+                    $condEmpresasBanco = "";
+                    if(!empty($empresasFiltroIds)){
+                        $condEmpresasBanco = " AND empr_nb_id IN (".implode(',', $empresasFiltroIds).")";
+                    }
+                    $resEmpresasBanco = query("SELECT empr_nb_id, empr_tx_nome FROM empresa WHERE empr_tx_status = 'ativo'".$condEmpresasBanco." ORDER BY empr_tx_nome ASC");
+                    $totaisZero = [
+                        "jornadaPrevista" => "00:00", "jornadaEfetiva" => "00:00",
+                        "HESemanal" => "00:00", "HESabado" => "00:00",
+                        "adicionalNoturno" => "00:00", "esperaIndenizada" => "00:00",
+                        "saldoAnterior" => "00:00", "saldoPeriodo" => "00:00", "saldoFinal" => "00:00"
+                    ];
+                    while($empRow = mysqli_fetch_assoc($resEmpresasBanco)){
+                        $empresas[] = [
+                            "empr_nb_id"     => $empRow["empr_nb_id"],
+                            "empr_tx_nome"   => $empRow["empr_tx_nome"],
+                            "percEndossado"  => 0,
+                            "qtdFuncionarios"=> 0,
+                            "totais"         => $totaisZero
+                        ];
+                    }
+                    // Cria arquivos virtuais (array vazio, carregarDados não será chamado)
+                    $arquivos = [];
                 }
             }
         }
@@ -1132,7 +1217,7 @@ HTML;
             $rowTotais = "<tr class='totais'>";
             $rowTitulos = "<tr id='titulos' class='titulos'>";
 
-            if(!empty($_POST["empresa"])){
+            if($modoDetalhe){
                 $rowTotais .= 
                     "<th colspan='2'>".$totais["empresaNome"]."</th>"
                     ."<th colspan='1'></th>"
@@ -1251,10 +1336,15 @@ HTML;
             $titulo = "Geral de saldo";
             include_once "painel_html.php";
 
+            // Injeta linhas zeradas diretamente quando não há JSONs no mês
+            if(!empty($linhasEmpresasZeradas)){
+                echo "<script>document.querySelector('#tabela-empresas tbody').innerHTML = ".json_encode($linhasEmpresasZeradas).";</script>";
+            }
+
             echo 
                 "<div class='script'>
                     <script>"
-                        .((!empty($_POST["empresa"]))? "document.getElementById('tabela1').style.display = 'table';": "")
+                        .($modoDetalhe ? "document.getElementById('tabela1').style.display = 'table';": "")
                         ."var porcentagemEndoTds = document.getElementsByClassName('porcentagemEndo')[0].getElementsByTagName('td');
                         var porcentagemNaEndoTds = document.getElementsByClassName('porcentagemNaEndo')[0].getElementsByTagName('td');
                         var porcentagemEndoPcTds = document.getElementsByClassName('porcentagemEndoPc')[0].getElementsByTagName('td');
@@ -1285,12 +1375,12 @@ HTML;
                 </div>"
             ;
         }else{
-            if(!empty($_POST["acao"]) && $_POST["acao"] == "buscar"){
-                set_status("Não possui dados desse mês");
-                echo "<script>alert('Não Possui dados desse mês')</script>";
+            if(!empty($_POST["acao"]) && $_POST["acao"] == "buscar" && $modoDetalhe){
+                set_status("Não possui dados desse mês para esta empresa");
+                echo "<script>alert('Não Possui dados desse mês para esta empresa')</script>";
             }
         }
         
-        carregarJS($arquivos);
+        carregarJS($arquivos, $empresas ?? []);
         rodape();
     }
