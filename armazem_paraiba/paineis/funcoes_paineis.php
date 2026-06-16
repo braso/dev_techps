@@ -401,10 +401,15 @@ function criar_relatorio_endosso() {
 	$mes = new DateTime($_POST["busca_data"]."-01");
 	$fimMes = new DateTime($mes->format("Y-m-t"));
 
+	$empresaIdsFiltro = [];
+	if(!empty($_POST["empresa"])){
+		$empresaIdsFiltro = array_values(array_unique(array_filter(array_map('intval', explode(',', (string)$_POST["empresa"])), function($v){ return $v > 0; })));
+	}
+
 	$empresas = mysqli_fetch_all(query(
 		"SELECT empr_nb_id, empr_tx_nome FROM empresa"
 			. " WHERE empr_tx_status = 'ativo'"
-			. (!empty($_POST["empresa"]) ? " AND empr_nb_id = ".$_POST["empresa"] : "")
+			. (!empty($empresaIdsFiltro) ? " AND empr_nb_id IN (".implode(',', $empresaIdsFiltro).")" : "")
 			. " ORDER BY empr_tx_nome ASC;"
 	), MYSQLI_ASSOC);
 

@@ -1346,7 +1346,7 @@ HTML;
                 $rowTitulos .= 
                     "<th data-column='nome' data-order='asc'>Nome da Empresa/Filial</th>
                     <th data-column='percEndossados' data-order='asc'>% Endossados</th>
-                    <th data-column='qtdMotoristas' data-order='asc'>Qtd. Motoristas</th>
+                    <th data-column='qtdMotoristas' data-order='asc'>Qtd</th>
                     <th data-column='jornadaPrevista' data-order='asc'>Jornada Prevista</th>
                     <th data-column='JornadaEfetiva' data-order='asc'>Jornada Efetiva</th>
                     <th data-column='HESemanal' data-order='asc'>H.E. Semanal</th>
