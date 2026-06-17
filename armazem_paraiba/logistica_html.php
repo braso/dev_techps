@@ -26,14 +26,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
    if (data) {
-        // Formata a data da URL para "YYYY-MM-DD"
-        var formattedDate = data;
+        // Garante apenas a parte da data (YYYY-MM-DD)
+        var formattedDate = data.split("T")[0].split(" ")[0];
 
         // Define a data e hora de início como 00:00:00
-        var dateStart = formattedDate + "T00:00";
+        var dateStart = formattedDate + "T00:00:00";
 
-        // Define a data e hora de fim como 23:59
-        var dateEnd = formattedDate + "T23:59";
+        // Define a data e hora de fim como 23:59:59
+        var dateEnd = formattedDate + "T23:59:59";
         
         document.getElementById('date_start').value = dateStart;
         document.getElementById('date_end').value = dateEnd;
