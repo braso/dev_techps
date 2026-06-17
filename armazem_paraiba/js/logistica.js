@@ -2,6 +2,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const filterForm = document.getElementById("filterForm");
     const resultsDiv = document.getElementById("results");
     const messageDiv = document.getElementById("messageDiv");
+
+    const ADDRESS_API_URL = "logistica_integracao/endereco_api.php";
+    const ADDRESS_FILE_URL = "logistica_integracao/endereço.json";
+    let addressCache = {};
+    let addressCacheLoaded = false;
   
     filterForm.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -73,12 +78,57 @@ document.addEventListener("DOMContentLoaded", () => {
       return `${hours}h ${minutes}min ${sec}s`;
     };
   
+    function roundCoord(num) {
+      return Number(num).toFixed(6);
+    }
+
+    function cacheKey(lat, lon) {
+      return `${roundCoord(lat)},${roundCoord(lon)}`;
+    }
+
+    async function carregarCacheEnderecos() {
+      try {
+        const response = await fetch(ADDRESS_FILE_URL, { cache: "no-store" });
+        if (!response.ok) throw new Error("Cache não carregado");
+        const data = await response.json();
+        addressCache = data && typeof data === "object" ? data : {};
+      } catch (err) {
+        console.warn("Não foi possível carregar cache de endereços:", err);
+        addressCache = {};
+      } finally {
+        addressCacheLoaded = true;
+      }
+    }
+
+    function salvarEnderecoNoCache(lat, lon, endereco) {
+      const chave = cacheKey(lat, lon);
+      addressCache[chave] = endereco;
+
+      fetch(ADDRESS_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lat, lon, endereco })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.sucesso) {
+          console.error("Erro ao salvar cache:", data.erro);
+        }
+      })
+      .catch(err => console.error("Erro ao salvar cache:", err));
+    }
+
     const buscarEnderecosFaltantes = () => {
-        const regexNaoInformado = /endere[cç]o\s+n[aã]o\s+informado/i;
-        const tds = document.querySelectorAll("td[data-lat][data-lon]");
+      if (!addressCacheLoaded) {
+        carregarCacheEnderecos().then(() => buscarEnderecosFaltantes());
+        return;
+      }
+
+      const regexNaoInformado = /endere[cç]o\s+n[aã]o\s+informado/i;
+      const tds = document.querySelectorAll("td[data-lat][data-lon]");
         
-        let count = 0;
-        tds.forEach(td => {
+      let count = 0;
+      tds.forEach(td => {
             const text = td.textContent.trim();
             // Verifica se o texto é vazio, null ou "Endereço nao informado"
             // E também verifica se JÁ NÃO ESTÁ buscando (para evitar duplicação)
@@ -221,6 +271,7 @@ document.addEventListener("DOMContentLoaded", () => {
             stopEnd = new Date(row.moduleTime);
           } else {
             if (isStopped) {
+              stopEnd = new Date(row.moduleTime);
               const totalTime = (stopEnd - stopStart) / 1000;
   
               if (totalTime >= 5 * 60) {
@@ -366,6 +417,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
   
       addRowClickListeners();
+      buscarEnderecosFaltantes();
     };
   
     let startTime = null;
@@ -874,15 +926,26 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function queueAddressLookup(lat, lon, elementId) {
-        if (isNaN(lat) || isNaN(lon) || lat === 0 || lon === 0) {
-            const elements = document.querySelectorAll("." + elementId);
-            elements.forEach(element => {
-                element.innerText = "Coord. inválidas";
-            });
-            return;
-        }
-        addressQueue.push({ lat, lon, elementId });
-        processAddressQueue();
+      if (isNaN(lat) || isNaN(lon) || lat === 0 || lon === 0) {
+        const elements = document.querySelectorAll("." + elementId);
+        elements.forEach(element => {
+          element.innerText = "Coord. inválidas";
+        });
+        return;
+      }
+
+      const chave = cacheKey(lat, lon);
+      if (addressCache[chave]) {
+        const elements = document.querySelectorAll("." + elementId);
+        elements.forEach(element => {
+          element.innerText = addressCache[chave];
+          element.classList.remove(elementId);
+        });
+        return;
+      }
+
+      addressQueue.push({ lat, lon, elementId });
+      processAddressQueue();
     }
 
     function processAddressQueue() {
@@ -900,11 +963,13 @@ document.addEventListener("DOMContentLoaded", () => {
         .then(data => {
             // Usa querySelectorAll para pegar todos os elementos (original e clones)
             const elements = document.querySelectorAll("." + elementId);
+            const endereco = formatNominatimAddress(data);
             elements.forEach(element => {
-                element.innerText = formatNominatimAddress(data);
+                element.innerText = endereco;
                 // Remove a classe para não processar novamente se for o caso
                 element.classList.remove(elementId);
             });
+            salvarEnderecoNoCache(lat, lon, endereco);
         })
         .catch(err => {
             console.error("Erro ao buscar endereço:", err);
@@ -931,14 +996,10 @@ document.addEventListener("DOMContentLoaded", () => {
     
       const tr = document.createElement("tr");
     
-      if (parseInt(row.speed) <= 5) {
-        if (row.ignition === "true") {
-          tr.classList.add("high-speed");
-        } else {
-          tr.classList.add("low-speed");
-        }
+      if (ignition === "true") {
+        tr.classList.add("high-speed");
       } else {
-        tr.classList.add("speed-5");
+        tr.classList.add("low-speed");
       }
     
           // Calcula a diferença de hodômetro
