@@ -123,3 +123,11 @@
 2026-04-28 12:35:16 | ASSINATURA | enviando para integracao com 2 signatarios
 2026-04-28 12:35:16 | ASSINATURA | integracao ok solicitacao_assinatura=49
 2026-04-28 12:35:16 | APROVACAO | assinatura encaminhada solicitacao=63 id_instancia=17
+2026-06-08 22:43:00 | ASSINATURA | inicio solicitacao=2 aprovador=282
+2026-06-08 22:43:00 | ASSINATURA | criando instancia nova para solicitacao=2
+2026-06-08 22:43:00 | ASSINATURA | nenhum tipo de documento ativo encontrado
+2026-06-08 22:43:00 | APROVACAO | erro ao enviar para assinatura solicitacao=2 msg=Nenhum tipo de documento ativo foi encontrado para o ajuste.
+2026-06-10 08:53:01 | ASSINATURA | inicio solicitacao=4 aprovador=138
+2026-06-10 08:53:01 | ASSINATURA | criando instancia nova para solicitacao=4
+2026-06-10 08:53:01 | ASSINATURA | nenhum tipo de documento ativo encontrado
+2026-06-10 08:53:01 | APROVACAO | erro ao enviar para assinatura solicitacao=4 msg=Nenhum tipo de documento ativo foi encontrado para o ajuste.

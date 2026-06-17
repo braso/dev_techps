@@ -19,3 +19,11 @@ brasomo_dev_techps_sistema.sql
 
 .cpanel.yml
 .contex20/backup
+
+#patas ornilio  
+/posiitron
+# Ignorar dependências do Node.js
+node_modules/
+# Ignorar arquivos de configuração de dependências (se não quiser versionar)
+package-lock.json
+package.json
