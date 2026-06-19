@@ -37,7 +37,7 @@
         "TMILITAO"              => "t_militao",
         "LAUTO"                 => "lauto",
         "DEMO"                  => "demo",
-        "GST"                   => "gst"
+        "GST"                   => "gst",
         "ARMAPLAST"             => "armaplast"
 
     ];
@@ -73,7 +73,7 @@
         "t_militao"         => "T Militao",       
         "lauto"             => "L Auto Cargo",
         "demo"              => "Demo",
-        "gst"               => "GST"
+        "gst"               => "GST",
         "armaplast"         => "ARMAPLAST"
     ];
 
