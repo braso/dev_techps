@@ -1091,7 +1091,7 @@ if (empty($justificativaGestor)) {
 				"(" . implode(" OR ", $condicoes_setor) . $bloqueioSubsetor . ")";
 		}
 		// informa os usuario s que terao acesso total, independente das regras de hierarquia
-		$nivesLiberados = ['Super Administrador'];
+		$nivesLiberados = ['Super Administrador','Administrador','Funcionário'];
 		$isSuperAdmin = in_array($_SESSION['user_tx_nivel'] ?? '', $nivesLiberados);
 
 		if ($isSuperAdmin){

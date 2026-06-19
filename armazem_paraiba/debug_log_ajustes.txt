@@ -131,3 +131,15 @@
 2026-06-10 08:53:01 | ASSINATURA | criando instancia nova para solicitacao=4
 2026-06-10 08:53:01 | ASSINATURA | nenhum tipo de documento ativo encontrado
 2026-06-10 08:53:01 | APROVACAO | erro ao enviar para assinatura solicitacao=4 msg=Nenhum tipo de documento ativo foi encontrado para o ajuste.
+2026-06-19 07:33:20 | ASSINATURA | inicio solicitacao=1 aprovador=141
+2026-06-19 07:33:20 | ASSINATURA | criando instancia nova para solicitacao=1
+2026-06-19 07:33:20 | ASSINATURA | nenhum campo ativo encontrado para tipo=211
+2026-06-19 07:33:20 | APROVACAO | erro ao enviar para assinatura solicitacao=1 msg=Nenhum layout ativo foi encontrado para o documento de ajuste.
+2026-06-19 07:33:27 | ASSINATURA | inicio solicitacao=6 aprovador=141
+2026-06-19 07:33:27 | ASSINATURA | criando instancia nova para solicitacao=6
+2026-06-19 07:33:27 | ASSINATURA | nenhum campo ativo encontrado para tipo=211
+2026-06-19 07:33:27 | APROVACAO | erro ao enviar para assinatura solicitacao=6 msg=Nenhum layout ativo foi encontrado para o documento de ajuste.
+2026-06-19 07:46:44 | ASSINATURA | inicio solicitacao=7 aprovador=886
+2026-06-19 07:46:44 | ASSINATURA | criando instancia nova para solicitacao=7
+2026-06-19 07:46:44 | ASSINATURA | nenhum campo ativo encontrado para tipo=211
+2026-06-19 07:46:44 | APROVACAO | erro ao enviar para assinatura solicitacao=7 msg=Nenhum layout ativo foi encontrado para o documento de ajuste.
