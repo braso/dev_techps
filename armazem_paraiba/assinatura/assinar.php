@@ -108,7 +108,10 @@ function ensureAssinaturaTables(mysqli $conn): void {
             "validar_icp" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN validar_icp ENUM('sim','nao') NOT NULL DEFAULT 'nao'",
             "expires_at" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN expires_at DATETIME NULL",
             "data_assinatura" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN data_assinatura DATETIME NULL",
-            "status_final" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN status_final VARCHAR(50) DEFAULT 'pendente'"
+            "status_final" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN status_final VARCHAR(50) DEFAULT 'pendente'",
+            "empresa_id" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN empresa_id INT NULL",
+            "salvar_documentos_empresa" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN salvar_documentos_empresa ENUM('sim','nao') NOT NULL DEFAULT 'nao'",
+            "prazo_expiracao_dias" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN prazo_expiracao_dias INT NOT NULL DEFAULT 1"      
         ];
         foreach ($cols as $col => $ddl) {
             $check = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE '{$col}'");
@@ -232,6 +235,101 @@ function parseDataHora(string $value): string {
         return date("Y-m-d H:i:s");
     }
     return date("Y-m-d H:i:s", $ts);
+}
+
+function assinatura_salvarDocumentoEmpresa(
+    mysqli $conn,
+    int $empresaId,
+    int $tipoDocumentoId,
+    string $caminhoFinal,
+    string $nomeArquivoOriginal
+): void {
+    if ($empresaId <= 0 || $caminhoFinal === "") {
+        return;
+    }
+
+    $rootEmpresa = dirname(__DIR__) . "/arquivos/docu_empresa/" . $empresaId . "/";
+    if (!is_dir($rootEmpresa)) {
+        @mkdir($rootEmpresa, 0777, true);
+    }
+
+    $nomeBase = $nomeArquivoOriginal !== "" ? $nomeArquivoOriginal : basename($caminhoFinal);
+    $nomeBase = preg_replace('/[^\p{L}\p{N}\s\.\-\_]/u', '_', basename($nomeBase));
+    if (strtolower(pathinfo($nomeBase, PATHINFO_EXTENSION)) !== "pdf") {
+        $nomeBase .= ".pdf";
+    }
+
+    $destAbs = rtrim(str_replace("\\", "/", $rootEmpresa), "/") . "/" . $nomeBase;
+    $rel = "arquivos/docu_empresa/" . $empresaId . "/" . $nomeBase;
+
+    $srcAbs = __DIR__ . "/" . ltrim($caminhoFinal, "/\\");
+    if (!file_exists($srcAbs)) {
+        return;
+    }
+
+    if (file_exists($destAbs)) {
+        $info = pathinfo($nomeBase);
+        $baseName = strval($info["filename"] ?? "documento");
+        $ext = isset($info["extension"]) && $info["extension"] !== "" ? "." . $info["extension"] : ".pdf";
+        $nomeBase = $baseName . "_" . time() . $ext;
+        $destAbs = rtrim(str_replace("\\", "/", $rootEmpresa), "/") . "/" . $nomeBase;
+        $rel = "arquivos/docu_empresa/" . $empresaId . "/" . $nomeBase;
+    }
+
+    if (!@copy($srcAbs, $destAbs)) {
+        return;
+    }
+
+    $nomeDoc = strval(pathinfo($nomeBase, PATHINFO_FILENAME));
+    if ($nomeDoc === "") {
+        $nomeDoc = "Documento assinado";
+    }
+
+    $descricao = "Documento assinado eletronicamente.";
+    $dataCadastro = date("Y-m-d H:i:s");
+    $usuarioCadastro = 0;
+
+    $docId = 0;
+    $stmtFind = @mysqli_prepare($conn, "SELECT docu_nb_id FROM documento_empresa WHERE empr_nb_id = ? AND docu_tx_caminho = ? LIMIT 1");
+    if ($stmtFind) {
+        mysqli_stmt_bind_param($stmtFind, "is", $empresaId, $rel);
+        @mysqli_stmt_execute($stmtFind);
+        $rowDoc = @mysqli_fetch_assoc(mysqli_stmt_get_result($stmtFind));
+        mysqli_stmt_close($stmtFind);
+        $docId = intval($rowDoc["docu_nb_id"] ?? 0);
+    }
+
+    if ($docId > 0) {
+        $stmtUp = @mysqli_prepare(
+            $conn,
+            "UPDATE documento_empresa
+                SET
+                    docu_tx_assinado = 'sim',
+                    docu_tx_tipo = NULLIF(?,0),
+                    docu_tx_descricao = CASE WHEN docu_tx_descricao IS NULL OR TRIM(docu_tx_descricao) = '' THEN ? ELSE docu_tx_descricao END
+            WHERE docu_nb_id = ?
+            LIMIT 1"
+        );
+        if ($stmtUp) {
+            mysqli_stmt_bind_param($stmtUp, "isi", $tipoDocumentoId, $descricao, $docId);
+            @mysqli_stmt_execute($stmtUp);
+            mysqli_stmt_close($stmtUp);
+        }
+        return;
+    }
+
+    $stmtIns = @mysqli_prepare(
+        $conn,
+        "INSERT INTO documento_empresa
+            (empr_nb_id, docu_tx_nome, docu_tx_descricao, docu_tx_dataCadastro, docu_tx_datavencimento, docu_tx_tipo, docu_nb_sbgrupo, docu_tx_usuarioCadastro, docu_tx_assinado, docu_tx_visivel, docu_tx_caminho)
+        VALUES
+            (?, ?, ?, ?, NULL, NULLIF(?,0), NULL, ?, 'sim', 'sim', ?)"
+    );
+    if ($stmtIns) {
+        mysqli_stmt_bind_param($stmtIns, "isssiis", $empresaId, $nomeDoc, $descricao, $dataCadastro, $tipoDocumentoId, $usuarioCadastro, $rel);
+        @mysqli_stmt_execute($stmtIns);
+        mysqli_stmt_close($stmtIns);
+    }
 }
 
 function assinatura_entregarParaFuncionarioEFinalizarNotificacao(
@@ -363,7 +461,7 @@ $dataHora = parseDataHora(strval($_POST["data_hora"] ?? ""));
 
 $arquivo = $_FILES["arquivo_assinado"] ?? null;
 
-$sql = "SELECT a.*, s.id as solicitacao_id, s.email as email_solicitacao, s.nome_arquivo_original, s.tipo_documento_id, s.validar_icp, s.caminho_arquivo, s.id_documento as doc_id_global, s.expires_at, s.modo_envio
+$sql = "SELECT a.*, s.id as solicitacao_id, s.email as email_solicitacao, s.nome_arquivo_original, s.tipo_documento_id, s.validar_icp, s.caminho_arquivo, s.id_documento as doc_id_global, s.expires_at, s.modo_envio, s.empresa_id, s.salvar_documentos_empresa
         FROM assinantes a
         JOIN solicitacoes_assinatura s ON a.id_solicitacao = s.id
         WHERE a.token = ?
@@ -674,6 +772,12 @@ if (!$ultimo) {
     }
 
     $caminhoRel = $caminhoFinal;
+
+    $empresaIdFinal = intval($row["empresa_id"] ?? 0);
+    $salvarEmpresaFinal = strtolower(trim(strval($row["salvar_documentos_empresa"] ?? "nao"))) === "sim";
+    if ($salvarEmpresaFinal && $empresaIdFinal > 0) {
+        assinatura_salvarDocumentoEmpresa($conn, $empresaIdFinal, $tipoDocumentoId, $caminhoFinal, $nomeArquivoOriginal);
+    }
 }
 
 $GLOBALS["__assinatura_json_sent"] = true;

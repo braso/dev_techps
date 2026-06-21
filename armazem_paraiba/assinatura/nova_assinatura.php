@@ -865,6 +865,16 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                                     <?php endfor; ?>
                                 </div>
 
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-700 mb-1" for="prazo_expiracao_dias_lote">Prazo de expiração do link</label>
+                                    <select id="prazo_expiracao_dias_lote" name="prazo_expiracao_dias" required class="w-full rounded-lg border-gray-300 bg-gray-50 border focus:bg-white focus:border-blue-500 focus:ring-blue-500 text-sm py-2.5">
+                                        <?php for($d = 1; $d <= 30; $d++): ?>
+                                            <option value="<?php echo $d; ?>" <?php echo $d === 1 ? 'selected' : ''; ?>><?php echo $d; ?> dia<?php echo $d > 1 ? 's' : ''; ?></option>
+                                        <?php endfor; ?>
+                                    </select>
+                                    <p class="text-xs text-gray-500 mt-1">O link de assinatura expirará após este prazo.</p>
+                                </div>
+
                                 <div class="pt-2">
                                     <button type="submit" id="btnSepararEnviar" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all">
                                         <i class="fas fa-paper-plane mr-2 text-lg"></i> <span id="btnSepararEnviarLabel">Separar e enviar para assinatura</span>
@@ -936,6 +946,16 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                                     </div>
                                 </div>
                             <?php endforeach; ?>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1" for="prazo_expiracao_dias_funcionarios">Prazo de expiração do link</label>
+                                <select id="prazo_expiracao_dias_funcionarios" name="prazo_expiracao_dias" required class="w-full rounded-lg border-gray-300 bg-gray-50 border focus:bg-white focus:border-blue-500 focus:ring-blue-500 text-sm py-2.5">
+                                    <?php for($d = 1; $d <= 30; $d++): ?>
+                                        <option value="<?php echo $d; ?>" <?php echo $d === 1 ? 'selected' : ''; ?>><?php echo $d; ?> dia<?php echo $d > 1 ? 's' : ''; ?></option>
+                                    <?php endfor; ?>
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1">O link de assinatura expirará após este prazo.</p>
+                            </div>
 
                             <div class="pt-2">
                                 <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all">
@@ -1126,10 +1146,26 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                                         Validação com ICP-Brasil
                                     </div>
                                     <div class="text-xs mt-1 leading-relaxed">
-                                       Seu documento será assinado com ICP-BRASI dando válidade a o processo pela TECHPS após a assinatura do Signatário automaticamente. 
+                                       Seu documento será assinado com ICP-BRASI dando válidade a o processo pela TECHPS após a assinatura do Signatário automaticamente.
+                                    </div>
                                 </div>
                             </div>
-                            
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1" for="prazo_expiracao_dias_avulso">Prazo de expiração do link</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fas fa-clock text-gray-400"></i>
+                                    </div>
+                                    <select id="prazo_expiracao_dias_avulso" name="prazo_expiracao_dias" required class="pl-10 block w-full rounded-lg border-gray-300 bg-gray-50 border focus:bg-white focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 transition-colors">
+                                        <?php for($d = 1; $d <= 30; $d++): ?>
+                                            <option value="<?php echo $d; ?>" <?php echo $d === 1 ? 'selected' : ''; ?>><?php echo $d; ?> dia<?php echo $d > 1 ? 's' : ''; ?></option>
+                                        <?php endfor; ?>
+                                    </select>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">O link de assinatura expirará após este prazo.</p>
+                            </div>
+
                             <div id="avulso_signatario_wrap">
                                 <label id="avulso_label_nome" for="nome" class="block text-sm font-medium text-gray-700 mb-1">Nome do Signatário</label>
                                 <div class="relative">
@@ -1210,7 +1246,7 @@ if($resEmpresas){
             <div class="flex flex-col lg:flex-row min-h-[480px]">
 
                 <!-- Coluna esquerda: upload PDF -->
-                <div class="lg:w-1/2 bg-gray-50 p-6 lg:p-8 flex flex-col border-b lg:border-b-0 lg:border-r border-gray-100">
+                <div class="lg:w-1/2 bg-gray-50 p-6 lg:p-8 flex flex-col border-b lg:border-b-0 lg:border-r border-gray-100 lg:self-start lg:h-[480px]">
                     <h3 class="text-lg font-bold text-gray-800 mb-1">Documento</h3>
                     <p class="text-xs text-gray-500 mb-5">Selecione o PDF que será enviado para assinatura.</p>
 
@@ -1465,6 +1501,16 @@ if($resEmpresas){
                                 <button type="button" onclick="adicionarSignatario('externo')" class="flex-1 flex items-center justify-center gap-2 py-2 px-4 border-2 border-dashed border-purple-300 text-purple-500 rounded-lg text-sm font-medium hover:border-purple-400 hover:text-purple-600 hover:bg-purple-50 transition-colors">
                                     <i class="fas fa-user-tie"></i> + Externo
                                 </button>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1" for="prazo_expiracao_dias_externo">Prazo de expiração do link</label>
+                                <select id="prazo_expiracao_dias_externo" name="prazo_expiracao_dias" required class="block w-full rounded-lg border-gray-300 bg-white border focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 transition-colors">
+                                    <?php for($d = 1; $d <= 30; $d++): ?>
+                                        <option value="<?php echo $d; ?>" <?php echo $d === 1 ? 'selected' : ''; ?>><?php echo $d; ?> dia<?php echo $d > 1 ? 's' : ''; ?></option>
+                                    <?php endfor; ?>
+                                </select>
+                                <p class="text-xs text-gray-400 mt-1">O link de assinatura expirará após este prazo.</p>
                             </div>
 
                             <button type="submit" id="btnEnviarExterno"
