@@ -1,12 +1,39 @@
 deployment:
   tasks:
-    # Diret贸rios gerais
+    # ============================================================
+    # LOG DE DEPLOY - para diagnosticar falhas
+    # ============================================================
+    - export DEPLOY_LOG=/home/devtechpsgj/deploy_cpanel.log
+    - echo "" >> $DEPLOY_LOG
+    - echo "========================================" >> $DEPLOY_LOG
+    - echo "DEPLOY DEV INICIADO em $(date '+%Y-%m-%d %H:%M:%S')" >> $DEPLOY_LOG
+    - echo "Diretorio atual: $(pwd)" >> $DEPLOY_LOG
+    - echo "Usuario: $(whoami)" >> $DEPLOY_LOG
+    - echo "Branch atual do repositorio: $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'N/A')" >> $DEPLOY_LOG
+    - echo "Ultimo commit: $(git log -1 --format='%h - %s (%ci)' 2>/dev/null || echo 'N/A')" >> $DEPLOY_LOG
+    - echo "Status do repositorio:" >> $DEPLOY_LOG
+    - git status --short >> $DEPLOY_LOG 2>&1 || echo "AVISO: nao foi possivel obter git status" >> $DEPLOY_LOG
+    - echo "" >> $DEPLOY_LOG
+
+
+
+
+    # ============================================================
+    # VARIAVEIS DE ORIGEM
+    # ============================================================
     - export GENERAL=/home/devtechpsgj/repositories/dev_techps/*
     - export DOMAIN=/home/devtechpsgj/repositories/dev_techps/armazem_paraiba/*
-    - export GENERALDEPLOY=/home/devtechpsgj/public_html/dev
+    - echo "GENERAL: /home/devtechpsgj/repositories/dev_techps/*" >> $DEPLOY_LOG
+    - echo "DOMAIN: /home/devtechpsgj/repositories/dev_techps/armazem_paraiba/*" >> $DEPLOY_LOG
+    - echo "" >> $DEPLOY_LOG
 
-    # Diret贸rios espec铆ficos de cada projeto
-    
+
+
+
+    # ============================================================
+    # VARIAVEIS DE DESTINO
+    # ============================================================
+    - export GENERALDEPLOY=/home/devtechpsgj/public_html/dev
     - export IFRN=/home/devtechpsgj/public_html/dev/ifrn
     - export OPAFRUTAS=/home/devtechpsgj/public_html/dev/opafrutas
     - export ARMAZEMPARAIBA=/home/devtechpsgj/public_html/dev/armazem_paraiba
@@ -20,17 +47,69 @@ deployment:
     - export QUALY=/home/devtechpsgj/public_html/dev/qualy_transportes
 
 
-    # Copiando diret贸rios
-    - /bin/cp -R $GENERAL $GENERALDEPLOY
-    - /bin/cp -R $DOMAIN $IFRN
-    - /bin/cp -R $DOMAIN $OPAFRUTAS
-    - /bin/cp -R $DOMAIN $ARMAZEMPARAIBA
-    - /bin/cp -R $DOMAIN $BLUEROAD
-    - /bin/cp -R $DOMAIN $SAOLUCAS
-    - /bin/cp -R $DOMAIN $TMILITAO
-    - /bin/cp -R $DOMAIN $MIDIADIGITAL
-    - /bin/cp -R $DOMAIN $PBTRANSPORTES
-    - /bin/cp -R $DOMAIN $DEVTRANSCOPEL
-    - /bin/cp -R $DOMAIN $LEMON
-    - /bin/cp -R $DOMAIN $QUALY
-    
+
+
+    # ============================================================
+    # VERIFICACAO DAS PASTAS DE DESTINO
+    # ============================================================
+    - echo "Verificando existencia das pastas de destino..." >> $DEPLOY_LOG
+    - for dir in "$GENERALDEPLOY" "$IFRN" "$OPAFRUTAS" "$ARMAZEMPARAIBA" "$BLUEROAD" "$SAOLUCAS" "$TMILITAO" "$MIDIADIGITAL" "$PBTRANSPORTES" "$LEMON" "$DEVTRANSCOPEL" "$QUALY"; do if [ -d "$dir" ]; then echo "  OK (existe): $dir" >> $DEPLOY_LOG; else echo "  AVISO (nao existe): $dir" >> $DEPLOY_LOG; fi; done
+    - echo "" >> $DEPLOY_LOG
+
+
+
+
+    # ============================================================
+    # COPIA DOS ARQUIVOS GERAIS
+    # ============================================================
+    - echo "[$(date '+%H:%M:%S')] Copiando arquivos gerais para $GENERALDEPLOY ..." >> $DEPLOY_LOG
+    - /bin/cp -R $GENERAL $GENERALDEPLOY >> $DEPLOY_LOG 2>&1 && echo "[$(date '+%H:%M:%S')] OK: GENERAL -> GENERALDEPLOY" >> $DEPLOY_LOG || echo "[$(date '+%H:%M:%S')] ERRO: GENERAL -> GENERALDEPLOY" >> $DEPLOY_LOG
+    - echo "" >> $DEPLOY_LOG
+
+
+
+
+    # ============================================================
+    # COPIA DOS ARQUIVOS ESPECIFICOS (armazem_paraiba) PARA CADA PROJETO
+    # ============================================================
+    - echo "[$(date '+%H:%M:%S')] Copiando DOMAIN -> IFRN ..." >> $DEPLOY_LOG
+    - /bin/cp -R $DOMAIN $IFRN >> $DEPLOY_LOG 2>&1 && echo "[$(date '+%H:%M:%S')] OK: DOMAIN -> IFRN" >> $DEPLOY_LOG || echo "[$(date '+%H:%M:%S')] ERRO: DOMAIN -> IFRN" >> $DEPLOY_LOG
+
+    - echo "[$(date '+%H:%M:%S')] Copiando DOMAIN -> OPAFRUTAS ..." >> $DEPLOY_LOG
+    - /bin/cp -R $DOMAIN $OPAFRUTAS >> $DEPLOY_LOG 2>&1 && echo "[$(date '+%H:%M:%S')] OK: DOMAIN -> OPAFRUTAS" >> $DEPLOY_LOG || echo "[$(date '+%H:%M:%S')] ERRO: DOMAIN -> OPAFRUTAS" >> $DEPLOY_LOG
+
+    - echo "[$(date '+%H:%M:%S')] Copiando DOMAIN -> ARMAZEMPARAIBA ..." >> $DEPLOY_LOG
+    - /bin/cp -R $DOMAIN $ARMAZEMPARAIBA >> $DEPLOY_LOG 2>&1 && echo "[$(date '+%H:%M:%S')] OK: DOMAIN -> ARMAZEMPARAIBA" >> $DEPLOY_LOG || echo "[$(date '+%H:%M:%S')] ERRO: DOMAIN -> ARMAZEMPARAIBA" >> $DEPLOY_LOG
+
+    - echo "[$(date '+%H:%M:%S')] Copiando DOMAIN -> BLUEROAD ..." >> $DEPLOY_LOG
+    - /bin/cp -R $DOMAIN $BLUEROAD >> $DEPLOY_LOG 2>&1 && echo "[$(date '+%H:%M:%S')] OK: DOMAIN -> BLUEROAD" >> $DEPLOY_LOG || echo "[$(date '+%H:%M:%S')] ERRO: DOMAIN -> BLUEROAD" >> $DEPLOY_LOG
+
+    - echo "[$(date '+%H:%M:%S')] Copiando DOMAIN -> SAOLUCAS ..." >> $DEPLOY_LOG
+    - /bin/cp -R $DOMAIN $SAOLUCAS >> $DEPLOY_LOG 2>&1 && echo "[$(date '+%H:%M:%S')] OK: DOMAIN -> SAOLUCAS" >> $DEPLOY_LOG || echo "[$(date '+%H:%M:%S')] ERRO: DOMAIN -> SAOLUCAS" >> $DEPLOY_LOG
+
+    - echo "[$(date '+%H:%M:%S')] Copiando DOMAIN -> TMILITAO ..." >> $DEPLOY_LOG
+    - /bin/cp -R $DOMAIN $TMILITAO >> $DEPLOY_LOG 2>&1 && echo "[$(date '+%H:%M:%S')] OK: DOMAIN -> TMILITAO" >> $DEPLOY_LOG || echo "[$(date '+%H:%M:%S')] ERRO: DOMAIN -> TMILITAO" >> $DEPLOY_LOG
+
+    - echo "[$(date '+%H:%M:%S')] Copiando DOMAIN -> MIDIADIGITAL ..." >> $DEPLOY_LOG
+    - /bin/cp -R $DOMAIN $MIDIADIGITAL >> $DEPLOY_LOG 2>&1 && echo "[$(date '+%H:%M:%S')] OK: DOMAIN -> MIDIADIGITAL" >> $DEPLOY_LOG || echo "[$(date '+%H:%M:%S')] ERRO: DOMAIN -> MIDIADIGITAL" >> $DEPLOY_LOG
+
+    - echo "[$(date '+%H:%M:%S')] Copiando DOMAIN -> PBTRANSPORTES ..." >> $DEPLOY_LOG
+    - /bin/cp -R $DOMAIN $PBTRANSPORTES >> $DEPLOY_LOG 2>&1 && echo "[$(date '+%H:%M:%S')] OK: DOMAIN -> PBTRANSPORTES" >> $DEPLOY_LOG || echo "[$(date '+%H:%M:%S')] ERRO: DOMAIN -> PBTRANSPORTES" >> $DEPLOY_LOG
+
+    - echo "[$(date '+%H:%M:%S')] Copiando DOMAIN -> LEMON ..." >> $DEPLOY_LOG
+    - /bin/cp -R $DOMAIN $LEMON >> $DEPLOY_LOG 2>&1 && echo "[$(date '+%H:%M:%S')] OK: DOMAIN -> LEMON" >> $DEPLOY_LOG || echo "[$(date '+%H:%M:%S')] ERRO: DOMAIN -> LEMON" >> $DEPLOY_LOG
+
+    - echo "[$(date '+%H:%M:%S')] Copiando DOMAIN -> DEVTRANSCOPEL ..." >> $DEPLOY_LOG
+    - /bin/cp -R $DOMAIN $DEVTRANSCOPEL >> $DEPLOY_LOG 2>&1 && echo "[$(date '+%H:%M:%S')] OK: DOMAIN -> DEVTRANSCOPEL" >> $DEPLOY_LOG || echo "[$(date '+%H:%M:%S')] ERRO: DOMAIN -> DEVTRANSCOPEL" >> $DEPLOY_LOG
+
+    - echo "[$(date '+%H:%M:%S')] Copiando DOMAIN -> QUALY ..." >> $DEPLOY_LOG
+    - /bin/cp -R $DOMAIN $QUALY >> $DEPLOY_LOG 2>&1 && echo "[$(date '+%H:%M:%S')] OK: DOMAIN -> QUALY" >> $DEPLOY_LOG || echo "[$(date '+%H:%M:%S')] ERRO: DOMAIN -> QUALY" >> $DEPLOY_LOG
+
+
+
+
+    # ============================================================
+    # FINALIZACAO
+    # ============================================================
+    - echo "[$(date '+%H:%M:%S')] DEPLOY DEV FINALIZADO" >> $DEPLOY_LOG
+    - echo "========================================" >> $DEPLOY_LOG
