@@ -1,0 +1,5 @@
+# Forca LF nos arquivos de deploy do cPanel para evitar quebras de linha Windows (CRLF)
+# que impedem a execucao correta das tarefas no shell Linux do servidor.
+.cpanel.yml text eol=lf
+.cpanelDEV.yml text eol=lf
+.cpanelPROD.yml text eol=lf

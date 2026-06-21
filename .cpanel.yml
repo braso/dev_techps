@@ -6,7 +6,6 @@ deployment:
 
 
 
-
     - export GENERALDEPLOY=/home/tech1694/public_html/gestaodeponto/
     - export BLUEROAD=/home/tech1694/public_html/gestaodeponto/blueroad
     - export BRASO=/home/tech1694/public_html/gestaodeponto/braso
@@ -24,7 +23,7 @@ deployment:
     - export PKF=/home/tech1694/public_html/gestaodeponto/pkf_medeiros
     - export QUALY=/home/tech1694/public_html/gestaodeponto/qualy_transportes
     - export TECHPS=/home/tech1694/public_html/gestaodeponto/techps
-    - export TECHPSDEMO=/home/tech1694/public_html/gestaodeponto/techps_demo
+    - export TECHPSDEMO=/home/tech1694/public_html/gestaodeponto/demo
     - export TRAMPGAS=/home/tech1694/public_html/gestaodeponto/trampolim_gas
     - export TRANSCOPEL=/home/tech1694/public_html/gestaodeponto/transcopel
     - export SAO_LUCAS=/home/tech1694/public_html/gestaodeponto/sao_lucas
@@ -38,7 +37,6 @@ deployment:
     - export LAUTO=/home/tech1694/public_html/gestaodeponto/lauto
     - export GST=/home/tech1694/public_html/gestaodeponto/gst
     - export ARMAPLAST=/home/tech1694/public_html/gestaodeponto/armaplast
-
 
 
 

@@ -25,7 +25,7 @@
                             <li>Selecione o <strong>PDF assinado</strong> que possui o certificado ICP-Brasil.</li>
                             <li>Marque a opção <strong>"Concordo com os termos"</strong>.</li>
                             <li>Clique no botão <strong>"Validar"</strong>.</li>
-                            <li>Na tela de resultado, clique em <strong>"Entendi"</strong> para continuar.</li>
+                            
                         </ol>
                         <p class="text-xs text-gray-500 mt-2">Você será redirecionado para o validador oficial do ITI em uma nova aba.</p>
                     </div>
