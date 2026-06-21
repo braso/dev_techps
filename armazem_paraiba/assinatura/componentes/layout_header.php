@@ -141,6 +141,7 @@ if($empresaTitulo === "" && isset($conn) && ($conn instanceof mysqli)){
                             "Documentos" => $baseAssinatura."/documentos.php",
                             "Consultar" => $baseAssinatura."/consultar.php",
                             "Signatários Externos" => $baseAssinatura."/cadastro_signatario.php",
+                            "Validar Assinatura" => "#iti",
                            // "Finalizar (ICP)" => $baseAssinatura."/finalizar.php"
                         ]
                     ];
@@ -156,7 +157,11 @@ if($empresaTitulo === "" && isset($conn) && ($conn instanceof mysqli)){
                                 <div class="bg-white border border-gray-200 rounded-md shadow-lg max-h-[80vh] overflow-y-auto">
                                     <div class="py-1">';
                                     foreach($itens as $nome => $link) {
-                                        echo '<a href="'.$link.'" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">'.$nome.'</a>';
+                                        if($nome === "Validar Assinatura"){
+                                            echo '<a href="javascript:void(0);" onclick="abrirInstrucoesITI(); return false;" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">'.$nome.'</a>';
+                                        } else {
+                                            echo '<a href="'.$link.'" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">'.$nome.'</a>';
+                                        }
                                     }
                         echo '          </div>
                                 </div>
@@ -213,7 +218,11 @@ if($empresaTitulo === "" && isset($conn) && ($conn instanceof mysqli)){
                                 <div id="'.$secId.'" class="hidden border-t border-gray-200 bg-gray-50">
                                     <div class="py-1">';
                                         foreach($itens as $nome => $link) {
-                                            echo '<a href="'.$link.'" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">'.htmlspecialchars($nome, ENT_QUOTES, "UTF-8").'</a>';
+                                            if($nome === "Validar Assinatura"){
+                                                echo '<a href="javascript:void(0);" onclick="abrirInstrucoesITI(); return false;" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">'.htmlspecialchars($nome, ENT_QUOTES, "UTF-8").'</a>';
+                                            } else {
+                                                echo '<a href="'.$link.'" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">'.htmlspecialchars($nome, ENT_QUOTES, "UTF-8").'</a>';
+                                            }
                                         }
                         echo '      </div>
                                 </div>

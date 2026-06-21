@@ -234,6 +234,20 @@ include_once "componentes/layout_header.php";
             </a>
         </div>
 
+        <!-- Validar Assinatura ITI -->
+        <div class="card-wrapper">
+            <a href="javascript:void(0);" onclick="abrirInstrucoesITI()" class="card-modulo">
+                <div class="card-border-top"></div>
+                <div class="card-body-content">
+                    <div class="icon-circle">
+                        <i class="fa fa-shield"></i>
+                    </div>
+                    <div class="card-title">Validar Assinatura</div>
+                    <div class="card-desc">Verifique a validade jurídica da assinatura digital no validador oficial do ITI.</div>
+                </div>
+            </a>
+        </div>
+
         <!-- Signatários Externos -->
         <div class="card-wrapper">
             <a href="<?php echo $baseAssinatura; ?>/cadastro_signatario.php" class="card-modulo">

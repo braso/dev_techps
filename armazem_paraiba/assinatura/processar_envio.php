@@ -78,6 +78,21 @@ function ensureAssinaturaTables($conn): void {
             mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN grupo_envio VARCHAR(64) NULL");
         }
 
+        $checkEmpresa = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'empresa_id'");
+        if($checkEmpresa && mysqli_num_rows($checkEmpresa) == 0){
+            mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN empresa_id INT NULL");
+        }
+
+        $checkSalvarEmpresa = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'salvar_documentos_empresa'");
+        if($checkSalvarEmpresa && mysqli_num_rows($checkSalvarEmpresa) == 0){
+            mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN salvar_documentos_empresa ENUM('sim','nao') NOT NULL DEFAULT 'nao'");
+        }
+
+        $checkPrazo = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'prazo_expiracao_dias'");
+        if($checkPrazo && mysqli_num_rows($checkPrazo) == 0){
+            mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN prazo_expiracao_dias INT NOT NULL DEFAULT 1");
+        }
+
         $checkExp = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'expires_at'");
         if($checkExp && mysqli_num_rows($checkExp) == 0){
             mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN expires_at DATETIME NULL");
@@ -260,6 +275,14 @@ $avulsoDestino = in_array($avulsoDestino, ["um", "todos"], true) ? $avulsoDestin
 $salvarDocumentosEmpresa = strtolower(trim(strval($_POST["salvar_documentos_empresa"] ?? "nao")));
 $salvarDocumentosEmpresa = $salvarDocumentosEmpresa === "sim" ? "sim" : "nao";
 
+$prazoExpiracaoDias = intval($_POST["prazo_expiracao_dias"] ?? 1);
+if($prazoExpiracaoDias < 1){
+    $prazoExpiracaoDias = 1;
+}
+if($prazoExpiracaoDias > 30){
+    $prazoExpiracaoDias = 30;
+}
+
 // Captura signatários do formulário (Array)
 $signatarios = $_POST['signatarios'] ?? [];
 
@@ -384,14 +407,14 @@ if($modo_envio === "funcionarios"){
         $tokenMestre = bin2hex(random_bytes(32));
         $id_documento = 'DOC-' . date('YmdHis') . '-' . uniqid();
 
-        $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, modo_envio, expires_at, status) VALUES (?, ?, ?, ?, ?, ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 24 HOUR), 'pendente')";
+        $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, modo_envio, prazo_expiracao_dias, expires_at, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY), 'pendente')";
         $stmt = mysqli_prepare($conn, $sql);
         if(!$stmt){
             @unlink($dest_path);
             $erros++;
             continue;
         }
-        mysqli_stmt_bind_param($stmt, "sssssss", $tokenMestre, $email, $nome, $dest_path, $original, $id_documento, $modo_envio);
+        mysqli_stmt_bind_param($stmt, "ssssssisi", $tokenMestre, $email, $nome, $dest_path, $original, $id_documento, $modo_envio, $prazoExpiracaoDias, $prazoExpiracaoDias);
         if(!mysqli_stmt_execute($stmt)){
             @unlink($dest_path);
             $erros++;
@@ -546,15 +569,15 @@ if($modo_envio === "separar_paginas"){
             $tokenMestre = bin2hex(random_bytes(32));
             $id_documento = 'DOC-' . date('YmdHis') . '-' . uniqid();
 
-            $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, modo_envio, expires_at, status)
-            VALUES (?, ?, ?, ?, ?, ?, NULLIF(?,0), ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 24 HOUR), 'pendente')";
+            $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, modo_envio, prazo_expiracao_dias, expires_at, status)
+            VALUES (?, ?, ?, ?, ?, ?, NULLIF(?,0), ?, ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY), 'pendente')";
             $stmt = mysqli_prepare($conn, $sql);
             if(!$stmt){
                 @unlink($dest_path);
                 $erros++;
                 continue;
             }
-            mysqli_stmt_bind_param($stmt, "ssssssiss", $tokenMestre, $email, $nome, $dest_path, $nomeArquivo, $id_documento, $tipoDocumentoId, $validarIcp, $modo_envio);
+            mysqli_stmt_bind_param($stmt, "ssssssissii", $tokenMestre, $email, $nome, $dest_path, $nomeArquivo, $id_documento, $tipoDocumentoId, $validarIcp, $modo_envio, $prazoExpiracaoDias, $prazoExpiracaoDias);
             if(!mysqli_stmt_execute($stmt)){
                 @unlink($dest_path);
                 $erros++;
@@ -962,15 +985,15 @@ if($modo_envio === "avulso" && $avulsoDestino === "todos"){
         $tokenMestre = bin2hex(random_bytes(32));
         $id_documento = 'DOC-' . date('YmdHis') . '-' . uniqid();
 
-        $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, modo_envio, grupo_envio, expires_at, status)
-            VALUES (?, ?, ?, ?, ?, ?, NULLIF(?,0), ?, ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 24 HOUR), 'pendente')";
+        $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, modo_envio, grupo_envio, prazo_expiracao_dias, expires_at, status)
+            VALUES (?, ?, ?, ?, ?, ?, NULLIF(?,0), ?, ?, ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY), 'pendente')";
         $stmt = mysqli_prepare($conn, $sql);
         if(!$stmt){
             @unlink($destInd);
             $erros++;
             continue;
         }
-        mysqli_stmt_bind_param($stmt, "ssssssisss", $tokenMestre, $email, $nome, $destInd, $fileName, $id_documento, $tipoDocumentoId, $validarIcp, $modo_envio, $grupoEnvio);
+        mysqli_stmt_bind_param($stmt, "ssssssisssii", $tokenMestre, $email, $nome, $destInd, $fileName, $id_documento, $tipoDocumentoId, $validarIcp, $modo_envio, $grupoEnvio, $prazoExpiracaoDias, $prazoExpiracaoDias);
         if(!mysqli_stmt_execute($stmt)){
             @unlink($destInd);
             $erros++;
@@ -1283,13 +1306,15 @@ if(move_uploaded_file($fileTmpPath, $dest_path)) {
         $fileName = $nomeSeguro;
     }
 
-    $tokenMestre = bin2hex(random_bytes(32)); 
+    $tokenMestre = bin2hex(random_bytes(32));
     $id_documento = 'DOC-' . date('YmdHis') . '-' . uniqid();
-    
-    $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, modo_envio, expires_at, status)
-        VALUES (?, ?, ?, ?, ?, ?, NULLIF(?,0), ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 24 HOUR), 'pendente')";
+
+    $empresaIdSalvar = $salvarDocumentosEmpresa === "sim" ? intval($_POST["empresa_id"] ?? 0) : 0;
+
+    $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, modo_envio, empresa_id, salvar_documentos_empresa, prazo_expiracao_dias, expires_at, status)
+        VALUES (?, ?, ?, ?, ?, ?, NULLIF(?,0), ?, ?, NULLIF(?,0), ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY), 'pendente')";
     $stmt = mysqli_prepare($conn, $sql);
-    mysqli_stmt_bind_param($stmt, "ssssssiss", $tokenMestre, $primeiroSignatario['email'], $primeiroSignatario['nome'], $dest_path, $fileName, $id_documento, $tipoDocumentoId, $validarIcp, $modo_envio);
+    mysqli_stmt_bind_param($stmt, "ssssssisissii", $tokenMestre, $primeiroSignatario['email'], $primeiroSignatario['nome'], $dest_path, $fileName, $id_documento, $tipoDocumentoId, $validarIcp, $modo_envio, $empresaIdSalvar, $salvarDocumentosEmpresa, $prazoExpiracaoDias, $prazoExpiracaoDias);
     
     if (mysqli_stmt_execute($stmt)) {
         $id_solicitacao = mysqli_insert_id($conn);
