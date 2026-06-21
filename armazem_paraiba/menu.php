@@ -109,6 +109,7 @@
                 "/assinatura/documentos.php"        => "Documentos",
                 "/assinatura/consultar.php"         => "Consultar",
                 "/assinatura/cadastro_signatario.php" => "Signatários Externos",
+                "#iti"                              => "Validar Assinatura",
             ],
 			// "suporte" => [
 			// 	"/#" 		=> "Perguntas Frequentes", 
@@ -215,9 +216,11 @@ if ($showComunicado) {
             }
             $countItems = 0;
             foreach($secao as $key => $value){
-                $full = __DIR__.$key;
-                if(!file_exists($full)){
-                    continue;
+                if ($key !== "#iti") {
+                    $full = __DIR__.$key;
+                    if(!file_exists($full)){
+                        continue;
+                    }
                 }
                 // Filtra filhos por permissões diretas do menu
                 if($perfilId > 0){
@@ -231,7 +234,11 @@ if ($showComunicado) {
                 }
                 // Só altera a apresentação da seção "ponto" para usuários terceirizados.
                 $labelExibicao = ($secKey === "ponto") ? $rotuloMenuPonto($value) : $value;
-                $children .= "<li class='dd'><a href='".$CONTEX["path"].$key."' class='nav-link'> ".$labelExibicao."</a></li>";
+                if ($key === "#iti") {
+                    $children .= "<li class='dd'><a href='javascript:void(0);' onclick='abrirInstrucoesITI(); return false;' class='nav-link'> ".$labelExibicao."</a></li>";
+                } else {
+                    $children .= "<li class='dd'><a href='".$CONTEX["path"].$key."' class='nav-link'> ".$labelExibicao."</a></li>";
+                }
                 $countItems++;
             }
             // Se houver perfil vinculado, mostra a seção se houver filhos OU se o PAI estiver permitido
@@ -310,6 +317,54 @@ if ($showComunicado) {
             ."</div>"
         ."<!-- FIM HEADER MENU -->"
     ;
+
+    // Garante que a funcao do menu "Validar Assinatura" esteja disponivel em todas as paginas
+    echo "
+    <script>
+        (function(){
+            if (typeof Swal === 'undefined') {
+                var s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+                s.onload = function() { definirAbrirInstrucoesITI(); };
+                document.head.appendChild(s);
+            } else {
+                definirAbrirInstrucoesITI();
+            }
+            function definirAbrirInstrucoesITI() {
+                if (typeof window.abrirInstrucoesITI === 'function') return;
+                window.abrirInstrucoesITI = function() {
+                    Swal.fire({
+                        title: 'Como validar sua assinatura no ITI',
+                        html: `
+                            <div class='text-left text-sm text-gray-700 space-y-3'>
+                                <p>Siga os passos abaixo para verificar a validade juridica do documento assinado:</p>
+                                <ol class='list-decimal list-inside space-y-2'>
+                                    <li>Ao acessar o site do ITI, clique em <strong>\"Escolher arquivo\"</strong>.</li>
+                                    <li>Selecione o <strong>PDF assinado</strong> que possui o certificado ICP-Brasil.</li>
+                                    <li>Marque a opcao <strong>\"Concordo com os termos\"</strong>.</li>
+                                    <li>Clique no botao <strong>\"Validar\"</strong>.</li>
+                                </ol>
+                                <p class='text-xs text-gray-500 mt-2'>Voce sera redirecionado para o validador oficial do ITI em uma nova aba.</p>
+                            </div>
+                        `,
+                        icon: 'info',
+                        showCancelButton: true,
+                        confirmButtonText: '<i class=\"fa fa-external-link-alt mr-1\"></i> Entendi, abrir ITI',
+                        cancelButtonText: 'Cancelar',
+                        confirmButtonColor: '#4b6cb7',
+                        cancelButtonColor: '#6b7280',
+                        reverseButtons: true,
+                        allowOutsideClick: false
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.open('https://validar.iti.gov.br', '_blank', 'noopener,noreferrer');
+                        }
+                    });
+                };
+            }
+        })();
+    </script>
+    ";
 
     /*
     $hasTable = false;
