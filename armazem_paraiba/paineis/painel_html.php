@@ -63,6 +63,11 @@
 					</tbody>
 				</table>
 				<div class='emissao'>
+					<?php if ($titulo === "de Endosso") { ?>
+						<b>Relatório Geral de Endosso</b><br>
+					<?php } elseif ($titulo === "Geral de saldo") { ?>
+						<b>Relatório Geral de Saldo</b><br>
+					<?php } ?>
 					<?= $dataEmissao."<br>"
 						. "<b>Período do relatório:</b> ".$periodoRelatorio["dataInicio"]." a ".$periodoRelatorio["dataFim"] ?>
 				</div>
