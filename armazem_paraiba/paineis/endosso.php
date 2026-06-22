@@ -22,7 +22,7 @@
         index();
     }
 
-    function carregarJS(array $arquivos){
+    function carregarJS(array $arquivos, array $empresasSemDados = []){
 
         $linha = "linha = '<tr>'";
         $modoDetalheJS = (!empty($_POST["empresa"]) && ($_POST["empresa_modo"] ?? "") === "detalhe");
@@ -232,13 +232,16 @@
                                 }else{
                                     // Mostrar painel geral das empresas.
                                 
-                                    if(Math.round(row.percEndossado*10000)/100 < 1){
+                                    if(row.percEndossado !== undefined && row.percEndossado < 1){
                                         row.totais = {
-                                            'saldoAnterior': row.totais.saldoAnterior
+                                            'saldoAnterior': row.totais ? row.totais.saldoAnterior : undefined
                                         };
                                     }
                                 }
-                                invalidValues = [undefined, '00:00'];
+                                if(row.totais === undefined){
+                                    row.totais = {};
+                                }
+                                var invalidValues = [undefined, '00:00'];
                                 {$linha}
                                 tabela.append(linha);
                             },
@@ -263,6 +266,9 @@
 
                     // Função para conversão de Horas para Minutos
                     function horasParaMinutos(horas) {
+                        if (!horas || typeof horas !== 'string' || !horas.includes(':')) {
+                            return 0;
+                        }
                         var partes = horas.split(':');
                         var horasNumeros = parseInt(partes[0], 10);  // Horas (pode ser positivo ou negativo)
                         var minutos = parseInt(partes[1], 10);       // Minutos
@@ -428,6 +434,7 @@
         $botao_imprimir = "";
         $botao_baixar_txt = "";
         $botaoAtualizarPainel = "";
+        $linhasEmpresasZeradas = "";
 
         // $texto = "<div style=''><b>Periodo da Busca:</b> $monthName de $year</div>";
         //position: absolute; top: 101px; left: 420px;
@@ -905,6 +912,16 @@ HTML;
             "dataInicio" => "1900-01-01",
             "dataFim" => "1900-01-01"
         ];
+        if(!empty($_POST["busca_data"])){
+            $dataMes = DateTime::createFromFormat("Y-m-d H:i:s", $_POST["busca_data"]."-01 00:00:00");
+            if ($dataMes) {
+                $dataFim = DateTime::createFromFormat("Y-m-d H:i:s", (date("Y-m-d") < $dataMes->format("Y-m-t") ? date("Y-m-d") : $dataMes->format("Y-m-t"))." 00:00:00");
+                $periodoRelatorio = [
+                    "dataInicio" => $dataMes->format("d/m"),
+                    "dataFim" => $dataFim->format("d/m")
+                ];
+            }
+        }
 
         $modoDetalhe = false;
 
@@ -973,7 +990,12 @@ HTML;
                 }
                 $dataEmissao = $alertaEmissao . " Atualizado em: ".($latestMTime > 0 ? date("d/m/Y H:i", $latestMTime) : "")."</span>";
                 if($periodoRelatorioBruto !== null){
-                    $periodoRelatorio = ["dataInicio" => $periodoRelatorioBruto["dataInicio"], "dataFim" => $periodoRelatorioBruto["dataFim"]];
+                    $dtIni = DateTime::createFromFormat("d/m/Y", $periodoRelatorioBruto["dataInicio"]);
+                    $dtFim = DateTime::createFromFormat("d/m/Y", $periodoRelatorioBruto["dataFim"]);
+                    $periodoRelatorio = [
+                        "dataInicio" => $dtIni ? $dtIni->format("d/m") : "",
+                        "dataFim" => $dtFim ? $dtFim->format("d/m") : ""
+                    ];
                 }
                 foreach($arquivos as $arquivo){
                     $json = json_decode(file_get_contents($arquivo), true);
@@ -1036,9 +1058,11 @@ HTML;
                 $dataEmissao = $alertaEmissao." Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresas.json"))."</span>"; //Utilizado no HTML.
                 $arquivoGeral = json_decode(file_get_contents($path."/empresas.json"), true);
 
+                $dtIni = DateTime::createFromFormat("d/m/Y", $arquivoGeral["dataInicio"]);
+                $dtFim = DateTime::createFromFormat("d/m/Y", $arquivoGeral["dataFim"]);
                 $periodoRelatorio = [
-                    "dataInicio" => $arquivoGeral["dataInicio"],
-                    "dataFim" => $arquivoGeral["dataFim"]
+                    "dataInicio" => $dtIni ? $dtIni->format("d/m") : "",
+                    "dataFim" => $dtFim ? $dtFim->format("d/m") : ""
                 ];
 
                 $pastaEndossos = dir($path);
@@ -1090,7 +1114,65 @@ HTML;
                     }
                 }
             }else{
-                $encontrado = false;
+                // Sem dados no mês: monta grid com empresas do banco todas zeradas
+                $encontrado = true;
+                $latestUpdate = 0;
+                $endossosDir = "./arquivos/endossos";
+                if (is_dir($endossosDir)) {
+                    $iterator = new RecursiveIteratorIterator(
+                        new RecursiveDirectoryIterator($endossosDir, RecursiveDirectoryIterator::SKIP_DOTS),
+                        RecursiveIteratorIterator::SELF_FIRST
+                    );
+                    foreach ($iterator as $file) {
+                        if ($file->isFile() && (strpos($file->getFilename(), 'empresa_') === 0 || $file->getFilename() === 'empresas.json')) {
+                            $mtime = $file->getMTime();
+                            if ($mtime > $latestUpdate) {
+                                $latestUpdate = $mtime;
+                            }
+                        }
+                    }
+                }
+
+                if ($latestUpdate > 0) {
+                    $dataEmissao = "<i style='color:orange;' title='Sem dados gerados para este mês.' class='fa fa-warning'></i> Atualizado em: " . date("d/m/Y H:i", $latestUpdate);
+                } else {
+                    $dataEmissao = "<i style='color:orange;' title='Sem dados gerados para este mês.' class='fa fa-warning'></i> Atualizado em: Nunca";
+                }
+
+                $empresasFiltroIds = [];
+                if(!empty($_POST["empresa"]) && ($empresaModoAtual !== "detalhe")){
+                    $empresasFiltroIds = array_values(array_unique(array_filter(array_map('intval', explode(',', (string)$_POST["empresa"])), function($v){ return $v > 0; })));
+                }
+
+                $condEmpresasBanco = "";
+                if(!empty($empresasFiltroIds)){
+                    $condEmpresasBanco = " AND empr_nb_id IN (".implode(',', $empresasFiltroIds).")";
+                }
+                $resEmpresasBanco = query("SELECT empr_nb_id, empr_tx_nome FROM empresa WHERE empr_tx_status = 'ativo'".$condEmpresasBanco." ORDER BY empr_tx_nome ASC");
+                $totaisZero = [
+                    "jornadaPrevista" => "00:00", "jornadaEfetiva" => "00:00",
+                    "he50APagar" => "00:00", "he100APagar" => "00:00",
+                    "adicionalNoturno" => "00:00", "esperaIndenizada" => "00:00",
+                    "saldoAnterior" => "00:00", "saldoPeriodo" => "00:00", "saldoFinal" => "00:00"
+                ];
+                $linhasEmpresasZeradas = "";
+                while($empRow = mysqli_fetch_assoc($resEmpresasBanco)){
+                    $empresas[] = [
+                        "empr_nb_id"     => $empRow["empr_nb_id"],
+                        "empr_tx_nome"   => $empRow["empr_tx_nome"],
+                        "percEndossado"  => 0,
+                        "qtdMotoristas"  => 0,
+                        "totais"         => $totaisZero
+                    ];
+
+                    $linhasEmpresasZeradas .= "<tr>"
+                        ."<td class='nomeEmpresa' style='cursor:pointer;' onclick=\"setAndSubmit(".intval($empRow["empr_nb_id"]).")\">".htmlspecialchars($empRow["empr_tx_nome"], ENT_QUOTES)."</td>"
+                        ."<td>0%</td>"
+                        ."<td>0</td>"
+                        ."<td>00:00</td><td>00:00</td><td>00:00</td><td>00:00</td><td>00:00</td><td>00:00</td><td>00:00</td><td>00:00</td><td>00:00</td>"
+                        ."</tr>";
+                }
+                $arquivos = [];
             }
         }
 
@@ -1247,6 +1329,10 @@ HTML;
             $titulo = "de Endosso"; // usado no html
             include_once "painel_html.php";
 
+            if(!empty($linhasEmpresasZeradas)){
+                echo "<script>document.querySelector('#tabela-empresas tbody').innerHTML = ".json_encode($linhasEmpresasZeradas).";</script>";
+            }
+
             echo
         "<div class='script'>
                     <script>
@@ -1281,6 +1367,6 @@ HTML;
             }
         }
         
-        carregarJS($arquivos);
+        carregarJS($arquivos, $empresas ?? []);
         rodape();
     }

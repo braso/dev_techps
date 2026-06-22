@@ -182,6 +182,7 @@ function gerarPainelEndosso() {
                 $TotaisJson = json_decode(file_get_contents($caminho), true);
                 // agora $conteudo tem os dados do arquivo
             }
+            $totaisExibicao = isset($TotaisJson["totais"]) ? $TotaisJson["totais"] : [];
 
             foreach ($motoristas as $saldosMotorista) {
                 $contagemEndossos[$saldosMotorista["statusEndosso"]]++;
@@ -199,67 +200,104 @@ function gerarPainelEndosso() {
     } elseif (!empty($_POST["busca_data"])) {
         //Painel geral das empresas
         $empresas = [];
+        $empresa = mysqli_fetch_assoc(query(
+            "SELECT empr_tx_logo FROM empresa
+                WHERE empr_tx_status = 'ativo'
+                    AND empr_tx_Ehmatriz = 'sim'
+                LIMIT 1;"
+        ));
 
         $path .= "/" . $_POST["busca_data"];
 
-        $dataArquivo = date("d/m/Y H:i", filemtime($path . "/empresas.json"));
-        $horaArquivo = date("H:i", filemtime($path . "/empresas.json"));
+        if (is_dir($path) && is_file($path . "/empresas.json")) {
+            $dataArquivo = date("d/m/Y H:i", filemtime($path . "/empresas.json"));
+            $horaArquivo = date("H:i", filemtime($path . "/empresas.json"));
 
-        $dataAtual = date("d/m/Y");
-        $horaAtual = date("H:i");
-        if ($dataArquivo != $dataAtual) {
-            $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
-                    <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
-        } else {
-            $alertaEmissao = "<span>";
-        }
-        $dataEmissao = $alertaEmissao . " Atualizado em: " . date("d/m/Y H:i", filemtime($path . "/empresas.json")) . "</span>"; //Utilizado no HTML.
-        $arquivoGeral = json_decode(file_get_contents($path . "/empresas.json"), true);
-
-        $periodoRelatorio = [
-            "dataInicio" => $arquivoGeral["dataInicio"],
-            "dataFim" => $arquivoGeral["dataFim"]
-        ];
-
-        $pastaEndossos = dir($path);
-        while ($arquivo = $pastaEndossos->read()) {
-            if (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresas"))) {
-                $arquivo = $path . "/" . $arquivo . "/empresa_" . $arquivo . ".json";
-                $arquivos[] = $arquivo;
-                $json = json_decode(file_get_contents($arquivo), true);
-                foreach ($totais as $key => $value) {
-                    $totais[$key] = operarHorarios([
-                        !empty($totais[$key]) ? $totais[$key] : "00:00",
-                        !empty($json["totais"][$key]) ? $json["totais"][$key] : "00:00"
-                    ], "+");
-                }
-                $empresas[] = $json;
-            }
-        }
-        $pastaEndossos->close();
-
-        foreach ($empresas as $empresa) {
-            if ($empresa["percEndossado"] < 1) {
-                $empresa["totais"] = [
-                    "saldoAnterior" => $empresa["totais"]["saldoAnterior"]
-                ];
-                if ($empresa["percEndossado"] <= 0) {
-                    $contagemEndossos["N"]++;
-                } else {
-                    $contagemEndossos["EP"]++;
-                }
+            $dataAtual = date("d/m/Y");
+            $horaAtual = date("H:i");
+            if ($dataArquivo != $dataAtual) {
+                $alertaEmissao = "<span style='color: red; border: 2px solid; padding: 2px; border-radius: 4px;'>
+                        <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
             } else {
-                $contagemEndossos["E"]++;
+                $alertaEmissao = "<span>";
+            }
+            $dataEmissao = $alertaEmissao . " Atualizado em: " . date("d/m/Y H:i", filemtime($path . "/empresas.json")) . "</span>"; //Utilizado no HTML.
+            $arquivoGeral = json_decode(file_get_contents($path . "/empresas.json"), true);
 
-                if ($empresa["totais"]["saldoFinal"] === "00:00") {
-                    $contagemSaldos["meta"]++;
-                } elseif ($empresa["totais"]["saldoFinal"][0] == "-") {
-                    $contagemSaldos["negativos"]++;
-                } else {
-                    $contagemSaldos["positivos"]++;
+            $periodoRelatorio = [
+                "dataInicio" => $arquivoGeral["dataInicio"],
+                "dataFim" => $arquivoGeral["dataFim"]
+            ];
+            $periodoRelatorio["dataInicio"] = DateTime::createFromFormat("d/m/Y", $periodoRelatorio["dataInicio"])->format("d/m");
+            $periodoRelatorio["dataFim"] = DateTime::createFromFormat("d/m/Y", $periodoRelatorio["dataFim"])->format("d/m");
+
+            $pastaEndossos = dir($path);
+            while ($arquivo = $pastaEndossos->read()) {
+                if (!empty($arquivo) && !in_array($arquivo, [".", ".."]) && is_bool(strpos($arquivo, "empresas"))) {
+                    $arquivo = $path . "/" . $arquivo . "/empresa_" . $arquivo . ".json";
+                    $arquivos[] = $arquivo;
+                    $json = json_decode(file_get_contents($arquivo), true);
+                    foreach ($totais as $key => $value) {
+                        $totais[$key] = operarHorarios([
+                            !empty($totais[$key]) ? $totais[$key] : "00:00",
+                            !empty($json["totais"][$key]) ? $json["totais"][$key] : "00:00"
+                        ], "+");
+                    }
+                    $empresas[] = $json;
                 }
             }
+            $pastaEndossos->close();
+
+            foreach ($empresas as $emp) {
+                if ($emp["percEndossado"] < 1) {
+                    $emp["totais"] = [
+                        "saldoAnterior" => $emp["totais"]["saldoAnterior"]
+                    ];
+                    if ($emp["percEndossado"] <= 0) {
+                        $contagemEndossos["N"]++;
+                    } else {
+                        $contagemEndossos["EP"]++;
+                    }
+                } else {
+                    $contagemEndossos["E"]++;
+
+                    if ($emp["totais"]["saldoFinal"] === "00:00") {
+                        $contagemSaldos["meta"]++;
+                    } elseif ($emp["totais"]["saldoFinal"][0] == "-") {
+                        $contagemSaldos["negativos"]++;
+                    } else {
+                        $contagemSaldos["positivos"]++;
+                    }
+                }
+            }
+        } else {
+            // Sem dados no mês
+            $latestUpdate = 0;
+            $endossosDir = "./arquivos/endossos";
+            if (is_dir($endossosDir)) {
+                $iterator = new RecursiveIteratorIterator(
+                    new RecursiveDirectoryIterator($endossosDir, RecursiveDirectoryIterator::SKIP_DOTS),
+                    RecursiveIteratorIterator::SELF_FIRST
+                );
+                foreach ($iterator as $file) {
+                    if ($file->isFile() && (strpos($file->getFilename(), 'empresa_') === 0 || $file->getFilename() === 'empresas.json')) {
+                        $mtime = $file->getMTime();
+                        if ($mtime > $latestUpdate) {
+                            $latestUpdate = $mtime;
+                        }
+                    }
+                }
+            }
+            if ($latestUpdate > 0) {
+                $dataEmissao = "Atualizado em: " . date("d/m/Y H:i", $latestUpdate);
+            } else {
+                $dataEmissao = "Atualizado em: Nunca";
+            }
         }
+    }
+
+    if (empty($totaisExibicao)) {
+        $totaisExibicao = $totais;
     }
 
     [$percEndosso["E"], $percEndosso["EP"], $percEndosso["N"]] = calcPercs(array_values($contagemEndossos));
@@ -361,7 +399,8 @@ function gerarPainelEndosso() {
 
     // --- ATUALIZADO EM (alinhado à esquerda com formatação) ---
     $textoAtualizado = 'Atualizado em: ';
-    $dataAtualizacao = date("d/m/Y H:i", filemtime($path . "/empresa_" . $empresa["empr_nb_id"] . ".json"));
+    $dataAtualizacao = strip_tags($dataEmissao);
+    $dataAtualizacao = trim(str_replace('Atualizado em:', '', $dataAtualizacao));
 
     $pdf->SetFont('helvetica', 'B', 10);
     $pdf->Write(6, $textoAtualizado);
@@ -417,15 +456,15 @@ function gerarPainelEndosso() {
     $pdf->Cell($larguras[3], $altura, '', 1, 0, 'C', true);
 
     // Células com dados
-    $pdf->Cell($larguras[4], $altura, $TotaisJson["totais"]["jornadaPrevista"], 1, 0, 'C', true);
-    $pdf->Cell($larguras[5], $altura, $TotaisJson["totais"]["jornadaEfetiva"], 1, 0, 'C', true);
-    $pdf->Cell($larguras[6], $altura, $TotaisJson["totais"]["he50APagar"], 1, 0, 'C', true);
-    $pdf->Cell($larguras[7], $altura, $TotaisJson["totais"]["he100APagar"], 1, 0, 'C', true);
-    $pdf->Cell($larguras[8], $altura, $TotaisJson["totais"]["adicionalNoturno"], 1, 0, 'C', true);
-    $pdf->Cell($larguras[9], $altura, $TotaisJson["totais"]["esperaIndenizada"], 1, 0, 'C', true);
-    $pdf->Cell($larguras[10], $altura, $TotaisJson["totais"]["saldoAnterior"], 1, 0, 'C', true);
-    $pdf->Cell($larguras[11], $altura, $TotaisJson["totais"]["saldoPeriodo"], 1, 0, 'C', true);
-    $pdf->Cell($larguras[11], $altura, $TotaisJson["totais"]["saldoFinal"], 1, 0, 'C', true);
+    $pdf->Cell($larguras[4], $altura, $totaisExibicao["jornadaPrevista"], 1, 0, 'C', true);
+    $pdf->Cell($larguras[5], $altura, $totaisExibicao["jornadaEfetiva"], 1, 0, 'C', true);
+    $pdf->Cell($larguras[6], $altura, $totaisExibicao["he50APagar"], 1, 0, 'C', true);
+    $pdf->Cell($larguras[7], $altura, $totaisExibicao["he100APagar"], 1, 0, 'C', true);
+    $pdf->Cell($larguras[8], $altura, $totaisExibicao["adicionalNoturno"], 1, 0, 'C', true);
+    $pdf->Cell($larguras[9], $altura, $totaisExibicao["esperaIndenizada"], 1, 0, 'C', true);
+    $pdf->Cell($larguras[10], $altura, $totaisExibicao["saldoAnterior"], 1, 0, 'C', true);
+    $pdf->Cell($larguras[11], $altura, $totaisExibicao["saldoPeriodo"], 1, 0, 'C', true);
+    $pdf->Cell($larguras[11], $altura, $totaisExibicao["saldoFinal"], 1, 0, 'C', true);
 
     $pdf->Ln(7);
     
