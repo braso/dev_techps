@@ -47,7 +47,7 @@
         }else{
             $linha .= "+'<td style=\"cursor: pointer;\" onclick=\"setAndSubmit(' + row.empr_nb_id + ')\">'+row.empr_tx_nome+'</td>'
                     +'<td>'+Math.round(row.percEndossado*10000)/100+'%</td>'
-                    +'<td>'+row.qtdFuncionarios+'</td>'
+                    +'<td>'+row.qtdMotoristas+'</td>'
                     +'<td>'+(row.totais.jornadaPrevista == '00:00' ? '' : row.totais.jornadaPrevista)+'</td>'
                     +'<td>'+(row.totais.jornadaEfetiva == '00:00' ? '' : row.totais.jornadaEfetiva)+'</td>'
                     +'<td>'+(row.totais.HESemanal == '00:00' ? '' : row.totais.HESemanal)+'</td>'
@@ -714,38 +714,21 @@
                                 estiloBase += 'text-align:center;';
                             }
                             
-                            // Estilo condicional para coluna de status (assumindo que é a 4ª coluna - índice 3)
-                            if (colIndex === 3) {
-                                var statusClass = '';
-                                if (td.classList.contains('endo')) {
-                                    estiloBase += 'background-color:' + coresStatus['endo'] + ';';
-                                } else if (td.classList.contains('endo-parc')) {
-                                    estiloBase += 'background-color:' + coresStatus['endo-parc'] + ';';
-                                } else if (td.classList.contains('nao-endo')) {
-                                    estiloBase += 'background-color:' + coresStatus['nao-endo'] + ';';
-                                }
+                            // Estilo condicional para coluna de status
+                            if (td.classList.contains('endo')) {
+                                estiloBase += 'background-color:' + coresStatus['endo'] + ';';
+                            } else if (td.classList.contains('endo-parc')) {
+                                estiloBase += 'background-color:' + coresStatus['endo-parc'] + ';';
+                            } else if (td.classList.contains('nao-endo')) {
+                                estiloBase += 'background-color:' + coresStatus['nao-endo'] + ';';
                             }
 
-                            if (colIndex === 10) {
-                                // console.log(td.id);
-                                if (td.id === 'saldo-zero') {
-                                    estiloBase += 'color:blue;';
-                                } else if (td.id === 'saldo-final') {
-                                    estiloBase += 'color:green;';
-                                } else if (td.id === 'saldo-negativo') {
-                                    estiloBase += 'color:red;';
-                                }
-                            }
-
-                            if (colIndex === 12) {
-                                // console.log(td.id);
-                                if (td.id === 'saldo-zero') {
-                                    estiloBase += 'color:blue;';
-                                } else if (td.id === 'saldo-final') {
-                                    estiloBase += 'color:green;';
-                                } else if (td.id === 'saldo-negativo') {
-                                    estiloBase += 'color:red;';
-                                }
+                            if (td.id === 'saldo-zero') {
+                                estiloBase += 'color:blue;';
+                            } else if (td.id === 'saldo-final') {
+                                estiloBase += 'color:green;';
+                            } else if (td.id === 'saldo-negativo') {
+                                estiloBase += 'color:red;';
                             }
                             
                             htmlSimplificado += '<td style=\"' + estiloBase + '\">';
@@ -927,6 +910,16 @@ HTML;
             "dataInicio" => "1900-01-01",
             "dataFim" => "1900-01-01"
         ];
+        if(!empty($_POST["busca_dataMes"])){
+            $dataMes = DateTime::createFromFormat("Y-m-d H:i:s", $_POST["busca_dataMes"]."-01 00:00:00");
+            if ($dataMes) {
+                $dataFim = DateTime::createFromFormat("Y-m-d H:i:s", (date("Y-m-d") < $dataMes->format("Y-m-t") ? date("Y-m-d") : $dataMes->format("Y-m-t"))." 00:00:00");
+                $periodoRelatorio = [
+                    "dataInicio" => $dataMes->format("d/m"),
+                    "dataFim" => $dataFim->format("d/m")
+                ];
+            }
+        }
         $modoDetalhe = false;
         $modoTerceirizado = false;
         
@@ -1182,7 +1175,28 @@ HTML;
                     }
                 }else{
                     // Sem dados no mês: monta grid com empresas do banco todas zeradas
-                    $dataEmissao = "<i style='color:orange;' title='Sem dados gerados para este mês.'  class='fa fa-warning'></i> Sem dados para este mês";
+                    $latestUpdate = 0;
+                    $saldosDir = "./arquivos/saldos";
+                    if (is_dir($saldosDir)) {
+                        $iterator = new RecursiveIteratorIterator(
+                            new RecursiveDirectoryIterator($saldosDir, RecursiveDirectoryIterator::SKIP_DOTS),
+                            RecursiveIteratorIterator::SELF_FIRST
+                        );
+                        foreach ($iterator as $file) {
+                            if ($file->isFile() && (strpos($file->getFilename(), 'empresa_') === 0 || $file->getFilename() === 'empresas.json')) {
+                                $mtime = $file->getMTime();
+                                if ($mtime > $latestUpdate) {
+                                    $latestUpdate = $mtime;
+                                }
+                            }
+                        }
+                    }
+
+                    if ($latestUpdate > 0) {
+                        $dataEmissao = "<i style='color:orange;' title='Sem dados gerados para este mês.'  class='fa fa-warning'></i> Atualizado em: " . date("d/m/Y H:i", $latestUpdate);
+                    } else {
+                        $dataEmissao = "<i style='color:orange;' title='Sem dados gerados para este mês.'  class='fa fa-warning'></i> Atualizado em: Nunca";
+                    }
 
                     $condEmpresasBanco = "";
                     if(!empty($empresasFiltroIds)){
@@ -1195,14 +1209,22 @@ HTML;
                         "adicionalNoturno" => "00:00", "esperaIndenizada" => "00:00",
                         "saldoAnterior" => "00:00", "saldoPeriodo" => "00:00", "saldoFinal" => "00:00"
                     ];
+                    $linhasEmpresasZeradas = "";
                     while($empRow = mysqli_fetch_assoc($resEmpresasBanco)){
                         $empresas[] = [
                             "empr_nb_id"     => $empRow["empr_nb_id"],
                             "empr_tx_nome"   => $empRow["empr_tx_nome"],
                             "percEndossado"  => 0,
-                            "qtdFuncionarios"=> 0,
+                            "qtdMotoristas"  => 0,
                             "totais"         => $totaisZero
                         ];
+
+                        $linhasEmpresasZeradas .= "<tr>"
+                            ."<td style='cursor:pointer;' onclick=\"setAndSubmit(".intval($empRow["empr_nb_id"]).")\">".htmlspecialchars($empRow["empr_tx_nome"], ENT_QUOTES)."</td>"
+                            ."<td>0%</td>"
+                            ."<td>0</td>"
+                            ."<td>00:00</td><td>00:00</td><td>00:00</td><td>00:00</td><td>00:00</td><td>00:00</td><td>00:00</td><td>00:00</td><td>00:00</td>"
+                            ."</tr>";
                     }
                     // Cria arquivos virtuais (array vazio, carregarDados não será chamado)
                     $arquivos = [];

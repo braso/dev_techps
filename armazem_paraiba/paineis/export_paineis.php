@@ -87,6 +87,16 @@ function gerarPainelEndosso() {
         "dataInicio" => "1900-01-01",
         "dataFim" => "1900-01-01"
     ];
+    if (!empty($_POST["busca_data"])) {
+        $dataMes = DateTime::createFromFormat("Y-m-d H:i:s", $_POST["busca_data"]."-01 00:00:00");
+        if ($dataMes) {
+            $dataFim = DateTime::createFromFormat("Y-m-d H:i:s", (date("Y-m-d") < $dataMes->format("Y-m-t") ? date("Y-m-d") : $dataMes->format("Y-m-t"))." 00:00:00");
+            $periodoRelatorio = [
+                "dataInicio" => $dataMes->format("d/m"),
+                "dataFim" => $dataFim->format("d/m")
+            ];
+        }
+    }
 
     if (!empty($_POST["empresa"]) && !empty($_POST["busca_data"])) {
         //Painel dos endossos dos motoristas de uma empresa específica
@@ -151,8 +161,8 @@ function gerarPainelEndosso() {
             $dataEmissao = date("d/m/Y H:i", filemtime($path . "/empresa_" . $empresa["empr_nb_id"] . ".json")) . "</span>"; //Utilizado no HTML.
             $periodoRelatorio = json_decode(file_get_contents($path . "/empresa_" . $empresa["empr_nb_id"] . ".json"), true);
             $periodoRelatorio = [
-                "dataInicio" => $periodoRelatorio["dataInicio"],
-                "dataFim" => $periodoRelatorio["dataFim"]
+                "dataInicio" => DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataInicio"])->format("d/m"),
+                "dataFim" => DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataFim"])->format("d/m")
             ];
 
             $motoristas = [];
@@ -437,6 +447,7 @@ function gerarPainelEndosso() {
 
 function gerarPainelSaldo() {
     $arquivos = [];
+    $dataEmissao = "";
     $path = "./arquivos/saldos";
     $periodoRelatorio = ["dataInicio" => "", "dataFim" => ""];
 
@@ -466,6 +477,16 @@ function gerarPainelSaldo() {
         "dataInicio" => "1900-01-01",
         "dataFim" => "1900-01-01"
     ];
+    if (!empty($_POST["busca_data"])) {
+        $dataMes = DateTime::createFromFormat("Y-m-d H:i:s", $_POST["busca_data"]."-01 00:00:00");
+        if ($dataMes) {
+            $dataFim = DateTime::createFromFormat("Y-m-d H:i:s", (date("Y-m-d") < $dataMes->format("Y-m-t") ? date("Y-m-d") : $dataMes->format("Y-m-t"))." 00:00:00");
+            $periodoRelatorio = [
+                "dataInicio" => $dataMes->format("d/m"),
+                "dataFim" => $dataFim->format("d/m")
+            ];
+        }
+    }
 
     $path .= "/" . $_POST["busca_data"];
     if (!empty($_POST["empresa"])) {
@@ -602,6 +623,28 @@ function gerarPainelSaldo() {
                 } else {
                     $contagemEndossos["EP"]++;
                 }
+            }
+        } else {
+            $latestUpdate = 0;
+            $saldosDir = "./arquivos/saldos";
+            if (is_dir($saldosDir)) {
+                $iterator = new RecursiveIteratorIterator(
+                    new RecursiveDirectoryIterator($saldosDir, RecursiveDirectoryIterator::SKIP_DOTS),
+                    RecursiveIteratorIterator::SELF_FIRST
+                );
+                foreach ($iterator as $file) {
+                    if ($file->isFile() && (strpos($file->getFilename(), 'empresa_') === 0 || $file->getFilename() === 'empresas.json')) {
+                        $mtime = $file->getMTime();
+                        if ($mtime > $latestUpdate) {
+                            $latestUpdate = $mtime;
+                        }
+                    }
+                }
+            }
+            if ($latestUpdate > 0) {
+                $dataEmissao = "Atualizado em: " . date("d/m/Y H:i", $latestUpdate);
+            } else {
+                $dataEmissao = "Atualizado em: Nunca";
             }
         }
     }
@@ -814,6 +857,16 @@ function gerarPainelNc() {
         "dataInicio" => "1900-01-01",
         "dataFim" => "1900-01-01"
     ];
+    if (!empty($_POST["busca_data"])) {
+        $dataMes = DateTime::createFromFormat("Y-m-d H:i:s", $_POST["busca_data"]."-01 00:00:00");
+        if ($dataMes) {
+            $dataFim = DateTime::createFromFormat("Y-m-d H:i:s", (date("Y-m-d") < $dataMes->format("Y-m-t") ? date("Y-m-d") : $dataMes->format("Y-m-t"))." 00:00:00");
+            $periodoRelatorio = [
+                "dataInicio" => $dataMes->format("d/m"),
+                "dataFim" => $dataFim->format("d/m")
+            ];
+        }
+    }
 
     if (!empty($_POST["empresa"]) && !empty($_POST["busca_data"])) {
         //Painel dos endossos dos motoristas de uma empresa específica
@@ -1143,8 +1196,8 @@ function gerarPainelNc() {
                 $arquivoGeral = json_decode(file_get_contents($arquivo), true);
 
                 $periodoRelatorio = [
-                    "dataInicio" => $arquivoGeral["dataInicio"],
-                    "dataFim" => $arquivoGeral["dataFim"]
+                    "dataInicio" => DateTime::createFromFormat("Y-m-d", $arquivoGeral["dataInicio"])->format("d/m"),
+                    "dataFim" => DateTime::createFromFormat("Y-m-d", $arquivoGeral["dataFim"])->format("d/m")
                 ];
 
 
