@@ -18,6 +18,7 @@ deployment:
     - export LEMON=/home/devtechpsgj/public_html/dev/lemon
     - export DEVTRANSCOPEL=/home/devtechpsgj/public_html/dev/devtranscopel
     - export QUALY=/home/devtechpsgj/public_html/dev/qualy_transportes
+    - export GST=/home/devtechpsgj/public_html/dev/gst
 
 
     # Copiando diretórios
@@ -33,4 +34,5 @@ deployment:
     - /bin/cp -R $DOMAIN $DEVTRANSCOPEL
     - /bin/cp -R $DOMAIN $LEMON
     - /bin/cp -R $DOMAIN $QUALY
+    - /bin/cp -R $DOMAIN $GST             
     
