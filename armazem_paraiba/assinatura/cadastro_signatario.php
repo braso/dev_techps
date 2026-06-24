@@ -1,14 +1,9 @@
 <?php
-// Processa o POST antes de qualquer include para evitar o dispatcher do contex
 $_msg     = "";
 $_msgType = "success";
-
-// Flag para saber se precisa redirecionar após salvar
 $_redirect = false;
 
-// Inclui só a conexão direta, sem o dispatcher
 define('NO_DISPATCHER', true);
-
 include_once "../conecta.php";
 
 // Garante que a tabela existe
@@ -22,99 +17,95 @@ mysqli_query($conn, "
         sign_tx_telefone  VARCHAR(100)  NULL,
         sign_tx_nascimento DATE         NULL,
         sign_tx_documento VARCHAR(500)  NULL,
+        sign_nb_empresa   INT           NULL,
         sign_tx_status    ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo',
         sign_tx_dataCadastro DATETIME   NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY uk_cpf (sign_tx_cpf)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ");
 
-// Garante que as colunas novas existem (caso a tabela já exista sem elas)
+// Garante colunas novas em tabelas existentes
 mysqli_query($conn, "ALTER TABLE signatarios_externos ADD COLUMN IF NOT EXISTS sign_tx_nascimento DATE NULL AFTER sign_tx_telefone");
 mysqli_query($conn, "ALTER TABLE signatarios_externos ADD COLUMN IF NOT EXISTS sign_tx_documento VARCHAR(500) NULL AFTER sign_tx_nascimento");
-
-// Garante índices únicos para CPF, RG e E-mail
+mysqli_query($conn, "ALTER TABLE signatarios_externos ADD COLUMN IF NOT EXISTS sign_nb_empresa INT NULL AFTER sign_tx_documento");
 mysqli_query($conn, "ALTER TABLE signatarios_externos ADD UNIQUE INDEX IF NOT EXISTS uk_rg (sign_tx_rg)");
 mysqli_query($conn, "ALTER TABLE signatarios_externos ADD UNIQUE INDEX IF NOT EXISTS uk_email (sign_tx_email)");
 
-// Garante que a pasta de documentos existe
 $pastaDocumentos = __DIR__ . "/docs";
 if (!is_dir($pastaDocumentos)) {
     mkdir($pastaDocumentos, 0755, true);
+}
+
+// Carrega lista de empresas para o select
+$empresas = [];
+$resEmp = mysqli_query($conn, "SELECT empr_nb_id, empr_tx_nome FROM empresa WHERE empr_tx_status = 'ativo' ORDER BY empr_tx_nome ASC");
+if ($resEmp) {
+    while ($r = mysqli_fetch_assoc($resEmp)) {
+        $empresas[] = $r;
+    }
 }
 
 // ── AÇÕES POST ────────────────────────────────────────────────────────────────
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $acao = trim($_POST["sign_acao"] ?? "");
 
-    // Salvar (inserir ou editar)
     if ($acao === "salvar") {
-        $id       = intval($_POST["sign_nb_id"] ?? 0);
-        $nome     = trim($_POST["sign_tx_nome"]     ?? "");
-        $rg       = trim($_POST["sign_tx_rg"]       ?? "");
-        $cpf      = preg_replace('/\D/', '', trim($_POST["sign_tx_cpf"] ?? ""));
-        $email    = trim($_POST["sign_tx_email"]    ?? "");
-        $telefone = trim($_POST["sign_tx_telefone"] ?? "");
+        $id         = intval($_POST["sign_nb_id"] ?? 0);
+        $nome       = trim($_POST["sign_tx_nome"]     ?? "");
+        $rg         = trim($_POST["sign_tx_rg"]       ?? "");
+        $cpf        = preg_replace('/\D/', '', trim($_POST["sign_tx_cpf"] ?? ""));
+        $email      = trim($_POST["sign_tx_email"]    ?? "");
+        $telefone   = trim($_POST["sign_tx_telefone"] ?? "");
         $nascimento = trim($_POST["sign_tx_nascimento"] ?? "");
-        $status   = in_array($_POST["sign_tx_status"] ?? "", ["ativo","inativo"]) ? $_POST["sign_tx_status"] : "ativo";
+        $empresaId  = intval($_POST["sign_nb_empresa"] ?? 0);
+        $status     = in_array($_POST["sign_tx_status"] ?? "", ["ativo","inativo"]) ? $_POST["sign_tx_status"] : "ativo";
 
         if ($nome === "") {
             $_msg     = "O campo Nome Completo é obrigatório.";
             $_msgType = "error";
         } else {
-            $cpfEsc      = mysqli_real_escape_string($conn, $cpf);
-            $nomeEsc     = mysqli_real_escape_string($conn, $nome);
-            $rgEsc       = mysqli_real_escape_string($conn, $rg);
-            $emailEsc    = mysqli_real_escape_string($conn, $email);
-            $telefoneEsc = mysqli_real_escape_string($conn, $telefone);
+            $cpfEsc        = mysqli_real_escape_string($conn, $cpf);
+            $nomeEsc       = mysqli_real_escape_string($conn, $nome);
+            $rgEsc         = mysqli_real_escape_string($conn, $rg);
+            $emailEsc      = mysqli_real_escape_string($conn, $email);
+            $telefoneEsc   = mysqli_real_escape_string($conn, $telefone);
             $nascimentoEsc = mysqli_real_escape_string($conn, $nascimento);
+            $empresaSql    = $empresaId > 0 ? $empresaId : "NULL";
 
-            // Validação de duplicidade (CPF, RG, E-mail)
             $condId = $id > 0 ? " AND sign_nb_id != $id" : "";
-            
+
             if ($cpf !== "") {
                 $dup = mysqli_fetch_assoc(mysqli_query($conn, "SELECT sign_nb_id FROM signatarios_externos WHERE sign_tx_cpf = '$cpfEsc' $condId LIMIT 1"));
-                if ($dup) {
-                    $_msg = "CPF já cadastrado.";
-                    $_msgType = "error";
-                }
+                if ($dup) { $_msg = "CPF já cadastrado."; $_msgType = "error"; }
             }
             if ($_msgType !== "error" && $rg !== "") {
                 $dup = mysqli_fetch_assoc(mysqli_query($conn, "SELECT sign_nb_id FROM signatarios_externos WHERE sign_tx_rg = '$rgEsc' $condId LIMIT 1"));
-                if ($dup) {
-                    $_msg = "RG já cadastrado.";
-                    $_msgType = "error";
-                }
+                if ($dup) { $_msg = "RG já cadastrado."; $_msgType = "error"; }
             }
             if ($_msgType !== "error" && $email !== "") {
                 $dup = mysqli_fetch_assoc(mysqli_query($conn, "SELECT sign_nb_id FROM signatarios_externos WHERE sign_tx_email = '$emailEsc' $condId LIMIT 1"));
-                if ($dup) {
-                    $_msg = "E-mail já cadastrado.";
-                    $_msgType = "error";
-                }
+                if ($dup) { $_msg = "E-mail já cadastrado."; $_msgType = "error"; }
             }
 
-            // Upload de documento com foto
+            // Upload documento
             $documentoNome = "";
             if (!empty($_FILES["sign_documento"]["name"]) && $_FILES["sign_documento"]["error"] === UPLOAD_ERR_OK) {
                 $extensoesPermitidas = ["jpg", "jpeg", "png", "gif", "pdf", "bmp", "webp"];
                 $nomeOriginal = $_FILES["sign_documento"]["name"];
                 $extensao = strtolower(pathinfo($nomeOriginal, PATHINFO_EXTENSION));
-                
                 if (!in_array($extensao, $extensoesPermitidas)) {
-                    $_msg     = "Formato de arquivo não permitido. Use: " . implode(", ", $extensoesPermitidas);
+                    $_msg = "Formato não permitido. Use: " . implode(", ", $extensoesPermitidas);
                     $_msgType = "error";
                 } elseif ($_FILES["sign_documento"]["size"] > 10 * 1024 * 1024) {
-                    $_msg     = "Arquivo muito grande. Máximo: 10MB.";
+                    $_msg = "Arquivo muito grande. Máximo: 10MB.";
                     $_msgType = "error";
                 } else {
-                    $pastaDocumentos = __DIR__ . "/docs";
-                    $nomeArquivo = uniqid("sign_") . "_" . preg_replace('/[^a-zA-Z0-9_\-\.]/', '_', $nomeOriginal);
+                    $nomeArquivo    = uniqid("sign_") . "_" . preg_replace('/[^a-zA-Z0-9_\-\.]/', '_', $nomeOriginal);
                     $caminhoDestino = $pastaDocumentos . "/" . $nomeArquivo;
-                    
                     if (move_uploaded_file($_FILES["sign_documento"]["tmp_name"], $caminhoDestino)) {
                         $documentoNome = $nomeArquivo;
                     } else {
-                        $_msg     = "Erro ao fazer upload do documento.";
+                        $_msg = "Erro ao fazer upload do documento.";
                         $_msgType = "error";
                     }
                 }
@@ -122,37 +113,39 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             if ($_msgType !== "error") {
                 if ($id > 0) {
-                    $sqlDoc = "";
-                    if ($documentoNome !== "") {
-                        $docEsc = mysqli_real_escape_string($conn, $documentoNome);
-                        $sqlDoc = ", sign_tx_documento = '$docEsc'";
-                    }
+                    $sqlDoc = $documentoNome !== "" ? ", sign_tx_documento = '" . mysqli_real_escape_string($conn, $documentoNome) . "'" : "";
                     $sql = "UPDATE signatarios_externos SET
-                                sign_tx_nome     = '$nomeEsc',
-                                sign_tx_rg       = '$rgEsc',
-                                sign_tx_cpf      = " . ($cpfEsc !== "" ? "'$cpfEsc'" : "NULL") . ",
-                                sign_tx_email    = '$emailEsc',
-                                sign_tx_telefone = '$telefoneEsc',
+                                sign_tx_nome       = '$nomeEsc',
+                                sign_tx_rg         = '$rgEsc',
+                                sign_tx_cpf        = " . ($cpfEsc !== "" ? "'$cpfEsc'" : "NULL") . ",
+                                sign_tx_email      = '$emailEsc',
+                                sign_tx_telefone   = '$telefoneEsc',
                                 sign_tx_nascimento = " . ($nascimentoEsc !== "" ? "'$nascimentoEsc'" : "NULL") . ",
-                                sign_tx_status   = '$status'
+                                sign_nb_empresa    = $empresaSql,
+                                sign_tx_status     = '$status'
                                 $sqlDoc
                             WHERE sign_nb_id = $id";
                     if (mysqli_query($conn, $sql)) {
                         $_msg = "Signatário atualizado com sucesso.";
                     } else {
-                        $_msg     = "Erro ao atualizar: " . mysqli_error($conn);
+                        $_msg = "Erro ao atualizar: " . mysqli_error($conn);
                         $_msgType = "error";
                     }
                 } else {
                     $docEsc = mysqli_real_escape_string($conn, $documentoNome);
                     $sql = "INSERT INTO signatarios_externos
-                                (sign_tx_nome, sign_tx_rg, sign_tx_cpf, sign_tx_email, sign_tx_telefone, sign_tx_nascimento, sign_tx_documento, sign_tx_status)
+                                (sign_tx_nome, sign_tx_rg, sign_tx_cpf, sign_tx_email, sign_tx_telefone, sign_tx_nascimento, sign_tx_documento, sign_nb_empresa, sign_tx_status)
                             VALUES
-                                ('$nomeEsc', '$rgEsc', " . ($cpfEsc !== "" ? "'$cpfEsc'" : "NULL") . ", '$emailEsc', '$telefoneEsc', " . ($nascimentoEsc !== "" ? "'$nascimentoEsc'" : "NULL") . ", " . ($docEsc !== "" ? "'$docEsc'" : "NULL") . ", '$status')";
+                                ('$nomeEsc', '$rgEsc',
+                                 " . ($cpfEsc !== "" ? "'$cpfEsc'" : "NULL") . ",
+                                 '$emailEsc', '$telefoneEsc',
+                                 " . ($nascimentoEsc !== "" ? "'$nascimentoEsc'" : "NULL") . ",
+                                 " . ($docEsc !== "" ? "'$docEsc'" : "NULL") . ",
+                                 $empresaSql, '$status')";
                     if (mysqli_query($conn, $sql)) {
                         $_msg = "Signatário cadastrado com sucesso.";
                     } else {
-                        $_msg     = "Erro ao cadastrar: " . mysqli_error($conn);
+                        $_msg = "Erro ao cadastrar: " . mysqli_error($conn);
                         $_msgType = "error";
                     }
                 }
@@ -160,7 +153,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
     }
 
-    // Inativar / Reativar
     if ($acao === "inativar" || $acao === "reativar") {
         $id         = intval($_POST["sign_nb_id"] ?? 0);
         $novoStatus = $acao === "inativar" ? "inativo" : "ativo";
@@ -172,27 +164,38 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 }
 
 // ── BUSCA / PAGINAÇÃO ─────────────────────────────────────────────────────────
-$busca        = trim($_GET["busca"] ?? "");
-$pagina       = max(1, intval($_GET["pagina"] ?? 1));
-$porPagina    = 15;
-$offset       = ($pagina - 1) * $porPagina;
-$filtroStatus = trim($_GET["filtro_status"] ?? "ativo");
+$busca           = trim($_GET["busca"] ?? "");
+$filtroEmpresa   = intval($_GET["filtro_empresa"] ?? 0);
+$pagina          = max(1, intval($_GET["pagina"] ?? 1));
+$porPagina       = 15;
+$offset          = ($pagina - 1) * $porPagina;
+$filtroStatus    = trim($_GET["filtro_status"] ?? "ativo");
 
 $where = "1=1";
 if ($busca !== "") {
     $bEsc  = mysqli_real_escape_string($conn, $busca);
-    $where .= " AND (sign_tx_nome LIKE '%$bEsc%' OR sign_tx_cpf LIKE '%$bEsc%' OR sign_tx_email LIKE '%$bEsc%')";
+    $where .= " AND (s.sign_tx_nome LIKE '%$bEsc%' OR s.sign_tx_cpf LIKE '%$bEsc%' OR s.sign_tx_email LIKE '%$bEsc%')";
 }
 if (in_array($filtroStatus, ["ativo","inativo"])) {
-    $where .= " AND sign_tx_status = '$filtroStatus'";
+    $where .= " AND s.sign_tx_status = '$filtroStatus'";
+}
+if ($filtroEmpresa > 0) {
+    $where .= " AND s.sign_nb_empresa = $filtroEmpresa";
 }
 
-$totalRes = mysqli_query($conn, "SELECT COUNT(*) as total FROM signatarios_externos WHERE $where");
+$totalRes = mysqli_query($conn, "SELECT COUNT(*) as total FROM signatarios_externos s WHERE $where");
 $total    = intval(mysqli_fetch_assoc($totalRes)["total"] ?? 0);
 $totalPag = max(1, ceil($total / $porPagina));
 
 $lista = [];
-$res   = mysqli_query($conn, "SELECT * FROM signatarios_externos WHERE $where ORDER BY sign_tx_nome ASC LIMIT $porPagina OFFSET $offset");
+$res   = mysqli_query($conn, "
+    SELECT s.*, e.empr_tx_nome as empresa_nome
+    FROM signatarios_externos s
+    LEFT JOIN empresa e ON e.empr_nb_id = s.sign_nb_empresa
+    WHERE $where
+    ORDER BY s.sign_tx_nome ASC
+    LIMIT $porPagina OFFSET $offset
+");
 if ($res) {
     while ($r = mysqli_fetch_assoc($res)) {
         $lista[] = $r;
@@ -209,7 +212,6 @@ if (isset($_GET["editar"])) {
     }
 }
 
-// Passa mensagem para a view
 $msg     = $_msg;
 $msgType = $_msgType;
 
@@ -269,6 +271,21 @@ include_once "componentes/layout_header.php";
                         <option value="ativo"   <?php echo ($editando['sign_tx_status'] ?? 'ativo') === 'ativo'   ? 'selected' : ''; ?>>Ativo</option>
                         <option value="inativo" <?php echo ($editando['sign_tx_status'] ?? '')      === 'inativo' ? 'selected' : ''; ?>>Inativo</option>
                     </select>
+                </div>
+
+                <!-- Empresa -->
+                <div class="lg:col-span-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Empresa <span class="text-gray-400 font-normal">(opcional)</span></label>
+                    <select name="sign_nb_empresa" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white text-sm">
+                        <option value="">Sem empresa vinculada</option>
+                        <?php foreach ($empresas as $e): ?>
+                            <option value="<?php echo intval($e['empr_nb_id']); ?>"
+                                <?php echo intval($editando['sign_nb_empresa'] ?? 0) === intval($e['empr_nb_id']) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($e['empr_tx_nome']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <p class="text-xs text-gray-400 mt-1">Vincule o signatário a uma empresa para identificá-lo como signatário externo dessa empresa.</p>
                 </div>
 
                 <!-- RG -->
@@ -358,8 +375,8 @@ include_once "componentes/layout_header.php";
 
     <!-- Filtros / Busca -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
-        <form method="GET" action="cadastro_signatario.php" class="flex flex-col sm:flex-row gap-3 items-end">
-            <div class="flex-1">
+        <form method="GET" action="cadastro_signatario.php" class="flex flex-col sm:flex-row gap-3 items-end flex-wrap">
+            <div class="flex-1 min-w-48">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
                 <div class="relative">
                     <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
@@ -369,6 +386,17 @@ include_once "componentes/layout_header.php";
                         placeholder="Nome, CPF ou e-mail..."
                         class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
                 </div>
+            </div>
+            <div class="min-w-48">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Empresa</label>
+                <select name="filtro_empresa" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm">
+                    <option value="">Todas</option>
+                    <?php foreach ($empresas as $e): ?>
+                        <option value="<?php echo intval($e['empr_nb_id']); ?>" <?php echo $filtroEmpresa === intval($e['empr_nb_id']) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($e['empr_tx_nome']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
@@ -382,7 +410,7 @@ include_once "componentes/layout_header.php";
                 class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
                 <i class="fas fa-filter"></i> Filtrar
             </button>
-            <?php if ($busca !== "" || $filtroStatus !== "ativo"): ?>
+            <?php if ($busca !== "" || $filtroStatus !== "ativo" || $filtroEmpresa > 0): ?>
             <a href="cadastro_signatario.php"
                 class="inline-flex items-center gap-2 border border-gray-300 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm">
                 <i class="fas fa-xmark"></i> Limpar
@@ -405,7 +433,7 @@ include_once "componentes/layout_header.php";
                     <tr class="bg-gray-50 border-b border-gray-200 text-xs uppercase text-gray-500 font-semibold tracking-wider">
                         <th class="px-4 py-3">#</th>
                         <th class="px-4 py-3">Nome Completo</th>
-                        <th class="px-4 py-3">RG</th>
+                        <th class="px-4 py-3">Empresa</th>
                         <th class="px-4 py-3">CPF</th>
                         <th class="px-4 py-3">E-mail</th>
                         <th class="px-4 py-3">Telefone</th>
@@ -427,12 +455,22 @@ include_once "componentes/layout_header.php";
                         if (strlen($cpfFmt) === 11) {
                             $cpfFmt = substr($cpfFmt,0,3).'.'.substr($cpfFmt,3,3).'.'.substr($cpfFmt,6,3).'-'.substr($cpfFmt,9,2);
                         }
-                        $ativo = $s['sign_tx_status'] === 'ativo';
+                        $ativo      = $s['sign_tx_status'] === 'ativo';
+                        $empNome    = trim(strval($s['empresa_nome'] ?? ''));
                     ?>
                     <tr class="hover:bg-gray-50 transition-colors <?php echo !$ativo ? 'opacity-60' : ''; ?>">
                         <td class="px-4 py-3 text-gray-400 font-mono text-xs"><?php echo intval($s['sign_nb_id']); ?></td>
                         <td class="px-4 py-3 font-medium text-gray-800"><?php echo htmlspecialchars($s['sign_tx_nome']); ?></td>
-                        <td class="px-4 py-3 text-gray-600"><?php echo htmlspecialchars($s['sign_tx_rg'] ?: '—'); ?></td>
+                        <td class="px-4 py-3 text-gray-600">
+                            <?php if ($empNome !== ''): ?>
+                                <span class="inline-flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full font-medium">
+                                    <i class="fas fa-building text-[10px]"></i>
+                                    <?php echo htmlspecialchars($empNome); ?>
+                                </span>
+                            <?php else: ?>
+                                <span class="text-gray-400 text-xs">—</span>
+                            <?php endif; ?>
+                        </td>
                         <td class="px-4 py-3 text-gray-600 font-mono"><?php echo htmlspecialchars($cpfFmt ?: '—'); ?></td>
                         <td class="px-4 py-3 text-gray-600">
                             <?php if ($s['sign_tx_email']): ?>
@@ -451,12 +489,10 @@ include_once "componentes/layout_header.php";
                         </td>
                         <td class="px-4 py-3 text-right">
                             <div class="flex items-center justify-end gap-2">
-                                <!-- Editar -->
                                 <a href="cadastro_signatario.php?editar=<?php echo intval($s['sign_nb_id']); ?><?php echo $busca !== '' ? '&busca='.urlencode($busca) : ''; ?>&filtro_status=<?php echo urlencode($filtroStatus); ?>"
                                     class="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
                                     <i class="fas fa-pen-to-square"></i>
                                 </a>
-                                <!-- Inativar / Reativar -->
                                 <form method="POST" action="cadastro_signatario.php?busca=<?php echo urlencode($busca); ?>&filtro_status=<?php echo urlencode($filtroStatus); ?>&pagina=<?php echo $pagina; ?>"
                                     onsubmit="return confirm('<?php echo $ativo ? 'Inativar este signatário?' : 'Reativar este signatário?'; ?>')">
                                     <input type="hidden" name="sign_acao" value="<?php echo $ativo ? 'inativar' : 'reativar'; ?>">
@@ -476,15 +512,15 @@ include_once "componentes/layout_header.php";
             </table>
         </div>
 
-        <!-- Paginação -->
         <?php if ($totalPag > 1): ?>
         <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
             <span>Página <?php echo $pagina; ?> de <?php echo $totalPag; ?></span>
             <div class="flex gap-1">
                 <?php
                 $queryBase = http_build_query(array_filter([
-                    'busca'         => $busca,
-                    'filtro_status' => $filtroStatus,
+                    'busca'          => $busca,
+                    'filtro_status'  => $filtroStatus,
+                    'filtro_empresa' => $filtroEmpresa ?: '',
                 ]));
                 for ($p = 1; $p <= $totalPag; $p++):
                     $active = $p === $pagina;
@@ -502,7 +538,6 @@ include_once "componentes/layout_header.php";
 </div>
 
 <script>
-// Máscara CPF
 document.getElementById('campo_cpf')?.addEventListener('input', function () {
     let v = this.value.replace(/\D/g, '').substring(0, 11);
     if (v.length > 9)      v = v.replace(/^(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4');
@@ -511,9 +546,7 @@ document.getElementById('campo_cpf')?.addEventListener('input', function () {
     this.value = v;
 });
 
-// Máscara Telefone
 document.getElementById('campo_telefone')?.addEventListener('input', function () {
-    // Permite múltiplos números separados por vírgula — aplica máscara só no último segmento
     let parts = this.value.split(',');
     let last  = parts[parts.length - 1].replace(/\D/g, '').substring(0, 11);
     if (last.length > 10)     last = last.replace(/^(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');

@@ -336,14 +336,17 @@ function assinatura_finalizar_documento_icp($conn, int $idDocumento, array $opts
         $shortHash = substr($docHash, 0, 20) . "...";
         $verificationCode = strtoupper(substr(md5($outputFileName . $signDate . $idDocumento), 0, 16));
 
-        $w = 120;
+        $iti_url = "https://validar.iti.gov.br/";
+        $qrSize = 24;
+        $w = 150;
         $h = 36;
         $margin = 10;
+        $linkH = 6;
 
         $pdf->SetAutoPageBreak(false);
 
         $x = $pdf->getPageWidth() - $w - $margin;
-        $y = $pdf->getPageHeight() - $h - $margin;
+        $y = $pdf->getPageHeight() - $h - $linkH - $margin;
 
         $pdf->SetAlpha(1);
         $pdf->SetFillColor(255, 255, 255);
@@ -356,6 +359,7 @@ function assinatura_finalizar_documento_icp($conn, int $idDocumento, array $opts
         }
 
         $textX = $x + 30;
+        $textW = $w - 32 - $qrSize - 4;
         $currentY = $y + 3;
 
         $pdf->SetFont("helvetica", "B", 7);
@@ -366,30 +370,52 @@ function assinatura_finalizar_documento_icp($conn, int $idDocumento, array $opts
         $currentY += 4;
         $pdf->SetFont("helvetica", "B", 8);
         $pdf->SetXY($textX, $currentY);
-        $pdf->Cell($w - 32, 0, substr(strtoupper(strval($signerName)), 0, 45), 0, 1, "L");
+        $pdf->Cell($textW, 0, substr(strtoupper(strval($signerName)), 0, 40), 0, 1, "L");
 
         $currentY += 4;
         $pdf->SetFont("helvetica", "", 6);
         $pdf->SetXY($textX, $currentY);
-        $pdf->Cell($w - 32, 0, "Data: " . $signDate, 0, 1, "L");
+        $pdf->Cell($textW, 0, "Data: " . $signDate, 0, 1, "L");
 
         $currentY += 3;
         $pdf->SetXY($textX, $currentY);
-        $pdf->Cell($w - 32, 0, "Emissor: " . substr(strval($issuerName), 0, 50), 0, 1, "L");
+        $pdf->Cell($textW, 0, "Emissor: " . substr(strval($issuerName), 0, 45), 0, 1, "L");
 
         $currentY += 3;
         $pdf->SetXY($textX, $currentY);
-        $pdf->Cell($w - 32, 0, "Hash Doc: " . $shortHash, 0, 1, "L");
+        $pdf->Cell($textW, 0, "Hash Doc: " . $shortHash, 0, 1, "L");
 
         $currentY += 3;
         $pdf->SetFont("helvetica", "B", 6);
         $pdf->SetXY($textX, $currentY);
-        $pdf->Cell($w - 32, 0, "Cód. Verificação: " . $verificationCode, 0, 1, "L");
+        $pdf->Cell($textW, 0, "Cód. Verificação: " . $verificationCode, 0, 1, "L");
 
         $pdf->SetFont("helvetica", "", 5);
         $pdf->SetTextColor(80, 80, 80);
         $pdf->SetXY($x + 2, $y + $h - 7);
-        $pdf->MultiCell($w - 4, 8, "Documento assinado digitalmente conforme MP 2.200-2/2001 e Lei 14.063/2020.\nValidade jurídica assegurada.", 0, "L");
+        $pdf->MultiCell($textW + 28, 8, "Documento assinado digitalmente conforme MP 2.200-2/2001 e Lei 14.063/2020.\nValidade jurídica assegurada.", 0, "L");
+
+        // QR code com link do validador ITI dentro do carimbo
+        $qrX = $x + $w - $qrSize - 3;
+        $qrY = $y + ($h - $qrSize) / 2;
+        $qrStyle = [
+            "border" => false,
+            "vpadding" => 0,
+            "hpadding" => 0,
+            "fgcolor" => [0, 0, 0],
+            "bgcolor" => [255, 255, 255],
+            "module_width" => 1,
+            "module_height" => 1,
+        ];
+        $pdf->write2DBarcode($iti_url, "QRCODE,H", $qrX, $qrY, $qrSize, $qrSize, $qrStyle, "N");
+
+        // Linha separadora e link clicável abaixo do carimbo
+        $pdf->SetLineStyle(["width" => 0.1, "color" => [180, 180, 180]]);
+        $linkY = $y + $h + 1;
+        $pdf->SetFont("helvetica", "", 5.5);
+        $pdf->SetTextColor(30, 80, 180);
+        $pdf->SetXY($x, $linkY);
+        $pdf->Cell($w, $linkH, "Valide o documento: " . $iti_url, 0, 1, "C", false, $iti_url);
 
         $pdf->Output($outputPdfPath, "F");
         if (!file_exists($outputPdfPath)) {
