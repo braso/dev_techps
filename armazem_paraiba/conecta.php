@@ -151,6 +151,15 @@
         mysqli_query($conn, "ALTER TABLE endosso ADD COLUMN totalResumo LONGTEXT NULL AFTER endo_tx_pontos");
     };
 
+    // Migração da tabela entidade: aumentar o tamanho do saldo de horas para varchar(15)
+    $checkBancoCol = mysqli_query($conn, "SHOW COLUMNS FROM entidade LIKE 'enti_tx_banco'");
+    if ($checkBancoCol && $row = mysqli_fetch_assoc($checkBancoCol)) {
+        if ($row['Type'] === 'varchar(8)') {
+            mysqli_query($conn, "ALTER TABLE entidade MODIFY COLUMN enti_tx_banco VARCHAR(15) DEFAULT '00:00';");
+        }
+    }
+
+
 
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_grid.php";
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";

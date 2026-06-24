@@ -698,7 +698,7 @@
 				;
 			break;
 			case "MASCARA_HORAS":
-				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['99:99', '-99:99', '999:99', '-999:99'], placeholder: \"\"});";
+				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['99:99', '-99:99', '999:99', '-999:99', '9999:99', '-9999:99', '99999:99', '-99999:99'], placeholder: \"\"});";
 			break;
 			case "MASCARA_HORA":
 				$type = "time";
