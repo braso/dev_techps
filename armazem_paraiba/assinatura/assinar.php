@@ -754,8 +754,20 @@ if (!$ultimo) {
         mysqli_stmt_close($stmtDone);
     }
 
+    $pfxConfigAuto = [];
+    $pfxConfigAutoPath = __DIR__ . "/config_pfx.php";
+    if (file_exists($pfxConfigAutoPath)) {
+        $tmp = include($pfxConfigAutoPath);
+        if (is_array($tmp)) {
+            $pfxConfigAuto = $tmp;
+        }
+    }
+    $autoSignAtivo = !empty($pfxConfigAuto["auto_sign"])
+        && !empty($pfxConfigAuto["pfx_path"])
+        && file_exists(strval($pfxConfigAuto["pfx_path"]));
+
     $caminhoFinal = $caminhoRel;
-    if ($validarIcp === "sim" && function_exists("assinatura_finalizar_documento_icp")) {
+    if (($validarIcp === "sim" || $autoSignAtivo) && function_exists("assinatura_finalizar_documento_icp")) {
         $res = assinatura_finalizar_documento_icp($conn, $idSolicitacao, ["send_email" => false]);
         if (!empty($res["ok"]) && !empty($res["caminho_arquivo"])) {
             $caminhoFinal = strval($res["caminho_arquivo"]);
