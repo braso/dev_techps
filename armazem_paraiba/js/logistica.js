@@ -47,6 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
             resultsDiv.textContent = "Nenhum resultado encontrado para o período selecionado.";
           } else {
             displayResults(resultData, plate, dateStart, dateEnd, speed, motoristaNome);
+            atualizarTabelaMotoristas(resultData, plate);
             messageDiv.innerHTML = "";
           }
         })
@@ -144,6 +145,84 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     };
+
+    function atualizarTabelaMotoristas(data, plate) {
+        const tbody = document.querySelector("#tabelaMotoristasPeriodo tbody");
+        if (!tbody) return;
+        tbody.innerHTML = "";
+
+        if (!data || data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center">Nenhum dado no período</td></tr>`;
+            return;
+        }
+
+        // Ordenar por moduleTime
+        const sorted = [...data].sort((a, b) => new Date(a.moduleTime) - new Date(b.moduleTime));
+
+        // Função para verificar se nomeMotorista é válido
+        function isNomeValido(nome) {
+            if (!nome) return false;
+            const n = String(nome).trim().toUpperCase();
+            return n !== "" && n !== "VAZIO";
+        }
+
+        // Agrupar por motorista, detectando trocas ao longo do tempo
+        const grupos = [];
+        let grupoAtual = null;
+        let ultimoNomeValido = null;
+
+        sorted.forEach((row) => {
+            let mot = row.nomeMotorista;
+            let isValido = isNomeValido(mot);
+
+            // Se não for válido, herda o último nome válido (não quebra a jornada)
+            if (!isValido && ultimoNomeValido) {
+                mot = ultimoNomeValido;
+            } else if (!isValido) {
+                mot = "Não informado";
+            }
+
+            if (isValido) {
+                ultimoNomeValido = mot;
+            }
+
+            if (!grupoAtual || grupoAtual.motorista !== mot) {
+                if (grupoAtual) grupos.push(grupoAtual);
+                grupoAtual = {
+                    motorista: mot,
+                    plate: row.vehicle_plate || plate,
+                    inicio: row.moduleTime,
+                    fim: row.moduleTime,
+                    registros: 1
+                };
+            } else {
+                grupoAtual.fim = row.moduleTime;
+                grupoAtual.registros++;
+            }
+        });
+        if (grupoAtual) grupos.push(grupoAtual);
+
+        // Renderizar na tabela
+        grupos.forEach((g) => {
+            const dtInicio = new Date(g.inicio);
+            const dtFim = new Date(g.fim);
+            const diffMs = dtFim - dtInicio;
+            const diffH = Math.floor(diffMs / 3600000);
+            const diffM = Math.floor((diffMs % 3600000) / 60000);
+            const diffS = Math.floor((diffMs % 60000) / 1000);
+            const tempoStr = `${diffH}h ${diffM}min ${diffS}s`;
+
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${g.plate}</td>
+                <td>${g.motorista}</td>
+                <td>${dtInicio.toLocaleString("pt-BR")}</td>
+                <td>${dtFim.toLocaleString("pt-BR")}</td>
+                <td>${tempoStr}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
 
     const displayResults = (data, plate, dateStart, dateEnd, speed, motoristaNome) => {
       resultsDiv.innerHTML = "";
@@ -324,6 +403,16 @@ document.addEventListener("DOMContentLoaded", () => {
         }
   
         const summaryDiv = document.createElement("div");
+
+        // Extrair nomes únicos de motoristas dos dados retornados
+        const motoristasUnicos = [...new Set(data.map(item => item.nomeMotorista).filter(Boolean))];
+        let motoristasDropdownHtml = "";
+        if (motoristasUnicos.length > 0) {
+            motoristasDropdownHtml = `<select id="motoristasPeriodo" style="padding:4px; border-radius:5px; border:1px solid #35A3BC; font-size:13px; color:#333;">${motoristasUnicos.map(m => `<option>${m}</option>`).join('')}</select>`;
+        } else {
+            motoristasDropdownHtml = `<span style="font-size:13px;">Não informado</span>`;
+        }
+
         summaryDiv.innerHTML = `<h2 class="title-section">Resumo da pesquisa</h2>
                   <div class="summary">
                       <div class="summary-column">
@@ -332,6 +421,7 @@ document.addEventListener("DOMContentLoaded", () => {
                           
                           <h6><i class="fas fa-id-card"></i> <b>Placa:  </b> ${plate}</h6>
                           <h6><i class="fas fa-calendar"></i> <b>Período de Consulta:  </b> 24H </h6>
+                          <h6><i class="fas fa-truck-driver" style="color:#35A3BC;"></i> <b>Motorista(s) no período:  </b> ${motoristasDropdownHtml}</h6>
                       </div>
                       <div class="summary-column">
                           <h6><i class="fas fa-power-off" style="color: green;"></i> <b>${formatTime(totalTrueTime)} </b>   com ignição ligada. Totalizando    <b>${totalStopsIgnitionOn} </b>    paradas.</h6>

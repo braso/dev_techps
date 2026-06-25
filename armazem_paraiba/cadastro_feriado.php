@@ -55,6 +55,11 @@
 		;
 	}
 
+	function redirFeriadoCargo(){
+		header("Location: {$_ENV["APP_PATH"]}{$_ENV["CONTEX_PATH"]}/cadastro_feriado_cargo.php");
+		exit;
+	}
+
 	function excluirFeriado(){
 		remover("feriado",$_POST["id"]);
 		index();
@@ -233,7 +238,8 @@
         $botoes = [ 
             botao("Buscar", "index"),
             botao("Limpar Filtro", "limparFiltros"),
-            botao("Inserir", "layout_feriado", "", "", "", "", "btn btn-success")
+            botao("Inserir", "layout_feriado", "", "", "", "", "btn btn-success"),
+            botao("Feriado por Cargo", "redirFeriadoCargo", "", "", "", "", "btn btn-info")
         ];
         
         echo abre_form();
