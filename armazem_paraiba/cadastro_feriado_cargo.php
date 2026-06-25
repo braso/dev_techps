@@ -15,13 +15,26 @@ include_once "load_env.php";
 include_once "utils/utils.php";
 include_once "conecta.php";
 
-// Cria tabela automaticamente se não existir
-$resTabela = query("SHOW TABLES LIKE 'feriado_funcionario'");
-if($resTabela !== false && $resTabela !== true){
-    $tabelaExiste = mysqli_fetch_assoc($resTabela);
-    if(empty($tabelaExiste)){
-        query("
-            CREATE TABLE IF NOT EXISTS feriado_funcionario (
+function ensureFeriadoFuncionarioSchema(){
+    $dbRow = mysqli_fetch_assoc(query("SELECT DATABASE() AS db"));
+    $db = strval($dbRow["db"] ?? "");
+    if($db === ""){
+        return;
+    }
+
+    $exists = mysqli_fetch_assoc(query(
+        "SELECT 1 AS ok
+        FROM information_schema.TABLES
+        WHERE TABLE_SCHEMA = ?
+            AND TABLE_NAME = 'feriado_funcionario'
+        LIMIT 1",
+        "s",
+        [$db]
+    ));
+
+    if(empty($exists)){
+        query(
+            "CREATE TABLE IF NOT EXISTS feriado_funcionario (
                 fefi_nb_id INT AUTO_INCREMENT PRIMARY KEY,
                 fefi_tx_nome VARCHAR(255) NOT NULL,
                 fefi_tx_data DATE NOT NULL,
@@ -30,12 +43,13 @@ if($resTabela !== false && $resTabela !== true){
                 fefi_nb_userCadastro INT DEFAULT NULL,
                 fefi_tx_dataCadastro DATETIME DEFAULT NULL,
                 UNIQUE KEY uk_feriado_funcionario_data_entidade (fefi_tx_data, fefi_nb_entidade)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
-        ");
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;"
+        );
     }
 }
 
 function index(){
+    ensureFeriadoFuncionarioSchema();
     verificaPermissao('/cadastro_feriado_cargo.php');
     cabecalho("Cadastro de Feriado por Cargo");
 
@@ -195,6 +209,7 @@ function limparFiltrosFeriadoCargo(){
 }
 
 function layout_feriado_cargo(){
+    ensureFeriadoFuncionarioSchema();
     global $a_mod;
 
     $isEdicao = !empty($_POST["nome"]) && !empty($_POST["data"]);
@@ -446,6 +461,7 @@ function layout_feriado_cargo(){
 }
 
 function salvarFeriadoCargo(){
+    ensureFeriadoFuncionarioSchema();
     $isEdicao = ($_POST["modo"] ?? "") === "editar";
 
     $camposObrig = [
@@ -554,6 +570,7 @@ function salvarFeriadoCargo(){
 }
 
 function editarFeriadoCargo(){
+    ensureFeriadoFuncionarioSchema();
     if(empty($_POST["nome"]) || empty($_POST["data"])){
         set_status("ERRO: Dados do feriado não identificados.");
         index();
@@ -564,6 +581,7 @@ function editarFeriadoCargo(){
 }
 
 function excluirGrupoFeriado(){
+    ensureFeriadoFuncionarioSchema();
     if(!empty($_POST["nome"]) && !empty($_POST["data"])){
         $nome = $_POST["nome"];
         $data = $_POST["data"];
@@ -580,6 +598,7 @@ function excluirGrupoFeriado(){
 }
 
 function excluirFeriadoCargo(){
+    ensureFeriadoFuncionarioSchema();
     if(!empty($_POST["id"])){
         remover("feriado_funcionario", $_POST["id"]);
         set_status("Feriado excluído com sucesso.");
