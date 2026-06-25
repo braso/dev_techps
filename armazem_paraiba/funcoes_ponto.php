@@ -1606,6 +1606,20 @@
 			$result = [implode(", ", $result)];
 		}
 
+		// Feriados específicos do funcionário (cadastrados por cargo)
+		$feriadosFuncionario = mysqli_fetch_all(query(
+			"SELECT fefi_tx_nome FROM feriado_funcionario
+				WHERE fefi_tx_status = 'ativo'
+					AND fefi_nb_entidade = '{$motorista["enti_nb_id"]}'
+					AND fefi_tx_data LIKE '{$data}%'
+				ORDER BY fefi_tx_nome ASC;"
+		), MYSQLI_ASSOC);
+		if(!empty($feriadosFuncionario)){
+			foreach($feriadosFuncionario as $f){
+				$result[] = $f["fefi_tx_nome"];
+			}
+		}
+
 		$ferias = mysqli_fetch_assoc(query(
 			"SELECT * FROM ferias
 				WHERE feri_tx_status = 'ativo'

@@ -170,10 +170,9 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="accordion" id="accordionExample">
             <!-- Accordion -->
             <div class="accordion-item">
-                <h2 class="title-section" class="accordion-header" id="headingOne">
-                    <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                <h2 class="accordion-header" id="headingOne">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                         data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
-
                         Ver Ponto registrado pelo colaborador <i class="fa-solid fa-arrow-down"></i>
                     </button>
                 </h2>
@@ -195,6 +194,34 @@ document.addEventListener('DOMContentLoaded', function() {
                             </tbody>
                         </table>
 
+                    </div>
+                </div>
+            </div>
+            <!-- Accordion Motoristas -->
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingMotoristas">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseMotoristas" aria-expanded="false" aria-controls="collapseMotoristas">
+                        Motoristas vinculados à placa no período <i class="fa-solid fa-arrow-down"></i>
+                    </button>
+                </h2>
+                <div id="collapseMotoristas" class="accordion-collapse collapse" aria-labelledby="headingMotoristas"
+                    data-bs-parent="#accordionExample">
+                    <div class="accordion-body">
+                        <table class="table table-striped table-bordered" id="tabelaMotoristasPeriodo">
+                            <thead>
+                                <tr>
+                                    <th>Placa</th>
+                                    <th>Motorista</th>
+                                    <th>Primeiro registro</th>
+                                    <th>Último registro</th>
+                                    <th>Tempo no veículo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="5" style="text-align:center">Consulte para exibir os motoristas</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -490,13 +517,58 @@ document.addEventListener('DOMContentLoaded', function() {
 
         .accordion-button {
             border: none;
-            background: none;
-            font-size: 24px;
+            background: #192942;
+            color: white;
+            font-size: 18px;
+            font-weight: 500;
+            text-transform: uppercase;
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
             flex-wrap: nowrap;
             flex-direction: row;
             width: 100%;
+            padding: 12px 20px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .accordion-button:hover {
+            background: #35A3BC;
+        }
+
+        .accordion-button.collapsed {
+            background: #192942;
+        }
+
+        .accordion-button .fa-arrow-down {
+            color: white;
+            padding: 6px;
+            background-color: #35A3BC;
+            border-radius: 50%;
+            font-size: 14px;
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+        }
+
+        .accordion-button:not(.collapsed) .fa-arrow-down {
+            transform: rotate(180deg);
+        }
+
+        .accordion-item {
+            border: none;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .accordion-header {
+            margin-bottom: 0 !important;
         }
 
         .title-section {
@@ -506,20 +578,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         .title-section button {
-            font-size: 24px;
+            font-size: 18px;
             font-weight: 500;
             text-transform: uppercase;
         }
-
-        .fa-arrow-down {
-            color: white;
-            padding: 10px;
-            background-color: #35A3BC;
-            border-radius: 50px;
-            font-size: 20px;
-        }
-
-
- 
-
-        </style>
