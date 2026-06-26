@@ -73,10 +73,6 @@
                 "/cadastro_perfil_acesso.php" 	=> "Perfil de Acesso",
                 "/cadastro_usuario_perfil.php" 	=> "Permisoes de usuarios",
                // "/cadastro_comunicado_interno.php" 	=> "Comunicado Interno",
-
-
-
-
             ],
 			"ponto" => [
 				"/batida_ponto.php"     => "Registrar Ponto",
