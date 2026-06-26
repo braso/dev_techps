@@ -65,6 +65,9 @@ function index(){
     if(!empty($_POST["busca_data"])){
         $filtros[] = "f.fefi_tx_data = '".mysqli_real_escape_string($GLOBALS['conn'], $_POST["busca_data"])."'";
     }
+    if(!empty($_POST["busca_empresa"])){
+        $filtros[] = "e.enti_nb_empresa = ".intval($_POST["busca_empresa"]);
+    }
     if(!empty($_POST["busca_cargo"])){
         $filtros[] = "e.enti_tx_tipoOperacao = ".intval($_POST["busca_cargo"]);
     }
@@ -77,6 +80,7 @@ function index(){
     $campos = [
         campo("Nome",     "busca_nome",     (empty($_POST["busca_nome"])? "": $_POST["busca_nome"]),     4, "", "maxlength='65'"),
         campo_data("Data",       "busca_data",     (empty($_POST["busca_data"])? "": $_POST["busca_data"]),     2),
+        combo_net("Empresa", "busca_empresa", (empty($_POST["busca_empresa"])? "": $_POST["busca_empresa"]), 3, "empresa", "", " AND empr_tx_status = 'ativo'"),
         combo_bd("Cargo",     "busca_cargo",    (empty($_POST["busca_cargo"])? "": $_POST["busca_cargo"]),    3, "operacao"),
         combo("Status",     "busca_status",   (empty($_POST["busca_status"])? "": $_POST["busca_status"]),   2, ["ativo" => "Ativo", "inativo" => "Inativo"])
     ];
@@ -98,13 +102,19 @@ function index(){
                 f.fefi_tx_data,
                 o.oper_tx_nome AS cargo,
                 e.enti_tx_tipoOperacao AS cargo_id,
+                emp.empr_tx_nome AS empresa,
+                e.enti_nb_empresa AS empresa_id,
+                para.para_tx_nome AS parametro,
+                e.enti_nb_parametro AS parametro_id,
                 GROUP_CONCAT(DISTINCT e.enti_tx_nome ORDER BY e.enti_tx_nome ASC SEPARATOR '||') AS funcionarios,
                 COUNT(*) AS total
             FROM feriado_funcionario f
             LEFT JOIN entidade e ON e.enti_nb_id = f.fefi_nb_entidade
             LEFT JOIN operacao o ON o.oper_nb_id = e.enti_tx_tipoOperacao
+            LEFT JOIN empresa emp ON emp.empr_nb_id = e.enti_nb_empresa
+            LEFT JOIN parametro para ON para.para_nb_id = e.enti_nb_parametro
             WHERE f.fefi_tx_status = 'ativo'" . $where . "
-            GROUP BY f.fefi_tx_nome, f.fefi_tx_data, o.oper_tx_nome, e.enti_tx_tipoOperacao
+            GROUP BY f.fefi_tx_nome, f.fefi_tx_data, o.oper_tx_nome, e.enti_tx_tipoOperacao, emp.empr_tx_nome, e.enti_nb_empresa, para.para_tx_nome, e.enti_nb_parametro
             ORDER BY f.fefi_tx_data DESC, f.fefi_tx_nome ASC";
     $res = query($sql);
     if($res !== false && $res !== true){
@@ -116,12 +126,14 @@ function index(){
     echo "<thead><tr>"
         ."<th>Nome</th>"
         ."<th>Data</th>"
+        ."<th>Empresa</th>"
+        ."<th>Parâmetro</th>"
         ."<th>Cargo</th>"
         ."<th>Funcionários</th>"
         ."<th style='text-align:center; width:120px'>Ações</th>"
         ."</tr></thead><tbody>";
     if(empty($grupos)){
-        echo "<tr><td colspan='5' style='text-align:center'>Nenhum registro encontrado</td></tr>";
+        echo "<tr><td colspan='7' style='text-align:center'>Nenhum registro encontrado</td></tr>";
     }else{
         foreach($grupos as $g){
             $dataFmt = date("d/m/Y", strtotime($g["fefi_tx_data"]));
@@ -137,6 +149,8 @@ function index(){
             echo "<tr>"
                 ."<td>".htmlspecialchars($g["fefi_tx_nome"])."</td>"
                 ."<td>".$dataFmt."</td>"
+                ."<td>".htmlspecialchars($g["empresa"] ?: "-")."</td>"
+                ."<td>".htmlspecialchars($g["parametro"] ?: "-")."</td>"
                 ."<td>".htmlspecialchars($g["cargo"] ?: "-")."</td>"
                 ."<td>".$funcionariosLabel."</td>"
                 ."<td style='text-align:center'>"
@@ -144,12 +158,16 @@ function index(){
                         .campo_hidden("nome", $g["fefi_tx_nome"])
                         .campo_hidden("data", $g["fefi_tx_data"])
                         .campo_hidden("cargo", $g["cargo_id"] ?? 0)
+                        .campo_hidden("empresa", $g["empresa_id"] ?? 0)
+                        .campo_hidden("parametro", $g["parametro_id"] ?? 0)
                         ."<button type='submit' name='acao' value='editarFeriadoCargo' class='btn btn-xs btn-primary' style='margin-right:4px'><i class='glyphicon glyphicon-search'></i></button>"
                     ."</form>"
                     ."<form method='post' style='display:inline'>"
                         .campo_hidden("nome", $g["fefi_tx_nome"])
                         .campo_hidden("data", $g["fefi_tx_data"])
                         .campo_hidden("cargo", $g["cargo_id"] ?? 0)
+                        .campo_hidden("empresa", $g["empresa_id"] ?? 0)
+                        .campo_hidden("parametro", $g["parametro_id"] ?? 0)
                         ."<button type='submit' name='acao' value='excluirGrupoFeriado' class='btn btn-xs btn-danger' onclick='return confirm(\"Deseja excluir este feriado de TODOS os funcionários deste cargo?\");'><i class='glyphicon glyphicon-remove'></i></button>"
                     ."</form>"
                 ."</td>"
@@ -201,6 +219,7 @@ function limparFiltrosFeriadoCargo(){
     unset(
         $_POST["busca_nome"],
         $_POST["busca_data"],
+        $_POST["busca_empresa"],
         $_POST["busca_cargo"],
         $_POST["busca_status"]
     );
@@ -219,11 +238,13 @@ function layout_feriado_cargo(){
 
     $nome = $_POST["nome"] ?? "";
     $data = $_POST["data"] ?? "";
+    $empresa = $_POST["empresa"] ?? "";
+    $parametro = $_POST["parametro"] ?? "";
     $cargo = $_POST["cargo"] ?? "";
 
     // Se está editando, carrega os funcionários já vinculados
     $selecionadosIds = [];
-    if($isEdicao && !empty($cargo)){
+    if($isEdicao && (!empty($cargo) || !empty($parametro))){
         $resSel = query(
             "SELECT fefi_nb_entidade FROM feriado_funcionario
              WHERE fefi_tx_status = 'ativo'
@@ -240,12 +261,21 @@ function layout_feriado_cargo(){
     }
 
     $funcionariosDisponiveis = [];
-    if(!empty($cargo)){
+    if(!empty($cargo) || !empty($parametro)){
+        $whereFunc = "enti_tx_status = 'ativo'";
+        if(!empty($empresa)){
+            $whereFunc .= " AND enti_nb_empresa = ".intval($empresa);
+        }
+        if(!empty($parametro)){
+            $whereFunc .= " AND enti_nb_parametro = ".intval($parametro);
+        }
+        if(!empty($cargo)){
+            $whereFunc .= " AND enti_tx_tipoOperacao = ".intval($cargo);
+        }
         $resFunc = query(
             "SELECT enti_nb_id, enti_tx_nome, enti_tx_matricula
              FROM entidade
-             WHERE enti_tx_status = 'ativo'
-               AND enti_tx_tipoOperacao = ".intval($cargo)."
+             WHERE {$whereFunc}
              ORDER BY enti_tx_nome ASC"
         );
         if($resFunc !== false && $resFunc !== true){
@@ -257,14 +287,17 @@ function layout_feriado_cargo(){
 
     $extraNome = "maxlength='65' required";
     $extraData = "required";
-    $extraCargo = "onchange='this.form.submit()' required";
+    $extraEmpresa = "onchange='this.form.submit()'";
+    $extraParametro = "onchange='this.form.submit()'";
+    $extraCargo = "onchange='this.form.submit()'";
 
     $campos = [];
     if($isEdicao){
         $extraNome .= " readonly";
         $extraData .= " readonly";
-        // Busca nome do cargo para exibir como campo readonly
+        // Busca nome do cargo e empresa para exibir como campo readonly
         $cargoNome = "";
+        $empresaNome = "";
         if(!empty($cargo)){
             $resCargo = query("SELECT oper_tx_nome FROM operacao WHERE oper_nb_id = ".intval($cargo)." LIMIT 1");
             if($resCargo !== false && $resCargo !== true){
@@ -272,21 +305,65 @@ function layout_feriado_cargo(){
                 $cargoNome = $rCargo["oper_tx_nome"] ?? "";
             }
         }
+        if(!empty($empresa)){
+            $resEmp = query("SELECT empr_tx_nome FROM empresa WHERE empr_nb_id = ".intval($empresa)." LIMIT 1");
+            if($resEmp !== false && $resEmp !== true){
+                $rEmp = mysqli_fetch_assoc($resEmp);
+                $empresaNome = $rEmp["empr_tx_nome"] ?? "";
+            }
+        }
         $campos = [
-            campo("Nome*", "nome", $nome, 4, "", $extraNome),
+            campo("Nome*", "nome", $nome, 3, "", $extraNome),
             campo_data("Data*", "data", $data, 2, "", $extraData),
-            campo("Cargo*", "cargo_view", $cargoNome, 3, "", "readonly"),
+            campo("Empresa", "empresa_view", $empresaNome, 3, "", "readonly"),
+            campo("Cargo", "cargo_view", $cargoNome, 3, "", "readonly"),
         ];
     }else{
-        // Select customizado com contagem de funcionários ativos por cargo
-        $cargosContagem = query("
+        // Select customizado de empresas
+        $optionsEmpresa = "<option value=''>Todas</option>";
+        $resEmpresas = query("SELECT empr_nb_id, empr_tx_nome FROM empresa WHERE empr_tx_status = 'ativo' ORDER BY empr_tx_nome ASC");
+        if($resEmpresas !== false && $resEmpresas !== true){
+            while($r = mysqli_fetch_assoc($resEmpresas)){
+                $selected = ($empresa == $r["empr_nb_id"]) ? " selected" : "";
+                $optionsEmpresa .= "<option value='" . intval($r["empr_nb_id"]) . "'" . $selected . ">" . htmlspecialchars($r["empr_tx_nome"]) . "</option>";
+            }
+        }
+
+        // Select customizado de parâmetros com contagem de funcionários ativos (filtrado por empresa)
+        $sqlParametros = "
+            SELECT p.para_nb_id, p.para_tx_nome, COUNT(e.enti_nb_id) AS total
+            FROM parametro p
+            LEFT JOIN entidade e ON e.enti_nb_parametro = p.para_nb_id AND e.enti_tx_status = 'ativo'";
+        if(!empty($empresa)){
+            $sqlParametros .= " AND e.enti_nb_empresa = ".intval($empresa);
+        }
+        $sqlParametros .= "
+            WHERE p.para_tx_status = 'ativo'
+            GROUP BY p.para_nb_id, p.para_tx_nome
+            ORDER BY p.para_tx_nome ASC";
+        $parametrosContagem = query($sqlParametros);
+        $optionsParametro = "<option value=''>Selecione</option>";
+        if($parametrosContagem !== false && $parametrosContagem !== true){
+            while($r = mysqli_fetch_assoc($parametrosContagem)){
+                $selected = ($parametro == $r["para_nb_id"]) ? " selected" : "";
+                $label = htmlspecialchars($r["para_tx_nome"]) . " (" . intval($r["total"]) . " pessoas)";
+                $optionsParametro .= "<option value='" . intval($r["para_nb_id"]) . "'" . $selected . ">" . $label . "</option>";
+            }
+        }
+
+        // Select customizado com contagem de funcionários ativos por cargo (filtrado por empresa)
+        $sqlCargos = "
             SELECT o.oper_nb_id, o.oper_tx_nome, COUNT(e.enti_nb_id) AS total
             FROM operacao o
-            LEFT JOIN entidade e ON e.enti_tx_tipoOperacao = o.oper_nb_id AND e.enti_tx_status = 'ativo'
+            LEFT JOIN entidade e ON e.enti_tx_tipoOperacao = o.oper_nb_id AND e.enti_tx_status = 'ativo'";
+        if(!empty($empresa)){
+            $sqlCargos .= " AND e.enti_nb_empresa = ".intval($empresa);
+        }
+        $sqlCargos .= "
             WHERE o.oper_tx_status = 'ativo'
             GROUP BY o.oper_nb_id, o.oper_tx_nome
-            ORDER BY o.oper_tx_nome ASC
-        ");
+            ORDER BY o.oper_tx_nome ASC";
+        $cargosContagem = query($sqlCargos);
         $optionsCargo = "<option value=''>Selecione</option>";
         if($cargosContagem !== false && $cargosContagem !== true){
             while($r = mysqli_fetch_assoc($cargosContagem)){
@@ -296,11 +373,23 @@ function layout_feriado_cargo(){
             }
         }
         $campos = [
-            campo("Nome*", "nome", $nome, 4, "", $extraNome),
+            campo("Nome*", "nome", $nome, 3, "", $extraNome),
             campo_data("Data*", "data", $data, 2, "", $extraData),
             "<div class='col-sm-3 margin-bottom-5 campo-fit-content'>
-                <label>Cargo*</label>
-                <select name='cargo' id='cargo' class='form-control input-sm campo-fit-content' onchange='this.form.submit()' required>
+                <label>Empresa</label>
+                <select name='empresa' id='empresa' class='form-control input-sm campo-fit-content' onchange='this.form.submit()'>
+                    " . $optionsEmpresa . "
+                </select>
+            </div>",
+            "<div class='col-sm-3 margin-bottom-5 campo-fit-content'>
+                <label>Parâmetro</label>
+                <select name='parametro' id='parametro' class='form-control input-sm campo-fit-content' onchange='this.form.submit()'>
+                    " . $optionsParametro . "
+                </select>
+            </div>",
+            "<div class='col-sm-3 margin-bottom-5 campo-fit-content'>
+                <label>Cargo</label>
+                <select name='cargo' id='cargo' class='form-control input-sm campo-fit-content' onchange='this.form.submit()'>
                     " . $optionsCargo . "
                 </select>
             </div>"
@@ -312,18 +401,26 @@ function layout_feriado_cargo(){
     if($isEdicao){
         echo campo_hidden("acao", "salvarFeriadoCargo");
         echo campo_hidden("modo", "editar");
-        echo campo_hidden("cargo", $cargo); // envia cargo mesmo com combo disabled
+        echo campo_hidden("empresa", $empresa);
+        echo campo_hidden("cargo", $cargo);
     } else {
-        echo campo_hidden("acao", "layout_feriado_cargo"); // recarrega form quando cargo muda
+        echo campo_hidden("acao", "layout_feriado_cargo"); // recarrega form quando filtros mudam
     }
     echo linha_form($campos);
 
     // Dual list com tabela (mais robusto que grid Bootstrap)
-    if(!empty($cargo)){
+    if(!empty($cargo) || !empty($parametro)){
         $totalDisponiveis = 0;
         $totalSelecionados = 0;
         foreach($funcionariosDisponiveis as $f){
             if(in_array(intval($f["enti_nb_id"]), $selecionadosIds)){ $totalSelecionados++; } else { $totalDisponiveis++; }
+        }
+
+        $dualListTitle = "Funcionários";
+        if(!empty($parametro)){
+            $dualListTitle = "Funcionários do parâmetro";
+        }elseif(!empty($cargo)){
+            $dualListTitle = "Funcionários do cargo";
         }
 
         echo "<style>
@@ -342,7 +439,7 @@ function layout_feriado_cargo(){
 
         echo "<div class='row'><div class='col-md-12' style='margin-top:20px'>"
             ."<div class='portlet light' style='padding:16px'>"
-                ."<div class='dual-title'><i class='glyphicon glyphicon-user' style='margin-right:6px'></i>Funcionários do cargo</div>"
+                ."<div class='dual-title'><i class='glyphicon glyphicon-user' style='margin-right:6px'></i>".$dualListTitle."</div>"
                 ."<table style='width:100%; border-collapse:collapse;'>"
                     ."<tr>"
                         ."<td style='width:42%; vertical-align:top; padding:5px;'>"
@@ -468,10 +565,6 @@ function salvarFeriadoCargo(){
         "nome" => "Nome",
         "data" => "Data",
     ];
-    // Na criação, cargo é obrigatório; na edição, vem via hidden
-    if(!$isEdicao){
-        $camposObrig["cargo"] = "Cargo";
-    }
 
     $errorMsg = conferirCamposObrig($camposObrig, $_POST);
     if(!empty($errorMsg)){
@@ -489,6 +582,8 @@ function salvarFeriadoCargo(){
 
     $nome = $_POST["nome"];
     $data = $_POST["data"];
+    $empresa = $_POST["empresa"] ?? "";
+    $parametro = $_POST["parametro"] ?? "";
     $cargo = $_POST["cargo"] ?? "";
 
     $inseridos = 0;
@@ -585,11 +680,28 @@ function excluirGrupoFeriado(){
     if(!empty($_POST["nome"]) && !empty($_POST["data"])){
         $nome = $_POST["nome"];
         $data = $_POST["data"];
+        $empresa = $_POST["empresa"] ?? "";
+        $cargo = $_POST["cargo"] ?? "";
+        
+        $where = "fefi_tx_nome = ? AND fefi_tx_data = ?";
+        $params = [$nome, $data];
+        $types = "ss";
+        
+        if(!empty($empresa)){
+            $where .= " AND fefi_nb_entidade IN (SELECT enti_nb_id FROM entidade WHERE enti_nb_empresa = ?)";
+            $params[] = intval($empresa);
+            $types .= "i";
+        }
+        if(!empty($cargo)){
+            $where .= " AND fefi_nb_entidade IN (SELECT enti_nb_id FROM entidade WHERE enti_tx_tipoOperacao = ?)";
+            $params[] = intval($cargo);
+            $types .= "i";
+        }
+        
         query(
-            "UPDATE feriado_funcionario SET fefi_tx_status = 'inativo'
-             WHERE fefi_tx_nome = ? AND fefi_tx_data = ?",
-            "ss",
-            [$nome, $data]
+            "UPDATE feriado_funcionario SET fefi_tx_status = 'inativo' WHERE " . $where,
+            $types,
+            $params
         );
         set_status("Feriado excluído de todos os funcionários com sucesso.");
     }
