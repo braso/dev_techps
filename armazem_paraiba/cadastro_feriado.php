@@ -239,7 +239,7 @@
             botao("Buscar", "index"),
             botao("Limpar Filtro", "limparFiltros"),
             botao("Inserir", "layout_feriado", "", "", "", "", "btn btn-success"),
-            botao("Feriado por Cargo", "redirFeriadoCargo", "", "", "", "", "btn btn-info")
+            botao("Feriado por CTT", "redirFeriadoCargo", "", "", "", "", "btn btn-info")
         ];
         
         echo abre_form();
