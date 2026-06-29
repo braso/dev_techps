@@ -1620,6 +1620,22 @@
 			}
 		}
 
+		// Feriados do parâmetro CCT (cadastrados no parâmetro do funcionário)
+		if(!empty($motorista["enti_nb_parametro"])){
+			$feriadosParametro = mysqli_fetch_all(query(
+				"SELECT feit_tx_titulo FROM feriado_parametro
+					WHERE feit_tx_status = 'ativo'
+						AND feit_nb_parametro = '{$motorista["enti_nb_parametro"]}'
+						AND feit_tx_data = '{$data}'
+					ORDER BY feit_tx_titulo ASC;"
+			), MYSQLI_ASSOC);
+			if(!empty($feriadosParametro)){
+				foreach($feriadosParametro as $f){
+					$result[] = $f["feit_tx_titulo"];
+				}
+			}
+		}
+
 		$ferias = mysqli_fetch_assoc(query(
 			"SELECT * FROM ferias
 				WHERE feri_tx_status = 'ativo'
