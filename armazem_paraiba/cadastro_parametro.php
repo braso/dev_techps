@@ -36,6 +36,30 @@
 		query("ALTER TABLE parametro ADD COLUMN para_tx_abonarFeriadoEscala ENUM('sim','nao') NOT NULL DEFAULT 'nao' COMMENT 'Abonar automaticamente feriados na escala'");
 	}
 
+	// Criação da tabela feriado_parametro se não existir
+	function ensureFeriadoParametroSchema(){
+		$exists = mysqli_fetch_assoc(query(
+			"SELECT 1 AS ok FROM information_schema.TABLES
+				WHERE TABLE_SCHEMA = (SELECT DATABASE())
+					AND TABLE_NAME = 'feriado_parametro'
+				LIMIT 1"
+		));
+		if(empty($exists)){
+			query(
+				"CREATE TABLE IF NOT EXISTS feriado_parametro (
+					feit_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+					feit_nb_parametro INT NOT NULL,
+					feit_tx_titulo VARCHAR(255) NOT NULL,
+					feit_tx_data DATE NOT NULL,
+					feit_tx_status VARCHAR(10) DEFAULT 'ativo',
+					feit_nb_userCadastro INT DEFAULT NULL,
+					feit_tx_dataCadastro DATETIME DEFAULT NULL,
+					KEY idx_parametro (feit_nb_parametro),
+					KEY idx_data (feit_tx_data)
+				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;"
+			);
+		}
+	}
 
 	function carregarJSFormParametro(){
 		global $a_mod;
@@ -146,6 +170,26 @@
 		document.form_download_arquivo.acao.value = acao;
 		document.form_download_arquivo.submit();
 	}
+
+				// Feriados CCT
+				document.addEventListener('DOMContentLoaded', function(){
+					var container = document.getElementById('containerFeriadosCCT');
+					if(!container) return;
+
+					document.getElementById('addFeriadoCCT').addEventListener('click', function(){
+						var div = document.createElement('div');
+						div.className = 'row-feriado-cct';
+						div.style.cssText = 'display:flex; gap:10px; align-items:center; margin-bottom:8px;';
+						div.innerHTML = '<div class=\"col-sm-4\"><label style=\"font-weight:normal;\">Título</label><input type=\"text\" name=\"feriado_titulo[]\" class=\"form-control input-sm\" maxlength=\"65\"></div><div class=\"col-sm-3\"><label style=\"font-weight:normal;\">Data</label><input type=\"date\" name=\"feriado_data[]\" class=\"form-control input-sm\"></div><div style=\"margin-top:22px;\"><button type=\"button\" class=\"btn btn-danger btn-sm remover-feriado\" title=\"Remover\">&times;</button></div>';
+						container.appendChild(div);
+					});
+
+					container.addEventListener('click', function(e){
+						if(e.target.classList.contains('remover-feriado')){
+							e.target.closest('.row-feriado-cct').remove();
+						}
+					});
+				});
 	</script>"
 		;
 
@@ -732,8 +776,50 @@
 			set_status("Registro inserido com sucesso.");
 		}
 
+		// Salva feriados CCT
+		salvarFeriadosParametro($_POST["id"]);
+
 		mostrarFormParametro();
 		exit;
+	}
+
+	function salvarFeriadosParametro($idParametro){
+		ensureFeriadoParametroSchema();
+		$idParametro = intval($idParametro);
+		if($idParametro <= 0) return;
+
+		$titulos = $_POST["feriado_titulo"] ?? [];
+		$datas = $_POST["feriado_data"] ?? [];
+		$ids = $_POST["feriado_id"] ?? [];
+
+		// Marca os existentes como inativo para depois reativar/inserir
+		query("UPDATE feriado_parametro SET feit_tx_status = 'inativo' WHERE feit_nb_parametro = {$idParametro}");
+
+		$count = 0;
+		for($i = 0; $i < count($titulos); $i++){
+			$titulo = trim($titulos[$i] ?? "");
+			$data = trim($datas[$i] ?? "");
+			if(empty($titulo) || empty($data)) continue;
+
+			$idReg = !empty($ids[$i]) ? intval($ids[$i]) : 0;
+			$dataCadastro = date("Y-m-d H:i:s");
+			$userCad = !empty($_SESSION["user_nb_id"]) ? intval($_SESSION["user_nb_id"]) : null;
+
+			if($idReg > 0){
+				query(
+					"UPDATE feriado_parametro SET feit_tx_titulo = ?, feit_tx_data = ?, feit_tx_status = 'ativo' WHERE feit_nb_id = ?",
+					"ssi",
+					[$titulo, $data, $idReg]
+				);
+			}else{
+				query(
+					"INSERT INTO feriado_parametro (feit_nb_parametro, feit_tx_titulo, feit_tx_data, feit_tx_status, feit_nb_userCadastro, feit_tx_dataCadastro) VALUES (?, ?, ?, 'ativo', ?, ?)",
+					"issis",
+					[$idParametro, $titulo, $data, $userCad, $dataCadastro]
+				);
+			}
+			$count++;
+		}
 	}
 
 	function mostrarFormParametro(){
@@ -931,6 +1017,52 @@
 		echo linha_form($campos[3]);
 		fieldset("Outros");
 		echo linha_form($campos[4]);
+
+		// Feriados CCT
+		ensureFeriadoParametroSchema();
+		$feriadosParametro = [];
+
+		// Se veio POST (ex: erro de validação), usa os dados do formulário para não perder
+		if(!empty($_POST["feriado_titulo"]) && is_array($_POST["feriado_titulo"])){
+			$postTitulos = $_POST["feriado_titulo"];
+			$postDatas = $_POST["feriado_data"] ?? [];
+			$postIds = $_POST["feriado_id"] ?? [];
+			foreach($postTitulos as $i => $titulo){
+				$titulo = trim($titulo);
+				$data = trim($postDatas[$i] ?? "");
+				if(empty($titulo) && empty($data)) continue;
+				$feriadosParametro[] = [
+					"feit_tx_titulo" => $titulo,
+					"feit_tx_data" => $data,
+					"feit_nb_id" => intval($postIds[$i] ?? 0),
+				];
+			}
+		}elseif(!empty($a_mod["para_nb_id"])){
+			$resFeriados = query(
+				"SELECT feit_nb_id, feit_tx_titulo, feit_tx_data FROM feriado_parametro
+					WHERE feit_nb_parametro = ".intval($a_mod["para_nb_id"])."
+						AND feit_tx_status = 'ativo'
+					ORDER BY feit_tx_data ASC"
+			);
+			if($resFeriados !== false && $resFeriados !== true){
+				$feriadosParametro = mysqli_fetch_all($resFeriados, MYSQLI_ASSOC);
+			}
+		}
+		fieldset("Feriados CCT");
+		echo "<div id='containerFeriadosCCT'>";
+		if(!empty($feriadosParametro)){
+			foreach($feriadosParametro as $idx => $f){
+				echo "<div class='row-feriado-cct' style='display:flex; gap:10px; align-items:center; margin-bottom:8px;'>"
+					. "<div class='col-sm-4'><label style='font-weight:normal;'>Título</label><input type='text' name='feriado_titulo[]' value='".htmlspecialchars($f["feit_tx_titulo"], ENT_QUOTES)."' class='form-control input-sm' maxlength='65'></div>"
+					. "<div class='col-sm-3'><label style='font-weight:normal;'>Data</label><input type='date' name='feriado_data[]' value='".(!empty($f["feit_tx_data"]) ? $f["feit_tx_data"] : "")."' class='form-control input-sm'></div>"
+					. "<input type='hidden' name='feriado_id[]' value='".intval($f["feit_nb_id"])."'>"
+					. "<div style='margin-top:22px;'><button type='button' class='btn btn-danger btn-sm remover-feriado' title='Remover'>&times;</button></div>"
+					. "</div>";
+			}
+		}
+		echo "</div>";
+		echo "<button type='button' id='addFeriadoCCT' class='btn btn-success btn-sm'>Adicionar Feriado CCT</button>";
+		echo "<br><br>";
 
 		if(!empty($a_mod["para_nb_userCadastro"])){
 			$a_userCadastro = carregar("user", $a_mod["para_nb_userCadastro"]);
