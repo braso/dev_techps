@@ -435,7 +435,19 @@
 							.$condBuscaMotorista.
 							" AND enti_nb_empresa IN (".implode(',', $idsEmpresa).")"
 							.$condCargoSetor.
-							" ORDER BY enti_tx_nome ASC"
+							" AND EXISTS (
+								SELECT 1 FROM user
+								JOIN usuario_perfil up ON up.user_nb_id = user.user_nb_id
+								JOIN perfil_menu_item pmi ON pmi.perfil_nb_id = up.perfil_nb_id
+								JOIN menu_item mi ON mi.menu_nb_id = pmi.menu_nb_id
+								WHERE user.user_nb_entidade = entidade.enti_nb_id
+								  AND user.user_tx_status = 'ativo'
+								  AND up.ativo = 1
+								  AND pmi.perm_ver = 1
+								  AND mi.menu_tx_ativo = 1
+								  AND mi.menu_tx_path = '/batida_ponto.php'
+							)
+							 ORDER BY enti_tx_nome ASC"
 						);
 						while($rowFuncionario = mysqli_fetch_assoc($funcionariosResult)){
 							$funcionariosOpcoes[$rowFuncionario['enti_nb_id']] = "[".$rowFuncionario['enti_tx_matricula']."] ".$rowFuncionario['enti_tx_nome'];
