@@ -1607,31 +1607,37 @@
 		}
 
 		// Feriados específicos do funcionário (cadastrados por cargo)
-		$feriadosFuncionario = mysqli_fetch_all(query(
+		$resFeriadosFuncionario = query(
 			"SELECT fefi_tx_nome FROM feriado_funcionario
 				WHERE fefi_tx_status = 'ativo'
 					AND fefi_nb_entidade = '{$motorista["enti_nb_id"]}'
 					AND fefi_tx_data LIKE '{$data}%'
 				ORDER BY fefi_tx_nome ASC;"
-		), MYSQLI_ASSOC);
-		if(!empty($feriadosFuncionario)){
-			foreach($feriadosFuncionario as $f){
-				$result[] = $f["fefi_tx_nome"];
+		);
+		if ($resFeriadosFuncionario && $resFeriadosFuncionario !== true) {
+			$feriadosFuncionario = mysqli_fetch_all($resFeriadosFuncionario, MYSQLI_ASSOC);
+			if(!empty($feriadosFuncionario)){
+				foreach($feriadosFuncionario as $f){
+					$result[] = $f["fefi_tx_nome"];
+				}
 			}
 		}
 
 		// Feriados do parâmetro CCT (cadastrados no parâmetro do funcionário)
 		if(!empty($motorista["enti_nb_parametro"])){
-			$feriadosParametro = mysqli_fetch_all(query(
+			$resFeriadosParametro = query(
 				"SELECT feit_tx_titulo FROM feriado_parametro
 					WHERE feit_tx_status = 'ativo'
 						AND feit_nb_parametro = '{$motorista["enti_nb_parametro"]}'
 						AND feit_tx_data = '{$data}'
 					ORDER BY feit_tx_titulo ASC;"
-			), MYSQLI_ASSOC);
-			if(!empty($feriadosParametro)){
-				foreach($feriadosParametro as $f){
-					$result[] = $f["feit_tx_titulo"];
+			);
+			if ($resFeriadosParametro && $resFeriadosParametro !== true) {
+				$feriadosParametro = mysqli_fetch_all($resFeriadosParametro, MYSQLI_ASSOC);
+				if(!empty($feriadosParametro)){
+					foreach($feriadosParametro as $f){
+						$result[] = $f["feit_tx_titulo"];
+					}
 				}
 			}
 		}

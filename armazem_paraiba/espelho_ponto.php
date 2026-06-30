@@ -276,6 +276,9 @@
 					$_POST["busca_periodo"] = $_POST["periodo_abono"];
 					unset($_POST["periodo_abono"]);
 				}
+				if(empty($_POST["busca_empresa"]) && !empty($_SESSION["user_nb_empresa"])){
+					$_POST["busca_empresa"] = $_SESSION["user_nb_empresa"];
+				}
 				$empresasSelecionadas = normalizarFiltroArray($_POST["busca_empresa"] ?? "");
 				$empresasIds = array_map('intval', $empresasSelecionadas);
 				$empresasIds = array_values(array_filter($empresasIds, function($v){ return $v > 0; }));
@@ -389,6 +392,9 @@
 				];
 
 			}else{
+				if(empty($_POST["busca_empresa"]) && !empty($_SESSION["user_nb_empresa"])){
+					$_POST["busca_empresa"] = $_SESSION["user_nb_empresa"];
+				}
 				$empresasSelecionadas = normalizarFiltroArray($_POST["busca_empresa"] ?? "");
 
 				$empresasOpcoes = [];

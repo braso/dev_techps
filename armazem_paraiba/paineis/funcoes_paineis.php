@@ -207,9 +207,15 @@ function criar_relatorio_saldo() {
 
 		foreach ($motoristas as $motorista) {
 
-			$admissao = new DateTime($motorista["enti_tx_admissao"]);
-			if($admissao->format("Y-m") > $dataMes->format("Y-m")){
-				continue;
+			if (!empty($motorista["enti_tx_admissao"]) && $motorista["enti_tx_admissao"] != "0000-00-00") {
+				try {
+					$admissao = new DateTime($motorista["enti_tx_admissao"]);
+					if ($admissao->format("Y-m") > $dataMes->format("Y-m")) {
+						continue;
+					}
+				} catch (Exception $e) {
+					// Ignora data inválida e assume ativo
+				}
 			}
 
 			//Status Endosso{
