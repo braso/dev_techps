@@ -1118,23 +1118,55 @@ HTML;
                     $empresasFiltroIds = array_values(array_unique(array_filter(array_map('intval', explode(',', (string)$_POST["empresa"])), function($v){ return $v > 0; })));
                 }
 
-                if(is_dir($path) && is_file($path."/empresas.json")){
-                    $arquivoGeral = $path."/empresas.json";
-
-                    $dataArquivo = date("d/m/Y", filemtime($arquivoGeral));
+                $arquivoGeralPath = $path."/empresas.json";
+                $temJsonEmpresas = false;
+                if(is_dir($path)){
+                    $pastas = glob($path."/*", GLOB_ONLYDIR);
+                    foreach($pastas as $p){
+                        if(count(glob($p."/empresa_*.json")) > 0){
+                            $temJsonEmpresas = true;
+                            break;
+                        }
+                    }
+                }
+                if(is_dir($path) && (is_file($arquivoGeralPath) || $temJsonEmpresas)){
+                    $mtimeGeral = is_file($arquivoGeralPath) ? filemtime($arquivoGeralPath) : time();
+                    $dataArquivo = date("d/m/Y", $mtimeGeral);
                     if($dataArquivo != date("d/m/Y")){
                         $alertaEmissao = "<i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
                     } else {
                         $alertaEmissao = "";
                     }
 
-                    $dataEmissao = $alertaEmissao ." Atualizado em: ".date("d/m/Y H:i", filemtime($arquivoGeral));
-                    $arquivoGeral = json_decode(file_get_contents($arquivoGeral), true);
-
-                    $periodoRelatorio = [
-                        "dataInicio" => $arquivoGeral["dataInicio"],
-                        "dataFim" => $arquivoGeral["dataFim"]
-                    ];
+                    $dataEmissao = $alertaEmissao ." Atualizado em: ".date("d/m/Y H:i", $mtimeGeral);
+                    
+                    if(is_file($arquivoGeralPath)){
+                        $arquivoGeral = json_decode(file_get_contents($arquivoGeralPath), true);
+                        $periodoRelatorio = [
+                            "dataInicio" => $arquivoGeral["dataInicio"],
+                            "dataFim" => $arquivoGeral["dataFim"]
+                        ];
+                    } else {
+                        // Fallback: busca datas de qualquer empresa_*.json
+                        $periodoRelatorio = [
+                            "dataInicio" => $dataMes->format("Y-m-01"),
+                            "dataFim" => $dataFim->format("Y-m-d")
+                        ];
+                        $pastas = glob($path."/*", GLOB_ONLYDIR);
+                        foreach($pastas as $p){
+                            $arquivosEmpresas = glob($p."/empresa_*.json");
+                            if(!empty($arquivosEmpresas)){
+                                $empJson = json_decode(file_get_contents($arquivosEmpresas[0]), true);
+                                if(!empty($empJson["dataInicio"]) && !empty($empJson["dataFim"])){
+                                    $periodoRelatorio = [
+                                        "dataInicio" => $empJson["dataInicio"],
+                                        "dataFim" => $empJson["dataFim"]
+                                    ];
+                                    break;
+                                }
+                            }
+                        }
+                    }
                     $periodoRelatorio["dataInicio"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataInicio"])->format("d/m");
                     $periodoRelatorio["dataFim"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataFim"])->format("d/m");
 

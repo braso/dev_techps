@@ -394,11 +394,29 @@ function criar_relatorio_saldo() {
 		file_put_contents($path."/empresa_".$empresa["empr_nb_id"].".json", json_encode($empresa));
 	}
 
+	$pathGeral = "./arquivos/saldos"."/".$dataMes->format("Y-m");
 	if (empty($_POST["empresa"])) {
-		$path = "./arquivos/saldos"."/".$dataMes->format("Y-m");
 		$totaisEmpresas["dataInicio"] = $dataMes->format("Y-m-d");
 		$totaisEmpresas["dataFim"] = $dataFim->format("Y-m-d");
-		file_put_contents($path."/empresas.json", json_encode($totaisEmpresas));
+		file_put_contents($pathGeral."/empresas.json", json_encode($totaisEmpresas));
+	} else {
+		if (!file_exists($pathGeral."/empresas.json")) {
+			$totaisEmpresas = [
+				"dataInicio" => $dataMes->format("Y-m-d"),
+				"dataFim" => $dataFim->format("Y-m-d"),
+				"jornadaPrevista" => "00:00",
+				"jornadaEfetiva" => "00:00",
+				"HESemanal" => "00:00",
+				"HESabado" => "00:00",
+				"adicionalNoturno" => "00:00",
+				"esperaIndenizada" => "00:00",
+				"saldoAnterior" => "00:00",
+				"saldoPeriodo" => "00:00",
+				"saldoFinal" => "00:00",
+				"qtdMotoristas" => 0
+			];
+			file_put_contents($pathGeral."/empresas.json", json_encode($totaisEmpresas));
+		}
 	}
 	return;
 }
@@ -631,11 +649,19 @@ function criar_relatorio_endosso() {
 		file_put_contents($path."/empresa_".$empresa["empr_nb_id"].".json", json_encode($empresa));
 	}
 
+	$pathGeral = "./arquivos/endossos"."/".$mes->format("Y-m");
 	if (empty($_POST["empresa"])) {
-		$path = "./arquivos/endossos"."/".$mes->format("Y-m");
 		$totaisEmpresas["dataInicio"] = $mes->format("01/m/Y");
 		$totaisEmpresas["dataFim"] = $mes->format("t/m/Y");
-		file_put_contents($path."/empresas.json", json_encode($totaisEmpresas));
+		file_put_contents($pathGeral."/empresas.json", json_encode($totaisEmpresas));
+	} else {
+		if (!file_exists($pathGeral."/empresas.json")) {
+			$totaisEmpresas = [
+				"dataInicio" => $mes->format("01/m/Y"),
+				"dataFim" => $mes->format("t/m/Y")
+			];
+			file_put_contents($pathGeral."/empresas.json", json_encode($totaisEmpresas));
+		}
 	}
 
 	return;
@@ -1733,11 +1759,19 @@ function criar_relatorio_ajustes() {
 		}
 	}
 
+	$pathGeral = "./arquivos/ajustes"."/".$periodoInicio->format("Y-m");
 	if (empty($_POST["empresa"])) {
-		$path = "./arquivos/ajustes"."/".$periodoInicio->format("Y-m");
 		$totaisEmpresa["dataInicio"] = $periodoInicio->format("d/m/Y");
 		$totaisEmpresa["dataFim"] = $periodoFim->format("d/m/Y");
-		file_put_contents($path."/empresas.json", json_encode($totaisEmpresa));
+		file_put_contents($pathGeral."/empresas.json", json_encode($totaisEmpresa));
+	} else {
+		if (!file_exists($pathGeral."/empresas.json")) {
+			$totaisEmpresa = [
+				"dataInicio" => $periodoInicio->format("d/m/Y"),
+				"dataFim" => $periodoFim->format("d/m/Y")
+			];
+			file_put_contents($pathGeral."/empresas.json", json_encode($totaisEmpresa));
+		}
 	}
 
 	return;
