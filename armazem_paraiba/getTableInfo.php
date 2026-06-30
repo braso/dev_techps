@@ -128,6 +128,46 @@ if (!empty($queryResult)) {
                 }
             }
 
+            if (($key === 'ss_e_db_valor_unitario' || $key === 'ss_e_db_valor_total') && $data !== null && $data !== '') {
+                $data = 'R$ ' . number_format((float)$data, 2, ',', '.');
+            }
+
+            if ($key === 'ss_e_tx_tipo') {
+                switch ($data) {
+                    case 'entrada':
+                        $data = '<span class="label label-success">Entrada</span>';
+                        break;
+                    case 'saida':
+                        $data = '<span class="label label-danger">Saída</span>';
+                        break;
+                }
+            }
+
+            if ($key === 'ss_e_tx_foto') {
+                if ($data !== null && $data !== '') {
+                    $data = '<a href="' . $_ENV["APP_PATH"] . '/' . htmlspecialchars($data) . '" target="_blank" class="btn btn-xs btn-default" style="padding: 2px 5px;"><i class="fa fa-picture-o"></i> Ver Foto</a>';
+                } else {
+                    $data = '<span class="text-muted">-</span>';
+                }
+            }
+
+            if ($key === 'ss_e_tx_status') {
+                switch ($data) {
+                    case 'ativo':
+                        $data = '<span class="label label-success">Entregue/Ativo</span>';
+                        break;
+                    case 'substituido':
+                        $data = '<span class="label label-warning">Substituído</span>';
+                        break;
+                    case 'devolvido':
+                        $data = '<span class="label label-info">Devolvido</span>';
+                        break;
+                    case 'perdido':
+                        $data = '<span class="label label-danger">Perdido/Extraviado</span>';
+                        break;
+                }
+            }
+
             $tabelaRow[$key] = $data;
         }
 

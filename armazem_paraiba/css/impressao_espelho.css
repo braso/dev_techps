@@ -139,9 +139,15 @@ table.espelho-cabecalho-info {
     /* --- SEUS ESTILOS ESPECÍFICOS E MELHORIAS --- */
     
     .portlet {
-        page-break-inside: avoid;
+        page-break-inside: auto !important;
+        break-inside: auto !important;
         border: none !important;
         box-shadow: none !important;
+    }
+
+    .conteudo-impressao tr {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
     }
     
     /* Oculta elementos desnecessários na impressão */

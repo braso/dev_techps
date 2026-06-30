@@ -159,8 +159,32 @@
         }
     }
 
+    // Criação da tabela feriado_funcionario se não existir
+    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS feriado_funcionario (
+        fefi_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        fefi_tx_nome VARCHAR(255) NOT NULL,
+        fefi_tx_data DATE NOT NULL,
+        fefi_nb_entidade INT NOT NULL,
+        fefi_tx_status VARCHAR(10) DEFAULT 'ativo',
+        fefi_nb_userCadastro INT DEFAULT NULL,
+        fefi_tx_dataCadastro DATETIME DEFAULT NULL,
+        UNIQUE KEY uk_feriado_funcionario_data_entidade (fefi_tx_data, fefi_nb_entidade)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;");
 
+    // Criação da tabela feriado_parametro se não existir
+    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS feriado_parametro (
+        feit_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        feit_nb_parametro INT NOT NULL,
+        feit_tx_titulo VARCHAR(255) NOT NULL,
+        feit_tx_data DATE NOT NULL,
+        feit_tx_status VARCHAR(10) DEFAULT 'ativo',
+        feit_nb_userCadastro INT DEFAULT NULL,
+        feit_tx_dataCadastro DATETIME DEFAULT NULL,
+        KEY idx_parametro (feit_nb_parametro),
+        KEY idx_data (feit_tx_data)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;");
 
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_grid.php";
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes.php";
+
