@@ -1042,9 +1042,21 @@ HTML;
             $path .= "/".$_POST["busca_data"];
 
             
-            if(is_dir($path) && file_exists($path."/empresas.json")){
-                $dataArquivo = date("d/m/Y H:i", filemtime($path . "/empresas.json"));
-                $horaArquivo = date("H:i", filemtime($path . "/empresas.json"));
+            $arquivoGeralPath = $path."/empresas.json";
+            $temJsonEmpresas = false;
+            if(is_dir($path)){
+                $pastas = glob($path."/*", GLOB_ONLYDIR);
+                foreach($pastas as $p){
+                    if(count(glob($p."/empresa_*.json")) > 0){
+                        $temJsonEmpresas = true;
+                        break;
+                    }
+                }
+            }
+            if(is_dir($path) && (file_exists($arquivoGeralPath) || $temJsonEmpresas)){
+                $mtimeGeral = file_exists($arquivoGeralPath) ? filemtime($arquivoGeralPath) : time();
+                $dataArquivo = date("d/m/Y H:i", $mtimeGeral);
+                $horaArquivo = date("H:i", $mtimeGeral);
 
                 $dataAtual = date("d/m/Y");
                 $horaAtual = date("H:i");
@@ -1053,13 +1065,32 @@ HTML;
                     <i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
                 } else {
                     $alertaEmissao = "<span>";
-                    $alertaEmissao = "<span>";
                 }
-                $dataEmissao = $alertaEmissao." Atualizado em: ".date("d/m/Y H:i", filemtime($path."/empresas.json"))."</span>"; //Utilizado no HTML.
-                $arquivoGeral = json_decode(file_get_contents($path."/empresas.json"), true);
-
-                $dtIni = DateTime::createFromFormat("d/m/Y", $arquivoGeral["dataInicio"]);
-                $dtFim = DateTime::createFromFormat("d/m/Y", $arquivoGeral["dataFim"]);
+                $dataEmissao = $alertaEmissao." Atualizado em: ".date("d/m/Y H:i", $mtimeGeral)."</span>"; //Utilizado no HTML.
+                
+                if(file_exists($arquivoGeralPath)){
+                    $arquivoGeral = json_decode(file_get_contents($arquivoGeralPath), true);
+                    $dtIni = DateTime::createFromFormat("d/m/Y", $arquivoGeral["dataInicio"]);
+                    $dtFim = DateTime::createFromFormat("d/m/Y", $arquivoGeral["dataFim"]);
+                } else {
+                    // Fallback se empresas.json não existir
+                    $dataInicioFallback = $dataMes->format("01/m/Y");
+                    $dataFimFallback = $dataFim->format("d/m/Y");
+                    $pastas = glob($path."/*", GLOB_ONLYDIR);
+                    foreach($pastas as $p){
+                        $arquivosEmpresas = glob($p."/empresa_*.json");
+                        if(!empty($arquivosEmpresas)){
+                            $empJson = json_decode(file_get_contents($arquivosEmpresas[0]), true);
+                            if(!empty($empJson["dataInicio"]) && !empty($empJson["dataFim"])){
+                                $dataInicioFallback = $empJson["dataInicio"];
+                                $dataFimFallback = $empJson["dataFim"];
+                                break;
+                            }
+                        }
+                    }
+                    $dtIni = DateTime::createFromFormat("d/m/Y", $dataInicioFallback);
+                    $dtFim = DateTime::createFromFormat("d/m/Y", $dataFimFallback);
+                }
                 $periodoRelatorio = [
                     "dataInicio" => $dtIni ? $dtIni->format("d/m") : "",
                     "dataFim" => $dtFim ? $dtFim->format("d/m") : ""
@@ -1076,10 +1107,6 @@ HTML;
                         $arquivos[] = $arquivo;
                         $json = json_decode(file_get_contents($arquivo), true);
                         foreach($totais as $key => $value){
-                            $totais[$key] = operarHorarios([
-                                !empty($totais[$key]) ? $totais[$key] : "00:00",
-                                !empty($json["totais"][$key]) ? $json["totais"][$key] : "00:00"
-                            ], "+");
                             $totais[$key] = operarHorarios([
                                 !empty($totais[$key]) ? $totais[$key] : "00:00",
                                 !empty($json["totais"][$key]) ? $json["totais"][$key] : "00:00"
@@ -1293,7 +1320,6 @@ HTML;
                 $totais["saldoFinal"] = ($totais["saldoFinal"] == "00:00")? "": $totais["saldoFinal"];
 
                 $rowTotais .= <<<EOD
-                    <th colspan='1'></th>
                     <th colspan='1'></th>
                     <th colspan='1'></th>
                     <th colspan='1'></th>

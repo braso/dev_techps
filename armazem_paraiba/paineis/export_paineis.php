@@ -209,9 +209,21 @@ function gerarPainelEndosso() {
 
         $path .= "/" . $_POST["busca_data"];
 
-        if (is_dir($path) && is_file($path . "/empresas.json")) {
-            $dataArquivo = date("d/m/Y H:i", filemtime($path . "/empresas.json"));
-            $horaArquivo = date("H:i", filemtime($path . "/empresas.json"));
+        $arquivoGeralPath = $path . "/empresas.json";
+        $temJsonEmpresas = false;
+        if (is_dir($path)) {
+            $pastas = glob($path . "/*", GLOB_ONLYDIR);
+            foreach ($pastas as $p) {
+                if (count(glob($p . "/empresa_*.json")) > 0) {
+                    $temJsonEmpresas = true;
+                    break;
+                }
+            }
+        }
+        if (is_dir($path) && (is_file($arquivoGeralPath) || $temJsonEmpresas)) {
+            $mtimeGeral = is_file($arquivoGeralPath) ? filemtime($arquivoGeralPath) : time();
+            $dataArquivo = date("d/m/Y H:i", $mtimeGeral);
+            $horaArquivo = date("H:i", $mtimeGeral);
 
             $dataAtual = date("d/m/Y");
             $horaAtual = date("H:i");
@@ -221,15 +233,42 @@ function gerarPainelEndosso() {
             } else {
                 $alertaEmissao = "<span>";
             }
-            $dataEmissao = $alertaEmissao . " Atualizado em: " . date("d/m/Y H:i", filemtime($path . "/empresas.json")) . "</span>"; //Utilizado no HTML.
-            $arquivoGeral = json_decode(file_get_contents($path . "/empresas.json"), true);
-
+            $dataEmissao = $alertaEmissao . " Atualizado em: " . date("d/m/Y H:i", $mtimeGeral) . "</span>"; //Utilizado no HTML.
+            
+            if (is_file($arquivoGeralPath)) {
+                $arquivoGeral = json_decode(file_get_contents($arquivoGeralPath), true);
+                $dtIni = DateTime::createFromFormat("d/m/Y", $arquivoGeral["dataInicio"]);
+                $dtFim = DateTime::createFromFormat("d/m/Y", $arquivoGeral["dataFim"]);
+            } else {
+                // Fallback se empresas.json não existir (Endosso usa d/m/Y)
+                $dataInicioFallback = date("01/m/Y");
+                $dataFimFallback = date("t/m/Y");
+                if (!empty($_POST["busca_data"])) {
+                    $mesTmp = DateTime::createFromFormat("Y-m-d H:i:s", $_POST["busca_data"]."-01 00:00:00");
+                    if ($mesTmp) {
+                        $dataInicioFallback = $mesTmp->format("01/m/Y");
+                        $dataFimFallback = $mesTmp->format("t/m/Y");
+                    }
+                }
+                $pastas = glob($path . "/*", GLOB_ONLYDIR);
+                foreach ($pastas as $p) {
+                    $arquivosEmpresas = glob($p . "/empresa_*.json");
+                    if (!empty($arquivosEmpresas)) {
+                        $empJson = json_decode(file_get_contents($arquivosEmpresas[0]), true);
+                        if (!empty($empJson["dataInicio"]) && !empty($empJson["dataFim"])) {
+                            $dataInicioFallback = $empJson["dataInicio"];
+                            $dataFimFallback = $empJson["dataFim"];
+                            break;
+                        }
+                    }
+                }
+                $dtIni = DateTime::createFromFormat("d/m/Y", $dataInicioFallback);
+                $dtFim = DateTime::createFromFormat("d/m/Y", $dataFimFallback);
+            }
             $periodoRelatorio = [
-                "dataInicio" => $arquivoGeral["dataInicio"],
-                "dataFim" => $arquivoGeral["dataFim"]
+                "dataInicio" => $dtIni ? $dtIni->format("d/m") : "",
+                "dataFim" => $dtFim ? $dtFim->format("d/m") : ""
             ];
-            $periodoRelatorio["dataInicio"] = DateTime::createFromFormat("d/m/Y", $periodoRelatorio["dataInicio"])->format("d/m");
-            $periodoRelatorio["dataFim"] = DateTime::createFromFormat("d/m/Y", $periodoRelatorio["dataFim"])->format("d/m");
 
             $pastaEndossos = dir($path);
             while ($arquivo = $pastaEndossos->read()) {
@@ -600,34 +639,67 @@ function gerarPainelSaldo() {
         $aEmpresa = $_ENV["APP_PATH"] . $_ENV["CONTEX_PATH"] . "/" . $aEmpresa;
 
 
-        if (is_dir($path) && is_file($path . "/empresas.json")) {
+        $arquivoGeralPath = $path . "/empresas.json";
+        $temJsonEmpresas = false;
+        if (is_dir($path)) {
+            $pastas = glob($path . "/*", GLOB_ONLYDIR);
+            foreach ($pastas as $p) {
+                if (count(glob($p . "/empresa_*.json")) > 0) {
+                    $temJsonEmpresas = true;
+                    break;
+                }
+            }
+        }
+        if (is_dir($path) && (is_file($arquivoGeralPath) || $temJsonEmpresas)) {
             $encontrado = true;
-            $arquivoGeral = $path . "/empresas.json";
-
-            $dataArquivo = date("d/m/Y", filemtime($arquivoGeral));
-            $horaArquivo = date("H:i", filemtime($arquivoGeral));
+            $mtimeGeral = is_file($arquivoGeralPath) ? filemtime($arquivoGeralPath) : time();
+            $dataArquivo = date("d/m/Y", $mtimeGeral);
+            $horaArquivo = date("H:i", $mtimeGeral);
 
             $dataAtual = date("d/m/Y");
             $horaAtual = date("H:i");
             if ($dataArquivo != $dataAtual) {
                 $alertaEmissao = "<i style='color:red;' title='As informações do painel não correspondem à data de hoje.' class='fa fa-warning'></i>";
             } else {
-                // Datas iguais: compara as horas
-                // if ($horaArquivo < $horaAtual) {
-                //     $alertaEmissao = "<i style='color:red;' title='As informações do painel podem estar desatualizadas.' class='fa fa-warning'></i>";
-                // } else {
                 $alertaEmissao = "";
-                // }
             }
 
-            $dataEmissao = $alertaEmissao . " Atualizado em: " . date("d/m/Y H:i", filemtime($arquivoGeral)); //Utilizado no HTML.
-            $arquivoGeral = json_decode(file_get_contents($arquivoGeral), true);
-
-            $periodoRelatorio = [
-                "dataInicio" => $arquivoGeral["dataInicio"],
-                "dataFim" => $arquivoGeral["dataFim"]
-            ];
-
+            $dataEmissao = $alertaEmissao . " Atualizado em: " . date("d/m/Y H:i", $mtimeGeral); //Utilizado no HTML.
+            
+            if (is_file($arquivoGeralPath)) {
+                $arquivoGeral = json_decode(file_get_contents($arquivoGeralPath), true);
+                $periodoRelatorio = [
+                    "dataInicio" => $arquivoGeral["dataInicio"],
+                    "dataFim" => $arquivoGeral["dataFim"]
+                ];
+            } else {
+                // Fallback (Saldo usa Y-m-d)
+                $dataInicioFallback = date("Y-m-01");
+                $dataFimFallback = date("Y-m-d");
+                if (!empty($_POST["busca_data"])) {
+                    $mesTmp = DateTime::createFromFormat("Y-m-d H:i:s", $_POST["busca_data"]."-01 00:00:00");
+                    if ($mesTmp) {
+                        $dataInicioFallback = $mesTmp->format("Y-m-01");
+                        $dataFimFallback = (date("Y-m-d") < $mesTmp->format("Y-m-t") ? date("Y-m-d") : $mesTmp->format("Y-m-t"));
+                    }
+                }
+                $pastas = glob($path . "/*", GLOB_ONLYDIR);
+                foreach ($pastas as $p) {
+                    $arquivosEmpresas = glob($p . "/empresa_*.json");
+                    if (!empty($arquivosEmpresas)) {
+                        $empJson = json_decode(file_get_contents($arquivosEmpresas[0]), true);
+                        if (!empty($empJson["dataInicio"]) && !empty($empJson["dataFim"])) {
+                            $dataInicioFallback = $empJson["dataInicio"];
+                            $dataFimFallback = $empJson["dataFim"];
+                            break;
+                        }
+                    }
+                }
+                $periodoRelatorio = [
+                    "dataInicio" => $dataInicioFallback,
+                    "dataFim" => $dataFimFallback
+                ];
+            }
             $periodoRelatorio["dataInicio"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataInicio"])->format("d/m");
             $periodoRelatorio["dataFim"] = DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataFim"])->format("d/m");
 
