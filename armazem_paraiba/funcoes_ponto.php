@@ -1265,30 +1265,35 @@
 							}
 
 							if($proximoDiaEscalado){
-								$horasPosMeiaNoite = "00:00";
-								$meiaNoite = strtotime($dataProximoDia . " 00:00:00");
-								
-								if(!empty($registros["jornadaCompleto"]["pares"])){
-									foreach($registros["jornadaCompleto"]["pares"] as $par){
-										if(empty($par["inicio"]) || empty($par["fim"])) continue;
-										
-										$inicioTs = strtotime($par["inicio"]);
-										$fimTs = strtotime($par["fim"]);
-										
-										if($fimTs > $meiaNoite){
-											$inicioEfetivo = max($inicioTs, $meiaNoite);
-											$diffSegundos = $fimTs - $inicioEfetivo;
-											
-											if($diffSegundos > 0){
-												$horas = floor($diffSegundos / 3600);
-												$minutos = floor(($diffSegundos % 3600) / 60);
-												$tempoPar = sprintf("%02d:%02d", $horas, $minutos);
-												$horasPosMeiaNoite = operarHorarios([$horasPosMeiaNoite, $tempoPar], "+");
-											}
+								// Calcula o tempo bruto de jornada após a meia-noite
+								$horasPosMeiaNoite = calcularTempoAposMeiaNoite($registros["jornadaCompleto"]["pares"] ?? [], $dataProximoDia);
+
+								// Calcula os intervalos não remunerados após a meia-noite para descontar da jornada efetiva
+								$intervalosPosMeiaNoite = calcularTempoAposMeiaNoite($registros["refeicaoCompleto"]["pares"] ?? [], $dataProximoDia);
+
+								if(!empty($motorista["enti_nb_parametro"]) && !empty($motorista["para_tx_ignorarCampos"])){
+									$campos = ["espera", "descanso", "repouso"];
+									foreach($campos as $campo){
+										if(is_bool(strpos($motorista["para_tx_ignorarCampos"], $campo))){
+											$intervalosPosMeiaNoite = operarHorarios([$intervalosPosMeiaNoite, calcularTempoAposMeiaNoite($registros[$campo."Completo"]["pares"] ?? [], $dataProximoDia)], "+");
 										}
 									}
+								}else{
+									if($motorista["para_tx_adi5322"] == "nao"){
+										$intervalosPosMeiaNoite = operarHorarios([$intervalosPosMeiaNoite, calcularTempoAposMeiaNoite($registros["esperaCompleto"]["pares"] ?? [], $dataProximoDia)], "+");
+									}
+									$intervalosPosMeiaNoite = operarHorarios([$intervalosPosMeiaNoite, calcularTempoAposMeiaNoite($registros["descansoCompleto"]["pares"] ?? [], $dataProximoDia)], "+");
+									$intervalosPosMeiaNoite = operarHorarios([$intervalosPosMeiaNoite, calcularTempoAposMeiaNoite($registros["repousoCompleto"]["pares"] ?? [], $dataProximoDia)], "+");
 								}
-								
+
+								// Horas efetivas após a meia-noite (descontados os intervalos)
+								$horasPosMeiaNoite = operarHorarios([$horasPosMeiaNoite, $intervalosPosMeiaNoite], "-");
+
+								// Garante que não fique negativo nem maior que o saldo
+								if($horasPosMeiaNoite[0] == "-"){
+									$horasPosMeiaNoite = "00:00";
+								}
+
 								// Ajusta HE100 e HE50
 								$aRetorno["he100"] = operarHorarios([$aRetorno["diffSaldo"], $horasPosMeiaNoite], "-");
 								$aRetorno["he50"] = $horasPosMeiaNoite;
@@ -1832,6 +1837,37 @@
 		}
 
 		return $horarios;
+	}
+
+	function calcularTempoAposMeiaNoite(array $pares, string $dataProximoDia): string{
+		$meiaNoite = strtotime($dataProximoDia . " 00:00:00");
+		$totalSegundos = 0;
+
+		if(empty($pares)){
+			return "00:00";
+		}
+
+		foreach($pares as $par){
+			if(empty($par["inicio"]) || empty($par["fim"])){
+				continue;
+			}
+
+			$inicioTs = strtotime($par["inicio"]);
+			$fimTs = strtotime($par["fim"]);
+
+			if($fimTs > $meiaNoite){
+				$inicioEfetivo = max($inicioTs, $meiaNoite);
+				$diffSegundos = $fimTs - $inicioEfetivo;
+
+				if($diffSegundos > 0){
+					$totalSegundos += $diffSegundos;
+				}
+			}
+		}
+
+		$horas = floor($totalSegundos / 3600);
+		$minutos = floor(($totalSegundos % 3600) / 60);
+		return sprintf("%02d:%02d", $horas, $minutos);
 	}
 
 	function organizarIntervalos(string $data, array $inicios, array $fins): array{
