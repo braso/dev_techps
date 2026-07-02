@@ -720,6 +720,9 @@ JS;
 							if($day >= $startDate && $day <= $endDate){
 								// Não aplicar tolerância aqui - os dados do endosso já foram processados
 								$diasEndossados++;
+								// Remove colunas de escala que não têm cabeçalho no espelho de ponto
+								if(isset($row["inicioEscala"])) unset($row["inicioEscala"]);
+								if(isset($row["fimEscala"])) unset($row["fimEscala"]);
 								$rows[] = $row;
 							}
 						}

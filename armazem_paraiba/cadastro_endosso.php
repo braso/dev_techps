@@ -449,6 +449,11 @@ function cadastrar(){
 
 					
 					$row = array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $dataVez, $motorista["enti_nb_id"])], $aDetalhado);
+
+					// Remove colunas de escala que não têm cabeçalho na tabela de endosso
+					if(isset($row["inicioEscala"])) unset($row["inicioEscala"]);
+					if(isset($row["fimEscala"])) unset($row["fimEscala"]);
+
 					if($motorista["para_tx_descFaltas"] == "sim" && strpos($row["inicioJornada"], "Batida início de jornada não registrada!")){
 						$descFaltasNaoJustificadas = operarHorarios([$descFaltasNaoJustificadas, $row["jornadaPrevista"]], "+");
 					}
