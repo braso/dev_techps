@@ -90,8 +90,20 @@
 			$motorista = mysqli_fetch_assoc(query(
 				"SELECT * FROM entidade "
 				." WHERE enti_tx_status = 'ativo'"
-					." AND enti_nb_id = ".$idMotorista.";"
+					." AND enti_nb_id = ".$idMotorista
+					." AND EXISTS (
+						SELECT 1
+						FROM user u
+						JOIN usuario_perfil up ON u.user_nb_id = up.user_nb_id AND up.ativo = 1
+						JOIN perfil_menu_item p ON up.perfil_nb_id = p.perfil_nb_id AND p.perm_ver = 1
+						JOIN menu_item m ON p.menu_nb_id = m.menu_nb_id AND m.menu_tx_ativo = 1 AND m.menu_tx_path = '/batida_ponto.php'
+						WHERE u.user_nb_entidade = entidade.enti_nb_id AND u.user_tx_status = 'ativo'
+					);"
 			));
+
+			if(empty($motorista)){
+				return "Funcionário não encontrado, inativo ou não registra ponto.  ";
+			}
 
 			$motErrMsg = "";
 
@@ -420,6 +432,14 @@ function cadastrar(){
 				WHERE enti_tx_status = 'ativo'
 					AND enti_nb_empresa = {$_POST["empresa"]}
 					".((!empty($_POST["busca_motorista"]))? " AND enti_nb_id = {$_POST["busca_motorista"]}": "")."
+					AND EXISTS (
+						SELECT 1
+						FROM user u
+						JOIN usuario_perfil up ON u.user_nb_id = up.user_nb_id AND up.ativo = 1
+						JOIN perfil_menu_item p ON up.perfil_nb_id = p.perfil_nb_id AND p.perm_ver = 1
+						JOIN menu_item m ON p.menu_nb_id = m.menu_nb_id AND m.menu_tx_ativo = 1 AND m.menu_tx_path = '/batida_ponto.php'
+						WHERE u.user_nb_entidade = entidade.enti_nb_id AND u.user_tx_status = 'ativo'
+					)
 				ORDER BY enti_tx_nome ASC;"
 		), MYSQLI_ASSOC);
 
@@ -826,7 +846,15 @@ function index(){
 
 		cabecalho("Cadastro de Endosso");
 
-		$condicoes_motorista = "AND enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')";
+		$condicoes_motorista = "AND enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário')
+			AND EXISTS (
+				SELECT 1
+				FROM user u
+				JOIN usuario_perfil up ON u.user_nb_id = up.user_nb_id AND up.ativo = 1
+				JOIN perfil_menu_item p ON up.perfil_nb_id = p.perfil_nb_id AND p.perm_ver = 1
+				JOIN menu_item m ON p.menu_nb_id = m.menu_nb_id AND m.menu_tx_ativo = 1 AND m.menu_tx_path = '/batida_ponto.php'
+				WHERE u.user_nb_entidade = entidade.enti_nb_id AND u.user_tx_status = 'ativo'
+			)";
 		if($_SESSION["user_tx_nivel"] != "Super Administrador" && !temPermissaoMenu('/cadastro_empresa.php')){
 			$condicoes_motorista .= " AND enti_nb_empresa = ".$_SESSION["user_nb_empresa"];
 		}
