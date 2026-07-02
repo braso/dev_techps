@@ -416,6 +416,9 @@ function criar_relatorio_saldo() {
 				"qtdMotoristas" => 0
 			];
 			file_put_contents($pathGeral."/empresas.json", json_encode($totaisEmpresas));
+		} else {
+			$content = file_get_contents($pathGeral."/empresas.json");
+			file_put_contents($pathGeral."/empresas.json", $content);
 		}
 	}
 	return;
@@ -661,6 +664,9 @@ function criar_relatorio_endosso() {
 				"dataFim" => $mes->format("t/m/Y")
 			];
 			file_put_contents($pathGeral."/empresas.json", json_encode($totaisEmpresas));
+		} else {
+			$content = file_get_contents($pathGeral."/empresas.json");
+			file_put_contents($pathGeral."/empresas.json", $content);
 		}
 	}
 
@@ -1771,6 +1777,9 @@ function criar_relatorio_ajustes() {
 				"dataFim" => $periodoFim->format("d/m/Y")
 			];
 			file_put_contents($pathGeral."/empresas.json", json_encode($totaisEmpresa));
+		} else {
+			$content = file_get_contents($pathGeral."/empresas.json");
+			file_put_contents($pathGeral."/empresas.json", $content);
 		}
 	}
 

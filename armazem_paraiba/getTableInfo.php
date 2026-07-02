@@ -143,28 +143,44 @@ if (!empty($queryResult)) {
                 }
             }
 
-            if ($key === 'ss_e_tx_foto') {
+            if ($key === 'ss_e_tx_foto' || $key === 'ss_e_tx_foto_epi') {
                 if ($data !== null && $data !== '') {
-                    $data = '<a href="' . $_ENV["APP_PATH"] . '/' . htmlspecialchars($data) . '" target="_blank" class="btn btn-xs btn-default" style="padding: 2px 5px;"><i class="fa fa-picture-o"></i> Ver Foto</a>';
+                    $resolvedSrc = $_ENV["APP_PATH"] . '/' . htmlspecialchars($data);
+                    $data = '<img src="' . $resolvedSrc . '" onclick="verImagemMaior(\'' . $resolvedSrc . '\')" style="max-height: 40px; max-width: 40px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; object-fit: cover;" title="Clique para ampliar">';
                 } else {
                     $data = '<span class="text-muted">-</span>';
                 }
             }
 
             if ($key === 'ss_e_tx_status') {
-                switch ($data) {
-                    case 'ativo':
-                        $data = '<span class="label label-success">Entregue/Ativo</span>';
-                        break;
-                    case 'substituido':
-                        $data = '<span class="label label-warning">Substituído</span>';
-                        break;
-                    case 'devolvido':
-                        $data = '<span class="label label-info">Devolvido</span>';
-                        break;
-                    case 'perdido':
-                        $data = '<span class="label label-danger">Perdido/Extraviado</span>';
-                        break;
+                $isEntrega = (strpos($queryBase, 'ss_epi_entrega') !== false);
+                if ($isEntrega) {
+                    switch ($data) {
+                        case 'ativo':
+                            $data = '<span class="label label-success">Entregue/Ativo</span>';
+                            break;
+                        case 'substituido':
+                            $data = '<span class="label label-warning">Substituído</span>';
+                            break;
+                        case 'devolvido':
+                            $data = '<span class="label label-info">Devolvido</span>';
+                            break;
+                        case 'perdido':
+                            $data = '<span class="label label-danger">Perdido/Extraviado</span>';
+                            break;
+                        case 'nao_entregue':
+                            $data = '<span class="label label-default">Não Entregue</span>';
+                            break;
+                    }
+                } else {
+                    switch ($data) {
+                        case 'ativo':
+                            $data = '<span class="label label-success">Ativo</span>';
+                            break;
+                        case 'inativo':
+                            $data = '<span class="label label-danger">Inativo</span>';
+                            break;
+                    }
                 }
             }
 
