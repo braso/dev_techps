@@ -232,6 +232,7 @@
 		$_POST["acao"] = "index";
 		$_POST["idMotorista"] = $_POST["busca_motorista"];
 		$_POST["data"] = $_POST["busca_periodo"][0] ?? date("Y-m-d");
+
 		echo criarHiddenForm(
 			"form_ajuste",
 			array_keys($_POST),
@@ -968,7 +969,7 @@ JS;
 				]);
 
 				
-				if(in_array($_SESSION["user_tx_nivel"],["Administrador", "Super Administrador"])){
+				if(in_array($_SESSION["user_tx_nivel"],["Administrador", "Super Administrador"]) || temPermissaoMenu('/espelho_ponto.php')){
 					$paginaDestino = "ajuste_ponto.php";
 				}else{
 					$paginaDestino = "ajuste_pontofuncionario.php";

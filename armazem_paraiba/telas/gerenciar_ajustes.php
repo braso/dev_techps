@@ -1091,20 +1091,28 @@ if (empty($justificativaGestor)) {
 				"(" . implode(" OR ", $condicoes_setor) . $bloqueioSubsetor . ")";
 		}
 		// informa os usuario s que terao acesso total, independente das regras de hierarquia
-		$nivesLiberados = ['Super Administrador','Administrador','Funcionário'];
-		$isSuperAdmin = in_array($_SESSION['user_tx_nivel'] ?? '', $nivesLiberados);
+		$isRealAdmin = in_array($_SESSION['user_tx_nivel'] ?? '', ['Super Administrador', 'Administrador']);
 
-		if ($isSuperAdmin){
+		if ($isRealAdmin) {
 			// Super Admin vê tudo
 			$extra_sql_hierarquia = "";
-		}else{
-			// Usuário comum vê apenas o que as regras permitem
-			if (!empty($condicoes)) {
-				$extra_sql_hierarquia = " AND (" . implode(" OR ", $condicoes) . ")";
-			} else {
-				// Se não houver regras, não mostrar nada
-				$extra_sql_hierarquia = " AND 1=0";
-			}
+		} else {
+			// Usuário comum vê apenas o que as regras de responsabilidade permitem
+			$entidadeIdLogado = intval($_SESSION['user_nb_entidade'] ?? 0);
+			$extra_sql_hierarquia = " AND (
+				e.enti_setor_id IN (
+					SELECT sr.sres_nb_setor_id 
+					FROM setor_responsavel sr 
+					WHERE sr.sres_nb_entidade_id = {$entidadeIdLogado} 
+					  AND sr.sres_tx_status = 'ativo'
+				)
+				OR e.enti_tx_tipoOperacao IN (
+					SELECT opre_nb_operacao_id 
+					FROM operacao_responsavel 
+					WHERE opre_nb_entidade_id = {$entidadeIdLogado} 
+					  AND opre_tx_status = 'ativo'
+				)
+			)";
 		}
 		// LÓGICA DE FILTROS DO USUÁRIO
 		$statusFiltro = $filtros['status_filtro'] ?? 'pendentes';
