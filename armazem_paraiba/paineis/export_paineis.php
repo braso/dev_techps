@@ -160,9 +160,11 @@ function gerarPainelEndosso() {
 
             $dataEmissao = date("d/m/Y H:i", filemtime($path . "/empresa_" . $empresa["empr_nb_id"] . ".json")) . "</span>"; //Utilizado no HTML.
             $periodoRelatorio = json_decode(file_get_contents($path . "/empresa_" . $empresa["empr_nb_id"] . ".json"), true);
+            $dtIni = DateTime::createFromFormat("d/m/Y", $periodoRelatorio["dataInicio"]);
+            $dtFim = DateTime::createFromFormat("d/m/Y", $periodoRelatorio["dataFim"]);
             $periodoRelatorio = [
-                "dataInicio" => DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataInicio"])->format("d/m"),
-                "dataFim" => DateTime::createFromFormat("Y-m-d", $periodoRelatorio["dataFim"])->format("d/m")
+                "dataInicio" => $dtIni ? $dtIni->format("d/m") : "",
+                "dataFim" => $dtFim ? $dtFim->format("d/m") : ""
             ];
 
             $motoristas = [];
