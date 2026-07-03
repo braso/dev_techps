@@ -1,4 +1,33 @@
 <link rel="stylesheet" href="../css/paineis.css">
+<style>
+	/* Força fundo branco e texto preto nos gráficos Highcharts (evita modo escuro/herança de variáveis CSS) */
+	.highcharts-background {
+		fill: #ffffff !important;
+	}
+	.highcharts-plot-background {
+		fill: #ffffff !important;
+	}
+	.highcharts-container {
+		--highcharts-background-color: #ffffff !important;
+	}
+	.highcharts-title,
+	.highcharts-subtitle,
+	.highcharts-axis-labels,
+	.highcharts-xaxis-labels,
+	.highcharts-yaxis-labels,
+	.highcharts-axis-labels text,
+	.highcharts-xaxis-labels text,
+	.highcharts-yaxis-labels text,
+	.highcharts-legend-item text,
+	.highcharts-data-label,
+	.highcharts-data-label text,
+	.highcharts-caption,
+	.highcharts-label text,
+	.highcharts-tooltip text {
+		fill: #000000 !important;
+		color: #000000 !important;
+	}
+</style>
 <script src="https://code.highcharts.com/highcharts.js"></script>
 <script src="https://code.highcharts.com/highcharts-more.js"></script>
 <script src="https://code.highcharts.com/modules/solid-gauge.js"></script>
@@ -283,7 +312,8 @@
 							</h3>
 						</div>
 						<div id="collapse1" class="panel-collapse collapse">
-							<div class="panel-body" style="overflow: hidden;">
+							<div class="panel-body">
+									<div class="table-responsive">
 								<table id="tabela-empresas" class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact">
 									<thead>
 										<?= $rowTotais ?>
@@ -296,6 +326,7 @@
 										<?= $rowTotal ?>
 									</thead>
 								</table>
+									</div>
                                 <script>
                                 (function(){
                                     var table = document.querySelector('#tabela-empresas');
@@ -323,7 +354,7 @@
 				</div>
 			<?php } ?>
 			<?php if ($mostra === false || empty($mostra)) { ?>
-				<div class="table-responsive" style="overflow: hidden;">
+				<div class="table-responsive">
 					<table id="tabela-empresas" class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact">
 						<thead>
 							<?= $rowTotais ?>
