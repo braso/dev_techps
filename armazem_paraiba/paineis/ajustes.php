@@ -112,7 +112,7 @@ function carregarGraficos($periodoInicio) {
 		const mesesFormatados = $mesesFormatadosJS;
 		const totaisPorMes = $totaisPorMesJS;
 
-		Highcharts.chart('chart-unificado', {
+		window.chart_unificado = Highcharts.chart('chart-unificado', {
 			chart: { type: 'line' },
 			title: {
 				text: 'Ajustes Inseridos e Excluídos (Últimos 12 meses)'
@@ -645,7 +645,7 @@ function carregarJS(array $arquivos) {
 				var input1 = document.createElement('input');
 				input1.type = 'hidden';
 				input1.name = 'empresa';
-				input1.value = $_POST[empresa]; // Valor do primeiro campo
+				input1.value = " . (!empty($_POST['empresa']) ? $_POST['empresa'] : '""') . "'; // Valor do primeiro campo
 				form.appendChild(input1);
 
 				// Criando campo 2
@@ -685,7 +685,7 @@ function carregarJS(array $arquivos) {
 				var input1 = document.createElement('input');
 				input1.type = 'hidden';
 				input1.name = 'empresa';
-				input1.value = $_POST[empresa]; // Valor do primeiro campo
+				input1.value = " . (!empty($_POST['empresa']) ? $_POST['empresa'] : '""') . "'; // Valor do primeiro campo
 				form.appendChild(input1);
 
 				// Criando campo 2
@@ -804,89 +804,7 @@ function index() {
 		$botao_volta = "<button class='btn default' type='button' onclick='setAndSubmit(\"\")'>Voltar</button>";
 	}
 
-	$botao_imprimir = "<button class='btn default' type='button' onclick='enviarDados3()'>Imprimir</button>
-	<script>
-			async function enviarDados3() {
-				const loader = document.getElementById('loader-overlay');
-				
-				try {
-					// Mostra o loader
-					loader.style.display = 'flex';
-
-					// 1. Processa todos os gráficos
-					await processarGraficos();
-
-					// 2. Prepara e envia o formulário
-					await enviarFormulario();
-
-				} catch (error) {
-					console.error(\"Erro durante a exportação:\", error);
-					loader.innerHTML = `
-						<div style=\"text-align: center; color: #ff6b6b;\">
-							<p>❌ Falha ao exportar. Recarregue a página e tente novamente.</p>
-							<button onclick=location.reload() style=margin-top: 10px; padding: 5px 10px;>Recarregar</button>
-						</div>
-					`;
-				} finally {
-					setTimeout(() => loader.style.display = 'none', 2000);
-				}
-			}
-
-						async function processarGraficos() {
-				try {
-					// Processa gráficos normais em paralelo
-					await Promise.all([
-						enviarGraficoServidor(chart_unificado)
-					]);
-					
-				} catch (error) {
-					console.error(\"Erro ao processar gráficos:\", error);
-					throw error; // Re-lança o erro para ser capturado no escopo superior
-				}
-			}
-			
-			async function enviarFormulario() {
-				var data = '" . json_encode($_POST["busca_periodo"]) . "'
-				var form = document.createElement('form');
-				form.method = 'POST';
-				form.action = 'export_paineis.php'; // Página que receberá os dados
-				form.target = '_blank'; // Abre em nova aba
-
-				// Criando campo 1
-				var input1 = document.createElement('input');
-				input1.type = 'hidden';
-				input1.name = 'empresa';
-				input1.value = " . (!empty($_POST['empresa']) ? $_POST['empresa'] : 'null') . "; // Valor do primeiro campo
-				form.appendChild(input1);
-
-				// Criando campo 2
-				var input2 = document.createElement('input');
-				input2.type = 'hidden';
-				input2.name = 'busca_data';
-				input2.value = data; // Valor do segundo campo
-				form.appendChild(input2);
-
-                // Criando campo 2
-				var input2 = document.createElement('input');
-				input2.type = 'hidden';
-				input2.name = 'relatorio';
-				input2.value = 'ajustes'; // Valor do segundo campo
-				form.appendChild(input2);
-
-				// Criando campo 3
-				// var input2 = document.createElement('input');
-				// input2.type = 'hidden';
-				// input2.name = 'busca_endossado';
-				// input2.value = '" . json_encode($_POST["busca_periodo"]) . "' ; // Valor do segundo campo
-				// form.appendChild(input2);
-
-
-				document.body.appendChild(form);
-				form.submit();
-				document.body.removeChild(form);
-			}
-
-	</script>";
+	$botao_imprimir = "<button class='btn default' type='button' onclick='enviarDados3()'>Imprimir</button>";
 
 	$buttons = [
 		botao("Buscar", "enviarForm()", "", "", "", "", "btn btn-info"),
@@ -1400,5 +1318,75 @@ function index() {
 	if (!empty($periodoInicio)) {
 		carregarGraficos($periodoInicio);
 	}
+	echo "
+	<script>
+		async function enviarDados3() {
+			const loader = document.getElementById('loader-overlay');
+
+			try {
+				loader.style.display = 'flex';
+
+				if (typeof enviarGraficoServidor === 'function' && typeof chart_unificado !== 'undefined' && chart_unificado) {
+					await processarGraficos();
+				}
+
+				await enviarFormulario();
+			} catch (error) {
+				console.error(\"Erro durante a exportação:\", error);
+				if (loader) {
+					loader.innerHTML = `
+						<div style=\"text-align: center; color: #ff6b6b;\">
+							<p>❌ Falha ao exportar. Recarregue a página e tente novamente.</p>
+							<button onclick=location.reload() style=margin-top: 10px; padding: 5px 10px;>Recarregar</button>
+						</div>
+					`;
+				}
+			} finally {
+				setTimeout(() => { if (loader) loader.style.display = 'none'; }, 2000);
+			}
+		}
+
+		async function processarGraficos() {
+			try {
+				await Promise.all([
+					enviarGraficoServidor(chart_unificado)
+				]);
+			} catch (error) {
+				console.error(\"Erro ao processar gráficos:\", error);
+				throw error;
+			}
+		}
+
+		async function enviarFormulario() {
+			var data = '" . json_encode($_POST["busca_periodo"]) . "'
+			var form = document.createElement('form');
+			form.method = 'POST';
+			form.action = 'export_paineis.php';
+			form.target = '_blank';
+
+			var input1 = document.createElement('input');
+			input1.type = 'hidden';
+			input1.name = 'empresa';
+			input1.value = " . (!empty($_POST['empresa']) ? $_POST['empresa'] : '""') . ";
+			form.appendChild(input1);
+
+			var input2 = document.createElement('input');
+			input2.type = 'hidden';
+			input2.name = 'busca_data';
+			input2.value = data;
+			form.appendChild(input2);
+
+			var input3 = document.createElement('input');
+			input3.type = 'hidden';
+			input3.name = 'relatorio';
+			input3.value = 'ajustes';
+			form.appendChild(input3);
+
+			document.body.appendChild(form);
+			form.submit();
+			document.body.removeChild(form);
+		}
+	</script>";
+
 	rodape();
 }

@@ -3,10 +3,10 @@ require_once __DIR__ . "/../tcpdf/tcpdf.php";
 require __DIR__ . "/../funcoes_ponto.php";
 require_once __DIR__ . "/funcoes_paineis.php";
 
-/* Modo debug
+/* Modo debug */
         ini_set("display_errors", 1);
         error_reporting(E_ALL);
-    //*/
+    /**/
 
     define('TCPDF_LOGS', true);
     ob_start();
@@ -990,7 +990,8 @@ function gerarPainelNc() {
                 LIMIT 1;"
         ));
 
-        if ($_POST["busca_endossado"] === "naoEndossado") {
+        $buscaEndossado = $_POST["busca_endossado"] ?? "";
+        if ($buscaEndossado === "naoEndossado") {
             $pastaArquivo = "nao_endossado";
         } else {
             $pastaArquivo = "endossado";
@@ -1181,7 +1182,7 @@ function gerarPainelNc() {
             $porcentagemTotalMedia = 100 - $mediaPerfTotal;
             $porcentagemTotalBaixa2 = (array) $totaisFuncionario2;
 
-            if (!empty($_POST["empresa"]) && $_POST["busca_endossado"] === "endossado") {
+            if (!empty($_POST["empresa"]) && ($buscaEndossado === "endossado")) {
                 $totalNaoconformidade = array_sum([
                     $totalizadores["mdcDescanso30m5h"],
                     $totalizadores["inicioRefeicaoSemRegistro"],
@@ -1234,7 +1235,7 @@ function gerarPainelNc() {
                 "baixa" => $totalGeral > 0 ? round(($gravidadeBaixa / $totalGeral) * 100, 2) : 0
             ];
 
-            if ($_POST["busca_endossado"] !== "endossado") {
+            if ($buscaEndossado !== "endossado") {
 
                 $keys = [
                     "espera",
@@ -1308,9 +1309,11 @@ function gerarPainelNc() {
                 $dataEmissao = date("d/m/Y H:i", filemtime($arquivo)); //Utilizado no HTML.
                 $arquivoGeral = json_decode(file_get_contents($arquivo), true);
 
+                $dtInicio = DateTime::createFromFormat("Y-m-d", $arquivoGeral["dataInicio"] ?? "");
+                $dtFim = DateTime::createFromFormat("Y-m-d", $arquivoGeral["dataFim"] ?? "");
                 $periodoRelatorio = [
-                    "dataInicio" => DateTime::createFromFormat("Y-m-d", $arquivoGeral["dataInicio"])->format("d/m"),
-                    "dataFim" => DateTime::createFromFormat("Y-m-d", $arquivoGeral["dataFim"])->format("d/m")
+                    "dataInicio" => $dtInicio ? $dtInicio->format("d/m") : ($arquivoGeral["dataInicio"] ?? ""),
+                    "dataFim" => $dtFim ? $dtFim->format("d/m") : ($arquivoGeral["dataFim"] ?? "")
                 ];
 
 
@@ -1325,6 +1328,7 @@ function gerarPainelNc() {
             }
             $pasta->close();
 
+            $dadosOrdenados = [];
             foreach ($arquivos as $caminho) {
                 if (file_exists($caminho)) {
                     $conteudo = file_get_contents($caminho);
@@ -1641,8 +1645,12 @@ function gerarPainelAjustes() {
     $resultado = [];
     $resultado2 = [];
     $totais = [];
+    $jsons = [];
     $dataEmissao = ""; //Utilizado no HTML
-    $buscar_data = json_decode($_POST["busca_data"]);
+    $buscar_data = json_decode($_POST["busca_data"] ?? '[]');
+    if (!is_array($buscar_data) || empty($buscar_data[0])) {
+        die("Parâmetro busca_data inválido.");
+    }
     $path = "./arquivos/ajustes";
     $periodoInicio = new DateTime($buscar_data[0]);
     $path .= "/" . $periodoInicio->format("Y-m") . "/" . $_POST["empresa"];
@@ -1820,7 +1828,10 @@ function gerarPainelAjustes() {
     $posYGraficos = 5 + $alturaTabelas; // 15mm de espaçamento
 
     // // Gráfico (Esquerda)
-    $pdf->Image('./arquivos/graficos/grafico_chart-unificado_' . $periodoInicio->format("Y-m")  . '_' . $userEntrada . '.png', 95, $posYGraficos, 150);
+    $imagemGrafico = './arquivos/graficos/grafico_chart-unificado_' . $periodoInicio->format("Y-m") . '_' . $userEntrada . '.png';
+    if (file_exists($imagemGrafico)) {
+        $pdf->Image($imagemGrafico, 95, $posYGraficos, 150);
+    }
 
 
     // === Espaço antes da próxima tabela ===

@@ -350,7 +350,7 @@
 				const queryBase = '".base64_encode($queryBase." WHERE 1")."';
 				{$jsFunctions}
 			</script>
-			<script src='{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/js/grid_dinamico.js'></script>
+			<script src='{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/js/grid_dinamico.js?v=2'></script>
 			
 			<!-- Modal Config Grid -->
 			<div id='modalConfigGrid' class='modal fade' role='dialog' style='z-index: 10052;'>

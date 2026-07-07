@@ -1229,7 +1229,10 @@
 			}
 
 			const userEntrada = '<?= $_SESSION['horaEntrada'] ?? '0' ?>';
-			const dataGrafc = '<?= isset($_POST["busca_dataMes"]) ? $_POST["busca_dataMes"] : '' ?>';
+			const dataGrafc = '<?= 
+    !empty($_POST["busca_dataMes"]) ? $_POST["busca_dataMes"] : 
+    (!empty($_POST["busca_periodo"][0]) ? date("Y-m", strtotime($_POST["busca_periodo"][0])) : '') 
+?>';
 
 			const el = document.getElementById(elementId);
 			if (!el) {

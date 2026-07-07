@@ -954,6 +954,15 @@ JS;
 					{$periodoPesquisa}<br>
 					{$saldosMotorista}"
 				);
+				foreach($rows as &$r){
+					foreach($r as $k => &$v){
+						if(is_string($v) && trim($v) === "00:00"){
+							$v = "";
+						}
+					}
+				}
+				unset($r, $v);
+
 				echo montarTabelaPonto($cabecalho, $rows);
 				echo fecha_form();
 
