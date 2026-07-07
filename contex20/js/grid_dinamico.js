@@ -571,7 +571,7 @@ function imprimirTabelaCompleta() {
             form.appendChild(inputTabela);
             
             const selectIdEmpresa = document.getElementById('busca_empresa');
-            const id = selectIdEmpresa.value;
+            const id = selectIdEmpresa ? selectIdEmpresa.value : '';
 
             var IdEmpresa = document.createElement('input');
             IdEmpresa.type = 'hidden';
@@ -580,9 +580,9 @@ function imprimirTabelaCompleta() {
             form.appendChild(IdEmpresa);
 
             const divElemento = document.querySelector('.page-title');
-            const titulo = divElemento.innerText.trim();
+            const titulo = divElemento ? divElemento.innerText.trim() : '';
             const palavras = titulo.split(' ');
-            const pagina = palavras[2];
+            const pagina = palavras[2] || titulo;
 
 
             var paginaTitulo = document.createElement('input');
