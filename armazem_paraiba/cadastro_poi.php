@@ -160,6 +160,17 @@
 		$raio  = intval($_POST["raio"] ?? 50);
 		if($raio <= 0){ $raio = 50; }
 
+		// Verifica duplicidade de nome
+		$nome = trim($_POST["nome"]);
+		$editId = intval($_POST["id"] ?? 0);
+		$dupCheck = query("SELECT poi_nb_id FROM poi WHERE poi_tx_nome = ? AND poi_tx_status = 'ativo' LIMIT 1", "s", [$nome]);
+		$dupRow = $dupCheck ? mysqli_fetch_assoc($dupCheck) : null;
+		if($dupRow && intval($dupRow["poi_nb_id"] ?? 0) !== $editId){
+			set_status("ERRO: Já existe um POI com este nome.");
+			visualizarCadastro();
+			exit;
+		}
+
 		// Upload de imagem
 		$caminhoImagem = "";
 		if(!empty($_FILES["imagem"]) && $_FILES["imagem"]["error"] === UPLOAD_ERR_OK){
@@ -184,16 +195,16 @@
 			"poi_tx_status" 	=> "ativo"
 		];
 
-		if(!empty($_POST["id"])){
+		if($editId > 0){
 			if($caminhoImagem){
 				$dados["poi_tx_imagem"] = $caminhoImagem;
 				// Remove imagem antiga
-				$antigo = mysqli_fetch_assoc(query("SELECT poi_tx_imagem FROM poi WHERE poi_nb_id = ?", "i", [intval($_POST["id"])]));
+				$antigo = mysqli_fetch_assoc(query("SELECT poi_tx_imagem FROM poi WHERE poi_nb_id = ?", "i", [$editId]));
 				if(!empty($antigo["poi_tx_imagem"]) && file_exists($antigo["poi_tx_imagem"])){
 					@unlink($antigo["poi_tx_imagem"]);
 				}
 			}
-			atualizar("poi", array_keys($dados), array_values($dados), intval($_POST["id"]));
+			atualizar("poi", array_keys($dados), array_values($dados), strval($editId));
 		}else{
 			if($caminhoImagem){
 				$dados["poi_tx_imagem"] = $caminhoImagem;
@@ -242,28 +253,16 @@
 		}
 
 		$iconeAtual = $input_values["icone"] ?? "";
-		$iconeOptions = [
-			"" => "Padrão (azul)",
-			"fa-box" => "📦 Caixa",
-			"fa-building" => "🏢 Prédio",
-			"fa-industry" => "🏭 Indústria",
-			"fa-store" => "🏪 Loja",
-			"fa-gas-pump" => "⛽ Posto",
-			"fa-parking" => "🅿️ Estacionamento",
-			"fa-hospital" => "🏥 Hospital",
-			"fa-university" => "🏦 Banco",
-			"fa-utensils" => "🍽️ Restaurante",
-			"fa-hotel" => "🏨 Hotel",
-			"fa-warehouse" => "🏭 Armazém",
-			"fa-truck" => "🚚 Caminhão",
-			"fa-map-pin" => "📍 Alfinete",
-			"fa-flag-checkered" => "🏁 Ponto de Jornada"
-		];
-		$iconeHtml = "<select name='icone' class='form-control'>";
-		foreach($iconeOptions as $val => $label){
-			$sel = ($val === $iconeAtual) ? " selected" : "";
-			$iconeHtml .= "<option value='".htmlspecialchars($val)."'$sel>".htmlspecialchars($label)."</option>";
+		$tiposPoi = [];
+		$rsTipos = query("SELECT poti_tx_codigo, poti_tx_nome, poti_tx_emoji FROM poi_tipo WHERE poti_tx_status = 'ativo' ORDER BY poti_tx_nome ASC");
+		while($rsTipos && ($r = mysqli_fetch_assoc($rsTipos))){ $tiposPoi[] = $r; }
+		$iconeHtml = "<select name='icone' class='form-control' id='poi_icone'>";
+		$iconeHtml .= "<option value=''>Selecione o tipo</option>";
+		foreach($tiposPoi as $t){
+			$sel = ($t['poti_tx_codigo'] === $iconeAtual) ? " selected" : "";
+			$iconeHtml .= "<option value='".htmlspecialchars($t['poti_tx_codigo'])."' data-emoji='".htmlspecialchars($t['poti_tx_emoji'])."'$sel>".htmlspecialchars($t['poti_tx_emoji'])." ".htmlspecialchars($t['poti_tx_nome'])."</option>";
 		}
+		$iconeHtml .= "<option value='__novo__' style='color:#004173; font-weight:600;'>➕ Criar novo tipo...</option>";
 		$iconeHtml .= "</select>";
 
 		$imagemAtual = $input_values["imagem"] ?? "";
@@ -282,7 +281,7 @@
 			campo("Latitude*",			"latitude",		$input_values["latitude"],	2),
 			campo("Longitude*",			"longitude",	$input_values["longitude"],	2),
 			campo("Raio (metros)",		"raio",			$input_values["raio"],		2, "MASCARA_NUMERO"),
-			"<div class='col-sm-3 margin-bottom-5 campo-fit-content'><label>Ícone</label>{$iconeHtml}</div>",
+			"<div class='col-sm-3 margin-bottom-5 campo-fit-content'><label>Tipo de POI</label>{$iconeHtml}</div>",
 			"<div class='col-sm-4 margin-bottom-5 campo-fit-content'><label>Imagem do Local</label>{$imagemHtml}</div>"
 		];
 
@@ -319,7 +318,124 @@
 
 		rodape();
 
+		// Modal para criar novo tipo de POI
+		$basePathPoi = $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"];
 		echo "
+		<style>
+		.emojigrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:6px;max-height:220px;overflow-y:auto;padding:4px;border:1px solid #eee;border-radius:8px;background:#fafafa;}
+		.emojigrid button{font-size:24px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:2px solid transparent;border-radius:8px;background:white;cursor:pointer;transition:all .15s;}
+		.emojigrid button:hover{border-color:#004173;background:#e8f0fe;transform:scale(1.12);}
+		.emojigrid button.selecionado{border-color:#004173;background:#d0e2ff;box-shadow:0 0 0 2px #004173;transform:scale(1.1);}
+		</style>
+		<div id='modalNovoTipoPoi' style='display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.5); z-index:99999; align-items:center; justify-content:center;'>
+			<div style='background:white; border-radius:12px; padding:24px; width:480px; max-width:95%; box-shadow:0 8px 30px rgba(0,0,0,.3); position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);'>
+				<h3 style='margin:0 0 4px 0; font-size:18px;'>➕ Criar novo tipo de POI</h3>
+				<p style='color:#666; font-size:13px; margin-bottom:14px;'>Dê um nome e escolha um ícone.</p>
+				<div style='margin-bottom:10px;'>
+					<label style='display:block; font-weight:600; font-size:13px; margin-bottom:4px;'>Nome <span style='color:red;'>*</span></label>
+					<input type='text' id='novoTipoNome' class='form-control' placeholder='Ex: Escola' style='width:100%;' autocomplete='off'>
+				</div>
+				<div style='margin-bottom:14px;'>
+					<label style='display:block; font-weight:600; font-size:13px; margin-bottom:4px;'>Ícone <span style='color:red;'>*</span> <span id='emojiSelecionado' style='font-size:18px; margin-left:6px;'></span></label>
+					<div class='emojigrid' id='gradeEmojis'>
+						<button type='button' data-emoji='📦'>📦</button><button type='button' data-emoji='🏢'>🏢</button><button type='button' data-emoji='🏭'>🏭</button><button type='button' data-emoji='🏪'>🏪</button><button type='button' data-emoji='⛽'>⛽</button><button type='button' data-emoji='🅿️'>🅿️</button><button type='button' data-emoji='🏥'>🏥</button>
+						<button type='button' data-emoji='🏦'>🏦</button><button type='button' data-emoji='🍽️'>🍽️</button><button type='button' data-emoji='🏨'>🏨</button><button type='button' data-emoji='🚚'>🚚</button><button type='button' data-emoji='📍'>📍</button><button type='button' data-emoji='🏁'>🏁</button><button type='button' data-emoji='🏫'>🏫</button>
+						<button type='button' data-emoji='🛒'>🛒</button><button type='button' data-emoji='⚕️'>⚕️</button><button type='button' data-emoji='🔧'>🔧</button><button type='button' data-emoji='⚙️'>⚙️</button><button type='button' data-emoji='🛠️'>🛠️</button><button type='button' data-emoji='🚛'>🚛</button><button type='button' data-emoji='🚌'>🚌</button>
+						<button type='button' data-emoji='🚕'>🚕</button><button type='button' data-emoji='✈️'>✈️</button><button type='button' data-emoji='⚓'>⚓</button><button type='button' data-emoji='🚢'>🚢</button><button type='button' data-emoji='🚂'>🚂</button><button type='button' data-emoji='🏗️'>🏗️</button><button type='button' data-emoji='🏠'>🏠</button>
+						<button type='button' data-emoji='⛪'>⛪</button><button type='button' data-emoji='🎓'>🎓</button><button type='button' data-emoji='📚'>📚</button><button type='button' data-emoji='📋'>📋</button><button type='button' data-emoji='🛡️'>🛡️</button><button type='button' data-emoji='🔒'>🔒</button><button type='button' data-emoji='🔑'>🔑</button>
+						<button type='button' data-emoji='🪪'>🪪</button><button type='button' data-emoji='📞'>📞</button><button type='button' data-emoji='🖥️'>🖥️</button><button type='button' data-emoji='🚧'>🚧</button><button type='button' data-emoji='🧰'>🧰</button><button type='button' data-emoji='🧲'>🧲</button><button type='button' data-emoji='🔋'>🔋</button>
+						<button type='button' data-emoji='🍕'>🍕</button><button type='button' data-emoji='🍔'>🍔</button><button type='button' data-emoji='☕'>☕</button><button type='button' data-emoji='🥤'>🥤</button><button type='button' data-emoji='🧃'>🧃</button><button type='button' data-emoji='🏟️'>🏟️</button><button type='button' data-emoji='🎪'>🎪</button>
+						<button type='button' data-emoji='🎯'>🎯</button><button type='button' data-emoji='🎳'>🎳</button><button type='button' data-emoji='🎮'>🎮</button><button type='button' data-emoji='🌲'>🌲</button><button type='button' data-emoji='🌳'>🌳</button><button type='button' data-emoji='🏔️'>🏔️</button><button type='button' data-emoji='🏝️'>🏝️</button>
+						<button type='button' data-emoji='🏖️'>🏖️</button><button type='button' data-emoji='🚁'>🚁</button><button type='button' data-emoji='🛸'>🛸</button><button type='button' data-emoji='🚤'>🚤</button><button type='button' data-emoji='🚑'>🚑</button><button type='button' data-emoji='🚒'>🚒</button><button type='button' data-emoji='⚖️'>⚖️</button>
+						<button type='button' data-emoji='🏛️'>🏛️</button><button type='button' data-emoji='📊'>📊</button><button type='button' data-emoji='📜'>📜</button><button type='button' data-emoji='🛋️'>🛋️</button><button type='button' data-emoji='🛏️'>🛏️</button><button type='button' data-emoji='🚿'>🚿</button><button type='button' data-emoji='🧹'>🧹</button>
+						<button type='button' data-emoji='🩺'>🩺</button><button type='button' data-emoji='💊'>💊</button><button type='button' data-emoji='🔬'>🔬</button><button type='button' data-emoji='🧪'>🧪</button><button type='button' data-emoji='📡'>📡</button><button type='button' data-emoji='📷'>📷</button><button type='button' data-emoji='🎨'>🎨</button>
+						<button type='button' data-emoji='🖼️'>🖼️</button><button type='button' data-emoji='🎵'>🎵</button><button type='button' data-emoji='🎭'>🎭</button><button type='button' data-emoji='📝'>📝</button><button type='button' data-emoji='⚽'>⚽</button><button type='button' data-emoji='🏀'>🏀</button><button type='button' data-emoji='🎾'>🎾</button>
+						<button type='button' data-emoji='🏐'>🏐</button><button type='button' data-emoji='🚴'>🚴</button><button type='button' data-emoji='🏧'>🏧</button><button type='button' data-emoji='💳'>💳</button><button type='button' data-emoji='💰'>💰</button><button type='button' data-emoji='🧯'>🧯</button><button type='button' data-emoji='🗑️'>🗑️</button>
+					</div>
+				</div>
+				<div style='display:flex; gap:10px;'>
+					<button type='button' onclick='fecharModalNovoTipoPoi()' style='flex:1; padding:10px; border:1px solid #ccc; border-radius:6px; background:#f5f5f5; cursor:pointer; font-size:14px;'>Cancelar</button>
+					<button type='button' onclick='salvarNovoTipoPoi()' style='flex:1; padding:10px; border:none; border-radius:6px; background:#004173; color:white; cursor:pointer; font-size:14px;'>Salvar Tipo</button>
+				</div>
+				<div id='novoTipoStatus' style='margin-top:12px; font-size:13px;'></div>
+			</div>
+		</div>
+		<script>
+		if(!window.basePath) window.basePath = '$basePathPoi';
+		var _emojiSelecionado = '📦';
+		function abrirModalNovoTipoPoi(){
+			document.getElementById('novoTipoNome').value = '';
+			_emojiSelecionado = '📦';
+			document.querySelectorAll('#gradeEmojis button').forEach(function(b){ b.classList.remove('selecionado'); });
+			var def = document.querySelector('#gradeEmojis button[data-emoji=\"📦\"]');
+			if(def) def.classList.add('selecionado');
+			document.getElementById('emojiSelecionado').textContent = '📦';
+			document.getElementById('novoTipoStatus').innerHTML = '';
+			document.getElementById('modalNovoTipoPoi').style.display = 'flex';
+			setTimeout(function(){ document.getElementById('novoTipoNome').focus(); }, 100);
+		}
+		function fecharModalNovoTipoPoi(){
+			document.getElementById('modalNovoTipoPoi').style.display = 'none';
+		}
+		document.addEventListener('DOMContentLoaded', function(){
+			document.getElementById('gradeEmojis').addEventListener('click', function(e){
+				var btn = e.target.closest('button');
+				if(!btn) return;
+				document.querySelectorAll('#gradeEmojis button').forEach(function(b){ b.classList.remove('selecionado'); });
+				btn.classList.add('selecionado');
+				_emojiSelecionado = btn.getAttribute('data-emoji') || '📌';
+				document.getElementById('emojiSelecionado').textContent = _emojiSelecionado;
+			});
+			var sel = document.getElementById('poi_icone');
+			if(sel){
+				sel.addEventListener('change', function(){
+					if(this.value === '__novo__'){
+						this.value = '';
+						abrirModalNovoTipoPoi();
+					}
+				});
+			}
+		});
+		function salvarNovoTipoPoi(){
+			var nome = document.getElementById('novoTipoNome').value.trim();
+			var emoji = _emojiSelecionado;
+			var statusEl = document.getElementById('novoTipoStatus');
+			if(!nome){
+				statusEl.innerHTML = '<span style=\"color:red;\">Informe o nome do tipo.</span>';
+				document.getElementById('novoTipoNome').focus();
+				return;
+			}
+			var codigo = nome;
+			statusEl.innerHTML = '<span style=\"color:#666;\">Salvando...</span>';
+			var formData = new FormData();
+			formData.append('ajax_action', 'criar_tipo_poi');
+			formData.append('codigo', codigo);
+			formData.append('nome', nome);
+			formData.append('emoji', emoji);
+			fetch(window.basePath + '/ajax_poi_tipo.php', { method: 'POST', body: formData })
+				.then(function(r){ return r.json(); })
+				.then(function(data){
+					if(data.sucesso){
+						statusEl.innerHTML = '<span style=\"color:green;\">Tipo criado com sucesso!</span>';
+						var sel = document.getElementById('poi_icone');
+						var opt = document.createElement('option');
+						opt.value = data.tipo.poti_tx_codigo;
+						opt.textContent = data.tipo.poti_tx_emoji + ' ' + data.tipo.poti_tx_nome;
+						opt.setAttribute('data-emoji', data.tipo.poti_tx_emoji);
+						var novoItem = sel.querySelector('option[value=\"__novo__\"]');
+						sel.insertBefore(opt, novoItem);
+						sel.value = data.tipo.poti_tx_codigo;
+						setTimeout(fecharModalNovoTipoPoi, 800);
+					}else{
+						statusEl.innerHTML = '<span style=\"color:red;\">' + (data.erro || 'Erro ao salvar.') + '</span>';
+					}
+				})
+				.catch(function(err){
+					statusEl.innerHTML = '<span style=\"color:red;\">Erro na requisição.</span>';
+					console.error('AJAX_ERRO', err);
+				});
+		}
+		</script>
 		<link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css' />
 		<script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
 		<script>
@@ -567,10 +683,21 @@
 			// Como esta tabela nao tem JOIN, nao podemos usar $extra com AND solto.
 			// O filtro de status e os demais ficam por conta do grid JS via searchFields.
 			// O input busca_status tem default "ativo", entao o JS ja envia o filtro correto.
+
+			$emojiMap = [];
+			$__rsEmoji = query("SELECT poti_tx_codigo, poti_tx_emoji FROM poi_tipo WHERE poti_tx_status = 'ativo'");
+			while($__rsEmoji && ($__r = mysqli_fetch_assoc($__rsEmoji))){
+				$emojiMap[$__r['poti_tx_codigo']] = $__r['poti_tx_emoji'];
+			}
+			$caseEmoji = "CASE poi_tx_icone";
+			foreach ($emojiMap as $k => $v) { $caseEmoji .= " WHEN '$k' THEN '$v'"; }
+			$caseEmoji .= " ELSE '📌' END AS IMAGEM";
+
 			$gridFields = [
 				"CÓDIGO"	=> "poi_nb_id",
-				"IMAGEM"	=> "poi_tx_imagem",
+				"IMAGEM"	=> $caseEmoji,
 				"NOME"		=> "poi_tx_nome",
+				"TIPO"		=> "poi_tx_icone",
 				"CNPJ"		=> "poi_tx_cnpj",
 				"CONTATO"	=> "poi_tx_contato",
 				"ENDEREÇO"	=> "poi_tx_endereco",
@@ -753,17 +880,27 @@
 			});
 			if(p.poi_tx_icone){
 				var emojiMap = {
-					'fa-box': '📦', 'fa-building': '🏢', 'fa-industry': '🏭', 'fa-store': '🏪',
-					'fa-gas-pump': '⛽', 'fa-parking': '🅿️', 'fa-hospital': '🏥', 'fa-university': '🏦',
-					'fa-utensils': '🍽️', 'fa-hotel': '🏨', 'fa-warehouse': '🏭', 'fa-truck': '🚚',
-				'fa-map-pin': '📍',
-				'fa-flag-checkered': '🏁'
-			};
+					'Posto Fiscal': '🏛️', 'PRF - Polícia Rodoviária Federal': '👮', 'PM - Polícia Militar': '👮‍♂️',
+					'Balança Rodoviária': '⚖️', 'Pedágios': '🛣️',
+					'INÍCIO DE JORNADA': '🏁', 'INÍCIO REFEIÇÃO': '🍽️', 'FIM REFEIÇÃO': '🍽️',
+					'INÍCIO DE ESPERA': '⏸️', 'FIM DE ESPERA': '▶️',
+					'INÍCIO DE DESCANSO': '💤', 'FIM DE DESCANSO': '▶️',
+					'INÍCIO DE REPOUSO': '😴', 'FIM DE REPOUSO': '▶️',
+					'INÍCIO DE PERNOITE': '🌙', 'FIM DE PERNOITE': '🌅',
+					'FIM DE JORNADA': '🔚',
+					'Oficina': '🔧', 'Posto de Gasolina': '⛽', 'Garagem': '🅿️',
+					'Base/Terminal': '🏢', 'Cliente': '🤝', 'Fornecedor': '📦',
+					'Pátio': '🏭', 'Embarcadouro': '⚓', 'Porto Seco': '🚢',
+					'Almoxarifado': '📦', 'Centro de Distribuição': '🏭',
+					'Ponto de Apoio': '🆘', 'Parada Obrigatória': '🛑',
+					'Pesagem': '⚖️', 'Fronteira': '🚧', 'Alfândega': '🛃',
+					'Garagem Cliente': '🏠', 'Pátio Cliente': '🏭'
+				};
 				var e = emojiMap[p.poi_tx_icone] || '📌';
 				poiIcon = L.divIcon({
 					className: 'poi-custom-icon',
-					html: '<div style=\"background:#004173; color:white; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; box-shadow:0 2px 6px rgba(0,0,0,.3); border:2px solid white;\">' + e + '</div>',
-					iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -36]
+					html: '<div style=\"background:transparent; width:28px; height:28px; display:flex; align-items:center; justify-content:center; font-size:24px; line-height:1;\">' + e + '</div>',
+					iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -16]
 				});
 			}
 			var marker = L.marker([lat, lng], { icon: poiIcon }).addTo(camadaPois);

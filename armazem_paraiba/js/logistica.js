@@ -632,9 +632,29 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("hora").value = formatTime(startTime);
             document.getElementById("horaFim").value = formatTime(endTime);
   
+            var _poiComentarios = [];
+            var _poisData = window.pois || [];
+            if (_poisData.length > 0 && coordinates.length > 0) {
+              for (var _pc = 0; _pc < coordinates.length; _pc++) {
+                var _c = coordinates[_pc];
+                if (isNaN(_c.latitude) || isNaN(_c.longitude)) continue;
+                for (var _pp = 0; _pp < _poisData.length; _pp++) {
+                  var _poi = _poisData[_pp];
+                  var _pl = parseFloat(_poi.poi_tx_latitude);
+                  var _pn = parseFloat(_poi.poi_tx_longitude);
+                  var _pr = parseInt(_poi.poi_nb_raio, 10) || 50;
+                  if (isNaN(_pl) || isNaN(_pn)) continue;
+                  var _dist = calcularDistancia(_c.latitude, _c.longitude, _pl, _pn) * 1000;
+                  if (_dist <= _pr && _poiComentarios.indexOf(_poi.poi_tx_nome) === -1) {
+                    _poiComentarios.push(_poi.poi_tx_nome);
+                  }
+                }
+              }
+            }
+            var _poiStr = _poiComentarios.length > 0 ? ' | POI - ' + _poiComentarios.join(', POI - ') : '';
             document.getElementById(
               "descricao"
-            ).innerHTML = `Registro de parada identificada no histórico de posição do sistema de rastreamento instalado no veículo, local: ${address} | Placa: ${plate} | Latitude: ${latitude} | Longitude: ${longitude} | ${comment}`;
+            ).innerHTML = `Registro de parada identificada no histórico de posição do sistema de rastreamento instalado no veículo, local: ${address} | Placa: ${plate} | Latitude: ${latitude} | Longitude: ${longitude} | ${comment}${_poiStr}`;
   
             const motoristaSelect = document.getElementById("motorista");
             for (let j = 0; j < motoristaSelect.options.length; j++) {
@@ -860,6 +880,8 @@ document.addEventListener("DOMContentLoaded", () => {
     
       coordinates.forEach(function (coord, index) {
         if (!isNaN(coord.latitude) && !isNaN(coord.longitude)) {
+          var stopLat = coord.latitude;
+          var stopLng = coord.longitude;
           let popupContent = `<div style="font-size: 16px;">
                    <div style="font-size: 16px;">
                     <strong>Parada #${index + 1}</strong><br>
@@ -883,8 +905,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         <strong>Ignição:</strong> ${coord.ignition}
                     </div>
                     <p><a href="${googleMapsLink}" target="_blank">Ver Rota no Google Maps</a></p>
+                    <button onclick="abrirCadastroPoiPorCoordenadas(${stopLat}, ${stopLng})" style="margin-top:6px; padding:6px 12px; border:none; border-radius:6px; background:#004173; color:white; cursor:pointer; font-size:13px; width:100%;">📌 Criar POI aqui</button>
                   </div>`;
-    
+
           let icon;
           if (index === 0) {
             // Primeiro marcador: verde
@@ -917,11 +940,9 @@ document.addEventListener("DOMContentLoaded", () => {
             });
           }
     
-          const marker = L.marker([coord.latitude, coord.longitude], { icon: icon })
+          L.marker([stopLat, stopLng], { icon: icon })
             .addTo(map)
             .bindPopup(popupContent);
-    
-          // Não abre o popup automaticamente
         }
       });
     
@@ -953,7 +974,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (poi.poi_nb_raio > 0) {
               L.circle([parseFloat(poi.poi_tx_latitude), parseFloat(poi.poi_tx_longitude)], {
                 radius: parseInt(poi.poi_nb_raio, 10) || 50,
-                color: '#004173', fillColor: '#004173', fillOpacity: 0.08, weight: 1
+                color: '#002244', fillColor: '#002244', fillOpacity: 0.2, weight: 2
               }).addTo(poiLayer);
             }
           }
@@ -965,14 +986,6 @@ document.addEventListener("DOMContentLoaded", () => {
           return L.marker([coord.latitude, coord.longitude]);
         })
       );
-
-      if (poisData.length > 0) {
-        poisData.forEach(function (poi) {
-          if (!isNaN(parseFloat(poi.poi_tx_latitude)) && !isNaN(parseFloat(poi.poi_tx_longitude))) {
-            group.addLayer(L.marker([parseFloat(poi.poi_tx_latitude), parseFloat(poi.poi_tx_longitude)]));
-          }
-        });
-      }
 
       map.fitBounds(group.getBounds());
     }
@@ -1221,21 +1234,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     window.montarIconePoi = function(icone) {
       if (icone && icone !== "") {
-        var faIcon = icone.replace('fa-', '');
-        var emojiMap = {
-          'box': '📦', 'building': '🏢', 'industry': '🏭', 'store': '🏪',
-          'gas-pump': '⛽', 'parking': '🅿️', 'hospital': '🏥', 'university': '🏦',
-          'utensils': '🍽️', 'hotel': '🏨', 'warehouse': '🏭', 'truck': '🚚',
-          'map-pin': '📍',
-          'flag-checkered': '🏁'
-        };
-        var emoji = emojiMap[faIcon] || '📌';
+        var _dynamicTipos = window.poiTipos || [];
+        var _eMap = {};
+        _dynamicTipos.forEach(function(t){ _eMap[t.poti_tx_codigo] = t.poti_tx_emoji; });
+        var emoji = _eMap[icone] || '📌';
         return L.divIcon({
           className: 'poi-custom-icon',
-          html: '<div style="background:#004173; color:white; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; box-shadow:0 2px 6px rgba(0,0,0,.3); border:2px solid white;">' + emoji + '</div>',
-          iconSize: [32, 32],
-          iconAnchor: [16, 32],
-          popupAnchor: [0, -36]
+          html: '<div style="background:transparent; width:28px; height:28px; display:flex; align-items:center; justify-content:center; font-size:24px; line-height:1;">' + emoji + '</div>',
+          iconSize: [28, 28],
+          iconAnchor: [14, 14],
+          popupAnchor: [0, -16]
         });
       }
       return L.icon({
@@ -1283,31 +1291,39 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("poi_cep").value = poiData.poi_tx_cep || "";
         document.getElementById("poi_cnpj").value = poiData.poi_tx_cnpj || "";
         document.getElementById("poi_contato").value = poiData.poi_tx_contato || "";
-        document.getElementById("poi_raio").value = poiData.poi_nb_raio || 50;
+        var raio = poiData.poi_nb_raio || 50;
+        document.getElementById("poi_raio").value = raio;
+        document.getElementById("poi_raio_range").value = raio;
         document.getElementById("poi_icone").value = poiData.poi_tx_icone || "";
         document.getElementById("poi_imagem").value = "";
         var preview = document.getElementById("poi_imagem_preview");
         preview.innerHTML = poiData.poi_tx_imagem ? '<img src="' + poiData.poi_tx_imagem + '?v=' + Date.now() + '" style="max-width:180px; max-height:100px; border-radius:4px; border:1px solid #ddd;">' : '';
-        document.getElementById("poiModal").style.display = "block";
-        document.getElementById("poiModalOverlay").style.display = "block";
+        document.getElementById("poiSidebar").style.display = "block";
+        atualizarPreviewRaio();
         return;
       }
+      abrirCadastroPoiPorCoordenadas(_contextLat, _contextLng);
+    };
+
+    window.abrirCadastroPoiPorCoordenadas = function(lat, lng) {
       document.getElementById("poi_id").value = 0;
-      document.getElementById("poi_latitude").value = _contextLat;
-      document.getElementById("poi_longitude").value = _contextLng;
-      document.getElementById("poi_lat_display").value = _contextLat.toFixed(6);
-      document.getElementById("poi_lon_display").value = _contextLng.toFixed(6);
+      document.getElementById("poi_latitude").value = lat;
+      document.getElementById("poi_longitude").value = lng;
+      document.getElementById("poi_lat_display").value = (typeof lat === 'number' ? lat : parseFloat(lat)).toFixed(6);
+      document.getElementById("poi_lon_display").value = (typeof lng === 'number' ? lng : parseFloat(lng)).toFixed(6);
       document.getElementById("poi_nome").value = "";
       document.getElementById("poi_endereco").value = "";
       document.getElementById("poi_cep").value = "";
       document.getElementById("poi_cnpj").value = "";
       document.getElementById("poi_contato").value = "";
       document.getElementById("poi_raio").value = "50";
+      document.getElementById("poi_raio_range").value = "50";
       document.getElementById("poi_icone").value = "";
       document.getElementById("poi_imagem").value = "";
       document.getElementById("poi_imagem_preview").innerHTML = "";
-      document.getElementById("poiModal").style.display = "block";
-      document.getElementById("poiModalOverlay").style.display = "block";
+      document.getElementById("poiSidebar").style.display = "block";
+      atualizarPreviewRaio();
+      reverseGeocodeLog(lat, lng);
     };
 
     window.editarPoi = function(poiId) {
@@ -1327,9 +1343,49 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     window.fecharModalPoi = function() {
-      document.getElementById("poiModal").style.display = "none";
-      document.getElementById("poiModalOverlay").style.display = "none";
+      document.getElementById("poiSidebar").style.display = "none";
+      removerPreviewRaio();
     };
+
+    // Preview do raio no mapa em tempo real
+    var _circlePreview = null;
+
+    function atualizarPreviewRaio() {
+      if (!map) return;
+      var lat = parseFloat(document.getElementById("poi_latitude").value);
+      var lng = parseFloat(document.getElementById("poi_longitude").value);
+      if (isNaN(lat) || isNaN(lng)) return;
+      var raio = parseInt(document.getElementById("poi_raio").value, 10) || 50;
+      removerPreviewRaio();
+      _circlePreview = L.circle([lat, lng], {
+        radius: raio,
+        color: '#c0392b',
+        fillColor: '#c0392b',
+        fillOpacity: 0.15,
+        weight: 3,
+        dashArray: '8,6'
+      }).addTo(map);
+    }
+
+    function removerPreviewRaio() {
+      if (_circlePreview) {
+        map.removeLayer(_circlePreview);
+        _circlePreview = null;
+      }
+    }
+
+    // Sincroniza range <-> number e atualiza preview
+    document.addEventListener("input", function(e) {
+      if (e.target.id === "poi_raio_range") {
+        var num = document.getElementById("poi_raio");
+        num.value = e.target.value;
+        atualizarPreviewRaio();
+      } else if (e.target.id === "poi_raio") {
+        var range = document.getElementById("poi_raio_range");
+        range.value = e.target.value;
+        atualizarPreviewRaio();
+      }
+    });
 
     function reverseGeocodeLog(lat, lng) {
       var url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + lat + '&lon=' + lng + '&accept-language=pt&countrycodes=br&addressdetails=1';
@@ -1363,9 +1419,9 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("poi_longitude").value = _contextLng;
         document.getElementById("poi_lat_display").value = _contextLat.toFixed(6);
         document.getElementById("poi_lon_display").value = _contextLng.toFixed(6);
-        document.getElementById("poiModal").style.display = "block";
-        document.getElementById("poiModalOverlay").style.display = "block";
+        document.getElementById("poiSidebar").style.display = "block";
         reverseGeocodeLog(_contextLat, _contextLng);
+        setTimeout(atualizarPreviewRaio, 100);
       };
       map.on("click", selectHandler);
     };

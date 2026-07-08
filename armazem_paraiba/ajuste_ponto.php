@@ -341,6 +341,35 @@
 			}
 			</script>"
 		;
+		// POIs ativos
+		$__pois = mysqli_fetch_all(query(
+			"SELECT poi_nb_id, poi_tx_nome, poi_tx_cnpj, poi_tx_contato,
+					poi_tx_latitude, poi_tx_longitude, poi_nb_raio, poi_tx_icone,
+					poi_tx_endereco, poi_tx_cep, poi_tx_imagem
+			 FROM poi
+			 WHERE poi_tx_status = 'ativo'
+			 ORDER BY poi_tx_nome ASC"
+		), MYSQLI_ASSOC);
+		// Garante tabela poi_tipo + carrega tipos
+		$__rsDb = query("SELECT DATABASE() AS db");
+		$__dbName = "";
+		if($__rsDb){ $__dbRow = mysqli_fetch_assoc($__rsDb); $__dbName = strval($__dbRow["db"] ?? ""); }
+		if($__dbName !== ""){
+			$__rsChkPt = query("SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'poi_tipo' LIMIT 1", "s", [$__dbName]);
+			$__chkPt = $__rsChkPt ? mysqli_fetch_assoc($__rsChkPt) : null;
+			if(empty($__chkPt)){
+				query("CREATE TABLE IF NOT EXISTS poi_tipo (poti_nb_id INT AUTO_INCREMENT PRIMARY KEY, poti_tx_codigo VARCHAR(50) NOT NULL UNIQUE, poti_tx_nome VARCHAR(100) NOT NULL, poti_tx_emoji VARCHAR(10) NOT NULL DEFAULT '📌', poti_tx_status ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+				$__padrao = [['fa-box','Caixa','📦'],['fa-building','Prédio','🏢'],['fa-industry','Indústria','🏭'],['fa-store','Loja','🏪'],['fa-gas-pump','Posto','⛽'],['fa-parking','Estacionamento','🅿️'],['fa-hospital','Hospital','🏥'],['fa-university','Banco','🏦'],['fa-utensils','Restaurante','🍽️'],['fa-hotel','Hotel','🏨'],['fa-warehouse','Armazém','🏭'],['fa-truck','Caminhão','🚚'],['fa-map-pin','Alfinete','📍'],['fa-flag-checkered','Ponto de Jornada','🏁']];
+				foreach($__padrao as $__t){ $__rsChk2 = query("SELECT 1 FROM poi_tipo WHERE poti_tx_codigo = ? LIMIT 1", "s", [$__t[0]]); $__chk = $__rsChk2 ? mysqli_fetch_assoc($__rsChk2) : null; if(empty($__chk)) query("INSERT INTO poi_tipo (poti_tx_codigo, poti_tx_nome, poti_tx_emoji) VALUES (?, ?, ?)", "sss", $__t); }
+			}
+		}
+		$__tiposPoi = [];
+		$__rsTipos = query("SELECT poti_tx_codigo, poti_tx_nome, poti_tx_emoji FROM poi_tipo WHERE poti_tx_status = 'ativo' ORDER BY poti_tx_nome ASC");
+		while($__rsTipos && ($__r = mysqli_fetch_assoc($__rsTipos))){ $__tiposPoi[] = $__r; }
+		$__tiposPoiJson = json_encode($__tiposPoi ?: [], JSON_UNESCAPED_UNICODE);
+
+		$__poisJson = json_encode($__pois ?: [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
 		$botaoLocEventos = 
 			"<button class='btn default' type='button' onclick='abrirLocalizacoesEventos()'>Localização Eventos</button>
 			<link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'>
@@ -348,6 +377,7 @@
 			<link rel='stylesheet' href='https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css'>
 			<script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
 			<script src='https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js'></script>
+			<script>window.pois = {$__poisJson}; window.poiTipos = {$__tiposPoiJson};</script>
 			<div id='mapModal' style='display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:10000; align-items:center; justify-content:center;'>
 				<div style='background:#fff; width:90%; height:80%; border-radius:8px; position:relative; padding:8px; display:flex; flex-direction:column;'>
 					<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:6px'>
@@ -510,7 +540,8 @@
 				var baseMapa=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19});
 				var googleHybrid=L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{maxZoom:20, subdomains:['mt0','mt1','mt2','mt3']});
 				baseMapa.addTo(__ajusteMap);
-				L.control.layers({'Mapa':baseMapa,'Satélite (Híbrido)':googleHybrid},null,{position:'topright'}).addTo(__ajusteMap);
+				var __ajustePoiLayer = L.layerGroup().addTo(__ajusteMap);
+				L.control.layers({'Mapa':baseMapa,'Satélite (Híbrido)':googleHybrid},{'📍 POIs': __ajustePoiLayer},{position:'topright'}).addTo(__ajusteMap);
 				var greenIcon=new L.Icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',shadowUrl:'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34],shadowSize:[41,41]});
 				var redIcon=new L.Icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',shadowUrl:'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34],shadowSize:[41,41]});
 				var yellowIcon=new L.Icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png',shadowUrl:'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34],shadowSize:[41,41]});
@@ -539,6 +570,49 @@
 					bounds.push([c.lat,c.lng]);
 				}
 				if(bounds.length>0){ __ajusteMap.fitBounds(cluster.getBounds()); }
+
+				// ---- POIs ----
+				var __ajustePoisData = window.pois || [];
+				var __ajustePoiMarkers = [];
+				var __ajustePoiLegendItems = [];
+				var __ajusteTipos = window.poiTipos || [];
+				var __ajustePoiEmojiMap = {};
+				__ajusteTipos.forEach(function(t){ __ajustePoiEmojiMap[t.poti_tx_codigo] = t.poti_tx_emoji; });
+				if (__ajustePoisData.length > 0) {
+					for(var __p=0;__p<__ajustePoisData.length;__p++){
+						var __poi=__ajustePoisData[__p];
+						var __poiLat=parseFloat(__poi.poi_tx_latitude);
+						var __poiLng=parseFloat(__poi.poi_tx_longitude);
+						if(isNaN(__poiLat)||isNaN(__poiLng)) continue;
+						var __emoji=__ajustePoiEmojiMap[__poi.poi_tx_icone]||'📌';
+						var __poiIcon=L.divIcon({className:'ajuste-poi-icon',html:'<div style=\"background:#004173;color:white;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 6px rgba(0,0,0,.3);border:2px solid white;\">'+__emoji+'</div>',iconSize:[32,32],iconAnchor:[16,32],popupAnchor:[0,-36]});
+						var __poiImg=__poi.poi_tx_imagem?'<img src=\"'+__poi.poi_tx_imagem+'\" style=\"max-width:200px;max-height:130px;border-radius:6px;margin-bottom:6px;display:block;border:1px solid #ddd;\">':'';
+						var __poiPopup='<div style=\"font-size:14px;min-width:220px\">'+
+							__poiImg+
+							'<strong>📌 '+__poi.poi_tx_nome+'</strong>'+
+							(__poi.poi_tx_endereco?'<br><b>Endereço:</b> '+__poi.poi_tx_endereco:'')+
+							(__poi.poi_tx_cep?'<br><b>CEP:</b> '+__poi.poi_tx_cep:'')+
+							(__poi.poi_tx_cnpj?'<br><b>CNPJ:</b> '+__poi.poi_tx_cnpj:'')+
+							(__poi.poi_tx_contato?'<br><b>Contato:</b> '+__poi.poi_tx_contato:'')+
+							'<br><b>Lat:</b> '+__poi.poi_tx_latitude+
+							'<br><b>Lon:</b> '+__poi.poi_tx_longitude+
+							(__poi.poi_nb_raio?'<br><b>Raio:</b> '+__poi.poi_nb_raio+'m':'')+
+						'</div>';
+						var __poiM=L.marker([__poiLat,__poiLng],{icon:__poiIcon}).bindPopup(__poiPopup).addTo(__ajustePoiLayer);
+						if(__poi.poi_nb_raio>0){
+							L.circle([__poiLat,__poiLng],{radius:parseInt(__poi.poi_nb_raio,10)||50,color:'#002244',fillColor:'#002244',fillOpacity:0.2,weight:2}).addTo(__ajustePoiLayer);
+						}
+						__ajustePoiMarkers.push(__poiM);
+						__ajustePoiLegendItems.push({nome:__poi.poi_tx_nome,emoji:__emoji,raio:__poi.poi_nb_raio});
+					}
+				}
+				window.__ajusteZoomToPoi = function(idx){
+					var m=__ajustePoiMarkers[idx];
+					if(!m || !__ajusteMap) return;
+					__ajusteMap.setView(m.getLatLng(), 17);
+					m.openPopup();
+				};
+
 				var Legend=L.Control.extend({
 					onAdd:function(){
 						var div=L.DomUtil.create('div','info legend');
@@ -563,6 +637,17 @@
 							html+= line;
 						}
 						html+='</div>';
+						// ---- POIs na legenda ----
+						if(__ajustePoiLegendItems.length>0){
+							html+='<div style=\"margin-top:8px; font-weight:bold; font-size:16px\">📍 POIs</div>';
+							html+='<div style=\"max-height:160px; overflow-y:auto; margin-top:4px\">';
+							for(var __pl=0;__pl<__ajustePoiLegendItems.length;__pl++){
+								var __pli=__ajustePoiLegendItems[__pl];
+								var __plRaio=__pli.raio?' ('+__pli.raio+'m)':'';
+								html+='<div style=\"display:flex; align-items:center; gap:6px; font-size:15px; cursor:pointer; border-radius:4px; padding:4px\" onclick=\"__ajusteZoomToPoi('+__pl+')\"><span style=\"font-size:18px\">'+__pli.emoji+'</span> <span>'+__pli.nome+__plRaio+'</span></div>';
+							}
+							html+='</div>';
+						}
 						div.innerHTML=html;
 						return div;
 					}
@@ -821,6 +906,63 @@
 				}
 			</style>"
 		;
+
+		// ---- POI detection: check each point in the grid against POIs ----
+		if (!empty($__pois)) {
+			echo "
+			<script>
+			(function(){
+				var _pois = window.pois || [];
+				if (_pois.length === 0) return;
+				function _haversineKm(lat1, lon1, lat2, lon2) {
+					var R = 6371;
+					var dLat = (lat2-lat1)*Math.PI/180;
+					var dLon = (lon2-lon1)*Math.PI/180;
+					var a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+					return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+				}
+				var tbl = document.querySelector('[id^=\"contex-grid-\"]');
+				if (!tbl) return;
+				var ths = tbl.querySelectorAll('thead tr th');
+				var idxLoc = -1, idxJust = -1;
+				for (var i = 0; i < ths.length; i++) {
+					var txt = (ths[i].textContent || '').trim().toUpperCase();
+					if (txt.indexOf('LOCALIZA') >= 0) idxLoc = i;
+					if (txt === 'JUSTIFICATIVA') idxJust = i;
+				}
+				if (idxLoc < 0 || idxJust < 0) return;
+				var rows = tbl.querySelectorAll('tbody tr');
+				for (var r = 0; r < rows.length; r++) {
+					var tds = rows[r].children;
+					if (!tds || tds.length <= Math.max(idxLoc, idxJust)) continue;
+					var a = tds[idxLoc] ? tds[idxLoc].querySelector('a[href*=\"google.com/maps?q\"]') : null;
+					if (!a) continue;
+					var href = a.getAttribute('href') || '';
+					var qIdx = href.indexOf('q=');
+					if (qIdx < 0) continue;
+					var parts = href.substring(qIdx + 2).split(',');
+					if (parts.length < 2) continue;
+					var lat = parseFloat(parts[0]), lng = parseFloat(parts[1]);
+					if (isNaN(lat) || isNaN(lng)) continue;
+					var matches = [];
+					for (var p = 0; p < _pois.length; p++) {
+						var poi = _pois[p];
+						var pl = parseFloat(poi.poi_tx_latitude), pn = parseFloat(poi.poi_tx_longitude);
+						var pr = parseInt(poi.poi_nb_raio, 10) || 50;
+						if (isNaN(pl) || isNaN(pn)) continue;
+						var dist = _haversineKm(lat, lng, pl, pn) * 1000;
+						if (dist <= pr) matches.push(poi.poi_tx_nome);
+					}
+					if (matches.length > 0) {
+						var justTd = tds[idxJust];
+						var existing = (justTd.textContent || '').trim();
+						var addText = 'POI - ' + matches.join(', POI - ');
+						justTd.textContent = existing ? existing + ' | ' + addText : addText;
+					}
+				}
+			})();
+			</script>";
+		}
 
 		carregarJS();
 

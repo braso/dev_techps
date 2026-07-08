@@ -1,0 +1,6 @@
+nome;cnpj;contato;endereco;cep;latitude;longitude;raio;icone
+Exemplo Matriz;00.000.000/0001-00;83988887777;Rua XV, Centro, Campina Grande;58400150;-7.230000;-35.881000;100;fa-building
+Exemplo Filial;11.111.111/0001-11;83988886666;Av Principal, Prata, Campina Grande;58400500;-7.225000;-35.890000;80;fa-store
+Base Operacional;22.222.222/0001-22;83988885555;BR-230, km 120;58410000;-7.200000;-35.860000;200;fa-truck
+Ponto de Apoio;;83988884444;Rua A, Bodocongó;58430000;-7.240000;-35.870000;50;fa-gas-pump
+CD Central;33.333.333/0001-33;;Av Elpidio de Almeida, 500;58400100;-7.215000;-35.895000;150;fa-warehouse

@@ -55,7 +55,34 @@
         $pois[] = $r;
     }
 
-    
+    // Garante a tabela poi_tipo
+    $__rsDb = query("SELECT DATABASE() AS db");
+    $__dbName = "";
+    if($__rsDb){ $__dbRow = mysqli_fetch_assoc($__rsDb); $__dbName = strval($__dbRow["db"] ?? ""); }
+    if($__dbName !== ""){
+        $__rsChkTipo = query("SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'poi_tipo' LIMIT 1", "s", [$__dbName]);
+        $chkTipo = $__rsChkTipo ? mysqli_fetch_assoc($__rsChkTipo) : null;
+        if(empty($chkTipo)){
+            query("CREATE TABLE IF NOT EXISTS poi_tipo (poti_nb_id INT AUTO_INCREMENT PRIMARY KEY, poti_tx_codigo VARCHAR(50) NOT NULL UNIQUE, poti_tx_nome VARCHAR(100) NOT NULL, poti_tx_emoji VARCHAR(10) NOT NULL DEFAULT '📌', poti_tx_status ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            $padrao = [['fa-box','Caixa','📦'],['fa-building','Prédio','🏢'],['fa-industry','Indústria','🏭'],['fa-store','Loja','🏪'],['fa-gas-pump','Posto','⛽'],['fa-parking','Estacionamento','🅿️'],['fa-hospital','Hospital','🏥'],['fa-university','Banco','🏦'],['fa-utensils','Restaurante','🍽️'],['fa-hotel','Hotel','🏨'],['fa-warehouse','Armazém','🏭'],['fa-truck','Caminhão','🚚'],['fa-map-pin','Alfinete','📍'],['fa-flag-checkered','Ponto de Jornada','🏁'],['Posto Fiscal','Posto Fiscal','🏛️'],['PRF - Polícia Rodoviária Federal','PRF - Polícia Rodoviária Federal','👮'],['PM - Polícia Militar','PM - Polícia Militar','👮‍♂️'],['Balança Rodoviária','Balança Rodoviária','⚖️'],['Pedágios','Pedágios','🛣️'],['INÍCIO DE JORNADA','INÍCIO DE JORNADA','🏁'],['INÍCIO REFEIÇÃO','INÍCIO REFEIÇÃO','🍽️'],['FIM REFEIÇÃO','FIM REFEIÇÃO','🍽️'],['INÍCIO DE ESPERA','INÍCIO DE ESPERA','⏸️'],['FIM DE ESPERA','FIM DE ESPERA','▶️'],['INÍCIO DE DESCANSO','INÍCIO DE DESCANSO','💤'],['FIM DE DESCANSO','FIM DE DESCANSO','▶️'],['INÍCIO DE REPOUSO','INÍCIO DE REPOUSO','😴'],['FIM DE REPOUSO','FIM DE REPOUSO','▶️'],['INÍCIO DE PERNOITE','INÍCIO DE PERNOITE','🌙'],['FIM DE PERNOITE','FIM DE PERNOITE','🌅'],['FIM DE JORNADA','FIM DE JORNADA','🔚'],['Oficina','Oficina','🔧'],['Posto de Gasolina','Posto de Gasolina','⛽'],['Garagem','Garagem','🅿️'],['Base/Terminal','Base/Terminal','🏢'],['Cliente','Cliente','🤝'],['Fornecedor','Fornecedor','📦'],['Pátio','Pátio','🏭'],['Embarcadouro','Embarcadouro','⚓'],['Porto Seco','Porto Seco','🚢'],['Almoxarifado','Almoxarifado','📦'],['Centro de Distribuição','Centro de Distribuição','🏭'],['Ponto de Apoio','Ponto de Apoio','🆘'],['Parada Obrigatória','Parada Obrigatória','🛑'],['Pesagem','Pesagem','⚖️'],['Fronteira','Fronteira','🚧'],['Alfândega','Alfândega','🛃'],['Garagem Cliente','Garagem Cliente','🏠'],['Pátio Cliente','Pátio Cliente','🏭']];
+            foreach($padrao as $t){ $__rsChk2 = query("SELECT 1 FROM poi_tipo WHERE poti_tx_codigo = ? LIMIT 1", "s", [$t[0]]); $chk = $__rsChk2 ? mysqli_fetch_assoc($__rsChk2) : null; if(empty($chk)) query("INSERT INTO poi_tipo (poti_tx_codigo, poti_tx_nome, poti_tx_emoji) VALUES (?, ?, ?)", "sss", $t); }
+        }
+    }
+    // Garante que todos os tipos (incluindo antigos) tenham os emojis corretos
+    $todosTipos = [['fa-box','Caixa','📦'],['fa-building','Prédio','🏢'],['fa-industry','Indústria','🏭'],['fa-store','Loja','🏪'],['fa-gas-pump','Posto','⛽'],['fa-parking','Estacionamento','🅿️'],['fa-hospital','Hospital','🏥'],['fa-university','Banco','🏦'],['fa-utensils','Restaurante','🍽️'],['fa-hotel','Hotel','🏨'],['fa-warehouse','Armazém','🏭'],['fa-truck','Caminhão','🚚'],['fa-map-pin','Alfinete','📍'],['fa-flag-checkered','Ponto de Jornada','🏁'],['Posto Fiscal','Posto Fiscal','🏛️'],['PRF - Polícia Rodoviária Federal','PRF - Polícia Rodoviária Federal','👮'],['PM - Polícia Militar','PM - Polícia Militar','👮‍♂️'],['Balança Rodoviária','Balança Rodoviária','⚖️'],['Pedágios','Pedágios','🛣️'],['INÍCIO DE JORNADA','INÍCIO DE JORNADA','🏁'],['INÍCIO REFEIÇÃO','INÍCIO REFEIÇÃO','🍽️'],['FIM REFEIÇÃO','FIM REFEIÇÃO','🍽️'],['INÍCIO DE ESPERA','INÍCIO DE ESPERA','⏸️'],['FIM DE ESPERA','FIM DE ESPERA','▶️'],['INÍCIO DE DESCANSO','INÍCIO DE DESCANSO','💤'],['FIM DE DESCANSO','FIM DE DESCANSO','▶️'],['INÍCIO DE REPOUSO','INÍCIO DE REPOUSO','😴'],['FIM DE REPOUSO','FIM DE REPOUSO','▶️'],['INÍCIO DE PERNOITE','INÍCIO DE PERNOITE','🌙'],['FIM DE PERNOITE','FIM DE PERNOITE','🌅'],['FIM DE JORNADA','FIM DE JORNADA','🔚'],['Oficina','Oficina','🔧'],['Posto de Gasolina','Posto de Gasolina','⛽'],['Garagem','Garagem','🅿️'],['Base/Terminal','Base/Terminal','🏢'],['Cliente','Cliente','🤝'],['Fornecedor','Fornecedor','📦'],['Pátio','Pátio','🏭'],['Embarcadouro','Embarcadouro','⚓'],['Porto Seco','Porto Seco','🚢'],['Almoxarifado','Almoxarifado','📦'],['Centro de Distribuição','Centro de Distribuição','🏭'],['Ponto de Apoio','Ponto de Apoio','🆘'],['Parada Obrigatória','Parada Obrigatória','🛑'],['Pesagem','Pesagem','⚖️'],['Fronteira','Fronteira','🚧'],['Alfândega','Alfândega','🛃'],['Garagem Cliente','Garagem Cliente','🏠'],['Pátio Cliente','Pátio Cliente','🏭']];
+    foreach($todosTipos as $t){
+        $__rsChk3 = query("SELECT 1 FROM poi_tipo WHERE poti_tx_codigo = ? LIMIT 1", "s", [$t[0]]);
+        $chk3 = $__rsChk3 ? mysqli_fetch_assoc($__rsChk3) : null;
+        if(empty($chk3)){
+            query("INSERT INTO poi_tipo (poti_tx_codigo, poti_tx_nome, poti_tx_emoji) VALUES (?, ?, ?)", "sss", $t);
+        }else{
+            query("UPDATE poi_tipo SET poti_tx_emoji = ?, poti_tx_nome = ? WHERE poti_tx_codigo = ?", "sss", [$t[2], $t[1], $t[0]]);
+        }
+    }
+    $tiposPoi = [];
+    $rsTipos = query("SELECT poti_tx_codigo, poti_tx_nome, poti_tx_emoji FROM poi_tipo WHERE poti_tx_status = 'ativo' ORDER BY poti_tx_nome ASC");
+    while($rsTipos && ($r = mysqli_fetch_assoc($rsTipos))){ $tiposPoi[] = $r; }
+
 
     // Função para buscar pontos
     function buscarPontos($matricula, $data) {
@@ -335,6 +362,14 @@
 
         $userId = !empty($_SESSION["user_nb_id"]) ? (int)$_SESSION["user_nb_id"] : 0;
         $editId = !empty($_POST["id"]) ? (int)$_POST["id"] : 0;
+
+        // Verifica duplicidade de nome
+        $dupCheck = query("SELECT poi_nb_id FROM poi WHERE poi_tx_nome = ? AND poi_tx_status = 'ativo' LIMIT 1", "s", [$nome]);
+        $dupRow = $dupCheck ? mysqli_fetch_assoc($dupCheck) : null;
+        if($dupRow && (!empty($dupRow["poi_nb_id"]) && intval($dupRow["poi_nb_id"]) !== $editId)){
+            echo json_encode(["sucesso" => false, "erro" => "Já existe um POI com este nome."]);
+            exit;
+        }
 
         if($editId > 0){
             $dados = [

@@ -1,6 +1,31 @@
 <?php
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
 error_reporting(E_ALL);
+
+// Garante que qualquer erro fatal retorna JSON, não HTML/vazio
+register_shutdown_function(function(){
+    $err = error_get_last();
+    if($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])){
+        if(!headers_sent()){
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(200);
+        }
+        echo json_encode([
+            "error" => "Erro interno PHP: " . $err['message'] . " em " . $err['file'] . ":" . $err['line']
+        ], JSON_UNESCAPED_UNICODE);
+    }
+});
+
+set_exception_handler(function(Throwable $e){
+    if(!headers_sent()){
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code(200);
+    }
+    echo json_encode([
+        "error" => "Exceção: " . $e->getMessage()
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+});
 
 $interno = true; // utilizado em conecta.php
 include_once __DIR__ . "/conecta.php";
@@ -42,6 +67,10 @@ function ensureRfidsNbEntidadeIdColumn(mysqli $conn): void{
 ensureRfidsNbEntidadeIdColumn($conn);
 
 // Receber query e parâmetros
+if(empty($_POST["query"]) || !is_array($_POST["query"]) || count($_POST["query"]) < 4){
+    echo json_encode(["error" => "Parâmetros inválidos.", "rows" => [], "total" => 0]);
+    exit;
+}
 $queryBase = base64_decode($_POST["query"][0]) . urldecode(base64_decode($_POST["query"][1]));
 $limit = min(intval(base64_decode($_POST["query"][2])), 1000); // Limite máximo de 1000
 $offset = max(0, intval(base64_decode($_POST["query"][3])));
@@ -143,7 +172,7 @@ if (!empty($queryResult)) {
                 }
             }
 
-            if ($key === 'ss_e_tx_foto' || $key === 'ss_e_tx_foto_epi') {
+            if ($key === 'ss_e_tx_foto' || $key === 'ss_e_tx_foto_epi' || $key === 'poi_tx_imagem') {
                 if ($data !== null && $data !== '') {
                     $resolvedSrc = $_ENV["APP_PATH"] . '/' . htmlspecialchars($data);
                     $data = '<img src="' . $resolvedSrc . '" onclick="verImagemMaior(\'' . $resolvedSrc . '\')" style="max-height: 40px; max-width: 40px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; object-fit: cover;" title="Clique para ampliar">';

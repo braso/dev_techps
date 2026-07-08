@@ -96,38 +96,39 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
-<!-- Modal de cadastro de POI -->
-<div id="poiModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:420px; max-width:90%; background:white; border:1px solid #ccc; border-radius:10px; box-shadow:0 6px 20px rgba(0,0,0,.25); z-index:2001; padding:24px;">
-    <h4 style="margin:0 0 16px 0; font-size:18px;">📌 Cadastrar POI</h4>
+<!-- Sidebar de cadastro de POI -->
+<div id="poiSidebar" style="display:none; position:fixed; top:0; right:0; width:400px; max-width:95%; height:100vh; background:white; box-shadow:-4px 0 20px rgba(0,0,0,.2); z-index:2001; overflow-y:auto; padding:20px; transition:right .3s ease;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h4 style="margin:0; font-size:18px;">📌 Cadastrar POI</h4>
+        <button type="button" onclick="fecharModalPoi()" style="background:none; border:none; font-size:22px; cursor:pointer; padding:4px 8px; color:#999;">&times;</button>
+    </div>
     <form id="poiForm" onsubmit="return salvarPoi(event)">
         <input type="hidden" id="poi_id" name="id" value="0">
         <input type="hidden" id="poi_latitude" name="latitude">
         <input type="hidden" id="poi_longitude" name="longitude">
-        <div style="margin-bottom:10px;">
+        <div style="margin-bottom:12px;">
             <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Nome *</label>
             <input type="text" id="poi_nome" name="nome" required style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
         </div>
-        <div style="margin-bottom:10px; display:flex; gap:10px;">
-            <div style="flex:2;">
-                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Endereço</label>
-                <input type="text" id="poi_endereco" name="endereco" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
-            </div>
+        <div style="margin-bottom:12px;">
+            <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Endereço</label>
+            <input type="text" id="poi_endereco" name="endereco" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
+        </div>
+        <div style="margin-bottom:12px; display:flex; gap:10px;">
             <div style="flex:1;">
                 <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">CEP</label>
                 <input type="text" id="poi_cep" name="cep" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
             </div>
-        </div>
-        <div style="margin-bottom:10px; display:flex; gap:10px;">
             <div style="flex:1;">
                 <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">CNPJ</label>
                 <input type="text" id="poi_cnpj" name="cnpj" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
             </div>
-            <div style="flex:1;">
-                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Contato</label>
-                <input type="text" id="poi_contato" name="contato" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
-            </div>
         </div>
-        <div style="margin-bottom:10px;">
+        <div style="margin-bottom:12px;">
+            <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Contato</label>
+            <input type="text" id="poi_contato" name="contato" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
+        </div>
+        <div style="margin-bottom:12px;">
             <div style="display:flex; gap:6px; align-items:flex-end;">
                 <div style="flex:1;">
                     <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Latitude</label>
@@ -137,47 +138,37 @@ document.addEventListener('DOMContentLoaded', function() {
                     <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Longitude</label>
                     <input type="text" id="poi_lon_display" disabled style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px; background:#f5f5f5;">
                 </div>
-                <button type="button" id="btnEscolherMapa" onclick="escolherPontoMapa()" style="height:38px; padding:8px 12px; border:1px solid #004173; border-radius:6px; background:#004173; color:white; cursor:pointer; font-size:13px; white-space:nowrap; display:flex; align-items:center; gap:4px;">📍 Escolher no mapa</button>
+                <button type="button" onclick="escolherPontoMapa()" style="height:38px; padding:8px 10px; border:1px solid #004173; border-radius:6px; background:#004173; color:white; cursor:pointer; font-size:12px; white-space:nowrap;">📍 Mapa</button>
             </div>
         </div>
-        <div style="margin-bottom:10px; display:flex; gap:10px;">
+        <div style="margin-bottom:12px; display:flex; gap:10px;">
             <div style="flex:1;">
                 <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Raio (metros)</label>
-                <input type="number" id="poi_raio" name="raio" value="50" min="1" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
+                <input type="range" id="poi_raio_range" min="10" max="500" value="50" style="width:100%;">
+                <input type="number" id="poi_raio" name="raio" value="50" min="1" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px; margin-top:4px;">
             </div>
             <div style="flex:1;">
-                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Ícone</label>
+                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Tipo de POI</label>
                 <select id="poi_icone" name="icone" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
-                    <option value="">Padrão (azul)</option>
-                    <option value="fa-box">📦 Caixa</option>
-                    <option value="fa-building">🏢 Prédio</option>
-                    <option value="fa-industry">🏭 Indústria</option>
-                    <option value="fa-store">🏪 Loja</option>
-                    <option value="fa-gas-pump">⛽ Posto</option>
-                    <option value="fa-parking">🅿️ Estacionamento</option>
-                    <option value="fa-hospital">🏥 Hospital</option>
-                    <option value="fa-university">🏦 Banco</option>
-                    <option value="fa-utensils">🍽️ Restaurante</option>
-                    <option value="fa-hotel">🏨 Hotel</option>
-                    <option value="fa-warehouse">🏭 Armazém</option>
-                    <option value="fa-truck">🚚 Caminhão</option>
-                    <option value="fa-map-pin">📍 Alfinete</option>
-                    <option value="fa-flag-checkered">🏁 Ponto de Jornada</option>
+                    <option value="">Selecione o tipo</option>
+                    <?php foreach($tiposPoi as $t): ?>
+                    <option value="<?=htmlspecialchars($t['poti_tx_codigo'])?>" data-emoji="<?=htmlspecialchars($t['poti_tx_emoji'])?>"><?=$t['poti_tx_emoji']?> <?=htmlspecialchars($t['poti_tx_nome'])?></option>
+                    <?php endforeach; ?>
+                    <option value="__novo__" style="color:#004173; font-weight:600;">➕ Criar novo tipo...</option>
                 </select>
             </div>
         </div>
-        <div style="margin-bottom:10px;">
+        <div style="margin-bottom:12px;">
             <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Imagem do Local</label>
             <input type="file" id="poi_imagem" name="imagem" accept="image/png,image/jpeg,image/gif,image/webp" style="width:100%; padding:6px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
             <div id="poi_imagem_preview" style="margin-top:4px;"></div>
         </div>
-        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:16px;">
-            <button type="button" onclick="fecharModalPoi()" style="padding:8px 20px; border:1px solid #ccc; border-radius:6px; background:#f5f5f5; cursor:pointer; font-size:14px;">Cancelar</button>
-            <button type="submit" style="padding:8px 20px; border:none; border-radius:6px; background:#004173; color:white; cursor:pointer; font-size:14px;">Salvar POI</button>
+        <div style="display:flex; gap:10px; margin-top:16px;">
+            <button type="button" onclick="fecharModalPoi()" style="flex:1; padding:10px; border:1px solid #ccc; border-radius:6px; background:#f5f5f5; cursor:pointer; font-size:14px;">Cancelar</button>
+            <button type="submit" style="flex:1; padding:10px; border:none; border-radius:6px; background:#004173; color:white; cursor:pointer; font-size:14px;">Salvar POI</button>
         </div>
     </form>
 </div>
-<div id="poiModalOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.4); z-index:2000;" onclick="fecharModalPoi()"></div>
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
@@ -190,6 +181,122 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+
+<style>
+.emojigrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:6px;max-height:220px;overflow-y:auto;padding:4px;border:1px solid #eee;border-radius:8px;background:#fafafa;}
+.emojigrid button{font-size:24px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:2px solid transparent;border-radius:8px;background:white;cursor:pointer;transition:all .15s;}
+.emojigrid button:hover{border-color:#004173;background:#e8f0fe;transform:scale(1.12);}
+.emojigrid button.selecionado{border-color:#004173;background:#d0e2ff;box-shadow:0 0 0 2px #004173;transform:scale(1.1);}
+</style>
+<div id="modalNovoTipoPoi" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.5); z-index:99999; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:12px; padding:24px; width:480px; max-width:95%; box-shadow:0 8px 30px rgba(0,0,0,.3); position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);">
+        <h3 style="margin:0 0 4px 0; font-size:18px;">➕ Criar novo tipo de POI</h3>
+        <p style="color:#666; font-size:13px; margin-bottom:14px;">Dê um nome e escolha um ícone.</p>
+        <div style="margin-bottom:10px;">
+            <label style="display:block; font-weight:600; font-size:13px; margin-bottom:4px;">Nome <span style="color:red;">*</span></label>
+            <input type="text" id="novoTipoNome" class="form-control" placeholder="Ex: Escola" style="width:100%;" autocomplete="off">
+        </div>
+        <div style="margin-bottom:14px;">
+            <label style="display:block; font-weight:600; font-size:13px; margin-bottom:4px;">Ícone <span style="color:red;">*</span> <span id="emojiSelecionado" style="font-size:18px; margin-left:6px;"></span></label>
+            <div class="emojigrid" id="gradeEmojis">
+                <button type="button" data-emoji="📦">📦</button><button type="button" data-emoji="🏢">🏢</button><button type="button" data-emoji="🏭">🏭</button><button type="button" data-emoji="🏪">🏪</button><button type="button" data-emoji="⛽">⛽</button><button type="button" data-emoji="🅿️">🅿️</button><button type="button" data-emoji="🏥">🏥</button>
+                <button type="button" data-emoji="🏦">🏦</button><button type="button" data-emoji="🍽️">🍽️</button><button type="button" data-emoji="🏨">🏨</button><button type="button" data-emoji="🚚">🚚</button><button type="button" data-emoji="📍">📍</button><button type="button" data-emoji="🏁">🏁</button><button type="button" data-emoji="🏫">🏫</button>
+                <button type="button" data-emoji="🛒">🛒</button><button type="button" data-emoji="⚕️">⚕️</button><button type="button" data-emoji="🔧">🔧</button><button type="button" data-emoji="⚙️">⚙️</button><button type="button" data-emoji="🛠️">🛠️</button><button type="button" data-emoji="🚛">🚛</button><button type="button" data-emoji="🚌">🚌</button>
+                <button type="button" data-emoji="🚕">🚕</button><button type="button" data-emoji="✈️">✈️</button><button type="button" data-emoji="⚓">⚓</button><button type="button" data-emoji="🚢">🚢</button><button type="button" data-emoji="🚂">🚂</button><button type="button" data-emoji="🏗️">🏗️</button><button type="button" data-emoji="🏠">🏠</button>
+                <button type="button" data-emoji="⛪">⛪</button><button type="button" data-emoji="🎓">🎓</button><button type="button" data-emoji="📚">📚</button><button type="button" data-emoji="📋">📋</button><button type="button" data-emoji="🛡️">🛡️</button><button type="button" data-emoji="🔒">🔒</button><button type="button" data-emoji="🔑">🔑</button>
+                <button type="button" data-emoji="🪪">🪪</button><button type="button" data-emoji="📞">📞</button><button type="button" data-emoji="🖥️">🖥️</button><button type="button" data-emoji="🚧">🚧</button><button type="button" data-emoji="🧰">🧰</button><button type="button" data-emoji="🧲">🧲</button><button type="button" data-emoji="🔋">🔋</button>
+                <button type="button" data-emoji="🍕">🍕</button><button type="button" data-emoji="🍔">🍔</button><button type="button" data-emoji="☕">☕</button><button type="button" data-emoji="🥤">🥤</button><button type="button" data-emoji="🧃">🧃</button><button type="button" data-emoji="🏟️">🏟️</button><button type="button" data-emoji="🎪">🎪</button>
+                <button type="button" data-emoji="🎯">🎯</button><button type="button" data-emoji="🎳">🎳</button><button type="button" data-emoji="🎮">🎮</button><button type="button" data-emoji="🌲">🌲</button><button type="button" data-emoji="🌳">🌳</button><button type="button" data-emoji="🏔️">🏔️</button><button type="button" data-emoji="🏝️">🏝️</button>
+                <button type="button" data-emoji="🏖️">🏖️</button><button type="button" data-emoji="🚁">🚁</button><button type="button" data-emoji="🛸">🛸</button><button type="button" data-emoji="🚤">🚤</button><button type="button" data-emoji="🚑">🚑</button><button type="button" data-emoji="🚒">🚒</button><button type="button" data-emoji="⚖️">⚖️</button>
+                <button type="button" data-emoji="🏛️">🏛️</button><button type="button" data-emoji="📊">📊</button><button type="button" data-emoji="📜">📜</button><button type="button" data-emoji="🛋️">🛋️</button><button type="button" data-emoji="🛏️">🛏️</button><button type="button" data-emoji="🚿">🚿</button><button type="button" data-emoji="🧹">🧹</button>
+                <button type="button" data-emoji="🩺">🩺</button><button type="button" data-emoji="💊">💊</button><button type="button" data-emoji="🔬">🔬</button><button type="button" data-emoji="🧪">🧪</button><button type="button" data-emoji="📡">📡</button><button type="button" data-emoji="📷">📷</button><button type="button" data-emoji="🎨">🎨</button>
+                <button type="button" data-emoji="🖼️">🖼️</button><button type="button" data-emoji="🎵">🎵</button><button type="button" data-emoji="🎭">🎭</button><button type="button" data-emoji="📝">📝</button><button type="button" data-emoji="⚽">⚽</button><button type="button" data-emoji="🏀">🏀</button><button type="button" data-emoji="🎾">🎾</button>
+                <button type="button" data-emoji="🏐">🏐</button><button type="button" data-emoji="🚴">🚴</button><button type="button" data-emoji="🏧">🏧</button><button type="button" data-emoji="💳">💳</button><button type="button" data-emoji="💰">💰</button><button type="button" data-emoji="🧯">🧯</button><button type="button" data-emoji="🗑️">🗑️</button>
+            </div>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <button type="button" onclick="fecharModalNovoTipoPoi()" style="flex:1; padding:10px; border:1px solid #ccc; border-radius:6px; background:#f5f5f5; cursor:pointer; font-size:14px;">Cancelar</button>
+            <button type="button" onclick="salvarNovoTipoPoi()" style="flex:1; padding:10px; border:none; border-radius:6px; background:#004173; color:white; cursor:pointer; font-size:14px;">Salvar Tipo</button>
+        </div>
+        <div id="novoTipoStatus" style="margin-top:12px; font-size:13px;"></div>
+    </div>
+</div>
+
+<script>
+var _emojiSelecionado = '📦';
+function abrirModalNovoTipoPoi(){
+    document.getElementById('novoTipoNome').value = '';
+    _emojiSelecionado = '📦';
+    document.querySelectorAll('#gradeEmojis button').forEach(function(b){ b.classList.remove('selecionado'); });
+    var def = document.querySelector('#gradeEmojis button[data-emoji=\"📦\"]');
+    if(def) def.classList.add('selecionado');
+    document.getElementById('emojiSelecionado').textContent = '📦';
+    document.getElementById('novoTipoStatus').innerHTML = '';
+    document.getElementById('modalNovoTipoPoi').style.display = 'flex';
+    setTimeout(function(){ document.getElementById('novoTipoNome').focus(); }, 100);
+}
+function fecharModalNovoTipoPoi(){
+    document.getElementById('modalNovoTipoPoi').style.display = 'none';
+}
+document.addEventListener('DOMContentLoaded', function(){
+    document.getElementById('gradeEmojis').addEventListener('click', function(e){
+        var btn = e.target.closest('button');
+        if(!btn) return;
+        document.querySelectorAll('#gradeEmojis button').forEach(function(b){ b.classList.remove('selecionado'); });
+        btn.classList.add('selecionado');
+        _emojiSelecionado = btn.getAttribute('data-emoji') || '📌';
+        document.getElementById('emojiSelecionado').textContent = _emojiSelecionado;
+    });
+    var sel = document.getElementById('poi_icone');
+    if(sel){
+        sel.addEventListener('change', function(){
+            if(this.value === '__novo__'){
+                this.value = '';
+                abrirModalNovoTipoPoi();
+            }
+        });
+    }
+});
+function salvarNovoTipoPoi(){
+    var nome = document.getElementById('novoTipoNome').value.trim();
+    var emoji = _emojiSelecionado;
+    var statusEl = document.getElementById('novoTipoStatus');
+    if(!nome){
+        statusEl.innerHTML = '<span style="color:red;">Informe o nome do tipo.</span>';
+        document.getElementById('novoTipoNome').focus();
+        return;
+    }
+    var codigo = nome;
+    statusEl.innerHTML = '<span style="color:#666;">Salvando...</span>';
+    var formData = new FormData();
+    formData.append('ajax_action', 'criar_tipo_poi');
+    formData.append('codigo', codigo);
+    formData.append('nome', nome);
+    formData.append('emoji', emoji);
+    fetch(window.basePath + '/ajax_poi_tipo.php', { method: 'POST', body: formData })
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if(data.sucesso){
+                statusEl.innerHTML = '<span style="color:green;">Tipo criado com sucesso!</span>';
+                var sel = document.getElementById('poi_icone');
+                var opt = document.createElement('option');
+                opt.value = data.tipo.poti_tx_codigo;
+                opt.textContent = data.tipo.poti_tx_emoji + ' ' + data.tipo.poti_tx_nome;
+                opt.setAttribute('data-emoji', data.tipo.poti_tx_emoji);
+                var novoItem = sel.querySelector('option[value="__novo__"]');
+                sel.insertBefore(opt, novoItem);
+                sel.value = data.tipo.poti_tx_codigo;
+                setTimeout(fecharModalNovoTipoPoi, 800);
+            }else{
+                statusEl.innerHTML = '<span style="color:red;">' + (data.erro || 'Erro ao salvar.') + '</span>';
+            }
+        })
+        .catch(function(err){
+            statusEl.innerHTML = '<span style="color:red;">Erro na requisição.</span>';
+            console.error('AJAX_ERRO', err);
+        });
+}
+</script>
 
 <div class="container">
     <div id="form_header" class="form_title">
@@ -447,6 +554,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const plates = <?=json_encode($plates)?>;
     // Array de POIs vindo do PHP (global para acesso no mapa)
     window.pois = <?=json_encode($pois)?>;
+    window.poiTipos = <?=json_encode($tiposPoi, JSON_UNESCAPED_UNICODE)?>;
+    window.basePath = '<?=$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]?>';
 
     // Escuta o evento de input no campo de busca
     searchInput.addEventListener('input', function() {

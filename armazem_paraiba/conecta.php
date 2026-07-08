@@ -51,7 +51,7 @@
 			$_ENV["DB_PASSWORD"],
 			$_ENV["DB_NAME"]
 		) or die("Connection failed: ".mysqli_connect_error());
-		$conn->set_charset("utf8");
+		$conn->set_charset("utf8mb4");
 	//}
 	
     // INICIALIZAÇÃO DE TABELAS (GARANTE A ESTRUTURA PARA CLIENTES NOVOS)
