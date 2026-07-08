@@ -1332,7 +1332,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     function reverseGeocodeLog(lat, lng) {
-      var url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + lat + '&lon=' + lng + '&accept-language=pt&countrycodes=br';
+      var url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + lat + '&lon=' + lng + '&accept-language=pt&countrycodes=br&addressdetails=1';
       fetch(url, { headers: { 'User-Agent': 'TechPS-POI/1.0' } })
         .then(function(r){ return r.json(); })
         .then(function(data){

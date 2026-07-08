@@ -372,7 +372,7 @@
 			}
 
 			function reverseGeocode(lat, lng) {
-				var url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + lat + '&lon=' + lng + '&accept-language=pt';
+				var url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + lat + '&lon=' + lng + '&accept-language=pt&addressdetails=1';
 				fetch(url, { headers: { 'User-Agent': 'TechPS-POI/1.0' } })
 					.then(function(r){ return r.json(); })
 					.then(function(data){
@@ -399,19 +399,23 @@
 
 			function preencherEndereco(address) {
 				var parts = [];
-				if(address.road){ parts.push(address.road); }
-				if(address.suburb || address.neighbourhood){
-					parts.push(address.suburb || address.neighbourhood);
+				if(address.road || address.pedestrian || address.footway){
+					parts.push(address.road || address.pedestrian || address.footway);
 				}
-				if(address.city || address.town || address.village){
-					parts.push(address.city || address.town || address.village);
+				if(address.suburb || address.neighbourhood || address.hamlet){
+					parts.push(address.suburb || address.neighbourhood || address.hamlet);
+				}
+				if(address.city || address.town || address.village || address.municipality){
+					parts.push(address.city || address.town || address.village || address.municipality);
 				}
 				if(address.state){ parts.push(address.state); }
 				var enderecoVal = parts.join(', ');
-				if(enderecoVal){ document.contex_form.endereco.value = enderecoVal; }
+				if(enderecoVal){
+					document.getElementById('endereco').value = enderecoVal;
+				}
 
 				if(address.postcode){
-					document.contex_form.cep.value = address.postcode;
+					document.getElementById('cep').value = address.postcode;
 				}
 			}
 
@@ -426,7 +430,7 @@
 				btn.disabled = true;
 				btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Buscando...';
 
-				var url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&q=' + encodeURIComponent(q) + '&limit=1&accept-language=pt&countrycodes=br';
+				var url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&q=' + encodeURIComponent(q) + '&limit=1&accept-language=pt&countrycodes=br&addressdetails=1';
 				fetch(url, { headers: { 'User-Agent': 'TechPS-POI/1.0' } })
 					.then(function(r){ return r.json(); })
 					.then(function(data){
@@ -460,7 +464,7 @@
 				if(q.length < 3 || q === geoLastQuery){ resultsDiv.style.display = 'none'; return; }
 				geoLastQuery = q;
 
-				var url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&q=' + encodeURIComponent(q) + '&limit=6&accept-language=pt&countrycodes=br';
+				var url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&q=' + encodeURIComponent(q) + '&limit=6&accept-language=pt&countrycodes=br&addressdetails=1';
 				fetch(url, { headers: { 'User-Agent': 'TechPS-POI/1.0' } })
 					.then(function(r){ return r.json(); })
 					.then(function(data){
