@@ -47,65 +47,58 @@ document.getElementById("toggleFormBtn").addEventListener("click", function () {
 
 // Mapeamento dos tipos de ajuste
 var tipoAjusteMap = {
+    "1": "Início de Jornada",
+    "2": "Fim de Jornada",
     "3": "Início e Fim de Refeição",
     "5": "Início e Fim de Espera",
     "7": "Início e Fim de Descanso",
     "9": "Início e Fim de Repouso",
 };
+
+// Tipos que geram pares automáticos (início + fim)
+function isPairedType(codigo) {
+    return codigo == "3" || codigo == "5" || codigo == "7" || codigo == "9";
+}
 // Função para atualizar o resumo acima da tabela
 function atualizarResumo() {
     var table = document.getElementById("adjustmentTable").getElementsByTagName("tbody")[0];
     var rows = table.getElementsByTagName("tr");
 
     var resumoContainer = document.getElementById("resumoContainer");
-    resumoContainer.innerHTML = ""; // Limpa o resumo anterior
+    resumoContainer.innerHTML = "";
 
-    // Cria um resumo baseado nas linhas da tabela
     for (var i = 0; i < rows.length; i++) {
         var cells = rows[i].getElementsByTagName("td");
-        var horaInicio = cells[2].textContent.trim();
-        var horaFim = ((i + 1 < rows.length)? rows[i + 1].getElementsByTagName("td")[2].textContent.trim(): "");
+        var hora = cells[2].textContent.trim();
         var tipoAjusteCodigo = cells[5].textContent.trim();
-
-        // Converte o código do tipo de ajuste para o nome usando o mapeamento
         var tipoAjusteNome = tipoAjusteMap[tipoAjusteCodigo] || "Tipo Desconhecido";
 
-        // Cria o resumo como uma string e adiciona ao container
         var resumo = document.createElement("p");
-
-        // Adiciona o ícone de check verde
         var checkIcon = document.createElement("i");
-        checkIcon.className = "fas fa-check-circle"; // Classe Font Awesome para o ícone de check
-        checkIcon.style.color = "green"; // Define a cor do ícone
-
-        // Adiciona o ícone e o texto ao resumo
+        checkIcon.className = "fas fa-check-circle";
+        checkIcon.style.color = "green";
         resumo.appendChild(checkIcon);
-        resumo.appendChild(document.createTextNode(` Hora Início: ${horaInicio}, Hora Fim: ${horaFim}, Tipo de Ajuste: ${tipoAjusteNome}  - `));
 
-        // Adiciona o botão de excluir ao lado do resumo
+        if (isPairedType(tipoAjusteCodigo)) {
+            var horaFim = (i + 1 < rows.length) ? rows[i + 1].getElementsByTagName("td")[2].textContent.trim() : "";
+            resumo.appendChild(document.createTextNode(` Hora Início: ${hora}, Hora Fim: ${horaFim}, Tipo: ${tipoAjusteNome}  - `));
+            if (horaFim !== "") {
+                i++;
+            }
+        } else {
+            resumo.appendChild(document.createTextNode(` Hora: ${hora}, Tipo: ${tipoAjusteNome}  - `));
+        }
+
         var deleteButton = document.createElement("button");
         deleteButton.className = "btn btn-danger btn-sm ml-2";
-
-        // Adiciona o ícone da lixeira (Font Awesome)
         var trashIcon = document.createElement("i");
-        trashIcon.className = "fas fa-trash-alt"; // Classe Font Awesome para o ícone de lixeira
+        trashIcon.className = "fas fa-trash-alt";
         deleteButton.appendChild(trashIcon);
-
-        // Adiciona o evento de clique para excluir a linha
         deleteButton.addEventListener("click", function () {
             excluirLinha(this);
         });
-
-        // Adiciona o botão ao resumo
         resumo.appendChild(deleteButton);
-
-        // Adiciona o resumo ao container
         resumoContainer.appendChild(resumo);
-
-        // Pula a próxima linha se for uma linha de fim automático
-        if (horaFim !== "") {
-            i++; // Salta a próxima linha, já que foi usada como hora de fim
-        }
     }
 }
 
@@ -148,20 +141,19 @@ document.getElementById("addAdjustmentBtn").addEventListener("click", function (
         // Cria a descrição concatenada com o comentário
         var descricaoCompleta = descricao + (comentario ? ' - ' + comentario : '');
 
-        // Se o campo de hora de fim for preenchido, adiciona a linha de fim automaticamente
-        if (horaFim) {
+        // Auto-pair apenas para tipos que têm início+fim (3,5,7,9)
+        if (horaFim && isPairedType(idMacro)) {
             var newRow = table.insertRow();
             newRow.insertCell(0).textContent = motorista;
             newRow.insertCell(1).textContent = data;
             newRow.insertCell(2).textContent = hora;
-            newRow.insertCell(3).textContent = latitude;  // Adiciona Latitude
-            newRow.insertCell(4).textContent = longitude; // Adiciona Longitude
+            newRow.insertCell(3).textContent = latitude;
+            newRow.insertCell(4).textContent = longitude;
             newRow.insertCell(5).textContent = idMacro;
             newRow.insertCell(6).textContent = motivo;
             newRow.insertCell(7).textContent = descricaoCompleta;
             newRow.insertCell(8).textContent = plate;
 
-            // Cria o botão de exclusão
             var deleteCell = newRow.insertCell(9);
             var deleteBtn = document.createElement("button");
             deleteBtn.textContent = "Excluir";
@@ -171,19 +163,17 @@ document.getElementById("addAdjustmentBtn").addEventListener("click", function (
             });
             deleteCell.appendChild(deleteBtn);
 
-            // Adiciona uma linha de fim automaticamente
             var newRowFim = table.insertRow();
             newRowFim.insertCell(0).textContent = motorista;
             newRowFim.insertCell(1).textContent = data;
             newRowFim.insertCell(2).textContent = horaFim;
-            newRowFim.insertCell(3).textContent = latitude; // Adiciona Latitude
-            newRowFim.insertCell(4).textContent = longitude; // Adiciona Longitude
+            newRowFim.insertCell(3).textContent = latitude;
+            newRowFim.insertCell(4).textContent = longitude;
             newRowFim.insertCell(5).textContent = (idMacro == "3" ? "4" : (idMacro == "5" ? "6" : (idMacro == "7" ? "8" : (idMacro == "9" ? "10" : ""))));
             newRowFim.insertCell(6).textContent = motivo;
             newRowFim.insertCell(7).textContent = descricaoCompleta;
             newRowFim.insertCell(8).textContent = plate;
 
-            // Cria o botão de exclusão para a linha de fim
             var deleteCellFim = newRowFim.insertCell(9);
             var deleteBtnFim = document.createElement("button");
             deleteBtnFim.textContent = "Excluir";

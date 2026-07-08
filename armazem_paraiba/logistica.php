@@ -49,6 +49,12 @@
     $rsPlacas = query("SELECT plac_tx_placa FROM placa ORDER BY plac_tx_placa ASC");
     while($rsPlacas && ($r = mysqli_fetch_assoc($rsPlacas))){ $plates[] = $r["plac_tx_placa"]; }
 
+    $pois = [];
+    $rsPois = query("SELECT poi_nb_id, poi_tx_nome, poi_tx_cnpj, poi_tx_contato, poi_tx_latitude, poi_tx_longitude, poi_nb_raio, poi_tx_icone FROM poi WHERE poi_tx_status = 'ativo'");
+    while($rsPois && ($r = mysqli_fetch_assoc($rsPois))){
+        $pois[] = $r;
+    }
+
     
 
     // Função para buscar pontos
@@ -147,7 +153,7 @@
         global $conn;
         // Atualize a consulta para obter apenas os tipos específicos
         $sql = "SELECT macr_tx_codigoInterno, macr_tx_nome FROM macroponto 
-            WHERE macr_tx_codigoInterno IN (3,5 ,7,9) AND macr_tx_fonte = 'positron';"
+            WHERE macr_tx_codigoInterno IN (1,2,3,5,7,9) AND macr_tx_fonte = 'positron';"
         ;
         $result = mysqli_query($conn, $sql);
 
@@ -254,6 +260,97 @@
 
 
 
+
+    // Processa salvamento de POI via AJAX
+    if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["action"]) && $_POST["action"] === "salvar_poi") {
+        // Garante que a tabela poi existe (sem incluir cadastro_poi.php para evitar output extra)
+        query("CREATE TABLE IF NOT EXISTS poi (
+            poi_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+            poi_tx_nome VARCHAR(150) NOT NULL,
+            poi_tx_cnpj VARCHAR(20) NOT NULL DEFAULT '',
+            poi_tx_contato VARCHAR(100) NOT NULL DEFAULT '',
+            poi_tx_latitude DECIMAL(10,7) NOT NULL,
+            poi_tx_longitude DECIMAL(10,7) NOT NULL,
+            poi_nb_raio INT NOT NULL DEFAULT 50,
+            poi_tx_icone VARCHAR(50) NOT NULL DEFAULT '',
+            poi_tx_status ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo',
+            poi_nb_userCadastro INT DEFAULT NULL,
+            poi_tx_dataCadastro DATETIME NOT NULL,
+            UNIQUE KEY uniq_poi_latlong (poi_tx_latitude, poi_tx_longitude),
+            KEY idx_poi_status (poi_tx_status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        // Garante coluna poi_tx_icone em tabelas antigas
+        $rsCheck = query("SHOW COLUMNS FROM poi LIKE 'poi_tx_icone'");
+        if($rsCheck && !mysqli_fetch_assoc($rsCheck)){
+            query("ALTER TABLE poi ADD COLUMN poi_tx_icone VARCHAR(50) NOT NULL DEFAULT '' AFTER poi_nb_raio");
+        }
+        header("Content-Type: application/json");
+        $erro = "";
+        $novoId = null;
+
+        $nome = trim($_POST["nome"] ?? "");
+        $cnpj = preg_replace('/[^0-9]/', '', (string)($_POST["cnpj"] ?? ""));
+        $contato = trim($_POST["contato"] ?? "");
+        $latitude = str_replace(",", ".", trim($_POST["latitude"] ?? ""));
+        $longitude = str_replace(",", ".", trim($_POST["longitude"] ?? ""));
+        $raio = intval($_POST["raio"] ?? 50);
+        $icone = trim($_POST["icone"] ?? "");
+
+        if(empty($nome)){
+            echo json_encode(["sucesso" => false, "erro" => "Nome é obrigatório"]);
+            exit;
+        }
+        if(!is_numeric($latitude) || !is_numeric($longitude)){
+            echo json_encode(["sucesso" => false, "erro" => "Latitude e Longitude inválidas"]);
+            exit;
+        }
+        if($raio <= 0){ $raio = 50; }
+
+        $userId = !empty($_SESSION["user_nb_id"]) ? (int)$_SESSION["user_nb_id"] : 0;
+        $editId = !empty($_POST["id"]) ? (int)$_POST["id"] : 0;
+
+        if($editId > 0){
+            // Atualiza POI existente
+            $dados = [
+                "poi_tx_nome"       => $nome,
+                "poi_tx_cnpj"       => $cnpj,
+                "poi_tx_contato"    => $contato,
+                "poi_tx_latitude"   => $latitude,
+                "poi_tx_longitude"  => $longitude,
+                "poi_nb_raio"       => $raio,
+                "poi_tx_icone"      => $icone
+            ];
+            atualizar("poi", array_keys($dados), array_values($dados), strval($editId));
+            $dados["poi_nb_id"] = $editId;
+            echo json_encode(["sucesso" => true, "id" => $editId, "poi" => $dados]);
+            exit;
+        }
+
+        $dados = [
+            "poi_tx_nome"       => $nome,
+            "poi_tx_cnpj"       => $cnpj,
+            "poi_tx_contato"    => $contato,
+            "poi_tx_latitude"   => $latitude,
+            "poi_tx_longitude"  => $longitude,
+            "poi_nb_raio"       => $raio,
+            "poi_tx_icone"      => $icone,
+            "poi_tx_status"     => "ativo",
+            "poi_nb_userCadastro" => $userId,
+            "poi_tx_dataCadastro" => date("Y-m-d H:i:s")
+        ];
+
+        $res = inserir("poi", array_keys($dados), array_values($dados));
+
+        if(gettype($res[0] ?? null) === "object"){
+            echo json_encode(["sucesso" => false, "erro" => $res[0]->getMessage()]);
+            exit;
+        }
+
+        $novoId = $res[0] ?? null;
+
+        echo json_encode(["sucesso" => true, "id" => $novoId, "poi" => $dados]);
+        exit;
+    }
 
     // Processar o formulário quando enviado
     if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["ajustes"])) {
