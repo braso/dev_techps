@@ -932,8 +932,12 @@ document.addEventListener("DOMContentLoaded", () => {
           if (!isNaN(parseFloat(poi.poi_tx_latitude)) && !isNaN(parseFloat(poi.poi_tx_longitude))) {
             var poiIcon = montarIconePoi(poi.poi_tx_icone);
 
-            var popupContent = '<div style="font-size: 14px; min-width: 200px;">' +
+            var imgHtml = poi.poi_tx_imagem ? '<img src="' + poi.poi_tx_imagem + '?v=' + Date.now() + '" style="max-width:200px; max-height:130px; border-radius:6px; margin-bottom:6px; display:block; border:1px solid #ddd;">' : '';
+            var popupContent = '<div style="font-size: 14px; min-width: 220px;">' +
+              imgHtml +
               '<strong>📌 ' + poi.poi_tx_nome + '</strong><br>' +
+              (poi.poi_tx_endereco ? '<span><b>Endereço:</b> ' + poi.poi_tx_endereco + '</span><br>' : '') +
+              (poi.poi_tx_cep ? '<span><b>CEP:</b> ' + poi.poi_tx_cep + '</span><br>' : '') +
               (poi.poi_tx_cnpj ? '<span><b>CNPJ:</b> ' + poi.poi_tx_cnpj + '</span><br>' : '') +
               (poi.poi_tx_contato ? '<span><b>Contato:</b> ' + poi.poi_tx_contato + '</span><br>' : '') +
               '<span><b>Lat:</b> ' + poi.poi_tx_latitude + '</span><br>' +
@@ -1222,7 +1226,8 @@ document.addEventListener("DOMContentLoaded", () => {
           'box': '📦', 'building': '🏢', 'industry': '🏭', 'store': '🏪',
           'gas-pump': '⛽', 'parking': '🅿️', 'hospital': '🏥', 'university': '🏦',
           'utensils': '🍽️', 'hotel': '🏨', 'warehouse': '🏭', 'truck': '🚚',
-          'map-pin': '📍'
+          'map-pin': '📍',
+          'flag-checkered': '🏁'
         };
         var emoji = emojiMap[faIcon] || '📌';
         return L.divIcon({
@@ -1274,10 +1279,15 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("poi_lat_display").value = poiData.poi_tx_latitude;
         document.getElementById("poi_lon_display").value = poiData.poi_tx_longitude;
         document.getElementById("poi_nome").value = poiData.poi_tx_nome || "";
+        document.getElementById("poi_endereco").value = poiData.poi_tx_endereco || "";
+        document.getElementById("poi_cep").value = poiData.poi_tx_cep || "";
         document.getElementById("poi_cnpj").value = poiData.poi_tx_cnpj || "";
         document.getElementById("poi_contato").value = poiData.poi_tx_contato || "";
         document.getElementById("poi_raio").value = poiData.poi_nb_raio || 50;
         document.getElementById("poi_icone").value = poiData.poi_tx_icone || "";
+        document.getElementById("poi_imagem").value = "";
+        var preview = document.getElementById("poi_imagem_preview");
+        preview.innerHTML = poiData.poi_tx_imagem ? '<img src="' + poiData.poi_tx_imagem + '?v=' + Date.now() + '" style="max-width:180px; max-height:100px; border-radius:4px; border:1px solid #ddd;">' : '';
         document.getElementById("poiModal").style.display = "block";
         document.getElementById("poiModalOverlay").style.display = "block";
         return;
@@ -1288,10 +1298,14 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("poi_lat_display").value = _contextLat.toFixed(6);
       document.getElementById("poi_lon_display").value = _contextLng.toFixed(6);
       document.getElementById("poi_nome").value = "";
+      document.getElementById("poi_endereco").value = "";
+      document.getElementById("poi_cep").value = "";
       document.getElementById("poi_cnpj").value = "";
       document.getElementById("poi_contato").value = "";
       document.getElementById("poi_raio").value = "50";
       document.getElementById("poi_icone").value = "";
+      document.getElementById("poi_imagem").value = "";
+      document.getElementById("poi_imagem_preview").innerHTML = "";
       document.getElementById("poiModal").style.display = "block";
       document.getElementById("poiModalOverlay").style.display = "block";
     };
@@ -1317,6 +1331,26 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("poiModalOverlay").style.display = "none";
     };
 
+    function reverseGeocodeLog(lat, lng) {
+      var url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + lat + '&lon=' + lng + '&accept-language=pt&countrycodes=br';
+      fetch(url, { headers: { 'User-Agent': 'TechPS-POI/1.0' } })
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+          if(data && data.address){
+            var addr = data.address;
+            var parts = [];
+            if(addr.road){ parts.push(addr.road); }
+            if(addr.suburb || addr.neighbourhood){ parts.push(addr.suburb || addr.neighbourhood); }
+            if(addr.city || addr.town || addr.village){ parts.push(addr.city || addr.town || addr.village); }
+            if(addr.state){ parts.push(addr.state); }
+            var endVal = parts.join(', ');
+            if(endVal){ document.getElementById("poi_endereco").value = endVal; }
+            if(addr.postcode){ document.getElementById("poi_cep").value = addr.postcode; }
+          }
+        })
+        .catch(function(){});
+    }
+
     window.escolherPontoMapa = function() {
       fecharModalPoi();
       map.getContainer().style.cursor = "crosshair";
@@ -1331,6 +1365,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("poi_lon_display").value = _contextLng.toFixed(6);
         document.getElementById("poiModal").style.display = "block";
         document.getElementById("poiModalOverlay").style.display = "block";
+        reverseGeocodeLog(_contextLat, _contextLng);
       };
       map.on("click", selectHandler);
     };

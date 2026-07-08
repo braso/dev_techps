@@ -108,6 +108,16 @@ document.addEventListener('DOMContentLoaded', function() {
             <input type="text" id="poi_nome" name="nome" required style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
         </div>
         <div style="margin-bottom:10px; display:flex; gap:10px;">
+            <div style="flex:2;">
+                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Endereço</label>
+                <input type="text" id="poi_endereco" name="endereco" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">CEP</label>
+                <input type="text" id="poi_cep" name="cep" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
+            </div>
+        </div>
+        <div style="margin-bottom:10px; display:flex; gap:10px;">
             <div style="flex:1;">
                 <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">CNPJ</label>
                 <input type="text" id="poi_cnpj" name="cnpj" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
@@ -152,8 +162,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     <option value="fa-warehouse">🏭 Armazém</option>
                     <option value="fa-truck">🚚 Caminhão</option>
                     <option value="fa-map-pin">📍 Alfinete</option>
+                    <option value="fa-flag-checkered">🏁 Ponto de Jornada</option>
                 </select>
             </div>
+        </div>
+        <div style="margin-bottom:10px;">
+            <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Imagem do Local</label>
+            <input type="file" id="poi_imagem" name="imagem" accept="image/png,image/jpeg,image/gif,image/webp" style="width:100%; padding:6px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
+            <div id="poi_imagem_preview" style="margin-top:4px;"></div>
         </div>
         <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:16px;">
             <button type="button" onclick="fecharModalPoi()" style="padding:8px 20px; border:1px solid #ccc; border-radius:6px; background:#f5f5f5; cursor:pointer; font-size:14px;">Cancelar</button>

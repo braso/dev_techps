@@ -86,6 +86,15 @@
 		if(!isset($colNames["poi_tx_icone"])){
 			query("ALTER TABLE poi ADD COLUMN poi_tx_icone VARCHAR(50) NOT NULL DEFAULT '' AFTER poi_nb_raio");
 		}
+		if(!isset($colNames["poi_tx_endereco"])){
+			query("ALTER TABLE poi ADD COLUMN poi_tx_endereco VARCHAR(255) NOT NULL DEFAULT '' AFTER poi_tx_icone");
+		}
+		if(!isset($colNames["poi_tx_cep"])){
+			query("ALTER TABLE poi ADD COLUMN poi_tx_cep VARCHAR(10) NOT NULL DEFAULT '' AFTER poi_tx_endereco");
+		}
+		if(!isset($colNames["poi_tx_imagem"])){
+			query("ALTER TABLE poi ADD COLUMN poi_tx_imagem VARCHAR(255) NOT NULL DEFAULT '' AFTER poi_tx_cep");
+		}
 	}
 
 	/**
@@ -110,6 +119,27 @@
 	}
 
 	/**
+	 * Salva imagem enviada no diretório arquivos/poi/
+	 */
+	function salvarImagemPoi($arquivo){
+		$dir = __DIR__ . "/arquivos/poi";
+		if(!is_dir($dir)){
+			@mkdir($dir, 0755, true);
+		}
+		$ext = strtolower(pathinfo($arquivo["name"], PATHINFO_EXTENSION));
+		$extsPermitidas = ["jpg", "jpeg", "png", "gif", "webp"];
+		if(!in_array($ext, $extsPermitidas)){
+			return false;
+		}
+		$nomeUnico = "poi_" . time() . "_" . bin2hex(random_bytes(4)) . "." . $ext;
+		$destino = $dir . "/" . $nomeUnico;
+		if(move_uploaded_file($arquivo["tmp_name"], $destino)){
+			return "arquivos/poi/" . $nomeUnico;
+		}
+		return false;
+	}
+
+	/**
 	 * Cadastra ou atualiza um POI.
 	 */
 	function cadastrarPoi(){
@@ -130,20 +160,44 @@
 		$raio  = intval($_POST["raio"] ?? 50);
 		if($raio <= 0){ $raio = 50; }
 
+		// Upload de imagem
+		$caminhoImagem = "";
+		if(!empty($_FILES["imagem"]) && $_FILES["imagem"]["error"] === UPLOAD_ERR_OK){
+			$caminhoImagem = salvarImagemPoi($_FILES["imagem"]);
+			if(!$caminhoImagem){
+				set_status("ERRO: Falha ao salvar imagem do local.");
+				visualizarCadastro();
+				exit;
+			}
+		}
+
 		$dados = [
 			"poi_tx_nome" 		=> trim($_POST["nome"]),
 			"poi_tx_cnpj" 		=> $cnpj,
 			"poi_tx_contato" 	=> trim($_POST["contato"] ?? ""),
+			"poi_tx_endereco" 	=> trim($_POST["endereco"] ?? ""),
+			"poi_tx_cep" 		=> trim($_POST["cep"] ?? ""),
 			"poi_tx_latitude" 	=> str_replace(",", ".", $_POST["latitude"]),
-			"poi_tx_longitude" 	=> str_replace(",", ".", $_POST["longitude"]),
+			"poi_tx_longitude"	=> str_replace(",", ".", $_POST["longitude"]),
 			"poi_nb_raio" 		=> $raio,
 			"poi_tx_icone" 		=> trim($_POST["icone"] ?? ""),
 			"poi_tx_status" 	=> "ativo"
 		];
 
 		if(!empty($_POST["id"])){
+			if($caminhoImagem){
+				$dados["poi_tx_imagem"] = $caminhoImagem;
+				// Remove imagem antiga
+				$antigo = mysqli_fetch_assoc(query("SELECT poi_tx_imagem FROM poi WHERE poi_nb_id = ?", "i", [intval($_POST["id"])]));
+				if(!empty($antigo["poi_tx_imagem"]) && file_exists($antigo["poi_tx_imagem"])){
+					@unlink($antigo["poi_tx_imagem"]);
+				}
+			}
 			atualizar("poi", array_keys($dados), array_values($dados), intval($_POST["id"]));
 		}else{
+			if($caminhoImagem){
+				$dados["poi_tx_imagem"] = $caminhoImagem;
+			}
 			$dados["poi_nb_userCadastro"]  = $_SESSION["user_nb_id"] ?? null;
 			$dados["poi_tx_dataCadastro"]  = date("Y-m-d H:i:s");
 			$res = inserir("poi", array_keys($dados), array_values($dados));
@@ -176,7 +230,7 @@
 			$btn_txt = "Atualizar";
 		}
 
-		$campos = ["nome", "cnpj", "contato", "latitude", "longitude", "raio", "icone"];
+		$campos = ["nome", "cnpj", "contato", "endereco", "cep", "latitude", "longitude", "raio", "icone", "imagem"];
 		$input_values = [];
 		foreach($campos as $campo){
 			if(empty($input_values[$campo])){
@@ -202,7 +256,8 @@
 			"fa-hotel" => "🏨 Hotel",
 			"fa-warehouse" => "🏭 Armazém",
 			"fa-truck" => "🚚 Caminhão",
-			"fa-map-pin" => "📍 Alfinete"
+			"fa-map-pin" => "📍 Alfinete",
+			"fa-flag-checkered" => "🏁 Ponto de Jornada"
 		];
 		$iconeHtml = "<select name='icone' class='form-control'>";
 		foreach($iconeOptions as $val => $label){
@@ -211,14 +266,24 @@
 		}
 		$iconeHtml .= "</select>";
 
+		$imagemAtual = $input_values["imagem"] ?? "";
+		$imagemHtml = "<input type='file' name='imagem' accept='image/png,image/jpeg,image/gif,image/webp' class='form-control' style='padding:6px 10px;'>";
+		if($imagemAtual){
+			$cacheBreaker = "?v=" . time();
+			$imagemHtml .= "<div style='margin-top:6px;'><img src='{$imagemAtual}{$cacheBreaker}' style='max-width:100%; max-height:80px; border-radius:4px; border:1px solid #ddd;'></div>";
+		}
+
 		$c = [
 			campo("Nome*",				"nome",			$input_values["nome"],		4, "", "maxlength='150'"),
 			campo("CNPJ",				"cnpj",			$input_values["cnpj"],		3, "MASCARA_CPF/CNPJ"),
 			campo("Contato",			"contato",		$input_values["contato"],	3),
+			campo("Endereço",			"endereco",		$input_values["endereco"],	6),
+			campo("CEP",				"cep",			$input_values["cep"],		2, "MASCARA_CEP"),
 			campo("Latitude*",			"latitude",		$input_values["latitude"],	2),
 			campo("Longitude*",			"longitude",	$input_values["longitude"],	2),
 			campo("Raio (metros)",		"raio",			$input_values["raio"],		2, "MASCARA_NUMERO"),
-			"<div class='col-sm-3 margin-bottom-5 campo-fit-content'><label>Ícone</label>{$iconeHtml}</div>"
+			"<div class='col-sm-3 margin-bottom-5 campo-fit-content'><label>Ícone</label>{$iconeHtml}</div>",
+			"<div class='col-sm-4 margin-bottom-5 campo-fit-content'><label>Imagem do Local</label>{$imagemHtml}</div>"
 		];
 
 		$botao = [
@@ -230,7 +295,7 @@
 		echo linha_form($c);
 		echo fecha_form($botao);
 
-		// Mini-mapa para capturar latitude/longitude clicando no mapa.
+		// Barra de busca de endereço via API gratuita Nominatim (OpenStreetMap)
 		echo "
 		<div class='col-md-12 margin-bottom-20'>
 			<div class='portlet light'>
@@ -238,6 +303,15 @@
 					<div class='caption'><i class='fa fa-map-marker'></i> Capturar Coordenadas (clique no mapa)</div>
 				</div>
 				<div class='portlet-body'>
+					<div class='row' style='margin-bottom:10px; position:relative;'>
+						<div class='col-sm-10'>
+							<input type='text' id='geoSearchInput' class='form-control' placeholder='Digite endereço, CEP, nome do local...' style='height:38px;' autocomplete='off'>
+							<div id='geoResults' style='position:absolute; top:42px; left:15px; right:15px; z-index:9999; background:#fff; border:1px solid #ccc; max-height:300px; overflow-y:auto; display:none; box-shadow:0 4px 8px rgba(0,0,0,.15);'></div>
+						</div>
+						<div class='col-sm-2'>
+							<button id='geoSearchBtn' class='btn btn-primary' style='width:100%; height:38px;'><i class='fa fa-search'></i> Buscar</button>
+						</div>
+					</div>
 					<div id='mapaPoi' style='width:100%; height:550px; border:1px solid #ccc;'></div>
 				</div>
 			</div>
@@ -280,8 +354,8 @@
 				var raio = parseInt(document.contex_form.raio.value, 10);
 				if(!isFinite(raio) || raio <= 0){ raio = 50; }
 
-				document.contex_form.latitude.value = lat;
-				document.contex_form.longitude.value = lng;
+				document.contex_form.latitude.value = lat.toFixed(7);
+				document.contex_form.longitude.value = lng.toFixed(7);
 
 				if(marker){ map.removeLayer(marker); }
 				if(circle){ map.removeLayer(circle); }
@@ -297,8 +371,154 @@
 				map.setView([latIni, lngIni], 16);
 			}
 
+			function reverseGeocode(lat, lng) {
+				var url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + lat + '&lon=' + lng + '&accept-language=pt';
+				fetch(url, { headers: { 'User-Agent': 'TechPS-POI/1.0' } })
+					.then(function(r){ return r.json(); })
+					.then(function(data){
+						if(data && data.address){
+							preencherEndereco(data.address);
+						}
+					})
+					.catch(function(){});
+			}
+
 			map.on('click', function(e){
 				aplicarPonto(e.latlng.lat, e.latlng.lng);
+				reverseGeocode(e.latlng.lat, e.latlng.lng);
+			});
+
+			// Autocomplete e busca geográfica via Nominatim (OpenStreetMap)
+			var geoDebounce = null;
+			var geoLastQuery = '';
+			var geoSelected = false;
+
+			function fecharResultados() {
+				document.getElementById('geoResults').style.display = 'none';
+			}
+
+			function preencherEndereco(address) {
+				var parts = [];
+				if(address.road){ parts.push(address.road); }
+				if(address.suburb || address.neighbourhood){
+					parts.push(address.suburb || address.neighbourhood);
+				}
+				if(address.city || address.town || address.village){
+					parts.push(address.city || address.town || address.village);
+				}
+				if(address.state){ parts.push(address.state); }
+				var enderecoVal = parts.join(', ');
+				if(enderecoVal){ document.contex_form.endereco.value = enderecoVal; }
+
+				if(address.postcode){
+					document.contex_form.cep.value = address.postcode;
+				}
+			}
+
+			function buscarLocal(q) {
+				if(!q){
+					q = document.getElementById('geoSearchInput').value.trim();
+				}
+				if(!q){ alert('Digite um endereço, CEP ou local para buscar.'); return; }
+				fecharResultados();
+
+				var btn = document.getElementById('geoSearchBtn');
+				btn.disabled = true;
+				btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Buscando...';
+
+				var url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&q=' + encodeURIComponent(q) + '&limit=1&accept-language=pt&countrycodes=br';
+				fetch(url, { headers: { 'User-Agent': 'TechPS-POI/1.0' } })
+					.then(function(r){ return r.json(); })
+					.then(function(data){
+						if(data && data.length > 0){
+							var lat = parseFloat(data[0].lat);
+							var lng = parseFloat(data[0].lon);
+							aplicarPonto(lat, lng);
+							map.setView([lat, lng], 16);
+							geoSelected = true;
+							if(data[0].address){
+								preencherEndereco(data[0].address);
+							}
+						}else{
+							alert('Nenhum local encontrado para \"' + q + '\". Tente um termo mais específico.');
+						}
+					})
+					.catch(function(err){
+						alert('Erro ao buscar local. Verifique sua conexão e tente novamente.');
+						console.error(err);
+					})
+					.finally(function(){
+						btn.disabled = false;
+						btn.innerHTML = '<i class=\"fa fa-search\"></i> Buscar';
+					});
+			}
+
+			function autocompleteLocal() {
+				var q = document.getElementById('geoSearchInput').value.trim();
+				var resultsDiv = document.getElementById('geoResults');
+
+				if(q.length < 3 || q === geoLastQuery){ resultsDiv.style.display = 'none'; return; }
+				geoLastQuery = q;
+
+				var url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&q=' + encodeURIComponent(q) + '&limit=6&accept-language=pt&countrycodes=br';
+				fetch(url, { headers: { 'User-Agent': 'TechPS-POI/1.0' } })
+					.then(function(r){ return r.json(); })
+					.then(function(data){
+						resultsDiv.innerHTML = '';
+						if(data && data.length > 0){
+							data.forEach(function(item){
+								var label = item.display_name || '';
+								var lat = parseFloat(item.lat);
+								var lng = parseFloat(item.lon);
+
+								var div = document.createElement('div');
+								div.className = 'geo-result-item';
+								div.style.cssText = 'padding:8px 12px; cursor:pointer; border-bottom:1px solid #eee; font-size:13px;';
+								div.onmouseover = function(){ this.style.background = '#f0f7ff'; };
+								div.onmouseout = function(){ this.style.background = '#fff'; };
+								div.textContent = label;
+								div.addEventListener('click', function(){
+									document.getElementById('geoSearchInput').value = label;
+									aplicarPonto(lat, lng);
+									map.setView([lat, lng], 16);
+									geoSelected = true;
+									if(item.address){
+										preencherEndereco(item.address);
+									}
+									fecharResultados();
+								});
+								resultsDiv.appendChild(div);
+							});
+							resultsDiv.style.display = 'block';
+						}else{
+							resultsDiv.style.display = 'none';
+						}
+					})
+					.catch(function(){
+						resultsDiv.style.display = 'none';
+					});
+			}
+
+			document.getElementById('geoSearchBtn').addEventListener('click', function(){ buscarLocal(); });
+			document.getElementById('geoSearchInput').addEventListener('keydown', function(e){
+				if(e.key === 'Enter'){
+					if(document.getElementById('geoResults').style.display === 'block'){
+						fecharResultados();
+					}
+					buscarLocal();
+				}
+				if(e.key === 'Escape'){ fecharResultados(); }
+			});
+			document.getElementById('geoSearchInput').addEventListener('input', function(){
+				geoSelected = false;
+				geoLastQuery = '';
+				if(geoDebounce){ clearTimeout(geoDebounce); }
+				geoDebounce = setTimeout(autocompleteLocal, 500);
+			});
+			document.addEventListener('click', function(e){
+				if(!e.target.closest('#geoSearchInput') && !e.target.closest('#geoResults')){
+					fecharResultados();
+				}
 			});
 		})();
 		</script>";
@@ -345,9 +565,12 @@
 			// O input busca_status tem default "ativo", entao o JS ja envia o filtro correto.
 			$gridFields = [
 				"CÓDIGO"	=> "poi_nb_id",
+				"IMAGEM"	=> "poi_tx_imagem",
 				"NOME"		=> "poi_tx_nome",
 				"CNPJ"		=> "poi_tx_cnpj",
 				"CONTATO"	=> "poi_tx_contato",
+				"ENDEREÇO"	=> "poi_tx_endereco",
+				"CEP"		=> "poi_tx_cep",
 				"LATITUDE"	=> "poi_tx_latitude",
 				"LONGITUDE" => "poi_tx_longitude",
 				"RAIO (m)"	=> "poi_nb_raio",
@@ -529,8 +752,9 @@
 					'fa-box': '📦', 'fa-building': '🏢', 'fa-industry': '🏭', 'fa-store': '🏪',
 					'fa-gas-pump': '⛽', 'fa-parking': '🅿️', 'fa-hospital': '🏥', 'fa-university': '🏦',
 					'fa-utensils': '🍽️', 'fa-hotel': '🏨', 'fa-warehouse': '🏭', 'fa-truck': '🚚',
-					'fa-map-pin': '📍'
-				};
+				'fa-map-pin': '📍',
+				'fa-flag-checkered': '🏁'
+			};
 				var e = emojiMap[p.poi_tx_icone] || '📌';
 				poiIcon = L.divIcon({
 					className: 'poi-custom-icon',
@@ -540,7 +764,9 @@
 			}
 			var marker = L.marker([lat, lng], { icon: poiIcon }).addTo(camadaPois);
 				marker.bindTooltip(p.poi_tx_nome, { permanent: false });
+				var imgHtml = p.poi_tx_imagem ? '<img src=\"' + p.poi_tx_imagem + '?v=' + Date.now() + '\" style=\"max-width:180px; max-height:120px; border-radius:4px; margin-bottom:4px; display:block;\">' : '';
 				marker.bindPopup(
+					imgHtml +
 					'<b>' + p.poi_tx_nome + '</b><br>' +
 					'CNPJ: ' + (p.poi_tx_cnpj || '-') + '<br>' +
 					'Contato: ' + (p.poi_tx_contato || '-') + '<br>' +

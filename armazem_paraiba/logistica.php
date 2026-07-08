@@ -279,10 +279,19 @@
             UNIQUE KEY uniq_poi_latlong (poi_tx_latitude, poi_tx_longitude),
             KEY idx_poi_status (poi_tx_status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-        // Garante coluna poi_tx_icone em tabelas antigas
+        // Garante colunas em tabelas antigas
         $rsCheck = query("SHOW COLUMNS FROM poi LIKE 'poi_tx_icone'");
         if($rsCheck && !mysqli_fetch_assoc($rsCheck)){
             query("ALTER TABLE poi ADD COLUMN poi_tx_icone VARCHAR(50) NOT NULL DEFAULT '' AFTER poi_nb_raio");
+        }
+        $rsCheck2 = query("SHOW COLUMNS FROM poi LIKE 'poi_tx_endereco'");
+        if($rsCheck2 && !mysqli_fetch_assoc($rsCheck2)){
+            query("ALTER TABLE poi ADD COLUMN poi_tx_endereco VARCHAR(255) NOT NULL DEFAULT '' AFTER poi_tx_icone");
+            query("ALTER TABLE poi ADD COLUMN poi_tx_cep VARCHAR(10) NOT NULL DEFAULT '' AFTER poi_tx_endereco");
+        }
+        $rsCheckImg = query("SHOW COLUMNS FROM poi LIKE 'poi_tx_imagem'");
+        if($rsCheckImg && !mysqli_fetch_assoc($rsCheckImg)){
+            query("ALTER TABLE poi ADD COLUMN poi_tx_imagem VARCHAR(255) NOT NULL DEFAULT '' AFTER poi_tx_cep");
         }
         header("Content-Type: application/json");
         $erro = "";
@@ -291,10 +300,28 @@
         $nome = trim($_POST["nome"] ?? "");
         $cnpj = preg_replace('/[^0-9]/', '', (string)($_POST["cnpj"] ?? ""));
         $contato = trim($_POST["contato"] ?? "");
+        $endereco = trim($_POST["endereco"] ?? "");
+        $cep = trim($_POST["cep"] ?? "");
         $latitude = str_replace(",", ".", trim($_POST["latitude"] ?? ""));
         $longitude = str_replace(",", ".", trim($_POST["longitude"] ?? ""));
         $raio = intval($_POST["raio"] ?? 50);
         $icone = trim($_POST["icone"] ?? "");
+        $caminhoImagem = "";
+
+        // Upload de imagem
+        if(!empty($_FILES["imagem"]) && $_FILES["imagem"]["error"] === UPLOAD_ERR_OK){
+            $dir = __DIR__ . "/arquivos/poi";
+            if(!is_dir($dir)){ @mkdir($dir, 0755, true); }
+            $ext = strtolower(pathinfo($_FILES["imagem"]["name"], PATHINFO_EXTENSION));
+            $extsPermitidas = ["jpg","jpeg","png","gif","webp"];
+            if(in_array($ext, $extsPermitidas)){
+                $nomeUnico = "poi_".time()."_".bin2hex(random_bytes(4)).".".$ext;
+                $destino = $dir."/".$nomeUnico;
+                if(move_uploaded_file($_FILES["imagem"]["tmp_name"], $destino)){
+                    $caminhoImagem = "arquivos/poi/".$nomeUnico;
+                }
+            }
+        }
 
         if(empty($nome)){
             echo json_encode(["sucesso" => false, "erro" => "Nome é obrigatório"]);
@@ -310,16 +337,24 @@
         $editId = !empty($_POST["id"]) ? (int)$_POST["id"] : 0;
 
         if($editId > 0){
-            // Atualiza POI existente
             $dados = [
                 "poi_tx_nome"       => $nome,
                 "poi_tx_cnpj"       => $cnpj,
                 "poi_tx_contato"    => $contato,
+                "poi_tx_endereco"   => $endereco,
+                "poi_tx_cep"        => $cep,
                 "poi_tx_latitude"   => $latitude,
                 "poi_tx_longitude"  => $longitude,
                 "poi_nb_raio"       => $raio,
                 "poi_tx_icone"      => $icone
             ];
+            if($caminhoImagem){
+                $dados["poi_tx_imagem"] = $caminhoImagem;
+                $antigo = mysqli_fetch_assoc(query("SELECT poi_tx_imagem FROM poi WHERE poi_nb_id = ?", "i", [$editId]));
+                if(!empty($antigo["poi_tx_imagem"]) && file_exists($antigo["poi_tx_imagem"])){
+                    @unlink($antigo["poi_tx_imagem"]);
+                }
+            }
             atualizar("poi", array_keys($dados), array_values($dados), strval($editId));
             $dados["poi_nb_id"] = $editId;
             echo json_encode(["sucesso" => true, "id" => $editId, "poi" => $dados]);
@@ -330,6 +365,8 @@
             "poi_tx_nome"       => $nome,
             "poi_tx_cnpj"       => $cnpj,
             "poi_tx_contato"    => $contato,
+            "poi_tx_endereco"   => $endereco,
+            "poi_tx_cep"        => $cep,
             "poi_tx_latitude"   => $latitude,
             "poi_tx_longitude"  => $longitude,
             "poi_nb_raio"       => $raio,
@@ -338,6 +375,9 @@
             "poi_nb_userCadastro" => $userId,
             "poi_tx_dataCadastro" => date("Y-m-d H:i:s")
         ];
+        if($caminhoImagem){
+            $dados["poi_tx_imagem"] = $caminhoImagem;
+        }
 
         $res = inserir("poi", array_keys($dados), array_values($dados));
 
