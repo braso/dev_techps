@@ -184,6 +184,75 @@
         KEY idx_data (feit_tx_data)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;");
 
+    // Criação da tabela poi_tipo se não existir
+    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS poi_tipo (
+        poti_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        poti_tx_codigo VARCHAR(50) NOT NULL UNIQUE,
+        poti_tx_nome VARCHAR(100) NOT NULL,
+        poti_tx_emoji VARCHAR(10) NOT NULL DEFAULT '📌',
+        poti_tx_status ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo'
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    $seedTipos = [
+        ['fa-box',           'Caixa',                        '📦'],
+        ['fa-building',      'Prédio',                       '🏢'],
+        ['fa-industry',      'Indústria',                    '🏭'],
+        ['fa-store',         'Loja',                         '🏪'],
+        ['fa-gas-pump',      'Posto',                        '⛽'],
+        ['fa-parking',       'Estacionamento',               '🅿️'],
+        ['fa-hospital',      'Hospital',                     '🏥'],
+        ['fa-university',    'Banco',                        '🏦'],
+        ['fa-utensils',      'Restaurante',                  '🍽️'],
+        ['fa-hotel',         'Hotel',                        '🏨'],
+        ['fa-warehouse',     'Armazém',                      '🏭'],
+        ['fa-truck',         'Caminhão',                     '🚚'],
+        ['fa-map-pin',       'Alfinete',                     '📍'],
+        ['fa-flag-checkered','Ponto de Jornada',             '🏁'],
+        ['Balança Rodoviária','Balança Rodoviária',          '⚖️'],
+        ['INÍCIO DE ESPERA', 'INÍCIO DE ESPERA',              '⏸️'],
+        ['FIM DE ESPERA',    'FIM DE ESPERA',                 '▶️'],
+        ['FIM DE DESCANSO',  'FIM DE DESCANSO',              '▶️'],
+        ['FIM DE REPOUSO',   'FIM DE REPOUSO',               '▶️'],
+        ['Posto de Gasolina','Posto de Gasolina',            '⛽'],
+        ['Embarcadouro',     'Embarcadouro',                 '⚓'],
+        ['Pesagem',          'Pesagem',                      '⚖️'],
+        ['Posto Fiscal',     'Posto Fiscal',                 '🏛️'],
+        ['PRF - Polícia Rodoviária Federal','PRF - Polícia Rodoviária Federal','👮'],
+        ['PM - Polícia Militar','PM - Polícia Militar',      '👮‍♂️'],
+        ['Pedágios',         'Pedágios',                     '🛣️'],
+        ['INÍCIO DE JORNADA','INÍCIO DE JORNADA',            '🏁'],
+        ['INÍCIO REFEIÇÃO',  'INÍCIO REFEIÇÃO',              '🍽️'],
+        ['FIM REFEIÇÃO',     'FIM REFEIÇÃO',                 '🍽️'],
+        ['INÍCIO DE DESCANSO','INÍCIO DE DESCANSO',          '💤'],
+        ['INÍCIO DE REPOUSO','INÍCIO DE REPOUSO',            '😴'],
+        ['INÍCIO DE PERNOITE','INÍCIO DE PERNOITE',          '🌙'],
+        ['FIM DE PERNOITE',  'FIM DE PERNOITE',              '🌅'],
+        ['FIM DE JORNADA',   'FIM DE JORNADA',               '🔚'],
+        ['Oficina',          'Oficina',                      '🔧'],
+        ['Garagem',          'Garagem',                      '🅿️'],
+        ['Base/Terminal',    'Base/Terminal',                '🏢'],
+        ['Cliente',          'Cliente',                      '🤝'],
+        ['Fornecedor',       'Fornecedor',                   '📦'],
+        ['Pátio',            'Pátio',                        '🏭'],
+        ['Porto Seco',       'Porto Seco',                   '🚢'],
+        ['Almoxarifado',     'Almoxarifado',                 '📦'],
+        ['Centro de Distribuição','Centro de Distribuição',  '🏭'],
+        ['Ponto de Apoio',   'Ponto de Apoio',               '🆘'],
+        ['Parada Obrigatória','Parada Obrigatória',          '🛑'],
+        ['Fronteira',        'Fronteira',                    '🚧'],
+        ['Alfândega',        'Alfândega',                    '🛃'],
+        ['Garagem Cliente',  'Garagem Cliente',              '🏠'],
+    ];
+    foreach ($seedTipos as $t) {
+        $rsChk = mysqli_query($conn, "SELECT 1 FROM poi_tipo WHERE poti_tx_codigo = '".mysqli_real_escape_string($conn, $t[0])."' LIMIT 1");
+        if ($rsChk && !mysqli_fetch_assoc($rsChk)) {
+            $c = mysqli_real_escape_string($conn, $t[0]);
+            $n = mysqli_real_escape_string($conn, $t[1]);
+            $e = mysqli_real_escape_string($conn, $t[2]);
+            mysqli_query($conn, "INSERT INTO poi_tipo (poti_tx_codigo, poti_tx_nome, poti_tx_emoji) VALUES ('$c', '$n', '$e')");
+        }
+    }
+
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_grid.php";
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes.php";
