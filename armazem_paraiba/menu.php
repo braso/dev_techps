@@ -95,6 +95,10 @@
 				"/paineis/saldo.php"			=> "Saldo",
                 "/paineis/escala_parametro.php"	=> "Escalas"
 			] + $camposOcultosProdução,
+			"logística" => [
+				"/cadastro_poi.php"  => "POI",
+				
+			],
 			"relatórios" => [
 					"/relatorio_pontos.php" => "Pontos"
 			],
@@ -122,6 +126,7 @@ if ($showComunicado) {
             "cadastros" => "",
             "ponto" => "",
             "painel" => "",
+            "logística" => "",
             "relatórios" => "",
             "assinatura" => "",
             "suporte" => "",
@@ -164,6 +169,7 @@ if ($showComunicado) {
             "cadastros" => "fa fa-folder-open",
             "ponto" => "fa fa-clock",
             "painel" => "fa fa-tachometer",
+            "logística" => "fa fa-truck",
             "relatórios" => "fa fa-file-alt",
             "assinatura" => "fa fa-file-contract",
             "suporte" => "fa fa-life-ring",
@@ -201,9 +207,24 @@ if ($showComunicado) {
             "Não Conformidades Jurídicas" => "fa fa-balance-scale",
             "Saldo" => "fa fa-chart-line",
             "Pontos" => "fa fa-list-alt",
-            "Signatários Externos" => "fa fa-address-card"
-        ];
-        foreach($paginas as $title => $secao){
+            "POI" => "fa fa-map-pin",
+            "Logística" => "fa fa-truck",
+	            "Signatários Externos" => "fa fa-address-card"
+	        ];
+
+        // Verifica se existe pelo menos uma placa cadastrada para mostrar o menu Logística.
+        $temPlacaCadastrada = false;
+        $rsPlacas = query("SELECT 1 FROM placa LIMIT 1");
+        if($rsPlacas && mysqli_num_rows($rsPlacas) > 0){
+            $temPlacaCadastrada = true;
+        }
+
+        // Remove a seção logística antes do loop se não houver placas cadastradas
+        if(!$temPlacaCadastrada){
+            unset($paginas["logística"]);
+        }
+
+            foreach($paginas as $title => $secao){
             $children = "";
             $secKey = strtolower($title);
             $parentAllowed = false;
@@ -274,7 +295,7 @@ if ($showComunicado) {
 
         $isAdmin = is_int(strpos($nivel, "Administrador"));
         $isSuperAdmin = is_int(strpos($nivel, "Super Administrador"));
-        $menusConcat = $menus["cadastros"].$menus["ponto"].$menus["painel"].($menus["assinatura"] ?? "").($menus["suporte"]?? "").($menus["relatórios"] ?? "");
+        $menusConcat = $menus["cadastros"].$menus["ponto"].$menus["painel"].($menus["logística"] ?? "").($menus["assinatura"] ?? "").($menus["suporte"]?? "").($menus["relatórios"] ?? "");
         if ($isSuperAdmin) {
             return $menusConcat;
         }

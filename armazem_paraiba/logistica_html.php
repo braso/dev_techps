@@ -89,6 +89,80 @@ document.addEventListener('DOMContentLoaded', function() {
     <button id="closeMapButton" style="position:absolute; top:2px; left:-42px; background-color:#004173; color:white; border:none; padding:10px 20px; border-radius:5px; z-index:1002;">X</button>
 </div>
 
+<!-- Menu de contexto do mapa -->
+<div id="mapContextMenu" style="display:none; position:fixed; background:white; border:1px solid #ccc; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,.2); z-index:2000; min-width:180px; padding:4px 0;">
+    <div style="padding:8px 14px; cursor:pointer; font-size:14px; display:flex; align-items:center; gap:8px;" onclick="abrirCadastroPoi()">
+        <span style="font-size:18px;">📌</span> Cadastrar POI
+    </div>
+</div>
+
+<!-- Modal de cadastro de POI -->
+<div id="poiModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:420px; max-width:90%; background:white; border:1px solid #ccc; border-radius:10px; box-shadow:0 6px 20px rgba(0,0,0,.25); z-index:2001; padding:24px;">
+    <h4 style="margin:0 0 16px 0; font-size:18px;">📌 Cadastrar POI</h4>
+    <form id="poiForm" onsubmit="return salvarPoi(event)">
+        <input type="hidden" id="poi_id" name="id" value="0">
+        <input type="hidden" id="poi_latitude" name="latitude">
+        <input type="hidden" id="poi_longitude" name="longitude">
+        <div style="margin-bottom:10px;">
+            <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Nome *</label>
+            <input type="text" id="poi_nome" name="nome" required style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
+        </div>
+        <div style="margin-bottom:10px; display:flex; gap:10px;">
+            <div style="flex:1;">
+                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">CNPJ</label>
+                <input type="text" id="poi_cnpj" name="cnpj" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Contato</label>
+                <input type="text" id="poi_contato" name="contato" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
+            </div>
+        </div>
+        <div style="margin-bottom:10px;">
+            <div style="display:flex; gap:6px; align-items:flex-end;">
+                <div style="flex:1;">
+                    <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Latitude</label>
+                    <input type="text" id="poi_lat_display" disabled style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px; background:#f5f5f5;">
+                </div>
+                <div style="flex:1;">
+                    <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Longitude</label>
+                    <input type="text" id="poi_lon_display" disabled style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px; background:#f5f5f5;">
+                </div>
+                <button type="button" id="btnEscolherMapa" onclick="escolherPontoMapa()" style="height:38px; padding:8px 12px; border:1px solid #004173; border-radius:6px; background:#004173; color:white; cursor:pointer; font-size:13px; white-space:nowrap; display:flex; align-items:center; gap:4px;">📍 Escolher no mapa</button>
+            </div>
+        </div>
+        <div style="margin-bottom:10px; display:flex; gap:10px;">
+            <div style="flex:1;">
+                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Raio (metros)</label>
+                <input type="number" id="poi_raio" name="raio" value="50" min="1" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Ícone</label>
+                <select id="poi_icone" name="icone" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
+                    <option value="">Padrão (azul)</option>
+                    <option value="fa-box">📦 Caixa</option>
+                    <option value="fa-building">🏢 Prédio</option>
+                    <option value="fa-industry">🏭 Indústria</option>
+                    <option value="fa-store">🏪 Loja</option>
+                    <option value="fa-gas-pump">⛽ Posto</option>
+                    <option value="fa-parking">🅿️ Estacionamento</option>
+                    <option value="fa-hospital">🏥 Hospital</option>
+                    <option value="fa-university">🏦 Banco</option>
+                    <option value="fa-utensils">🍽️ Restaurante</option>
+                    <option value="fa-hotel">🏨 Hotel</option>
+                    <option value="fa-warehouse">🏭 Armazém</option>
+                    <option value="fa-truck">🚚 Caminhão</option>
+                    <option value="fa-map-pin">📍 Alfinete</option>
+                </select>
+            </div>
+        </div>
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:16px;">
+            <button type="button" onclick="fecharModalPoi()" style="padding:8px 20px; border:1px solid #ccc; border-radius:6px; background:#f5f5f5; cursor:pointer; font-size:14px;">Cancelar</button>
+            <button type="submit" style="padding:8px 20px; border:none; border-radius:6px; background:#004173; color:white; cursor:pointer; font-size:14px;">Salvar POI</button>
+        </div>
+    </form>
+</div>
+<div id="poiModalOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.4); z-index:2000;" onclick="fecharModalPoi()"></div>
+
 <script>
     document.addEventListener("DOMContentLoaded", function() {
     const novoBotao = document.getElementById("novoBotao");
@@ -355,6 +429,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Array de placas vindo do PHP
     const plates = <?=json_encode($plates)?>;
+    // Array de POIs vindo do PHP (global para acesso no mapa)
+    window.pois = <?=json_encode($pois)?>;
 
     // Escuta o evento de input no campo de busca
     searchInput.addEventListener('input', function() {
@@ -581,4 +657,9 @@ document.addEventListener('DOMContentLoaded', function() {
             font-size: 18px;
             font-weight: 500;
             text-transform: uppercase;
+        }
+
+        /* Botão de adicionar POI no mapa */
+        #addPoiBtnMap:hover {
+            background: #f0f0f0 !important;
         }

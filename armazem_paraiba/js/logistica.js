@@ -797,7 +797,43 @@ document.addEventListener("DOMContentLoaded", () => {
         Terreno: terrainLayer,
       };
     
-      L.control.layers(baseMaps).addTo(map);
+      var poiLayer = L.layerGroup().addTo(map);
+
+      L.control.layers(baseMaps, { "📍 POIs": poiLayer }).addTo(map);
+
+      // Botão "Mostrar/Esconder POIs"
+      var togglePoiControl = L.control({ position: 'topleft' });
+      togglePoiControl.onAdd = function() {
+        var div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+        div.innerHTML = '<a href="javascript:void(0)" id="togglePoiBtnMap" title="Mostrar / Esconder POIs" style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:50px; height:44px; background:white; border-radius:4px; box-shadow:0 1px 5px rgba(0,0,0,.3); cursor:pointer; text-decoration:none; color:#333; font-size:18px; line-height:1.2;"><span>👁️</span><span style="font-size:9px; font-weight:600; text-transform:uppercase;">POI</span></a>';
+        return div;
+      };
+      togglePoiControl.addTo(map);
+
+      document.getElementById("togglePoiBtnMap").addEventListener("click", function(e) {
+        e.preventDefault();
+        if (map.hasLayer(poiLayer)) {
+          map.removeLayer(poiLayer);
+          e.currentTarget.style.opacity = "0.4";
+        } else {
+          poiLayer.addTo(map);
+          e.currentTarget.style.opacity = "1";
+        }
+      });
+
+      // Botão "Cadastrar POI"
+      var poiBtnControl = L.control({ position: 'topleft' });
+      poiBtnControl.onAdd = function() {
+        var div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+        div.innerHTML = '<a href="javascript:void(0)" id="addPoiBtnMap" title="Clique para ativar modo de cadastro de POI. Depois clique no mapa para escolher o local." style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:50px; height:44px; background:white; border-radius:4px; box-shadow:0 1px 5px rgba(0,0,0,.3); cursor:pointer; text-decoration:none; color:#333; font-size:18px; line-height:1.2;"><span>📌</span><span style="font-size:9px; font-weight:600; text-transform:uppercase;">POI</span></a>';
+        return div;
+      };
+      poiBtnControl.addTo(map);
+
+      document.getElementById("addPoiBtnMap").addEventListener("click", function(e) {
+        e.preventDefault();
+        toggleAddPoiMode();
+      });
     
       let googleMapsLink = "https://www.google.com/maps/dir/?api=1&travelmode=driving";
     
@@ -889,11 +925,51 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       });
     
+      // Adiciona marcadores de POI no mapa
+      var poisData = window.pois || [];
+      if (poisData.length > 0) {
+        poisData.forEach(function (poi) {
+          if (!isNaN(parseFloat(poi.poi_tx_latitude)) && !isNaN(parseFloat(poi.poi_tx_longitude))) {
+            var poiIcon = montarIconePoi(poi.poi_tx_icone);
+
+            var popupContent = '<div style="font-size: 14px; min-width: 200px;">' +
+              '<strong>📌 ' + poi.poi_tx_nome + '</strong><br>' +
+              (poi.poi_tx_cnpj ? '<span><b>CNPJ:</b> ' + poi.poi_tx_cnpj + '</span><br>' : '') +
+              (poi.poi_tx_contato ? '<span><b>Contato:</b> ' + poi.poi_tx_contato + '</span><br>' : '') +
+              '<span><b>Lat:</b> ' + poi.poi_tx_latitude + '</span><br>' +
+              '<span><b>Lon:</b> ' + poi.poi_tx_longitude + '</span><br>' +
+              (poi.poi_nb_raio ? '<span><b>Raio:</b> ' + poi.poi_nb_raio + 'm</span>' : '') +
+              '<hr style="margin:6px 0; border:none; border-top:1px solid #eee;">' +
+              '<a href="javascript:void(0)" onclick="editarPoi(' + poi.poi_nb_id + ')" style="color:#004173; font-size:13px; text-decoration:none;">✏️ Editar</a>' +
+              '</div>';
+
+            var poiMarker = L.marker([parseFloat(poi.poi_tx_latitude), parseFloat(poi.poi_tx_longitude)], { icon: poiIcon })
+              .bindPopup(popupContent);
+            poiMarker.addTo(poiLayer);
+            if (poi.poi_nb_raio > 0) {
+              L.circle([parseFloat(poi.poi_tx_latitude), parseFloat(poi.poi_tx_longitude)], {
+                radius: parseInt(poi.poi_nb_raio, 10) || 50,
+                color: '#004173', fillColor: '#004173', fillOpacity: 0.08, weight: 1
+              }).addTo(poiLayer);
+            }
+          }
+        });
+      }
+
       var group = new L.featureGroup(
         coordinates.map(function (coord) {
           return L.marker([coord.latitude, coord.longitude]);
         })
       );
+
+      if (poisData.length > 0) {
+        poisData.forEach(function (poi) {
+          if (!isNaN(parseFloat(poi.poi_tx_latitude)) && !isNaN(parseFloat(poi.poi_tx_longitude))) {
+            group.addLayer(L.marker([parseFloat(poi.poi_tx_latitude), parseFloat(poi.poi_tx_longitude)]));
+          }
+        });
+      }
+
       map.fitBounds(group.getBounds());
     }
     
@@ -1136,4 +1212,233 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("mapButton").addEventListener("click", openMapPopup);
     
     document.getElementById("closeMapButton").addEventListener("click", closeMapPopup);
+
+    // ---- POI: contexto, cadastro e ícones ----
+
+    window.montarIconePoi = function(icone) {
+      if (icone && icone !== "") {
+        var faIcon = icone.replace('fa-', '');
+        var emojiMap = {
+          'box': '📦', 'building': '🏢', 'industry': '🏭', 'store': '🏪',
+          'gas-pump': '⛽', 'parking': '🅿️', 'hospital': '🏥', 'university': '🏦',
+          'utensils': '🍽️', 'hotel': '🏨', 'warehouse': '🏭', 'truck': '🚚',
+          'map-pin': '📍'
+        };
+        var emoji = emojiMap[faIcon] || '📌';
+        return L.divIcon({
+          className: 'poi-custom-icon',
+          html: '<div style="background:#004173; color:white; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; box-shadow:0 2px 6px rgba(0,0,0,.3); border:2px solid white;">' + emoji + '</div>',
+          iconSize: [32, 32],
+          iconAnchor: [16, 32],
+          popupAnchor: [0, -36]
+        });
+      }
+      return L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+      });
+    };
+
+    var _contextLat = null;
+    var _contextLng = null;
+
+    // Abre o menu de contexto no mapa (impede o menu nativo do navegador)
+    function abrirContextMenu(e) {
+      e.originalEvent.preventDefault();
+      _contextLat = e.latlng.lat;
+      _contextLng = e.latlng.lng;
+      var menu = document.getElementById("mapContextMenu");
+      menu.style.display = "block";
+      menu.style.left = (e.originalEvent.clientX - 90) + "px";
+      menu.style.top = (e.originalEvent.clientY - 10) + "px";
+    }
+
+    // Fecha menu de contexto ao clicar em qualquer lugar
+    document.addEventListener("click", function(e) {
+      var menu = document.getElementById("mapContextMenu");
+      if (menu && !menu.contains(e.target)) {
+        menu.style.display = "none";
+      }
+    });
+
+    window.abrirCadastroPoi = function(poiData) {
+      document.getElementById("mapContextMenu").style.display = "none";
+      if (poiData) {
+        document.getElementById("poi_id").value = poiData.poi_nb_id || 0;
+        document.getElementById("poi_latitude").value = poiData.poi_tx_latitude;
+        document.getElementById("poi_longitude").value = poiData.poi_tx_longitude;
+        document.getElementById("poi_lat_display").value = poiData.poi_tx_latitude;
+        document.getElementById("poi_lon_display").value = poiData.poi_tx_longitude;
+        document.getElementById("poi_nome").value = poiData.poi_tx_nome || "";
+        document.getElementById("poi_cnpj").value = poiData.poi_tx_cnpj || "";
+        document.getElementById("poi_contato").value = poiData.poi_tx_contato || "";
+        document.getElementById("poi_raio").value = poiData.poi_nb_raio || 50;
+        document.getElementById("poi_icone").value = poiData.poi_tx_icone || "";
+        document.getElementById("poiModal").style.display = "block";
+        document.getElementById("poiModalOverlay").style.display = "block";
+        return;
+      }
+      document.getElementById("poi_id").value = 0;
+      document.getElementById("poi_latitude").value = _contextLat;
+      document.getElementById("poi_longitude").value = _contextLng;
+      document.getElementById("poi_lat_display").value = _contextLat.toFixed(6);
+      document.getElementById("poi_lon_display").value = _contextLng.toFixed(6);
+      document.getElementById("poi_nome").value = "";
+      document.getElementById("poi_cnpj").value = "";
+      document.getElementById("poi_contato").value = "";
+      document.getElementById("poi_raio").value = "50";
+      document.getElementById("poi_icone").value = "";
+      document.getElementById("poiModal").style.display = "block";
+      document.getElementById("poiModalOverlay").style.display = "block";
+    };
+
+    window.editarPoi = function(poiId) {
+      var poisData = window.pois || [];
+      var encontrado = null;
+      for (var i = 0; i < poisData.length; i++) {
+        if (poisData[i].poi_nb_id == poiId) {
+          encontrado = poisData[i];
+          break;
+        }
+      }
+      if (encontrado) {
+        abrirCadastroPoi(encontrado);
+      } else {
+        alert("POI não encontrado para edição.");
+      }
+    };
+
+    window.fecharModalPoi = function() {
+      document.getElementById("poiModal").style.display = "none";
+      document.getElementById("poiModalOverlay").style.display = "none";
+    };
+
+    window.escolherPontoMapa = function() {
+      fecharModalPoi();
+      map.getContainer().style.cursor = "crosshair";
+      var selectHandler = function(e) {
+        map.off("click", selectHandler);
+        map.getContainer().style.cursor = "";
+        _contextLat = e.latlng.lat;
+        _contextLng = e.latlng.lng;
+        document.getElementById("poi_latitude").value = _contextLat;
+        document.getElementById("poi_longitude").value = _contextLng;
+        document.getElementById("poi_lat_display").value = _contextLat.toFixed(6);
+        document.getElementById("poi_lon_display").value = _contextLng.toFixed(6);
+        document.getElementById("poiModal").style.display = "block";
+        document.getElementById("poiModalOverlay").style.display = "block";
+      };
+      map.on("click", selectHandler);
+    };
+
+    window.salvarPoi = function(event) {
+      event.preventDefault();
+      var form = document.getElementById("poiForm");
+      var dados = new FormData(form);
+      dados.append("action", "salvar_poi");
+
+      fetch(window.location.href, {
+        method: "POST",
+        body: dados
+      })
+      .then(function(r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.text();
+      })
+      .then(function(text) {
+        var resp;
+        try { resp = JSON.parse(text); }
+        catch(e) { throw new Error("Resposta inválida do servidor: " + text.substring(0, 200)); }
+        if (resp.sucesso) {
+          fecharModalPoi();
+          var editId = parseInt(document.getElementById("poi_id").value, 10);
+          var novosPois = window.pois || [];
+          resp.poi.poi_nb_id = resp.id;
+          if (editId > 0) {
+            // Atualiza no array existente
+            for (var i = 0; i < novosPois.length; i++) {
+              if (novosPois[i].poi_nb_id == editId) {
+                novosPois[i] = resp.poi;
+                break;
+              }
+            }
+            alert("POI atualizado com sucesso!");
+          } else {
+            novosPois.push(resp.poi);
+            alert("POI cadastrado com sucesso!");
+          }
+          window.pois = novosPois;
+          if (document.getElementById("mapPopup").style.display === "block") {
+            openMapPopup();
+          }
+        } else {
+          alert("Erro: " + (resp.erro || "Erro ao salvar POI"));
+        }
+      })
+      .catch(function(err) {
+        alert("Erro ao salvar POI: " + err.message);
+      });
+      return false;
+    };
+
+    // Modo de adicionar POI clicando no mapa
+    var _addPoiMode = false;
+    var _addPoiClickHandler = null;
+
+    window.toggleAddPoiMode = function() {
+      _addPoiMode = !_addPoiMode;
+      var btn = document.getElementById("addPoiBtnMap");
+      if (_addPoiMode) {
+        btn.style.backgroundColor = "#004173";
+        btn.style.color = "white";
+        btn.style.borderRadius = "4px";
+        map.getContainer().style.cursor = "crosshair";
+
+        _addPoiClickHandler = function(e) {
+          map.off("click", _addPoiClickHandler);
+          _addPoiClickHandler = null;
+          _addPoiMode = false;
+          map.getContainer().style.cursor = "";
+          if (btn) {
+            btn.style.backgroundColor = "";
+            btn.style.color = "";
+          }
+          _contextLat = e.latlng.lat;
+          _contextLng = e.latlng.lng;
+          abrirCadastroPoi();
+        };
+        map.on("click", _addPoiClickHandler);
+      } else {
+        map.getContainer().style.cursor = "";
+        btn.style.backgroundColor = "";
+        btn.style.color = "";
+        if (_addPoiClickHandler) {
+          map.off("click", _addPoiClickHandler);
+          _addPoiClickHandler = null;
+        }
+      }
+    };
+
+    // Reseta modo POI quando o mapa é removido
+    function resetAddPoiMode() {
+      _addPoiMode = false;
+      _addPoiClickHandler = null;
+    }
+
+    // Adiciona evento de contexto no mapa (após inicialização)
+    var _origOpenMap = openMapPopup;
+    openMapPopup = function() {
+      resetAddPoiMode();
+      _origOpenMap();
+      // Garante que o mapa tenha o evento de contexto
+      setTimeout(function() {
+        if (map) {
+          map.on("contextmenu", abrirContextMenu);
+        }
+      }, 200);
+    };
     });
