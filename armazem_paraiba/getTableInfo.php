@@ -31,6 +31,14 @@ $interno = true; // utilizado em conecta.php
 include_once __DIR__ . "/conecta.php";
 header('Content-Type: application/json; charset=utf-8');
 
+// Garante que a tabela poi_acao_esperada existe para a grid de POIs
+mysqli_query($conn, "CREATE TABLE IF NOT EXISTS poi_acao_esperada (
+	paes_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+	paes_nb_poi INT NOT NULL,
+	paes_tx_codigo VARCHAR(50) NOT NULL,
+	UNIQUE KEY uk_poi_acao (paes_nb_poi, paes_tx_codigo)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
 function ensureRfidsNbEntidadeIdColumn(mysqli $conn): void{
 	$dbRow = mysqli_fetch_assoc(mysqli_query($conn, "SELECT DATABASE() AS db"));
 	$db = strval($dbRow["db"] ?? "");

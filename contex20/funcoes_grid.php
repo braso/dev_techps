@@ -348,6 +348,8 @@
 				const allFields = ".json_encode($allFields).";
 				const gridName = '$nomeTabela';
 				const queryBase = '".base64_encode($queryBase." WHERE 1")."';
+			</script>
+			<script>
 				{$jsFunctions}
 			</script>
 			<script src='{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/js/grid_dinamico.js?v=2'></script>
@@ -390,39 +392,43 @@
 		}
 
 		for($f = 0; $f < count($actionFuncs); $f++){
-			$result["functions"][] = 
-				"$('[class=\"{$classNames[$f]}\"]').click(function(event){
-					form = document.createElement('form');
+			// Usa a classe mais específica (última palavra) para o seletor
+			$classParts = explode(' ', trim($classNames[$f]));
+			$selectorClass = end($classParts); // ex: "search-button" ou "search-remove"
+
+			$result["functions"][] =
+				"$(document).off('click', '.{$selectorClass}').on('click', '.{$selectorClass}', function(event){
+					var form = document.createElement('form');
 					form.setAttribute('method', 'post');
 					form.setAttribute('action', '{$actionFiles[$f]}');
-					
-					idInput = document.createElement('input');
+
+					var idInput = document.createElement('input');
 					idInput.setAttribute('name', 'id');
-					var row = $(event.target).closest('tr');
+					var row = \$(event.target).closest('tr');
 					var rowId = row.attr('data-row-id');
 					if(rowId == undefined || rowId === ''){
-						rowId = row.children().first().text();
+						rowId = row.children().first().text().trim();
 					}
 					idInput.setAttribute('value', rowId);
 					form.appendChild(idInput);
-					
-					actionInput = document.createElement('input');
+
+					var actionInput = document.createElement('input');
 					actionInput.setAttribute('name', 'acao');
 					actionInput.setAttribute('value', '{$actionFuncs[$f]}');
 					form.appendChild(actionInput);
 
-					inputs = document.contex_form.getElementsByTagName('input');
-					selects = document.contex_form.getElementsByTagName('select');
+					var inputs = document.contex_form.getElementsByTagName('input');
+					var selects = document.contex_form.getElementsByTagName('select');
 
 					if(inputs != undefined){
-						for(key in inputs){
+						for(var key in inputs){
 							if(inputs[key].value != undefined && inputs[key].value != ''){
 								form.appendChild(inputs[key].cloneNode(true));
 							}
 						}
 					}
 					if(selects != undefined){
-						for(key in selects){
+						for(var key in selects){
 							if(selects[key].value != undefined && selects[key].value != ''){
 								form.appendChild(selects[key].cloneNode(true));
 							}

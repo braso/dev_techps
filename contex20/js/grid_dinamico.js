@@ -3,9 +3,9 @@
     dict[string] fields = {'Título': 'campoBd'};
     string queryBase;
 */
-searchFields;
-fields;
-queryBase;
+if(typeof searchFields === 'undefined' || typeof fields === 'undefined' || typeof queryBase === 'undefined'){
+    console.error('grid_dinamico.js: searchFields, fields ou queryBase não foram definidos. Verifique se o gridDinamico() foi chamado corretamente.');
+}
 
 pageNumber = 1;
 total = -1;
@@ -120,13 +120,13 @@ function exportAllToCSV() {
                 return;
             }
             // Prepara os dados para CSV
-            let csvContent = "";
+            let csvContent = "\uFEFFsep=;\r\n";
             
             // Cabeçalhos
             const headers = Object.keys(window.tableConfig.fields);
             csvContent += headers.map(header => 
                 `"${header.replace(/"/g, '""')}"`
-            ).join(';') + '\n';
+            ).join(';') + '\r\n';
             
             // Dados
             response.rows.forEach(row => {
@@ -157,11 +157,11 @@ function exportAllToCSV() {
                     }
                 });
 
-                csvContent += rowData.join(';') + '\n';
+                csvContent += rowData.join(';') + '\r\n';
             });
             
             // Cria e faz download do arquivo
-            const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             const url = URL.createObjectURL(blob);
             
@@ -214,8 +214,10 @@ let definirFuncoesInternas = function(){
 }
 
 function esconderInativar(classeInativar, statusColIndex){
-    for(f = 0; f < $('[class=\"'+classeInativar+'\"]').length; f++){
-        let rowElements = $('[class=\"'+classeInativar+'\"]')[f].parentElement.parentElement.children;
+    // Usa a última classe como seletor para compatibilidade com múltiplas classes
+    var selectorClass = classeInativar.trim().split(/\s+/).pop();
+    for(f = 0; f < $('.'+selectorClass).length; f++){
+        let rowElements = $('.'+selectorClass)[f].parentElement.parentElement.children;
         let status = rowElements[statusColIndex].innerHTML;
         if(status == 'inativo'){
             $('[class=\"'+classeInativar+'\"]')[f].parentElement.remove();
@@ -301,6 +303,17 @@ const consultarRegistros = function(){
                             +value
                         +'</th>'
                 });
+
+                // Adiciona cabeçalho(s) vazio(s) para as colunas de ação
+                try {
+                    if(actions && actions.length){
+                        for(let a = 0; a < actions.length; a++){
+                            header.push('<th colspan="1" rowspan="1" class="table-col-head">&nbsp;</th>');
+                        }
+                    }
+                }catch(error){
+                    console.log('actions not defined');
+                }
             //}
 
             //Formatando informações das linhas{
@@ -376,6 +389,9 @@ const consultarRegistros = function(){
                         '<button id=\"btnExportCSV\" class=\"btn btn-success btn-sm\" title=\"Exportar TODOS os dados para CSV\">' +
                             '<i class=\"glyphicon glyphicon-download-alt\"></i> CSV (' + total + ' registros)' +
                         '</button>' +
+                        '<button id=\"btnExportPDF\" class=\"btn btn-danger btn-sm\" title=\"Exportar TODOS os dados para PDF\" style=\"margin-left: 5px;\">' +
+                            '<i class=\"glyphicon glyphicon-file\"></i> PDF (' + total + ' registros)' +
+                        '</button>' +
                         '<div id=\"csvLoading\" class=\"csv-loading\" style=\"display: none;\">Gerando CSV...</div>' +
                       '</div>';
             $('#result thead')[0].innerHTML = header.join('');
@@ -398,6 +414,10 @@ const consultarRegistros = function(){
 
             $('#btnExportCSV').off('click').on('click', function() {
                 exportAllToCSV();
+            });
+
+            $('#btnExportPDF').off('click').on('click', function() {
+                imprimirTabelaCompleta();
             });
 
             definirFuncoesInternas();

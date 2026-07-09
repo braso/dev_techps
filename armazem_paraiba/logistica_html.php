@@ -120,12 +120,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 <input type="text" id="poi_cep" name="cep" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
             </div>
             <div style="flex:1;">
-                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">CNPJ</label>
+                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">CNPJ / CPF</label>
                 <input type="text" id="poi_cnpj" name="cnpj" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
             </div>
         </div>
         <div style="margin-bottom:12px;">
-            <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Contato</label>
+            <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Telefone</label>
             <input type="text" id="poi_contato" name="contato" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
         </div>
         <div style="margin-bottom:12px;">
@@ -157,6 +157,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     <option value="__novo__" style="color:#004173; font-weight:600;">➕ Criar novo tipo...</option>
                 </select>
             </div>
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Ações Esperadas</label>
+            <select id="poi_acoes_esperadas" name="acoes_esperadas[]" multiple style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px; min-height:80px;">
+                <option value="Jornada">Jornada</option>
+                <option value="Refeição">Refeição</option>
+                <option value="Espera">Espera</option>
+                <option value="Descanso">Descanso</option>
+                <option value="Repouso">Repouso</option>
+                <option value="Pernoite">Pernoite</option>
+            </select>
         </div>
         <div style="margin-bottom:12px;">
             <label style="display:block; font-size:13px; font-weight:600; margin-bottom:3px;">Imagem do Local</label>
@@ -333,6 +344,7 @@ function salvarNovoTipoPoi(){
                     if($.fn.select2){
                         $.fn.select2.defaults.set('theme','bootstrap');
                         $('#plate').select2({placeholder:'Selecione', allowClear:true, width:'250px'});
+                        $('#poi_acoes_esperadas').select2({placeholder:'Selecione as ações...', allowClear:true, width:'100%', language:'pt-BR'});
                     }
                 });
             </script>
@@ -534,7 +546,7 @@ function salvarNovoTipoPoi(){
 
 
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="js/logistica.js"></script>
+    <script src="js/logistica.js?v=<?=filemtime(__DIR__.'/js/logistica.js')?>"></script>
     <script src="js/logistica_modal.js"></script>
 
 </body>

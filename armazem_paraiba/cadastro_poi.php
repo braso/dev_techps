@@ -7,6 +7,21 @@
 	include "check_permission.php";
 	include_once "conecta.php";
 
+	// --- ROTEADOR DE AÇÕES ---
+	// Verifica se chegou alguma ação via POST
+	if(!empty($_POST['acao'])){
+		$acao = $_POST['acao'];
+		// Remove parênteses se houver (ex: "editarPoi()" -> "editarPoi")
+		$acao = preg_replace('/\(.*\)$/', '', $acao);
+		if(function_exists($acao)){
+			$acao();
+			exit;
+		} else {
+			echo "Erro: Função '$acao' não existe no PHP.";
+			exit;
+		}
+	}
+
 	/**
 	 * Cria automaticamente a tabela de POIs caso ela ainda nao exista.
 	 * Campos: Nome, Cnpj, Contato, Latitude, Longitude e Raio (50m por padrao).
@@ -44,6 +59,14 @@
 					poi_tx_dataCadastro DATETIME NOT NULL,
 					UNIQUE KEY uniq_poi_latlong (poi_tx_latitude, poi_tx_longitude),
 					KEY idx_poi_status (poi_tx_status)
+				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+			);
+			query(
+				"CREATE TABLE IF NOT EXISTS poi_acao_esperada (
+					paes_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+					paes_nb_poi INT NOT NULL,
+					paes_tx_codigo VARCHAR(50) NOT NULL,
+					UNIQUE KEY uk_poi_acao (paes_nb_poi, paes_tx_codigo)
 				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
 			);
 			return;
@@ -95,6 +118,24 @@
 		if(!isset($colNames["poi_tx_imagem"])){
 			query("ALTER TABLE poi ADD COLUMN poi_tx_imagem VARCHAR(255) NOT NULL DEFAULT '' AFTER poi_tx_cep");
 		}
+
+		// Garante a tabela de ações esperadas
+		$dbRow2 = mysqli_fetch_assoc(query("SELECT DATABASE() AS db"));
+		$db2 = strval($dbRow2["db"] ?? "");
+		if($db2 !== ""){
+			$chkAcao = mysqli_fetch_assoc(query(
+				"SELECT 1 AS ok FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'poi_acao_esperada' LIMIT 1",
+				"s", [$db2]
+			));
+			if(empty($chkAcao)){
+				query("CREATE TABLE IF NOT EXISTS poi_acao_esperada (
+					paes_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+					paes_nb_poi INT NOT NULL,
+					paes_tx_codigo VARCHAR(50) NOT NULL,
+					UNIQUE KEY uk_poi_acao (paes_nb_poi, paes_tx_codigo)
+				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+			}
+		}
 	}
 
 	/**
@@ -143,6 +184,8 @@
 	 * Cadastra ou atualiza um POI.
 	 */
 	function cadastrarPoi(){
+		ensurePoiSchema();
+
 		$camposObrig = [
 			"nome" 		=> "Nome",
 			"latitude" 	=> "Latitude",
@@ -217,6 +260,19 @@
 				visualizarCadastro();
 				exit;
 			}
+			$editId = intval($res[0]);
+		}
+
+		// Salva as ações esperadas
+		$acoes = (array)($_POST['acoes_esperadas'] ?? []);
+		$acoes = array_filter($acoes, function($v){ return trim($v) !== ''; });
+		$acoes = array_unique(array_map('trim', $acoes));
+		// Remove ações existentes e insere as selecionadas
+		query("DELETE FROM poi_acao_esperada WHERE paes_nb_poi = ?", "i", [$editId]);
+		foreach($acoes as $acao){
+			if($acao !== ''){
+				query("INSERT INTO poi_acao_esperada (paes_nb_poi, paes_tx_codigo) VALUES (?, ?)", "is", [$editId, $acao]);
+			}
 		}
 
 		index();
@@ -252,6 +308,14 @@
 			$input_values["raio"] = 50;
 		}
 
+		// Carrega ações esperadas existentes (edição)
+		$acoesSelecionadas = [];
+		$editId = intval($values[$prefix."nb_id"] ?? 0);
+		if($editId > 0){
+			$rsAcoes = query("SELECT paes_tx_codigo FROM poi_acao_esperada WHERE paes_nb_poi = ?", "i", [$editId]);
+			while($rsAcoes && ($r = mysqli_fetch_assoc($rsAcoes))){ $acoesSelecionadas[] = $r['paes_tx_codigo']; }
+		}
+
 		$iconeAtual = $input_values["icone"] ?? "";
 		$tiposPoi = [];
 		$rsTipos = query("SELECT poti_tx_codigo, poti_tx_nome, poti_tx_emoji FROM poi_tipo WHERE poti_tx_status = 'ativo' ORDER BY poti_tx_nome ASC");
@@ -272,17 +336,26 @@
 			$imagemHtml .= "<div style='margin-top:6px;'><img src='{$imagemAtual}{$cacheBreaker}' style='max-width:100%; max-height:80px; border-radius:4px; border:1px solid #ddd;'></div>";
 		}
 
+		$acoesDisponiveis = ["Jornada", "Refeição", "Espera", "Descanso", "Repouso", "Pernoite"];
+		$acoesHtml = "<div class='col-sm-4 margin-bottom-5 campo-fit-content'><label>Ações Esperadas</label><select name='acoes_esperadas[]' id='acoes_esperadas' multiple class='form-control' style='width:100%;'>";
+		foreach($acoesDisponiveis as $acao){
+			$sel = in_array($acao, $acoesSelecionadas) ? " selected" : "";
+			$acoesHtml .= "<option value='".htmlspecialchars($acao, ENT_QUOTES)."'{$sel}>".htmlspecialchars($acao)."</option>";
+		}
+		$acoesHtml .= "</select></div>";
+		$acoesHtml .= "<script>$(document).ready(function(){ $('#acoes_esperadas').select2({ placeholder: 'Selecione as ações...', language: 'pt-BR', theme: 'bootstrap', width: '100%', allowClear: true }); });</script>";
+
 		$c = [
 			campo("Nome*",				"nome",			$input_values["nome"],		4, "", "maxlength='150'"),
-			campo("CNPJ",				"cnpj",			$input_values["cnpj"],		3, "MASCARA_CPF/CNPJ"),
-			campo("Contato",			"contato",		$input_values["contato"],	3),
+			campo("CNPJ / CPF",			"cnpj",			$input_values["cnpj"],		3, "MASCARA_CPF/CNPJ"),
+			campo("Telefone",			"contato",		$input_values["contato"],	3, "MASCARA_FONE"),
 			campo("Endereço",			"endereco",		$input_values["endereco"],	6),
 			campo("CEP",				"cep",			$input_values["cep"],		2, "MASCARA_CEP"),
 			campo("Latitude*",			"latitude",		$input_values["latitude"],	2),
 			campo("Longitude*",			"longitude",	$input_values["longitude"],	2),
-			campo("Raio (metros)",		"raio",			$input_values["raio"],		2, "MASCARA_NUMERO"),
+			"<div class='col-sm-4 margin-bottom-5 campo-fit-content'><label>Raio (metros)</label><input type='range' id='raio_range' min='10' max='500' value='".($input_values["raio"] ?: 50)."' style='width:100%;'><input type='number' name='raio' id='raio' value='".($input_values["raio"] ?: 50)."' min='1' style='width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px; margin-top:4px;'></div>",
 			"<div class='col-sm-3 margin-bottom-5 campo-fit-content'><label>Tipo de POI</label>{$iconeHtml}</div>",
-			"<div class='col-sm-4 margin-bottom-5 campo-fit-content'><label>Imagem do Local</label>{$imagemHtml}</div>"
+			$acoesHtml
 		];
 
 		$botao = [
@@ -479,6 +552,32 @@
 				circle = L.circle([lat, lng], { radius: raio, color: '#337ab7', fillColor: '#337ab7', fillOpacity: 0.15 }).addTo(map);
 			}
 
+			function atualizarRaioMapa(){
+				var raio = parseInt(document.contex_form.raio.value, 10);
+				if(!isFinite(raio) || raio <= 0){ raio = 50; }
+				document.getElementById('raio_range').value = raio;
+				document.getElementById('raio').value = raio;
+				if(circle){
+					circle.setRadius(raio);
+				}
+			}
+
+			// Sincroniza slider <-> number input e atualiza o círculo no mapa
+			var raioRange = document.getElementById('raio_range');
+			var raioInput = document.getElementById('raio');
+			if(raioRange){
+				raioRange.addEventListener('input', function(){
+					raioInput.value = this.value;
+					if(circle){ circle.setRadius(parseInt(this.value, 10) || 50); }
+				});
+			}
+			if(raioInput){
+				raioInput.addEventListener('input', function(){
+					raioRange.value = this.value;
+					if(circle){ circle.setRadius(parseInt(this.value, 10) || 50); }
+				});
+			}
+
 			// Pre-preenche ponto quando editando
 			var latIni = parseFloat(document.contex_form.latitude.value.replace(',', '.'));
 			var lngIni = parseFloat(document.contex_form.longitude.value.replace(',', '.'));
@@ -644,7 +743,135 @@
 		</script>";
 	}
 
-	/**
+		/**
+	 * Importa POIs a partir de um arquivo CSV.
+	 * Colunas esperadas: nome, cnpj, contato, endereco, cep, latitude, longitude, raio, icone
+	 */
+	function importarPoiCsv(){
+		if(!function_exists('verificaPermissao')){
+			include "check_permission.php";
+		}
+		verificaPermissao('/cadastro_poi.php');
+		ensurePoiSchema();
+
+		if(empty($_FILES['arquivo_csv']['tmp_name'])){
+			set_status("ERRO: Selecione um arquivo CSV.");
+			index();
+			exit;
+		}
+
+		$handle = fopen($_FILES['arquivo_csv']['tmp_name'], 'r');
+		if(!$handle){
+			set_status("ERRO: Não foi possível abrir o arquivo CSV.");
+			index();
+			exit;
+		}
+
+		// Detecta delimitador
+		$primeiraLinha = fgets($handle);
+		rewind($handle);
+		$delimitador = strpos($primeiraLinha, ';') !== false ? ';' : ',';
+
+		$cabecalho = fgetcsv($handle, 0, $delimitador);
+		if(!$cabecalho){
+			set_status("ERRO: CSV vazio ou sem cabeçalho.");
+			index();
+			exit;
+		}
+
+		// Normaliza cabeçalho
+		$cabecalho = array_map(function($v){ return strtolower(trim($v)); }, $cabecalho);
+
+		$colunasObrigatorias = ['nome', 'latitude', 'longitude'];
+		$faltando = [];
+		foreach($colunasObrigatorias as $col){
+			if(!in_array($col, $cabecalho)){
+				$faltando[] = $col;
+			}
+		}
+		if(!empty($faltando)){
+			set_status("ERRO: Colunas obrigatórias ausentes: " . implode(', ', $faltando) . ".");
+			index();
+			exit;
+		}
+
+		$indice = [];
+		foreach(['nome','cnpj','contato','endereco','cep','latitude','longitude','raio','icone'] as $col){
+			$indice[$col] = array_search($col, $cabecalho);
+		}
+
+		$inseridos = 0;
+		$erros = [];
+		$linhaNum = 1;
+
+		while(($linha = fgetcsv($handle, 0, $delimitador)) !== false){
+			$linhaNum++;
+			// Ignora linhas vazias, comentários ou instrução sep= do Excel
+			if(count($linha) === 0 || (isset($linha[0]) && (strpos(trim($linha[0]), '#') === 0 || strpos(trim($linha[0]), 'sep=') === 0))){
+				continue;
+			}
+			if(count($linha) < count($cabecalho)){
+				continue;
+			}
+
+			$nome      = trim($linha[$indice['nome']] ?? '');
+			$cnpj      = preg_replace('/[^0-9]/', '', (string)($linha[$indice['cnpj']] ?? ''));
+			$contato   = trim($linha[$indice['contato']] ?? '');
+			$endereco  = trim($linha[$indice['endereco']] ?? '');
+			$cep       = preg_replace('/[^0-9]/', '', (string)($linha[$indice['cep']] ?? ''));
+			$latitude  = str_replace(',', '.', trim($linha[$indice['latitude']] ?? ''));
+			$longitude = str_replace(',', '.', trim($linha[$indice['longitude']] ?? ''));
+			$raio      = intval($linha[$indice['raio']] ?? 50);
+			$icone     = trim($linha[$indice['icone']] ?? '');
+
+			if($nome === '' || !is_numeric($latitude) || !is_numeric($longitude)){
+				$erros[] = "Linha {$linhaNum}: nome, latitude ou longitude inválidos.";
+				continue;
+			}
+
+			// Verifica se já existe POI com mesmo nome + latitude + longitude
+			$existente = mysqli_fetch_assoc(query(
+				"SELECT poi_nb_id FROM poi WHERE poi_tx_nome = ? AND poi_tx_latitude = ? AND poi_tx_longitude = ? LIMIT 1",
+				"sss",
+				[$nome, $latitude, $longitude]
+			));
+
+			if(!empty($existente)){
+				query(
+					"UPDATE poi SET
+						poi_tx_cnpj = ?, poi_tx_contato = ?, poi_tx_endereco = ?, poi_tx_cep = ?,
+						poi_nb_raio = ?, poi_tx_icone = ?, poi_tx_status = 'ativo'
+					 WHERE poi_nb_id = ?",
+					"ssssisi",
+					[$cnpj, $contato, $endereco, $cep, $raio, $icone, $existente['poi_nb_id']]
+				);
+				$inseridos++;
+			}else{
+				query(
+					"INSERT INTO poi
+						(poi_tx_nome, poi_tx_cnpj, poi_tx_contato, poi_tx_endereco, poi_tx_cep,
+						 poi_tx_latitude, poi_tx_longitude, poi_nb_raio, poi_tx_icone, poi_tx_status, poi_tx_imagem)
+					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo', '')",
+					"sssssssis",
+					[$nome, $cnpj, $contato, $endereco, $cep, $latitude, $longitude, $raio, $icone]
+				);
+				$inseridos++;
+			}
+		}
+		fclose($handle);
+
+		$msg = "Importação concluída: {$inseridos} POI(s) processado(s).";
+		if(!empty($erros)){
+			$msg .= " Erros: " . implode(' ', array_slice($erros, 0, 5));
+			if(count($erros) > 5){
+				$msg .= " e mais " . (count($erros) - 5) . " erro(s).";
+			}
+		}
+		set_status($msg);
+		index();
+	}
+
+/**
 	 * Tela principal: listagem em grid + mapa com POIs e os pontos do motorista.
 	 * Parametros via GET (mesmos da logistica.php):
 	 *   motorista, matricula, data, cnpj
@@ -660,10 +887,17 @@
 		ensurePoiSchema();
 
 		// ---- Filtros do cadastro ----
+		$tiposFiltro = ["" => "Todos"];
+		$rsTiposFiltro = query("SELECT poti_tx_codigo, poti_tx_nome FROM poi_tipo WHERE poti_tx_status = 'ativo' ORDER BY poti_tx_nome ASC");
+		while($rsTiposFiltro && ($r = mysqli_fetch_assoc($rsTiposFiltro))){
+			$tiposFiltro[$r['poti_tx_codigo']] = $r['poti_tx_nome'];
+		}
+
 		$fields = [
 			campo("Código",		"busca_codigo",		($_POST["busca_codigo"] ?? ""),	1, "MASCARA_NUMERO", "maxlength='6' min='0'"),
 			campo("Nome",		"busca_nome_like",	($_POST["busca_nome_like"] ?? ""),	3, "", "maxlength='150'"),
-			campo("CNPJ",		"busca_cnpj",		($_POST["busca_cnpj"] ?? ""),		2, "MASCARA_CPF/CNPJ"),
+			combo("Tipo",		"busca_tipo",		($_POST["busca_tipo"] ?? ""),		2, $tiposFiltro),
+			campo("CPF/CNPJ",	"busca_cpf_cnpj",	($_POST["busca_cpf_cnpj"] ?? ""),	2, "MASCARA_CPF/CNPJ"),
 			combo("Status",		"busca_status",		($_POST["busca_status"] ?? "ativo"), 2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"])
 		];
 
@@ -671,12 +905,17 @@
 			botao("Buscar", "index"),
 			botao("Limpar Filtro", "limparFiltros"),
 			botao("Inserir", "visualizarCadastro", "", "", "", "", "btn btn-success"),
-			botao("Mapa de POIs", "abrirMapaPoi", "", "", "", "", "btn btn-info")
+			
+			botao("Mapa de POIs", "abrirMapaPoi", "", "", "", "", "btn btn-info"),
+			'<button type="button" class="btn btn-warning" onclick="abrirModalImportarPoi()">Importar CSV</button>',
+			'<a class="btn btn-default" href="arquivos/instrucoesPoi/modelo_importacao_poi.csv" download>Modelo CSV</a>',
 		];
 
 		echo abre_form();
 		echo linha_form($fields);
 		echo fecha_form($buttons);
+
+		echo "<style>.form-actions{display:flex;flex-wrap:wrap;gap:6px;}.form-actions .fecha-form-btn{display:inline-flex;}</style>";
 
 		// ---- Grid ----
 			// O gridDinamico() adiciona "WHERE 1" automaticamente ao final da queryBase.
@@ -693,6 +932,8 @@
 			foreach ($emojiMap as $k => $v) { $caseEmoji .= " WHEN '$k' THEN '$v'"; }
 			$caseEmoji .= " ELSE '📌' END AS IMAGEM";
 
+			$acoesSubquery = "COALESCE(CONCAT((SELECT COUNT(*) FROM poi_acao_esperada WHERE paes_nb_poi = poi_nb_id), '||', (SELECT GROUP_CONCAT(paes_tx_codigo ORDER BY paes_tx_codigo SEPARATOR ', ') FROM poi_acao_esperada WHERE paes_nb_poi = poi_nb_id)), '0') AS ACOES_INFO";
+
 			$gridFields = [
 				"CÓDIGO"	=> "poi_nb_id",
 				"IMAGEM"	=> $caseEmoji,
@@ -705,13 +946,15 @@
 				"LATITUDE"	=> "poi_tx_latitude",
 				"LONGITUDE" => "poi_tx_longitude",
 				"RAIO (m)"	=> "poi_nb_raio",
-				"STATUS"	=> "poi_tx_status"
+				"STATUS"	=> "poi_tx_status",
+				"AÇÕES ESPERADAS"	=> $acoesSubquery
 			];
 
 			$camposBusca = [
 				"busca_codigo" 	=> "poi_nb_id",
 				"busca_nome_like" => "poi_tx_nome",
-				"busca_cnpj" 	=> "poi_tx_cnpj",
+				"busca_tipo" 	=> "poi_tx_icone",
+				"busca_cpf_cnpj" => "poi_tx_cnpj",
 				"busca_status" 	=> "poi_tx_status"
 			];
 
@@ -720,14 +963,112 @@
 		$actions = criarIconesGrid(
 			["glyphicon glyphicon-search search-button", "glyphicon glyphicon-remove search-remove"],
 			["cadastro_poi.php", "cadastro_poi.php"],
-			["editarPoi()", "excluirPoi()"]
+			["editarPoi", "excluirPoi"]
 		);
-		$actions["functions"][1] .= "esconderInativar('glyphicon glyphicon-remove search-remove', 7);";
+		$indiceStatus = array_search("STATUS", array_keys($gridFields));
+		$actions["functions"][1] .= "esconderInativar('glyphicon glyphicon-remove search-remove', {$indiceStatus});";
 
 		$gridFields["actions"] = $actions["tags"];
-		$jsFunctions = "const funcoesInternas = function(){ ".implode(" ", $actions["functions"])." }";
-
+		$jsFunctions = "const funcoesInternas = function(){ ".implode(" ", $actions["functions"])."
+			try{
+				$('#result tbody tr').each(function(){
+					$(this).find('td').each(function(){
+						var txt = $(this).text();
+						if(txt.indexOf('||') > -1){
+							var parts = txt.split('||');
+							var qtd = parseInt(parts[0], 10) || 0;
+							var lista = parts[1] || '';
+							if(qtd > 0){
+								var encoded = $('<span>').text(lista).html();
+								$(this).html('<span style=\"cursor:pointer;color:#004173;font-weight:600;\" data-acoes=\"' + encoded + '\">' + qtd + ' | ver mais</span>');
+							}else{
+								$(this).text('0');
+							}
+						}
+					});
+				});
+				$('#result tbody').off('click', 'span[data-acoes]').on('click', 'span[data-acoes]', function(){
+					var acoes = $(this).data('acoes');
+					if(typeof Swal !== 'undefined'){
+						Swal.fire({
+							title: 'Ações Esperadas',
+							html: '<div style=\"text-align:left; font-size:16px;\">' + acoes + '</div>',
+							icon: 'info',
+							confirmButtonText: 'Fechar',
+							confirmButtonColor: '#004173'
+						});
+					}else{
+						alert('Ações Esperadas:\\n' + acoes);
+					}
+				});
+			}catch(e){}
+		}";
 		echo gridDinamico("tabelaPoi", $gridFields, $camposBusca, $queryBase, $jsFunctions);
+
+		$instrucoesPath = __DIR__ . "/arquivos/instrucoesPoi/modelo_importacao_poi.md";
+		$instrucoesHtml = "";
+		if(file_exists($instrucoesPath)){
+			$md = file_get_contents($instrucoesPath);
+			$instrucoesHtml = markdownSimplesParaHtml($md);
+		}
+
+		echo "
+		<style>
+		.modalImportacaoPoi td, .modalImportacaoPoi th { padding:6px 10px; border:1px solid #ddd; }
+		.modalImportacaoPoi th { background:#004173; color:#fff; font-weight:600; }
+		.modalImportacaoPoi table { width:100%; border-collapse:collapse; margin-bottom:16px; }
+		.modalImportacaoPoi p { margin:0 0 8px 0; line-height:1.6; }
+		.modalImportacaoPoi h1 { font-size:20px; color:#004173; margin:0 0 12px 0; }
+		.modalImportacaoPoi h2 { font-size:16px; color:#004173; margin:14px 0 8px 0; padding-bottom:4px; border-bottom:2px solid #004173; }
+		.modalImportacaoPoi h3 { font-size:14px; color:#333; margin:12px 0 6px 0; }
+		.modalImportacaoPoi ul { margin:4px 0 10px 0; padding-left:20px; }
+		.modalImportacaoPoi li { margin-bottom:3px; line-height:1.5; }
+		.modalImportacaoPoi code { background:#f4f4f4; padding:2px 5px; border-radius:3px; font-size:12px; color:#c7254e; }
+		.modalImportacaoPoi pre { background:#2d2d2d; color:#f8f8f2; padding:12px; border-radius:6px; overflow-x:auto; font-size:12px; }
+		.modalImportacaoPoi pre code { background:transparent; color:#f8f8f2; padding:0; }
+		.modalImportacaoPoi blockquote { margin:8px 0; padding:10px 14px; background:#fff3cd; border-left:4px solid #ffc107; border-radius:4px; font-size:13px; }
+		</style>
+		<script>
+		window.abrirModalImportarPoi = function(){
+			var instrucoes = " . json_encode($instrucoesHtml) . ";
+			Swal.fire({
+				width: '900px',
+				title: '<span style=\"font-size:22px;\"><i class=\"fa fa-upload\" style=\"margin-right:8px;\"></i>Importar POIs via CSV</span>',
+				html:
+					'<div class=\"modalImportacaoPoi\" style=\"text-align:left; max-height:500px; overflow-y:auto; margin-bottom:15px; padding:0 4px;\">' +
+					instrucoes +
+					'</div>' +
+					'<div style=\"border-top:1px solid #eee; padding-top:15px;\">' +
+					'<form id=\"formImportarPoi\" method=\"post\" enctype=\"multipart/form-data\" action=\"cadastro_poi.php\">' +
+					'<input type=\"hidden\" name=\"acao\" value=\"importarPoiCsv\">' +
+					'<div style=\"display:flex; align-items:center; gap:10px;\">' +
+					'<label style=\"font-weight:600; font-size:14px; white-space:nowrap; min-width:55px;\">Arquivo:</label>' +
+					'<input type=\"file\" name=\"arquivo_csv\" accept=\".csv\" style=\"flex:1; padding:8px; border:1px dashed #ccc; border-radius:6px; background:#fafafa; font-size:13px;\">' +
+					'</div>' +
+					'</form>' +
+					'</div>',
+				icon: null,
+				confirmButtonText: '<i class=\"fa fa-upload\"></i> Importar',
+				confirmButtonColor: '#004173',
+				showCancelButton: true,
+				cancelButtonText: 'Fechar',
+				cancelButtonColor: '#6c757d',
+				footer: '<a class=\"btn btn-default btn-sm\" href=\"arquivos/instrucoesPoi/modelo_importacao_poi.csv\" download style=\"color:#004173;\"><i class=\"fa fa-download\"></i> Baixar modelo CSV</a>',
+				preConfirm: function(){
+					var form = document.getElementById('formImportarPoi');
+					if(form && form.arquivo_csv && form.arquivo_csv.files.length === 0){
+						Swal.showValidationMessage('Selecione um arquivo CSV');
+						return false;
+					}
+					return true;
+				}
+			}).then(function(result){
+				if(result.isConfirmed){
+					document.getElementById('formImportarPoi').submit();
+				}
+			});
+		};
+		</script>";
 
 		rodape();
 	}
@@ -736,6 +1077,115 @@
 	 * Mapa com os POIs cadastrados e os pontos batidos pelo motorista no dia.
 	 * Permite flagar (marcar) POIs e mostrar os pontos de interesse.
 	 */
+	/**
+	 * Converte Markdown simples para HTML (sem dependência externa).
+	 */
+	function markdownSimplesParaHtml($texto){
+		$linhas = explode("\n", $texto);
+		$html = "";
+		$emTabela = false;
+		$emLista = false;
+		$emCodigo = false;
+
+		foreach($linhas as $i => $linha){
+			$trim = trim($linha);
+
+			// Bloco de código ```
+			if(strpos($trim, '```') === 0){
+				if($emCodigo){
+					$html .= "</code></pre>\n";
+					$emCodigo = false;
+				}else{
+					$html .= "<pre><code>";
+					$emCodigo = true;
+				}
+				continue;
+			}
+			if($emCodigo){
+				$html .= htmlspecialchars($linha) . "\n";
+				continue;
+			}
+
+			// Fechar tabela se linha não começa com |
+			if($emTabela && $linha !== '' && $trim !== '' && $trim[0] !== '|' && $trim[0] !== ':' && !preg_match('/^[\s\|:\-]+$/', $trim)){
+				$html .= "</tbody></table>\n";
+				$emTabela = false;
+			}
+
+			// Cabeçalho
+			if(preg_match('/^(#{1,3})\s+(.+)$/', $trim, $m)){
+				$nivel = strlen($m[1]);
+				$html .= "<h{$nivel}>" . htmlspecialchars($m[2]) . "</h{$nivel}>\n";
+				continue;
+			}
+
+			// Citação
+			if(preg_match('/^>\s*(.+)$/', $trim, $m)){
+				$html .= "<blockquote>" . htmlspecialchars($m[1]) . "</blockquote>\n";
+				continue;
+			}
+
+			// Tabela
+			if(preg_match('/^\|(.+)\|$/', $trim, $m)){
+				$proxLinha = $linhas[$i + 1] ?? '';
+				$proxTrim = trim($proxLinha);
+				if(!$emTabela){
+					$html .= "<table class='table table-bordered table-condensed' style='font-size:13px; margin-bottom:10px;'>\n";
+					$celulas = explode('|', $m[1]);
+					if(preg_match('/^[\s\|:\-]+$/', $proxTrim)){
+						$html .= "<thead><tr>";
+						foreach($celulas as $cel){
+							$html .= "<th>" . htmlspecialchars(trim($cel)) . "</th>";
+						}
+						$html .= "</tr></thead><tbody>";
+					}else{
+						$html .= "<tbody><tr>";
+						foreach($celulas as $cel){
+							$html .= "<td>" . htmlspecialchars(trim($cel)) . "</td>";
+						}
+						$html .= "</tr>";
+					}
+					$emTabela = true;
+				}else{
+					$html .= "<tr>";
+					$celulas = explode('|', $m[1]);
+					foreach($celulas as $cel){
+						$html .= "<td>" . htmlspecialchars(trim($cel)) . "</td>";
+					}
+					$html .= "</tr>\n";
+				}
+				continue;
+			}
+
+			// Lista
+			if(preg_match('/^[\-\*]\s+(.+)$/', $trim, $m)){
+				if(!$emLista){ $html .= "<ul>\n"; $emLista = true; }
+				$html .= "<li>" . htmlspecialchars($m[1]) . "</li>\n";
+				continue;
+			}elseif($emLista){
+				$html .= "</ul>\n";
+				$emLista = false;
+			}
+
+			// Negrito, itálico, código inline
+			$trim = preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $trim);
+			$trim = preg_replace('/\*(.+?)\*/', '<em>$1</em>', $trim);
+			$trim = preg_replace('/`(.+?)`/', '<code>$1</code>', $trim);
+
+			if($trim === ''){
+				$html .= "<p>&nbsp;</p>\n";
+				continue;
+			}
+			$html .= "<p>" . $trim . "</p>\n";
+		}
+
+		if($emCodigo){ $html .= "</code></pre>\n"; }
+		if($emLista){ $html .= "</ul>\n"; }
+		if($emTabela){ $html .= "</tbody></table>\n"; }
+
+		return $html;
+	}
+
 	function abrirMapaPoi(){
 		ensurePoiSchema();
 
@@ -750,11 +1200,20 @@
 		// ---- POIs ativos ----
 		$pois = mysqli_fetch_all(query(
 			"SELECT poi_nb_id, poi_tx_nome, poi_tx_cnpj, poi_tx_contato,
-					poi_tx_latitude, poi_tx_longitude, poi_nb_raio, poi_tx_icone
+					poi_tx_latitude, poi_tx_longitude, poi_nb_raio, poi_tx_icone,
+					poi_tx_endereco, poi_tx_cep, poi_tx_imagem,
+					(SELECT GROUP_CONCAT(paes_tx_codigo ORDER BY paes_tx_codigo SEPARATOR ', ')
+					 FROM poi_acao_esperada
+					 WHERE paes_nb_poi = poi.poi_nb_id) AS poi_tx_acoes_esperadas
 			 FROM poi
 			 WHERE poi_tx_status = 'ativo'
 			 ORDER BY poi_tx_nome ASC"
 		), MYSQLI_ASSOC);
+
+		// ---- Tipos de POI para o icone dinâmico ----
+		$rsTiposMapa = query("SELECT poti_tx_codigo, poti_tx_emoji FROM poi_tipo WHERE poti_tx_status = 'ativo'");
+		$tiposMapa = [];
+		while($rsTiposMapa && ($r = mysqli_fetch_assoc($rsTiposMapa))){ $tiposMapa[] = $r; }
 
 		// ---- Pontos do motorista no dia (se houver matricula/data) ----
 		$pontos = [];
@@ -784,6 +1243,7 @@
 
 		$poisJson   = json_encode($pois   ?: [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 		$pontosJson = json_encode($pontos ?: [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+		$tiposJson  = json_encode($tiposMapa ?: [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
 		echo "
 		<div class='col-md-12'>
@@ -803,22 +1263,25 @@
 				</div>
 				<div class='portlet-body'>
 					<div id='mapaPoiLogistica' style='width:100%; height:800px; border:1px solid #ccc;'></div>
-					<div id='listaPoisFlag' class='margin-top-15'>
-						<h4>Pontos de Interesse</h4>
-						<table class='table table-condensed table-hover' id='tabelaPoisMapa'>
-							<thead>
-								<tr>
-									<th style='width:30px;'></th>
-									<th>Nome</th>
-									<th>CNPJ</th>
-									<th>Contato</th>
-									<th>Raio</th>
-									<th>Coordenadas</th>
-								</tr>
-							</thead>
-							<tbody></tbody>
-						</table>
-					</div>
+				<div id='listaPoisFlag' class='margin-top-15'>
+					<h4>Pontos de Interesse</h4>
+					<table class='table table-condensed table-hover' id='tabelaPoisMapa'>
+						<thead>
+							<tr>
+								<th style='width:30px;'></th>
+								<th>Nome</th>
+								<th>Tipo</th>
+								<th>CNPJ / CPF</th>
+								<th>Telefone</th>
+								<th>Endereço</th>
+								<th>CEP</th>
+								<th>Raio</th>
+								<th>Coordenadas</th>
+							</tr>
+						</thead>
+						<tbody></tbody>
+					</table>
+				</div>
 				</div>
 			</div>
 		</div>";
@@ -832,6 +1295,9 @@
 		(function(){
 			var pois = ".($poisJson ?: "[]").";
 			var pontos = ".($pontosJson ?: "[]").";
+			var poiTipos = ".($tiposJson ?: "[]").";
+			var _eMap = {};
+			poiTipos.forEach(function(t){ _eMap[t.poti_tx_codigo] = t.poti_tx_emoji; });
 
 			var map = L.map('mapaPoiLogistica').setView([-7.2361, -35.8767], 13);
 
@@ -873,45 +1339,32 @@
 					color: '#4b6cb7', fillColor: '#4b6cb7', fillOpacity: 0.12
 				}).addTo(camadaPois);
 
-				var poiIcon = L.icon({
-				iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
-				shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-				iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
-			});
-			if(p.poi_tx_icone){
-				var emojiMap = {
-					'Posto Fiscal': '🏛️', 'PRF - Polícia Rodoviária Federal': '👮', 'PM - Polícia Militar': '👮‍♂️',
-					'Balança Rodoviária': '⚖️', 'Pedágios': '🛣️',
-					'INÍCIO DE JORNADA': '🏁', 'INÍCIO REFEIÇÃO': '🍽️', 'FIM REFEIÇÃO': '🍽️',
-					'INÍCIO DE ESPERA': '⏸️', 'FIM DE ESPERA': '▶️',
-					'INÍCIO DE DESCANSO': '💤', 'FIM DE DESCANSO': '▶️',
-					'INÍCIO DE REPOUSO': '😴', 'FIM DE REPOUSO': '▶️',
-					'INÍCIO DE PERNOITE': '🌙', 'FIM DE PERNOITE': '🌅',
-					'FIM DE JORNADA': '🔚',
-					'Oficina': '🔧', 'Posto de Gasolina': '⛽', 'Garagem': '🅿️',
-					'Base/Terminal': '🏢', 'Cliente': '🤝', 'Fornecedor': '📦',
-					'Pátio': '🏭', 'Embarcadouro': '⚓', 'Porto Seco': '🚢',
-					'Almoxarifado': '📦', 'Centro de Distribuição': '🏭',
-					'Ponto de Apoio': '🆘', 'Parada Obrigatória': '🛑',
-					'Pesagem': '⚖️', 'Fronteira': '🚧', 'Alfândega': '🛃',
-					'Garagem Cliente': '🏠', 'Pátio Cliente': '🏭'
-				};
-				var e = emojiMap[p.poi_tx_icone] || '📌';
-				poiIcon = L.divIcon({
+				var emoji = _eMap[p.poi_tx_icone] || '📌';
+				var poiIcon = L.divIcon({
 					className: 'poi-custom-icon',
-					html: '<div style=\"background:transparent; width:28px; height:28px; display:flex; align-items:center; justify-content:center; font-size:24px; line-height:1;\">' + e + '</div>',
+					html: '<div style=\"background:transparent; width:28px; height:28px; display:flex; align-items:center; justify-content:center; font-size:24px; line-height:1;\">' + emoji + '</div>',
 					iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -16]
 				});
-			}
-			var marker = L.marker([lat, lng], { icon: poiIcon }).addTo(camadaPois);
+
+				var marker = L.marker([lat, lng], { icon: poiIcon }).addTo(camadaPois);
 				marker.bindTooltip(p.poi_tx_nome, { permanent: false });
 				var imgHtml = p.poi_tx_imagem ? '<img src=\"' + p.poi_tx_imagem + '?v=' + Date.now() + '\" style=\"max-width:180px; max-height:120px; border-radius:4px; margin-bottom:4px; display:block;\">' : '';
+				var acoesHtml = p.poi_tx_acoes_esperadas
+					? '<div style=\"margin-top:8px; padding:8px; background:#e8f4fd; border-left:4px solid #004173; border-radius:4px;\"><b>Ações Esperadas:</b> ' + p.poi_tx_acoes_esperadas + '</div>'
+					: '';
 				marker.bindPopup(
+					'<div style=\"font-size:16px; line-height:1.7;\">' +
 					imgHtml +
 					'<b>' + p.poi_tx_nome + '</b><br>' +
-					'CNPJ: ' + (p.poi_tx_cnpj || '-') + '<br>' +
-					'Contato: ' + (p.poi_tx_contato || '-') + '<br>' +
-					'Raio: ' + (p.poi_nb_raio || 50) + 'm'
+					'<b>Tipo:</b> ' + emoji + ' ' + (p.poi_tx_icone || '-') + '<br>' +
+					'<b>CNPJ / CPF:</b> ' + (p.poi_tx_cnpj || '-') + '<br>' +
+					'<b>Telefone:</b> ' + (p.poi_tx_contato || '-') + '<br>' +
+					(p.poi_tx_endereco ? '<b>Endereço:</b> ' + p.poi_tx_endereco + '<br>' : '') +
+					(p.poi_tx_cep ? '<b>CEP:</b> ' + p.poi_tx_cep + '<br>' : '') +
+					'<b>Raio:</b> ' + (p.poi_nb_raio || 50) + 'm<br>' +
+					'<b>Lat/Lon:</b> ' + lat.toFixed(6) + ', ' + lng.toFixed(6) + '<br>' +
+					acoesHtml +
+					'</div>'
 				);
 				marcadoresPoi[p.poi_nb_id] = { marker: marker, circle: circle };
 
@@ -920,8 +1373,11 @@
 				tr.innerHTML =
 					'<td><input type=\"checkbox\" data-poi-id=\"'+p.poi_nb_id+'\"></td>' +
 					'<td>' + p.poi_tx_nome + '</td>' +
+					'<td>' + emoji + ' ' + (p.poi_tx_icone || '-') + '</td>' +
 					'<td>' + (p.poi_tx_cnpj || '-') + '</td>' +
 					'<td>' + (p.poi_tx_contato || '-') + '</td>' +
+					'<td>' + (p.poi_tx_endereco || '-') + '</td>' +
+					'<td>' + (p.poi_tx_cep || '-') + '</td>' +
 					'<td>' + (p.poi_nb_raio || 50) + 'm</td>' +
 					'<td>' + lat.toFixed(6) + ', ' + lng.toFixed(6) + '</td>';
 				tbody.appendChild(tr);

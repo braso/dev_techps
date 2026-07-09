@@ -50,7 +50,7 @@
     while($rsPlacas && ($r = mysqli_fetch_assoc($rsPlacas))){ $plates[] = $r["plac_tx_placa"]; }
 
     $pois = [];
-    $rsPois = query("SELECT poi_nb_id, poi_tx_nome, poi_tx_cnpj, poi_tx_contato, poi_tx_latitude, poi_tx_longitude, poi_nb_raio, poi_tx_icone FROM poi WHERE poi_tx_status = 'ativo'");
+    $rsPois = query("SELECT poi_nb_id, poi_tx_nome, poi_tx_cnpj, poi_tx_contato, poi_tx_latitude, poi_tx_longitude, poi_nb_raio, poi_tx_icone, poi_tx_endereco, poi_tx_cep, poi_tx_imagem, (SELECT GROUP_CONCAT(paes_tx_codigo ORDER BY paes_tx_codigo SEPARATOR ', ') FROM poi_acao_esperada WHERE paes_nb_poi = poi.poi_nb_id) AS poi_tx_acoes_esperadas FROM poi WHERE poi_tx_status = 'ativo'");
     while($rsPois && ($r = mysqli_fetch_assoc($rsPois))){
         $pois[] = $r;
     }
@@ -64,19 +64,6 @@
         $chkTipo = $__rsChkTipo ? mysqli_fetch_assoc($__rsChkTipo) : null;
         if(empty($chkTipo)){
             query("CREATE TABLE IF NOT EXISTS poi_tipo (poti_nb_id INT AUTO_INCREMENT PRIMARY KEY, poti_tx_codigo VARCHAR(50) NOT NULL UNIQUE, poti_tx_nome VARCHAR(100) NOT NULL, poti_tx_emoji VARCHAR(10) NOT NULL DEFAULT '📌', poti_tx_status ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-            $padrao = [['fa-box','Caixa','📦'],['fa-building','Prédio','🏢'],['fa-industry','Indústria','🏭'],['fa-store','Loja','🏪'],['fa-gas-pump','Posto','⛽'],['fa-parking','Estacionamento','🅿️'],['fa-hospital','Hospital','🏥'],['fa-university','Banco','🏦'],['fa-utensils','Restaurante','🍽️'],['fa-hotel','Hotel','🏨'],['fa-warehouse','Armazém','🏭'],['fa-truck','Caminhão','🚚'],['fa-map-pin','Alfinete','📍'],['fa-flag-checkered','Ponto de Jornada','🏁'],['Posto Fiscal','Posto Fiscal','🏛️'],['PRF - Polícia Rodoviária Federal','PRF - Polícia Rodoviária Federal','👮'],['PM - Polícia Militar','PM - Polícia Militar','👮‍♂️'],['Balança Rodoviária','Balança Rodoviária','⚖️'],['Pedágios','Pedágios','🛣️'],['INÍCIO DE JORNADA','INÍCIO DE JORNADA','🏁'],['INÍCIO REFEIÇÃO','INÍCIO REFEIÇÃO','🍽️'],['FIM REFEIÇÃO','FIM REFEIÇÃO','🍽️'],['INÍCIO DE ESPERA','INÍCIO DE ESPERA','⏸️'],['FIM DE ESPERA','FIM DE ESPERA','▶️'],['INÍCIO DE DESCANSO','INÍCIO DE DESCANSO','💤'],['FIM DE DESCANSO','FIM DE DESCANSO','▶️'],['INÍCIO DE REPOUSO','INÍCIO DE REPOUSO','😴'],['FIM DE REPOUSO','FIM DE REPOUSO','▶️'],['INÍCIO DE PERNOITE','INÍCIO DE PERNOITE','🌙'],['FIM DE PERNOITE','FIM DE PERNOITE','🌅'],['FIM DE JORNADA','FIM DE JORNADA','🔚'],['Oficina','Oficina','🔧'],['Posto de Gasolina','Posto de Gasolina','⛽'],['Garagem','Garagem','🅿️'],['Base/Terminal','Base/Terminal','🏢'],['Cliente','Cliente','🤝'],['Fornecedor','Fornecedor','📦'],['Pátio','Pátio','🏭'],['Embarcadouro','Embarcadouro','⚓'],['Porto Seco','Porto Seco','🚢'],['Almoxarifado','Almoxarifado','📦'],['Centro de Distribuição','Centro de Distribuição','🏭'],['Ponto de Apoio','Ponto de Apoio','🆘'],['Parada Obrigatória','Parada Obrigatória','🛑'],['Pesagem','Pesagem','⚖️'],['Fronteira','Fronteira','🚧'],['Alfândega','Alfândega','🛃'],['Garagem Cliente','Garagem Cliente','🏠'],['Pátio Cliente','Pátio Cliente','🏭']];
-            foreach($padrao as $t){ $__rsChk2 = query("SELECT 1 FROM poi_tipo WHERE poti_tx_codigo = ? LIMIT 1", "s", [$t[0]]); $chk = $__rsChk2 ? mysqli_fetch_assoc($__rsChk2) : null; if(empty($chk)) query("INSERT INTO poi_tipo (poti_tx_codigo, poti_tx_nome, poti_tx_emoji) VALUES (?, ?, ?)", "sss", $t); }
-        }
-    }
-    // Garante que todos os tipos (incluindo antigos) tenham os emojis corretos
-    $todosTipos = [['fa-box','Caixa','📦'],['fa-building','Prédio','🏢'],['fa-industry','Indústria','🏭'],['fa-store','Loja','🏪'],['fa-gas-pump','Posto','⛽'],['fa-parking','Estacionamento','🅿️'],['fa-hospital','Hospital','🏥'],['fa-university','Banco','🏦'],['fa-utensils','Restaurante','🍽️'],['fa-hotel','Hotel','🏨'],['fa-warehouse','Armazém','🏭'],['fa-truck','Caminhão','🚚'],['fa-map-pin','Alfinete','📍'],['fa-flag-checkered','Ponto de Jornada','🏁'],['Posto Fiscal','Posto Fiscal','🏛️'],['PRF - Polícia Rodoviária Federal','PRF - Polícia Rodoviária Federal','👮'],['PM - Polícia Militar','PM - Polícia Militar','👮‍♂️'],['Balança Rodoviária','Balança Rodoviária','⚖️'],['Pedágios','Pedágios','🛣️'],['INÍCIO DE JORNADA','INÍCIO DE JORNADA','🏁'],['INÍCIO REFEIÇÃO','INÍCIO REFEIÇÃO','🍽️'],['FIM REFEIÇÃO','FIM REFEIÇÃO','🍽️'],['INÍCIO DE ESPERA','INÍCIO DE ESPERA','⏸️'],['FIM DE ESPERA','FIM DE ESPERA','▶️'],['INÍCIO DE DESCANSO','INÍCIO DE DESCANSO','💤'],['FIM DE DESCANSO','FIM DE DESCANSO','▶️'],['INÍCIO DE REPOUSO','INÍCIO DE REPOUSO','😴'],['FIM DE REPOUSO','FIM DE REPOUSO','▶️'],['INÍCIO DE PERNOITE','INÍCIO DE PERNOITE','🌙'],['FIM DE PERNOITE','FIM DE PERNOITE','🌅'],['FIM DE JORNADA','FIM DE JORNADA','🔚'],['Oficina','Oficina','🔧'],['Posto de Gasolina','Posto de Gasolina','⛽'],['Garagem','Garagem','🅿️'],['Base/Terminal','Base/Terminal','🏢'],['Cliente','Cliente','🤝'],['Fornecedor','Fornecedor','📦'],['Pátio','Pátio','🏭'],['Embarcadouro','Embarcadouro','⚓'],['Porto Seco','Porto Seco','🚢'],['Almoxarifado','Almoxarifado','📦'],['Centro de Distribuição','Centro de Distribuição','🏭'],['Ponto de Apoio','Ponto de Apoio','🆘'],['Parada Obrigatória','Parada Obrigatória','🛑'],['Pesagem','Pesagem','⚖️'],['Fronteira','Fronteira','🚧'],['Alfândega','Alfândega','🛃'],['Garagem Cliente','Garagem Cliente','🏠'],['Pátio Cliente','Pátio Cliente','🏭']];
-    foreach($todosTipos as $t){
-        $__rsChk3 = query("SELECT 1 FROM poi_tipo WHERE poti_tx_codigo = ? LIMIT 1", "s", [$t[0]]);
-        $chk3 = $__rsChk3 ? mysqli_fetch_assoc($__rsChk3) : null;
-        if(empty($chk3)){
-            query("INSERT INTO poi_tipo (poti_tx_codigo, poti_tx_nome, poti_tx_emoji) VALUES (?, ?, ?)", "sss", $t);
-        }else{
-            query("UPDATE poi_tipo SET poti_tx_emoji = ?, poti_tx_nome = ? WHERE poti_tx_codigo = ?", "sss", [$t[2], $t[1], $t[0]]);
         }
     }
     $tiposPoi = [];
@@ -288,6 +275,23 @@
 
 
 
+    function salvarAcoesEsperadasPoi($poiId, $acoes){
+        query("CREATE TABLE IF NOT EXISTS poi_acao_esperada (
+            paes_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+            paes_nb_poi INT NOT NULL,
+            paes_tx_codigo VARCHAR(50) NOT NULL,
+            UNIQUE KEY uk_poi_acao (paes_nb_poi, paes_tx_codigo)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        query("DELETE FROM poi_acao_esperada WHERE paes_nb_poi = ?", "i", [$poiId]);
+        $acoes = is_array($acoes) ? $acoes : [];
+        foreach($acoes as $acao){
+            $acao = trim($acao);
+            if($acao !== ''){
+                query("INSERT IGNORE INTO poi_acao_esperada (paes_nb_poi, paes_tx_codigo) VALUES (?, ?)", "is", [$poiId, $acao]);
+            }
+        }
+    }
+
     // Processa salvamento de POI via AJAX
     if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["action"]) && $_POST["action"] === "salvar_poi") {
         // Garante que a tabela poi existe (sem incluir cadastro_poi.php para evitar output extra)
@@ -392,6 +396,8 @@
             }
             atualizar("poi", array_keys($dados), array_values($dados), strval($editId));
             $dados["poi_nb_id"] = $editId;
+            // Salva ações esperadas
+            salvarAcoesEsperadasPoi($editId, $_POST["acoes_esperadas"] ?? []);
             echo json_encode(["sucesso" => true, "id" => $editId, "poi" => $dados]);
             exit;
         }
@@ -422,6 +428,11 @@
         }
 
         $novoId = $res[0] ?? null;
+
+        // Salva ações esperadas
+        if($novoId){
+            salvarAcoesEsperadasPoi($novoId, $_POST["acoes_esperadas"] ?? []);
+        }
 
         echo json_encode(["sucesso" => true, "id" => $novoId, "poi" => $dados]);
         exit;

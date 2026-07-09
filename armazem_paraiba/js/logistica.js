@@ -954,6 +954,7 @@ document.addEventListener("DOMContentLoaded", () => {
             var poiIcon = montarIconePoi(poi.poi_tx_icone);
 
             var imgHtml = poi.poi_tx_imagem ? '<img src="' + poi.poi_tx_imagem + '?v=' + Date.now() + '" style="max-width:200px; max-height:130px; border-radius:6px; margin-bottom:6px; display:block; border:1px solid #ddd;">' : '';
+            var acoesHtml = poi.poi_tx_acoes_esperadas ? '<div style="margin-top:8px;padding:8px;background:#e8f4fd;border-left:4px solid #004173;border-radius:4px;font-size:13px;"><b>Ações Esperadas:</b> ' + poi.poi_tx_acoes_esperadas + '</div>' : '';
             var popupContent = '<div style="font-size: 14px; min-width: 220px;">' +
               imgHtml +
               '<strong>📌 ' + poi.poi_tx_nome + '</strong><br>' +
@@ -964,6 +965,7 @@ document.addEventListener("DOMContentLoaded", () => {
               '<span><b>Lat:</b> ' + poi.poi_tx_latitude + '</span><br>' +
               '<span><b>Lon:</b> ' + poi.poi_tx_longitude + '</span><br>' +
               (poi.poi_nb_raio ? '<span><b>Raio:</b> ' + poi.poi_nb_raio + 'm</span>' : '') +
+              acoesHtml +
               '<hr style="margin:6px 0; border:none; border-top:1px solid #eee;">' +
               '<a href="javascript:void(0)" onclick="editarPoi(' + poi.poi_nb_id + ')" style="color:#004173; font-size:13px; text-decoration:none;">✏️ Editar</a>' +
               '</div>';
@@ -1298,6 +1300,13 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("poi_imagem").value = "";
         var preview = document.getElementById("poi_imagem_preview");
         preview.innerHTML = poiData.poi_tx_imagem ? '<img src="' + poiData.poi_tx_imagem + '?v=' + Date.now() + '" style="max-width:180px; max-height:100px; border-radius:4px; border:1px solid #ddd;">' : '';
+        // Preenche ações esperadas
+        var acoesSelect = document.getElementById("poi_acoes_esperadas");
+        var acoesStr = poiData.poi_tx_acoes_esperadas || "";
+        var acoesArr = acoesStr.split(", ").map(function(s){ return s.trim(); }).filter(function(s){ return s; });
+        for (var i = 0; i < acoesSelect.options.length; i++) {
+          acoesSelect.options[i].selected = acoesArr.indexOf(acoesSelect.options[i].value) > -1;
+        }
         document.getElementById("poiSidebar").style.display = "block";
         atualizarPreviewRaio();
         return;
@@ -1321,6 +1330,12 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("poi_icone").value = "";
       document.getElementById("poi_imagem").value = "";
       document.getElementById("poi_imagem_preview").innerHTML = "";
+      // Limpa ações esperadas
+      var selAcoes = document.getElementById("poi_acoes_esperadas");
+      if(selAcoes){ for(var i=0;i<selAcoes.options.length;i++){ selAcoes.options[i].selected = false; } }
+      // Limpa endereço e CEP antes de buscar
+      document.getElementById("poi_endereco").value = "";
+      document.getElementById("poi_cep").value = "";
       document.getElementById("poiSidebar").style.display = "block";
       atualizarPreviewRaio();
       reverseGeocodeLog(lat, lng);
@@ -1388,10 +1403,43 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     function reverseGeocodeLog(lat, lng) {
+      var ufMap = {
+        'acre':'AC','alagoas':'AL','amapá':'AP','amazonas':'AM','bahia':'BA','ceará':'CE',
+        'distrito federal':'DF','espírito santo':'ES','goiás':'GO','maranhão':'MA',
+        'mato grosso':'MT','mato grosso do sul':'MS','minas gerais':'MG','pará':'PA',
+        'paraíba':'PB','paraná':'PR','pernambuco':'PE','piauí':'PI','rio de janeiro':'RJ',
+        'rio grande do norte':'RN','rio grande do sul':'RS','rondônia':'RO','roraima':'RR',
+        'santa catarina':'SC','são paulo':'SP','sergipe':'SE','tocantins':'TO'
+      };
+      function preencherCep(cep){
+        var cepLimpo = cep.replace(/\D/g, '');
+        if(cepLimpo.length === 8){ document.getElementById("poi_cep").value = cepLimpo; }
+      }
+      function buscarCepViaCep(addr){
+        if(!addr) return;
+        var uf = ufMap[(addr.state || '').toLowerCase().trim()];
+        var cidade = (addr.city || addr.town || addr.village || '').toLowerCase().trim();
+        var logradouro = (addr.road || addr.pedestrian || addr.footway || addr.highway || addr.street || '').toLowerCase().trim();
+        if(!uf || !cidade || !logradouro) return;
+        if(!cidade) return;
+        var viaUrl = 'https://viacep.com.br/ws/' + encodeURIComponent(uf) + '/' + encodeURIComponent(cidade) + '/' + encodeURIComponent(logradouro) + '/json/';
+        fetch(viaUrl)
+          .then(function(r){ return r.json(); })
+          .then(function(viaData){
+            if(!viaData || viaData.erro) return;
+            if(Array.isArray(viaData) && viaData.length > 0 && viaData[0].cep){
+              preencherCep(viaData[0].cep);
+            }else if(viaData.cep){
+              preencherCep(viaData.cep);
+            }
+          })
+          .catch(function(){});
+      }
       var url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + lat + '&lon=' + lng + '&accept-language=pt&countrycodes=br&addressdetails=1';
       fetch(url, { headers: { 'User-Agent': 'TechPS-POI/1.0' } })
         .then(function(r){ return r.json(); })
         .then(function(data){
+          var encontrouCep = false;
           if(data && data.address){
             var addr = data.address;
             var parts = [];
@@ -1401,7 +1449,17 @@ document.addEventListener("DOMContentLoaded", () => {
             if(addr.state){ parts.push(addr.state); }
             var endVal = parts.join(', ');
             if(endVal){ document.getElementById("poi_endereco").value = endVal; }
-            if(addr.postcode){ document.getElementById("poi_cep").value = addr.postcode; }
+            if(addr.postcode){
+              preencherCep(addr.postcode);
+              encontrouCep = true;
+            }else if(data.display_name){
+              var cepMatch = data.display_name.match(/(\d{5}-?\d{3})/);
+              if(cepMatch){ preencherCep(cepMatch[1]); encontrouCep = true; }
+            }
+            if(!encontrouCep){ buscarCepViaCep(addr); }
+          }else if(data && data.display_name){
+            var cepMatch = data.display_name.match(/(\d{5}-?\d{3})/);
+            if(cepMatch){ preencherCep(cepMatch[1]); }
           }
         })
         .catch(function(){});

@@ -345,7 +345,8 @@
 		$__pois = mysqli_fetch_all(query(
 			"SELECT poi_nb_id, poi_tx_nome, poi_tx_cnpj, poi_tx_contato,
 					poi_tx_latitude, poi_tx_longitude, poi_nb_raio, poi_tx_icone,
-					poi_tx_endereco, poi_tx_cep, poi_tx_imagem
+					poi_tx_endereco, poi_tx_cep, poi_tx_imagem,
+					(SELECT GROUP_CONCAT(paes_tx_codigo ORDER BY paes_tx_codigo SEPARATOR ', ') FROM poi_acao_esperada WHERE paes_nb_poi = poi.poi_nb_id) AS poi_tx_acoes_esperadas
 			 FROM poi
 			 WHERE poi_tx_status = 'ativo'
 			 ORDER BY poi_tx_nome ASC"
@@ -359,8 +360,6 @@
 			$__chkPt = $__rsChkPt ? mysqli_fetch_assoc($__rsChkPt) : null;
 			if(empty($__chkPt)){
 				query("CREATE TABLE IF NOT EXISTS poi_tipo (poti_nb_id INT AUTO_INCREMENT PRIMARY KEY, poti_tx_codigo VARCHAR(50) NOT NULL UNIQUE, poti_tx_nome VARCHAR(100) NOT NULL, poti_tx_emoji VARCHAR(10) NOT NULL DEFAULT '📌', poti_tx_status ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-				$__padrao = [['fa-box','Caixa','📦'],['fa-building','Prédio','🏢'],['fa-industry','Indústria','🏭'],['fa-store','Loja','🏪'],['fa-gas-pump','Posto','⛽'],['fa-parking','Estacionamento','🅿️'],['fa-hospital','Hospital','🏥'],['fa-university','Banco','🏦'],['fa-utensils','Restaurante','🍽️'],['fa-hotel','Hotel','🏨'],['fa-warehouse','Armazém','🏭'],['fa-truck','Caminhão','🚚'],['fa-map-pin','Alfinete','📍'],['fa-flag-checkered','Ponto de Jornada','🏁']];
-				foreach($__padrao as $__t){ $__rsChk2 = query("SELECT 1 FROM poi_tipo WHERE poti_tx_codigo = ? LIMIT 1", "s", [$__t[0]]); $__chk = $__rsChk2 ? mysqli_fetch_assoc($__rsChk2) : null; if(empty($__chk)) query("INSERT INTO poi_tipo (poti_tx_codigo, poti_tx_nome, poti_tx_emoji) VALUES (?, ?, ?)", "sss", $__t); }
 			}
 		}
 		$__tiposPoi = [];
@@ -587,6 +586,7 @@
 						var __emoji=__ajustePoiEmojiMap[__poi.poi_tx_icone]||'📌';
 						var __poiIcon=L.divIcon({className:'ajuste-poi-icon',html:'<div style=\"background:#004173;color:white;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 6px rgba(0,0,0,.3);border:2px solid white;\">'+__emoji+'</div>',iconSize:[32,32],iconAnchor:[16,32],popupAnchor:[0,-36]});
 						var __poiImg=__poi.poi_tx_imagem?'<img src=\"'+__poi.poi_tx_imagem+'\" style=\"max-width:200px;max-height:130px;border-radius:6px;margin-bottom:6px;display:block;border:1px solid #ddd;\">':'';
+						var __acoesHtml=__poi.poi_tx_acoes_esperadas?'<div style=\"margin-top:8px;padding:8px;background:#e8f4fd;border-left:4px solid #004173;border-radius:4px;font-size:13px;\"><b>Ações Esperadas:</b> '+__poi.poi_tx_acoes_esperadas+'</div>':'';
 						var __poiPopup='<div style=\"font-size:14px;min-width:220px\">'+
 							__poiImg+
 							'<strong>📌 '+__poi.poi_tx_nome+'</strong>'+
@@ -597,6 +597,7 @@
 							'<br><b>Lat:</b> '+__poi.poi_tx_latitude+
 							'<br><b>Lon:</b> '+__poi.poi_tx_longitude+
 							(__poi.poi_nb_raio?'<br><b>Raio:</b> '+__poi.poi_nb_raio+'m':'')+
+							__acoesHtml+
 						'</div>';
 						var __poiM=L.marker([__poiLat,__poiLng],{icon:__poiIcon}).bindPopup(__poiPopup).addTo(__ajustePoiLayer);
 						if(__poi.poi_nb_raio>0){
