@@ -354,7 +354,7 @@
 			campo("Latitude*",			"latitude",		$input_values["latitude"],	2),
 			campo("Longitude*",			"longitude",	$input_values["longitude"],	2),
 			"<div class='col-sm-4 margin-bottom-5 campo-fit-content'><label>Raio (metros)</label><input type='range' id='raio_range' min='10' max='500' value='".($input_values["raio"] ?: 50)."' style='width:100%;'><input type='number' name='raio' id='raio' value='".($input_values["raio"] ?: 50)."' min='1' style='width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px; margin-top:4px;'></div>",
-			"<div class='col-sm-3 margin-bottom-5 campo-fit-content'><label>Tipo de POI</label>{$iconeHtml}</div>",
+			"<div class='col-sm-3 margin-bottom-5 campo-fit-content'><label>Tipo de POI <a href='#' onclick='abrirModalGerenciarTipos();return false;' style='font-size:12px;font-weight:400;'>Gerenciar</a></label>{$iconeHtml}</div>",
 			$acoesHtml
 		];
 
@@ -388,6 +388,117 @@
 				</div>
 			</div>
 		</div>";
+
+		// Management JS functions defined before rodape so they're always available
+		$basePathPoi = $_ENV["APP_PATH"].$_ENV["CONTEX_PATH"];
+		echo "<script>
+if(!window.basePath) window.basePath = '{$basePathPoi}';
+var _emojiSelecionado = '📦';
+function abrirModalNovoTipoPoi(){
+	document.getElementById('novoTipoNome').value = '';_emojiSelecionado = '📦';
+	var b=document.querySelectorAll('#gradeEmojis button');for(var i=0;i<b.length;i++)b[i].classList.remove('selecionado');
+	var def=document.querySelector('#gradeEmojis button[data-emoji=\"📦\"]');if(def)def.classList.add('selecionado');
+	document.getElementById('emojiSelecionado').textContent = '📦';
+	document.getElementById('novoTipoStatus').innerHTML = '';
+	document.getElementById('modalNovoTipoPoi').style.display = 'flex';
+	setTimeout(function(){document.getElementById('novoTipoNome').focus();},100);
+	if(!window._emojiGridClickInited){
+		window._emojiGridClickInited=true;
+		(function initEmoji(){
+			var g=document.getElementById('gradeEmojis');
+			if(g){g.addEventListener('click',function(e){
+				var btn=e.target.closest('button');if(!btn)return;
+				document.querySelectorAll('#gradeEmojis button').forEach(function(b){b.classList.remove('selecionado');});
+				btn.classList.add('selecionado');_emojiSelecionado=btn.getAttribute('data-emoji')||'📌';
+				document.getElementById('emojiSelecionado').textContent=_emojiSelecionado;
+			});}else setTimeout(initEmoji,50);
+		})();
+	}
+}
+function fecharModalNovoTipoPoi(){document.getElementById('modalNovoTipoPoi').style.display='none';}
+function salvarNovoTipoPoi(){
+	var n=document.getElementById('novoTipoNome').value.trim(),e=_emojiSelecionado,s=document.getElementById('novoTipoStatus');
+	if(!n){s.innerHTML='<span style=\"color:red;\">Informe o nome do tipo.</span>';document.getElementById('novoTipoNome').focus();return;}
+	s.innerHTML='<span style=\"color:#666;\">Salvando...</span>';
+	var fd=new FormData();fd.append('ajax_action','criar_tipo_poi');fd.append('codigo',n);fd.append('nome',n);fd.append('emoji',e);
+	fetch(window.basePath+'/ajax_poi_tipo.php',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){
+		if(d.sucesso){
+			s.innerHTML='<span style=\"color:green;\">Tipo criado com sucesso!</span>';
+			var sel=document.getElementById('poi_icone'),opt=document.createElement('option');
+			opt.value=d.tipo.poti_tx_codigo;opt.textContent=d.tipo.poti_tx_emoji+' '+d.tipo.poti_tx_nome;
+			opt.setAttribute('data-emoji',d.tipo.poti_tx_emoji);sel.insertBefore(opt,sel.querySelector('option[value=\"__novo__\"]'));
+			sel.value=d.tipo.poti_tx_codigo;setTimeout(fecharModalNovoTipoPoi,800);
+		}else{s.innerHTML='<span style=\"color:red;\">'+(d.erro||'Erro ao salvar.')+'</span>';}
+	}).catch(function(){s.innerHTML='<span style=\"color:red;\">Erro na requisição.</span>';});
+}
+function abrirModalGerenciarTipos(){document.getElementById('modalGerenciarTipos').style.display='flex';carregarListaTipos();}
+function fecharModalGerenciarTipos(){document.getElementById('modalGerenciarTipos').style.display='none';}
+function carregarListaTipos(){
+	var l=document.getElementById('listaTiposPoi');
+	var tbar=document.getElementById('toolbarGerenciar');
+	l.innerHTML='<div class=\"empty-state\"><i class=\"fa fa-spinner fa-spin\"></i> Carregando...</div>';
+	var fd=new FormData();fd.append('ajax_action','listar_todos_tipos_poi');
+	fetch('ajax_poi_tipo.php',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){
+		if(!Array.isArray(d)||d.length===0){l.innerHTML='<div class=\"empty-state\">Nenhum tipo cadastrado.</div>';if(tbar)tbar.style.display='none';return;}
+		if(tbar)tbar.style.display='flex';
+		var h='';d.forEach(function(t){
+			var a=t.poti_tx_status==='inativo';h+='<div class=\"tipo-row'+(a?' inativo':'')+'\">';
+			h+='<input type=\"checkbox\" class=\"tipo-check\" value=\"'+escapeHtml(String(t.poti_nb_id))+'\" style=\"margin-right:8px;flex-shrink:0;\">';
+			h+='<div class=\"tipo-info\"><span>'+escapeHtml(t.poti_tx_emoji||'')+'</span>';
+			h+='<span class=\"tipo-nome\">'+escapeHtml(t.poti_tx_nome||'')+'</span>';
+			h+='<span class=\"tipo-codigo\">('+escapeHtml(t.poti_tx_codigo||'')+')</span></div>';
+			h+='<div class=\"tipo-actions\">';
+			h+='<button class=\"btn-edit\" onclick=\"abrirModalEditarTipo(\\''+escapeJs(String(t.poti_nb_id))+'\\',\\''+escapeJs(t.poti_tx_nome)+'\\',\\''+escapeJs(t.poti_tx_emoji||'')+'\\',\\''+escapeJs(t.poti_tx_status||'ativo')+'\\')\"><i class=\"fa fa-pencil\"></i></button>';
+			h+='<button class=\"btn-delete\" onclick=\"excluirTipo(\\''+escapeJs(String(t.poti_nb_id))+'\\',\\''+escapeJs(t.poti_tx_nome)+'\\')\"><i class=\"fa fa-trash\"></i></button>';
+			h+='</div></div>';});l.innerHTML=h;
+	}).catch(function(){l.innerHTML='<div class=\"empty-state\">Erro ao carregar.</div>';if(tbar)tbar.style.display='none';});
+}
+function toggleSelectAll(cb){
+	var checks=document.querySelectorAll('#listaTiposPoi .tipo-check');
+	for(var i=0;i<checks.length;i++)checks[i].checked=cb.checked;
+}
+function excluirSelecionados(){
+	var checks=document.querySelectorAll('#listaTiposPoi .tipo-check:checked');
+	if(checks.length===0){alert('Selecione pelo menos um tipo.');return;}
+	var ids=[];for(var i=0;i<checks.length;i++)ids.push(checks[i].value);
+	if(!confirm('Excluir '+ids.length+' tipo(s)?'))return;
+	var fd=new FormData();fd.append('ajax_action','excluir_varios_tipos_poi');
+	for(var i=0;i<ids.length;i++)fd.append('ids[]',ids[i]);
+	fetch('ajax_poi_tipo.php',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){
+		if(d.sucesso){carregarListaTipos();}
+		else{alert(d.erro||'Erro ao excluir.');}
+	});
+}
+function abrirModalEditarTipo(id,nome,emoji,status){
+	document.getElementById('editarTipoId').value=id;document.getElementById('editarTipoNome').value=nome;
+	document.getElementById('editarTipoEmoji').value=emoji;document.getElementById('editarTipoStatus').value=status;
+	document.getElementById('editarTipoStatusField').innerHTML='Status: '+(status==='ativo'?'<span style=\"color:green;\">Ativo</span>':'<span style=\"color:#888;\">Inativo</span>');
+	document.getElementById('editarTipoStatusField').style.display='block';document.getElementById('editarTipoStatusEl').innerHTML='';
+	document.getElementById('modalEditarTipo').style.display='flex';
+}
+function fecharModalEditarTipo(){document.getElementById('modalEditarTipo').style.display='none';}
+function salvarEditarTipo(){
+	var i=document.getElementById('editarTipoId').value.trim(),n=document.getElementById('editarTipoNome').value.trim();
+	var e=document.getElementById('editarTipoEmoji').value.trim(),s=document.getElementById('editarTipoStatus').value;
+	var st=document.getElementById('editarTipoStatusEl');
+	if(!n||!i){st.innerHTML='<span style=\"color:red;\">Preencha todos os campos.</span>';return;}
+	st.innerHTML='<span style=\"color:#666;\">Salvando...</span>';
+	var fd=new FormData();fd.append('ajax_action','editar_tipo_poi');fd.append('id',i);fd.append('nome',n);fd.append('emoji',e);
+	fetch('ajax_poi_tipo.php',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){
+		if(d.sucesso){st.innerHTML='<span style=\"color:green;\">Tipo atualizado!</span>';fecharModalEditarTipo();carregarListaTipos();}
+		else{st.innerHTML='<span style=\"color:red;\">'+(d.erro||'Erro ao salvar.')+'</span>';}
+	}).catch(function(){st.innerHTML='<span style=\"color:red;\">Erro na requisição.</span>';});
+}
+function excluirTipo(id,nome){
+	if(!confirm('Tem certeza que deseja excluir o tipo '+nome+'?'))return;
+	var fd=new FormData();fd.append('ajax_action','excluir_tipo_poi');fd.append('id',id);
+	fetch('ajax_poi_tipo.php',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){
+		if(d.sucesso){carregarListaTipos();}else{alert(d.erro||'Erro ao excluir.');}
+	});
+}
+function escapeHtml(text){var d=document.createElement('div');d.textContent=text;return d.innerHTML;}
+function escapeJs(text){return String(text).replace(new RegExp('\\\"','g'),'\\\\\"').replace(new RegExp(\"'\",'g'),'\\\\\\'');}
+</script>";
 
 		rodape();
 
@@ -433,32 +544,71 @@
 				<div id='novoTipoStatus' style='margin-top:12px; font-size:13px;'></div>
 			</div>
 		</div>
+
+		<style>
+		#modalGerenciarTipos .tipo-row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid #eee;}
+		#modalGerenciarTipos .tipo-row:hover{background:#f9f9f9;}
+		#modalGerenciarTipos .tipo-row.inativo{opacity:.5;}
+		#modalGerenciarTipos .tipo-info{display:flex;align-items:center;gap:8px;flex:1;min-width:0;}
+		#modalGerenciarTipos .tipo-nome{font-weight:600;font-size:13px;}
+		#modalGerenciarTipos .tipo-codigo{font-size:11px;color:#888;}
+		#modalGerenciarTipos .tipo-actions{display:flex;gap:4px;}
+		#modalGerenciarTipos .tipo-actions button{padding:4px 8px;font-size:12px;border-radius:4px;border:none;cursor:pointer;}
+		#modalGerenciarTipos .btn-edit{background:#004173;color:white;}
+		#modalGerenciarTipos .btn-delete{background:#c0392b;color:white;}
+		#modalGerenciarTipos .lista-tipos{max-height:350px;overflow-y:auto;border:1px solid #ddd;border-radius:6px;background:#fff;}
+		#modalGerenciarTipos .empty-state{text-align:center;padding:20px;color:#888;font-size:13px;}
+		</style>
+		<div id='modalGerenciarTipos' style='display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:99999;align-items:center;justify-content:center;'>
+			<div style='background:white;border-radius:12px;padding:20px;width:500px;max-width:95%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 30px rgba(0,0,0,.3);'>
+				<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;'>
+					<h3 style='margin:0;font-size:16px;color:#004173;'><i class='fa fa-tags'></i> Gerenciar Tipos de POI</h3>
+					<button type='button' onclick='fecharModalGerenciarTipos()' style='background:none;border:none;font-size:20px;cursor:pointer;color:#666;'>&times;</button>
+				</div>
+				<div id='toolbarGerenciar' style='display:none;align-items:center;gap:8px;margin-bottom:8px;font-size:13px;'>
+					<label style='display:flex;align-items:center;gap:4px;cursor:pointer;'><input type='checkbox' onchange='toggleSelectAll(this)'> Selecionar todos</label>
+					<button type='button' onclick='excluirSelecionados()' style='padding:4px 10px;border:none;border-radius:4px;background:#c0392b;color:white;cursor:pointer;font-size:12px;'><i class='fa fa-trash'></i> Excluir selecionados</button>
+				</div>
+				<div class='lista-tipos' id='listaTiposPoi'><div class='empty-state'>Carregando...</div></div>
+			</div>
+		</div>
+		<div id='modalEditarTipo' style='display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:100000;align-items:center;justify-content:center;'>
+			<div style='background:white;border-radius:12px;padding:20px;width:420px;max-width:95%;box-shadow:0 8px 30px rgba(0,0,0,.3);'>
+				<h3 style='margin:0 0 12px 0;font-size:16px;color:#004173;'><i class='fa fa-pencil'></i> Editar Tipo de POI</h3>
+				<input type='hidden' id='editarTipoId'>
+				<div style='margin-bottom:10px;'>
+					<label style='display:block;font-weight:600;font-size:13px;margin-bottom:4px;'>Nome <span style='color:red;'>*</span></label>
+					<input type='text' id='editarTipoNome' class='form-control' placeholder='Nome do tipo'>
+				</div>
+				<div style='margin-bottom:10px;'>
+					<label style='display:block;font-weight:600;font-size:13px;margin-bottom:4px;'>Emoji</label>
+					<input type='text' id='editarTipoEmoji' class='form-control' placeholder='📦' maxlength='10'>
+				</div>
+				<div id='editarTipoStatusField' style='margin-bottom:10px;display:none;font-size:13px;'></div>
+				<input type='hidden' id='editarTipoStatus' value='ativo'>
+				<div style='display:flex;gap:8px;'>
+					<button type='button' onclick='fecharModalEditarTipo()' style='flex:1;padding:10px;border:1px solid #ccc;border-radius:6px;background:#f5f5f5;cursor:pointer;font-size:14px;'>Cancelar</button>
+					<button type='button' onclick='salvarEditarTipo()' style='flex:1;padding:10px;border:none;border-radius:6px;background:#004173;color:white;cursor:pointer;font-size:14px;'>Salvar</button>
+				</div>
+				<div id='editarTipoStatusEl' style='margin-top:10px;font-size:13px;'></div>
+			</div>
+		</div>
 		<script>
-		if(!window.basePath) window.basePath = '$basePathPoi';
-		var _emojiSelecionado = '📦';
-		function abrirModalNovoTipoPoi(){
-			document.getElementById('novoTipoNome').value = '';
-			_emojiSelecionado = '📦';
-			document.querySelectorAll('#gradeEmojis button').forEach(function(b){ b.classList.remove('selecionado'); });
-			var def = document.querySelector('#gradeEmojis button[data-emoji=\"📦\"]');
-			if(def) def.classList.add('selecionado');
-			document.getElementById('emojiSelecionado').textContent = '📦';
-			document.getElementById('novoTipoStatus').innerHTML = '';
-			document.getElementById('modalNovoTipoPoi').style.display = 'flex';
-			setTimeout(function(){ document.getElementById('novoTipoNome').focus(); }, 100);
-		}
-		function fecharModalNovoTipoPoi(){
-			document.getElementById('modalNovoTipoPoi').style.display = 'none';
+		if(!window.emojiGridInited){
+			window.emojiGridInited = true;
+			document.addEventListener('DOMContentLoaded', function(){
+				var g = document.getElementById('gradeEmojis');
+				if(g) g.addEventListener('click', function(e){
+					var btn = e.target.closest('button');
+					if(!btn) return;
+					document.querySelectorAll('#gradeEmojis button').forEach(function(b){ b.classList.remove('selecionado'); });
+					btn.classList.add('selecionado');
+					_emojiSelecionado = btn.getAttribute('data-emoji') || '📌';
+					document.getElementById('emojiSelecionado').textContent = _emojiSelecionado;
+				});
+			});
 		}
 		document.addEventListener('DOMContentLoaded', function(){
-			document.getElementById('gradeEmojis').addEventListener('click', function(e){
-				var btn = e.target.closest('button');
-				if(!btn) return;
-				document.querySelectorAll('#gradeEmojis button').forEach(function(b){ b.classList.remove('selecionado'); });
-				btn.classList.add('selecionado');
-				_emojiSelecionado = btn.getAttribute('data-emoji') || '📌';
-				document.getElementById('emojiSelecionado').textContent = _emojiSelecionado;
-			});
 			var sel = document.getElementById('poi_icone');
 			if(sel){
 				sel.addEventListener('change', function(){
@@ -469,45 +619,6 @@
 				});
 			}
 		});
-		function salvarNovoTipoPoi(){
-			var nome = document.getElementById('novoTipoNome').value.trim();
-			var emoji = _emojiSelecionado;
-			var statusEl = document.getElementById('novoTipoStatus');
-			if(!nome){
-				statusEl.innerHTML = '<span style=\"color:red;\">Informe o nome do tipo.</span>';
-				document.getElementById('novoTipoNome').focus();
-				return;
-			}
-			var codigo = nome;
-			statusEl.innerHTML = '<span style=\"color:#666;\">Salvando...</span>';
-			var formData = new FormData();
-			formData.append('ajax_action', 'criar_tipo_poi');
-			formData.append('codigo', codigo);
-			formData.append('nome', nome);
-			formData.append('emoji', emoji);
-			fetch(window.basePath + '/ajax_poi_tipo.php', { method: 'POST', body: formData })
-				.then(function(r){ return r.json(); })
-				.then(function(data){
-					if(data.sucesso){
-						statusEl.innerHTML = '<span style=\"color:green;\">Tipo criado com sucesso!</span>';
-						var sel = document.getElementById('poi_icone');
-						var opt = document.createElement('option');
-						opt.value = data.tipo.poti_tx_codigo;
-						opt.textContent = data.tipo.poti_tx_emoji + ' ' + data.tipo.poti_tx_nome;
-						opt.setAttribute('data-emoji', data.tipo.poti_tx_emoji);
-						var novoItem = sel.querySelector('option[value=\"__novo__\"]');
-						sel.insertBefore(opt, novoItem);
-						sel.value = data.tipo.poti_tx_codigo;
-						setTimeout(fecharModalNovoTipoPoi, 800);
-					}else{
-						statusEl.innerHTML = '<span style=\"color:red;\">' + (data.erro || 'Erro ao salvar.') + '</span>';
-					}
-				})
-				.catch(function(err){
-					statusEl.innerHTML = '<span style=\"color:red;\">Erro na requisição.</span>';
-					console.error('AJAX_ERRO', err);
-				});
-		}
 		</script>
 		<link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css' />
 		<script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
@@ -909,6 +1020,7 @@
 			botao("Mapa de POIs", "abrirMapaPoi", "", "", "", "", "btn btn-info"),
 			'<button type="button" class="btn btn-warning" onclick="abrirModalImportarPoi()">Importar CSV</button>',
 			'<a class="btn btn-default" href="arquivos/instrucoesPoi/modelo_importacao_poi.csv" download>Modelo CSV</a>',
+
 		];
 
 		echo abre_form();
