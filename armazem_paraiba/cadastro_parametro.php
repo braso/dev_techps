@@ -1195,7 +1195,8 @@
 			combo("Banco de Horas", "busca_banco", $_POST["busca_banco"]?? "", 2, ["" => "Todos", "sim" => "Sim", "nao" => "Não"]),
 			campo("Categoria", "busca_categoria", $_POST["busca_categoria"]?? "", 2),
 			campo("Sindicato", "busca_sindicato", $_POST["busca_sindicato"]?? "", 2),
-			combo("Turno", "busca_turno", $_POST["busca_turno"]?? "", 2, ["" => "Todos", "M" => "Manhã", "T" => "Tarde", "V" => "Vespertino", "N" => "Noite", "D" => "Diurno"])
+			combo("Turno", "busca_turno", $_POST["busca_turno"]?? "", 2, ["" => "Todos", "M" => "Manhã", "T" => "Tarde", "V" => "Vespertino", "N" => "Noite", "D" => "Diurno"]),
+			combo("Status", "busca_status", $_POST["busca_status"]?? "ativo", 2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"])
 		];
 
 		$botoes = [
@@ -1230,7 +1231,8 @@
 				"busca_banco"		=> "para_tx_banco",
 				"busca_categoria"	=> "para_tx_categoria",
 				"busca_sindicato"	=> "para_tx_sindicato",
-				"busca_turno"		=> "para_tx_turno"
+				"busca_turno"		=> "para_tx_turno",
+				"busca_status"		=> "para_tx_status"
 			];
 
 			$queryBase = 
@@ -1239,13 +1241,15 @@
 			;
 
 			$actions = criarIconesGrid(
-				["glyphicon glyphicon-search search-button", "glyphicon glyphicon-duplicate search-button", "glyphicon glyphicon-remove search-remove"],
+				["glyphicon glyphicon-search search-view", "glyphicon glyphicon-duplicate search-duplicate", "glyphicon glyphicon-remove search-remove"],
 				["cadastro_parametro.php", "cadastro_parametro.php", "cadastro_parametro.php"],
-				["modificarParametro()", "duplicarParametro()", "excluirParametro()"]
+				["modificarParametro()", "duplicarParametro()", "excluirParametro()"],
+				["", "", "Deseja realmente excluir este parâmetro?"]
 			);
 	
+			$indiceStatus = array_search("STATUS", array_keys($gridFields));
 			$actions["functions"][2] .= 
-				"esconderInativar('glyphicon glyphicon-remove search-remove', 8);"
+				"esconderInativar('glyphicon glyphicon-remove search-remove', {$indiceStatus});"
 			;
 	
 			$gridFields["actions"] = $actions["tags"];

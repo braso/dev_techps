@@ -378,7 +378,7 @@
 		return $result;
 	}
 
-	function criarIconesGrid(array $classNames, array $actionFiles, array $actionFuncs){
+	function criarIconesGrid(array $classNames, array $actionFiles, array $actionFuncs, array $confirmMsgs = []){
 		if(count($classNames) != count($actionFiles) || count($classNames) != count($actionFuncs)){
 			throw new Exception("Os argumentos não possuem o mesmo tamanho.");
 		}
@@ -396,8 +396,14 @@
 			$classParts = explode(' ', trim($classNames[$f]));
 			$selectorClass = end($classParts); // ex: "search-button" ou "search-remove"
 
+			$confirmJs = "";
+			if(!empty($confirmMsgs[$f])){
+				$confirmJs = "if(!confirm('".addslashes($confirmMsgs[$f])."')){ return; }";
+			}
+
 			$result["functions"][] =
 				"$(document).off('click', '.{$selectorClass}').on('click', '.{$selectorClass}', function(event){
+					{$confirmJs}
 					var form = document.createElement('form');
 					form.setAttribute('method', 'post');
 					form.setAttribute('action', '{$actionFiles[$f]}');

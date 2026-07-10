@@ -157,3 +157,21 @@ td { font-size: 10px !important; }
     height: auto;
     align-items: center;
 }
+
+.export-csv-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+
+.export-csv-container .btn {
+    white-space: nowrap;
+}
+
+.export-csv-container .csv-loading {
+    margin-left: 5px;
+    white-space: nowrap;
+}

@@ -389,7 +389,7 @@ const consultarRegistros = function(){
                         '<button id=\"btnExportCSV\" class=\"btn btn-success btn-sm\" title=\"Exportar TODOS os dados para CSV\">' +
                             '<i class=\"glyphicon glyphicon-download-alt\"></i> CSV (' + total + ' registros)' +
                         '</button>' +
-                        '<button id=\"btnExportPDF\" class=\"btn btn-danger btn-sm\" title=\"Exportar TODOS os dados para PDF\" style=\"margin-left: 5px;\">' +
+                        '<button id=\"btnExportPDF\" class=\"btn btn-danger btn-sm\" title=\"Exportar TODOS os dados para PDF\">' +
                             '<i class=\"glyphicon glyphicon-file\"></i> PDF (' + total + ' registros)' +
                         '</button>' +
                         '<div id=\"csvLoading\" class=\"csv-loading\" style=\"display: none;\">Gerando CSV...</div>' +
