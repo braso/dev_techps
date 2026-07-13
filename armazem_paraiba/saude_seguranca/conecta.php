@@ -51,13 +51,7 @@ if (!isset($_ENV["URL_BASE"])) {
 global $_SESSION, $CONTEX, $conn;
 date_default_timezone_set('America/Fortaleza');
 
-// Cálculo dinâmico do caminho relativo para compatibilidade
-$appRoot = realpath($_SERVER["DOCUMENT_ROOT"] . $_ENV["APP_PATH"]);
-if (!$appRoot) {
-    $appRoot = realpath(__DIR__ . "/../..");
-}
-$dirRelative = str_replace([$appRoot, '\\'], ["", '/'], realpath(__DIR__));
-$CONTEX['path'] = $_ENV["APP_PATH"] . $dirRelative;
+$CONTEX['path'] = $_ENV["APP_PATH"] . ($_ENV["CONTEX_PATH"] ?? "/armazem_paraiba");
 
 $_SESSION['last_activity'] = time();
 

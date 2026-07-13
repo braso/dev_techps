@@ -111,6 +111,11 @@
                 "/assinatura/cadastro_signatario.php" => "Signatários Externos",
                 "#iti"                              => "Validar Assinatura",
             ],
+            "epi" => [
+                "/saude_seguranca/cadastro_epi.php" => "Cadastro de EPI",
+                "/saude_seguranca/entrega_epi.php"  => "Entrega de EPI",
+                "/saude_seguranca/estoque_epi.php"  => "Estoque de EPI"
+            ],
 			// "suporte" => [
 			// 	"/#" 		=> "Perguntas Frequentes", 
 			// 	"/doc.php" 	=> "Ver Documentação"
@@ -127,6 +132,7 @@ if ($showComunicado) {
             "ponto" => "",
             "painel" => "",
             "logística" => "",
+            "epi" => "",
             "relatórios" => "",
             "assinatura" => "",
             "suporte" => "",
@@ -170,6 +176,7 @@ if ($showComunicado) {
             "ponto" => "fa fa-clock",
             "painel" => "fa fa-tachometer",
             "logística" => "fa fa-truck",
+            "epi" => "fa fa-shield-alt",
             "relatórios" => "fa fa-file-alt",
             "assinatura" => "fa fa-file-contract",
             "suporte" => "fa fa-life-ring",
@@ -209,8 +216,11 @@ if ($showComunicado) {
             "Pontos" => "fa fa-list-alt",
             "POI" => "fa fa-map-pin",
             "Logística" => "fa fa-truck",
-	            "Signatários Externos" => "fa fa-address-card"
-	        ];
+            "Signatários Externos" => "fa fa-address-card",
+            "Cadastro de EPI" => "fa fa-plus-circle",
+            "Entrega de EPI" => "fa fa-exchange-alt",
+            "Estoque de EPI" => "fa fa-boxes"
+        ];
 
         // Verifica se existe pelo menos uma placa cadastrada para mostrar o menu Logística.
         $temPlacaCadastrada = false;
@@ -295,7 +305,7 @@ if ($showComunicado) {
 
         $isAdmin = is_int(strpos($nivel, "Administrador"));
         $isSuperAdmin = is_int(strpos($nivel, "Super Administrador"));
-        $menusConcat = $menus["cadastros"].$menus["ponto"].$menus["painel"].($menus["logística"] ?? "").($menus["assinatura"] ?? "").($menus["suporte"]?? "").($menus["relatórios"] ?? "");
+        $menusConcat = $menus["cadastros"].$menus["ponto"].$menus["painel"].($menus["logística"] ?? "").($menus["epi"] ?? "").($menus["assinatura"] ?? "").($menus["suporte"]?? "").($menus["relatórios"] ?? "");
         if ($isSuperAdmin) {
             return $menusConcat;
         }
