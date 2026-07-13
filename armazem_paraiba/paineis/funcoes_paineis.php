@@ -173,7 +173,6 @@ function criar_relatorio_saldo() {
 						LEFT JOIN sbgrupos_documentos ON  sbgr_nb_id = enti_subSetor_id
 						JOIN user ON user.user_nb_entidade = entidade.enti_nb_id
 						WHERE enti_tx_status = 'ativo'
-							AND DATE_FORMAT(enti_tx_dataCadastro, '%Y-%m') <= '{$dataMes->format("Y-m")}'
 							AND enti_nb_empresa = '{$empresa["empr_nb_id"]}'
 							AND user.user_tx_status = 'ativo'
 							AND (
@@ -206,17 +205,6 @@ function criar_relatorio_saldo() {
 		];
 
 		foreach ($motoristas as $motorista) {
-
-			if (!empty($motorista["enti_tx_admissao"]) && $motorista["enti_tx_admissao"] != "0000-00-00") {
-				try {
-					$admissao = new DateTime($motorista["enti_tx_admissao"]);
-					if ($admissao->format("Y-m") > $dataMes->format("Y-m")) {
-						continue;
-					}
-				} catch (Exception $e) {
-					// Ignora data inválida e assume ativo
-				}
-			}
 
 			//Status Endosso{
 			$endossos = mysqli_fetch_all(query(
