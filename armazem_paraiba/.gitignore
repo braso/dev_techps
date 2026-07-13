@@ -7,7 +7,7 @@ diaDetalhePonto.php
 
 #patas ornilio  
 /posiitron
-/saude_seguranca
+
 # Ignorar dependências do Node.js
 node_modules/
 # Ignorar arquivos de configuração de dependências (se não quiser versionar)

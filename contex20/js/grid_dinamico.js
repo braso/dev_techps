@@ -304,11 +304,25 @@ const consultarRegistros = function(){
                         +'</th>'
                 });
 
-                // Adiciona cabeçalho(s) vazio(s) para as colunas de ação
+                // Adiciona cabeçalho(s) para as colunas de ação
                 try {
                     if(actions && actions.length){
                         for(let a = 0; a < actions.length; a++){
-                            header.push('<th colspan="1" rowspan="1" class="table-col-head">&nbsp;</th>');
+                            let actionHtml = actions[a];
+                            let match = actionHtml.match(/title=["']([^"']+)["']/i);
+                            let actionTitle = '';
+                            if (match && match[1]) {
+                                actionTitle = match[1].toUpperCase();
+                            } else {
+                                if (actionHtml.indexOf('glyphicon-pencil') >= 0 || actionHtml.indexOf('search-button') >= 0) {
+                                    actionTitle = 'ALTERAR';
+                                } else if (actionHtml.indexOf('glyphicon-remove') >= 0 || actionHtml.indexOf('glyphicon-trash') >= 0) {
+                                    actionTitle = 'EXCLUIR';
+                                } else {
+                                    actionTitle = (a === 0 ? 'AÇÕES' : '&nbsp;');
+                                }
+                            }
+                            header.push('<th colspan="1" rowspan="1" class="table-col-head">' + actionTitle + '</th>');
                         }
                     }
                 }catch(error){

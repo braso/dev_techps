@@ -86,6 +86,7 @@ $pdf->AddPage();
 
 // Recebe e trata o HTML
 $htmlTabela = $_POST['tabela_html'] ?? '';
+$htmlTabela = mb_convert_encoding($htmlTabela, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
 
 // Limpeza adicional do HTML
 $htmlTabela = preg_replace('/<i[^>]*>(.*?)<\/i>/', '', $htmlTabela); // Remove ícones
