@@ -1420,7 +1420,7 @@ function modificarEpiEstoque() {
     
     $preview_html = "";
     foreach ($fotos as $idx => $f) {
-        $src = $_ENV["APP_PATH"] . '/' . $f;
+        $src = ss_resolve_foto_url($f);
         $preview_html .= '
             <div class="preview-item" data-path="' . htmlspecialchars($f) . '" style="display: inline-flex; align-items: center; gap: 5px; margin-right: 10px; margin-bottom: 10px; border: 1px solid #ccc; padding: 5px; border-radius: 4px;">
                 <img src="' . $src . '" style="max-height: 80px; max-width: 80px; object-fit: cover; cursor: pointer;" onclick="verImagemMaior(\'' . $src . '\')">
@@ -1708,11 +1708,7 @@ function modificarEpiEstoque() {
                         });
                     }
                     allFotos.forEach(fotoPath => {
-                        let resolvedSrc = fotoPath;
-                        var appPath = <?php echo json_encode($_ENV["APP_PATH"]); ?>;
-                        if (fotoPath && fotoPath.indexOf('data:image/') === -1 && fotoPath.indexOf('http') !== 0) {
-                            resolvedSrc = appPath + '/' + fotoPath;
-                        }
+                        let resolvedSrc = ssResolveFotoUrl(fotoPath);
                         fotosHtml += `<a href="${resolvedSrc}" target="_blank" style="margin-right: 5px;"><img src="${resolvedSrc}" style="max-height: 40px; max-width: 40px; border-radius: 4px; object-fit: cover;"></a>`;
                     });
                     if (!fotosHtml) fotosHtml = '<span class="text-muted">-</span>';
@@ -1763,7 +1759,7 @@ function modificarEpiEstoque() {
                 $('#fotos_mantidas').val(item.fotos_existentes || "");
                 
                 allExisting.forEach(f => {
-                    let src = <?php echo json_encode($_ENV["APP_PATH"]); ?> + '/' + f;
+                    let src = ssResolveFotoUrl(f);
                     let pItem = `
                         <div class="preview-item" data-path="${f}" style="display: inline-flex; align-items: center; gap: 5px; margin-right: 10px; margin-bottom: 10px; border: 1px solid #ccc; padding: 5px; border-radius: 4px;">
                             <img src="${src}" style="max-height: 80px; max-width: 80px; object-fit: cover; cursor: pointer;" onclick="verImagemMaior('${src}')">
@@ -1783,7 +1779,7 @@ function modificarEpiEstoque() {
                                 </div>`;
                             $('#new_photos_container').append(imgHtml);
                         } else {
-                            let src = <?php echo json_encode($_ENV["APP_PATH"]); ?> + '/' + pathOrBase64;
+                            let src = ssResolveFotoUrl(pathOrBase64);
                             let pItem = `
                                 <div class="preview-item" data-path="${pathOrBase64}" style="display: inline-flex; align-items: center; gap: 5px; margin-right: 10px; margin-bottom: 10px; border: 1px solid #ccc; padding: 5px; border-radius: 4px;">
                                     <img src="${src}" style="max-height: 80px; max-width: 80px; object-fit: cover; cursor: pointer;" onclick="verImagemMaior('${src}')">
@@ -2201,11 +2197,7 @@ function modificarKit() {
                 
                 let fotoHtml = '<span class=\"text-muted\">-</span>';
                 if (item.foto) {
-                    let resolvedSrc = item.foto;
-                    let appPath = " . json_encode($_ENV["APP_PATH"]) . ";
-                    if (item.foto.indexOf('data:image/') === -1 && item.foto.indexOf('http') !== 0) {
-                        resolvedSrc = appPath + '/' + item.foto;
-                    }
+                    let resolvedSrc = ssResolveFotoUrl(item.foto);
                     fotoHtml = '<img src=\"' + resolvedSrc + '\" class=\"thumbnail-kit-item\" onclick=\"verImagemMaior(\'' + resolvedSrc + '\')\" style=\"max-height: 40px; max-width: 40px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; object-fit: cover;\" title=\"Clique para ampliar\">';
                 }
                 row.append($('<td>').html(fotoHtml));

@@ -736,7 +736,7 @@ function modificarEntrega() {
     
     $foto_atual_html = "";
     foreach ($fotos as $f) {
-        $src = $_ENV["APP_PATH"] . "/" . htmlspecialchars($f);
+        $src = ss_resolve_foto_url($f);
         $foto_atual_html .= "
             <div class='preview-item' data-path='" . htmlspecialchars($f) . "' style='display: inline-flex; align-items: center; gap: 5px; margin-right: 10px; margin-bottom: 10px; border: 1px solid #ccc; padding: 5px; border-radius: 4px;'>
                 <img src='{$src}' style='max-height: 80px; max-width: 80px; object-fit: cover; cursor: pointer;' onclick='verImagemMaior(\"{$src}\")'>
@@ -958,11 +958,7 @@ function modificarEntrega() {
             const epiId = $('select[name=\"epi_id\"]').val();
             const fotoPath = epiFotosMap[epiId];
             if (fotoPath) {
-                let resolvedSrc = fotoPath;
-                let appPath = " . json_encode($_ENV["APP_PATH"]) . ";
-                if (fotoPath.indexOf('data:image/') === -1 && fotoPath.indexOf('http') !== 0) {
-                    resolvedSrc = appPath + '/' + fotoPath;
-                }
+                let resolvedSrc = ssResolveFotoUrl(fotoPath);
                 $('#preview_epi_individual').attr('src', resolvedSrc).attr('onclick', 'verImagemMaior(\'' + resolvedSrc + '\')');
                 $('#preview_epi_individual_container').css('display', 'block');
             } else {
@@ -1177,7 +1173,7 @@ function modificarEntrega() {
                     const tdCheck = $('<td style=\"text-align: center;\">').append($('<input type=\"checkbox\" checked class=\"chk_item_entregar\">').val(item.epi_id));
                     let fotoHtml = '-';
                     if (item.foto) {
-                        let resolved = item.foto.indexOf('data:image/') === -1 && item.foto.indexOf('http') !== 0 ? " . json_encode($_ENV["APP_PATH"]) . " + '/' + item.foto : item.foto;
+                        let resolved = ssResolveFotoUrl(item.foto);
                         fotoHtml = '<img src=\"' + resolved + '\" style=\"max-height: 60px; max-width: 60px; object-fit: cover; cursor: pointer;\" onclick=\"verImagemMaior(\'' + resolved + '\')\">';
                     }
                     const tdFoto = $('<td style=\"text-align: center;\">').append(fotoHtml);
@@ -1483,13 +1479,12 @@ function modificarEntrega() {
             grupo.itens.forEach(function(item) {
                 var fotoHtml = '-';
                 if (item.foto_payload) {
-                    fotoHtml = '<img src=\"' + item.foto_payload + '\" style=\"max-height: 45px; max-width: 45px; border-radius: 4px; object-fit: cover; cursor: pointer;\" onclick=\"verImagemMaior(\'' + item.foto_payload + '\')\">';
+                    var resolvedSrc = ssResolveFotoUrl(item.foto_payload);
+                    fotoHtml = '<img src=\"' + resolvedSrc + '\" style=\"max-height: 45px; max-width: 45px; border-radius: 4px; object-fit: cover; cursor: pointer;\" onclick=\"verImagemMaior(\'' + resolvedSrc + '\')\">';
                 } else {
                     var defaultFoto = epiFotosMap[item.epi_id];
                     if (defaultFoto) {
-                        var resolvedSrc = (defaultFoto.indexOf('data:image/') === -1 && defaultFoto.indexOf('http') !== 0)
-                            ? appPath + '/' + defaultFoto
-                            : defaultFoto;
+                        var resolvedSrc = ssResolveFotoUrl(defaultFoto);
                         fotoHtml = '<img src=\"' + resolvedSrc + '\" style=\"max-height: 45px; max-width: 45px; border-radius: 4px; object-fit: cover; cursor: pointer;\" onclick=\"verImagemMaior(\'' + resolvedSrc + '\')\">';
                     }
                 }

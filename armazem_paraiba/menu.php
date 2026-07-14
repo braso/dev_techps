@@ -349,6 +349,34 @@ if ($showComunicado) {
     echo "
     <script>
         (function(){
+            window.ssResolveFotoUrl = function(p) {
+                if (!p) return '';
+                if (p.indexOf('data:image/') === 0 || p.indexOf('http') === 0) {
+                    return p;
+                }
+                const appPath = " . json_encode($_ENV["APP_PATH"] ?? "/braso") . ";
+                const hasSaudeSeguranca = (p.indexOf('saude_seguranca/') !== -1 || p.indexOf('armazem_paraiba/') !== -1);
+                const isEpiStockPhoto = (p.indexOf('arquivos/') === 0 && p.indexOf('arquivos/entrega_epi/') !== 0);
+                
+                if (!hasSaudeSeguranca && isEpiStockPhoto) {
+                    return appPath + '/armazem_paraiba/saude_seguranca/' + p;
+                }
+                return appPath + '/' + p;
+            };
+            window.verImagemMaior = function(src) {
+                if (typeof Swal === 'undefined') {
+                    window.open(src, '_blank');
+                } else {
+                    Swal.fire({
+                        imageUrl: src,
+                        imageAlt: 'Visualização da Imagem',
+                        showConfirmButton: false,
+                        showCloseButton: true,
+                        background: '#fff',
+                        backdrop: 'rgba(0,0,0,0.8)'
+                    });
+                }
+            };
             if (typeof Swal === 'undefined') {
                 var s = document.createElement('script');
                 s.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';

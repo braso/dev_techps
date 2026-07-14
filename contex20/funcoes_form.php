@@ -160,7 +160,11 @@
             $returnValues["acao"] = "index";
         }
         
-        $formVoltar = "<form action='".str_replace($_ENV["URL_BASE"], "", $returnValues["HTTP_REFERER"])."' name='form_voltar' method='post'>";
+        $actionUrl = str_replace($_ENV["URL_BASE"], "", $returnValues["HTTP_REFERER"]);
+        if (strpos($actionUrl, "http") !== 0 && strpos($actionUrl, "/") !== 0) {
+            $actionUrl = "/" . $actionUrl;
+        }
+        $formVoltar = "<form action='" . $actionUrl . "' name='form_voltar' method='post'>";
         foreach($returnValues as $key => $value){
             if(is_array($value)){
                 foreach($value as $val){
