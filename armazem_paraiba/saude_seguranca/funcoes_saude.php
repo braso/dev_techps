@@ -232,6 +232,35 @@ function ss_tem_filiais_cadastradas() {
     return false;
 }
 
+function ss_resolve_foto_url($p) {
+    $p = trim($p);
+    if (empty($p)) {
+        return "";
+    }
+    
+    // Se já for URL completa ou base64
+    if (strpos($p, "data:image/") === 0 || strpos($p, "http") === 0) {
+        return $p;
+    }
+    
+    $docRoot = $_SERVER["DOCUMENT_ROOT"];
+    $appPath = $_ENV["APP_PATH"] ?? "/braso";
+    
+    // Verifica se já tem saude_seguranca ou armazem_paraiba no caminho
+    $hasSaudeSeguranca = (strpos($p, "saude_seguranca/") !== false || strpos($p, "armazem_paraiba/") !== false);
+    
+    if (!$hasSaudeSeguranca) {
+        $pathWithModule = 'armazem_paraiba/saude_seguranca/' . $p;
+        $fullPathWithModule = rtrim($docRoot, '/\\') . '/' . ltrim($appPath, '/\\') . '/' . $pathWithModule;
+        
+        if (file_exists($fullPathWithModule)) {
+            return rtrim($appPath, '/') . '/' . $pathWithModule;
+        }
+    }
+    
+    return rtrim($appPath, '/') . '/' . $p;
+}
+
 function ss_grid_foto_render($foto_paths) {
     if (empty($foto_paths)) {
         return '<span class="text-muted">Sem Foto</span>';
@@ -244,7 +273,8 @@ function ss_grid_foto_render($foto_paths) {
     
     $html = '<div style="display: flex; gap: 4px; flex-wrap: wrap;">';
     foreach ($paths as $p) {
-        $src = $_ENV["APP_PATH"] . '/' . $p;
+        $src = ss_resolve_foto_url($p);
+        if (empty($src)) continue;
         $html .= '<img src="' . $src . '" style="max-height: 35px; max-width: 35px; border-radius: 4px; border: 1px solid #ccc; object-fit: cover; cursor: pointer;" onclick="verImagemMaior(\'' . $src . '\')">';
     }
     $html .= '</div>';

@@ -123,7 +123,7 @@ function exportAllToCSV() {
             let csvContent = "\uFEFFsep=;\r\n";
             
             // Cabeçalhos
-            const headers = Object.keys(window.tableConfig.fields);
+            const headers = Object.keys(window.tableConfig.fields).filter(key => key !== 'actions');
             csvContent += headers.map(header => 
                 `"${header.replace(/"/g, '""')}"`
             ).join(';') + '\r\n';
@@ -281,12 +281,15 @@ const consultarRegistros = function(){
             statusCol = -1;
 
             if(fields['actions'] != null){
-                actions = JSON.parse(fields['actions']);
-                delete fields['actions'];
+                if (typeof fields['actions'] === 'string') {
+                    actions = JSON.parse(fields['actions']);
+                } else {
+                    actions = fields['actions'];
+                }
             }
 
             //Formatando informações do header{
-                const colKeys = Object.keys(fields);
+                const colKeys = Object.keys(fields).filter(key => key !== 'actions');
                 header = [...colKeys];
                 header.forEach(function(value, key){
                     if(camposBd[key] != null && camposBd[key].indexOf('status') >= 0){
@@ -545,7 +548,7 @@ function imprimirTabelaCompleta() {
                 return;
             }
             // Gera o HTML da tabela
-            const headerHtml = Object.keys(fields).map((value) => {
+            const headerHtml = Object.keys(fields).filter(key => key !== 'actions').map((value) => {
                 return `<th class="header-cell">${value}</th>`;
             }).join('');
             
@@ -711,13 +714,13 @@ function openColumnConfig(){
         
         const btnUp = document.createElement('button');
         btnUp.className = 'btn btn-xs btn-default';
-        btnUp.innerHTML = '<span class="glyphicon glyphicon-chevron-up"></span>';
+        btnUp.innerHTML = '<span class="glyphicon glyphicon-chevron-up fa fa-chevron-up"></span>';
         btnUp.style.marginRight = '5px';
         btnUp.onclick = function(e){ e.preventDefault(); moveItem(div, -1); };
         
         const btnDown = document.createElement('button');
         btnDown.className = 'btn btn-xs btn-default';
-        btnDown.innerHTML = '<span class="glyphicon glyphicon-chevron-down"></span>';
+        btnDown.innerHTML = '<span class="glyphicon glyphicon-chevron-down fa fa-chevron-down"></span>';
         btnDown.onclick = function(e){ e.preventDefault(); moveItem(div, 1); };
         
         btnGroup.appendChild(btnUp);
@@ -757,7 +760,7 @@ function saveColumnConfig(){
     }
 
     $.ajax({
-        url: '../contex20/grid_config_controller.php',
+        url: (typeof urlGridConfig !== 'undefined' ? urlGridConfig : '../contex20/grid_config_controller.php'),
         method: 'POST',
         data: {
             grid_name: gridName,

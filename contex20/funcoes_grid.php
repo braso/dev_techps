@@ -298,7 +298,7 @@
                         <div class='botao-csv'></div>
                         <div style='display: flex; align-items: flex-end;'>
 							<div class='gear-icon' onclick='openColumnConfig()' title='Configurar Colunas' style='margin-right:15px; margin-bottom: 5px; cursor:pointer; font-size: 16px; color: #666;'>
-								<span class='glyphicon glyphicon-cog'></span>
+								<span class='glyphicon glyphicon-cog fa fa-cog'></span>
 							</div>
                             <div class='total-registros' style='margin-right: 15px; margin-bottom: 5px; white-space: nowrap;'></div>
                             <div class='tab-pagination' style='margin-right: 15px; margin-bottom: 5px;'></div>
@@ -341,7 +341,10 @@
 		}
 
 		$result .=
-			"<script>urlTableInfo = '{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}{$_ENV["CONTEX_PATH"]}/getTableInfo.php';</script>
+			"<script>
+				urlTableInfo = '{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}{$_ENV["CONTEX_PATH"]}/getTableInfo.php';
+				urlGridConfig = '{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/grid_config_controller.php';
+			</script>
 			<script>
 				const searchFields = ".json_encode($camposBusca).";
 				const fields = ".json_encode($campos).";
