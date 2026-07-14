@@ -204,10 +204,12 @@ let definirFuncoesInternas = function(){
             consultarRegistros();
         });
 
-        try{
-            funcoesInternas();
-        }catch(error){
-            console.log(error);
+        if (typeof funcoesInternas === 'function') {
+            try {
+                funcoesInternas();
+            } catch(error) {
+                console.error(error);
+            }
         }
         
     //}
