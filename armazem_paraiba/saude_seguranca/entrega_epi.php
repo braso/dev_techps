@@ -211,13 +211,14 @@ function cadastrarEntregaLoteAjax() {
                         $extensao = strtolower($match[1]);
                     }
                     $dir_foto = "arquivos/entrega_epi/";
-                    if (!is_dir($dir_foto)) {
-                        mkdir($dir_foto, 0777, true);
+                    $dir_foto_abs = $_SERVER["DOCUMENT_ROOT"] . $_ENV["APP_PATH"] . "/" . $dir_foto;
+                    if (!is_dir($dir_foto_abs)) {
+                        mkdir($dir_foto_abs, 0777, true);
                     }
-                    $caminho_foto = $dir_foto . "ENTREGA_{$id}." . $extensao;
+                    $caminho_foto_abs = $dir_foto_abs . "ENTREGA_{$id}." . $extensao;
                     $conteudo = base64_decode($base64_data);
-                    if (file_put_contents($caminho_foto, $conteudo)) {
-                        atualizar("ss_epi_entrega", ["ss_e_tx_foto"], [$caminho_foto], $id);
+                    if (file_put_contents($caminho_foto_abs, $conteudo)) {
+                        atualizar("ss_epi_entrega", ["ss_e_tx_foto"], [$dir_foto . "ENTREGA_{$id}." . $extensao], $id);
                     }
                 }
             }
@@ -362,13 +363,14 @@ function cadastrarEntrega() {
                                 $extensao = strtolower($match[1]);
                             }
                             $dir_foto = "arquivos/entrega_epi/";
-                            if (!is_dir($dir_foto)) {
-                                mkdir($dir_foto, 0777, true);
+                            $dir_foto_abs = $_SERVER["DOCUMENT_ROOT"] . $_ENV["APP_PATH"] . "/" . $dir_foto;
+                            if (!is_dir($dir_foto_abs)) {
+                                mkdir($dir_foto_abs, 0777, true);
                             }
-                            $caminho_foto = $dir_foto . "ENTREGA_{$id}." . $extensao;
+                            $caminho_foto_abs = $dir_foto_abs . "ENTREGA_{$id}." . $extensao;
                             $conteudo = base64_decode($base64_data);
-                            if (file_put_contents($caminho_foto, $conteudo)) {
-                                atualizar("ss_epi_entrega", ["ss_e_tx_foto"], [$caminho_foto], $id);
+                            if (file_put_contents($caminho_foto_abs, $conteudo)) {
+                                atualizar("ss_epi_entrega", ["ss_e_tx_foto"], [$dir_foto . "ENTREGA_{$id}." . $extensao], $id);
                             }
                         }
                     }

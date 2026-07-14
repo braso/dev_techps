@@ -1233,8 +1233,9 @@ function cadastrarEpiEstoque() {
             $allowed = ["image/jpeg", "image/png", "image/jpg"];
             $total_files = count($_FILES["foto"]["name"]);
             $dir_foto = "arquivos/epi/{$id}/";
-            if (!is_dir($dir_foto)) {
-                mkdir($dir_foto, 0777, true);
+            $dir_foto_abs = $_SERVER["DOCUMENT_ROOT"] . $_ENV["APP_PATH"] . "/" . $dir_foto;
+            if (!is_dir($dir_foto_abs)) {
+                mkdir($dir_foto_abs, 0777, true);
             }
             for ($i = 0; $i < $total_files; $i++) {
                 if ($_FILES["foto"]["error"][$i] === UPLOAD_ERR_OK) {
@@ -1243,9 +1244,9 @@ function cadastrarEpiEstoque() {
                         $nomeOriginal = basename($_FILES["foto"]["name"][$i]);
                         $ext = pathinfo($nomeOriginal, PATHINFO_EXTENSION);
                         $target_name = "FOTO_{$id}_" . time() . "_" . $i . "." . $ext;
-                        $target_path = $dir_foto . $target_name;
+                        $target_path = $dir_foto_abs . $target_name;
                         if (move_uploaded_file($_FILES["foto"]["tmp_name"][$i], $target_path)) {
-                            $new_paths[] = $target_path;
+                            $new_paths[] = $dir_foto . $target_name;
                         }
                     }
                 }
@@ -1316,14 +1317,15 @@ function cadastrarEpiEstoque() {
                         }
                         
                         $dir_foto = "arquivos/epi/{$id}/";
-                        if (!is_dir($dir_foto)) {
-                            mkdir($dir_foto, 0777, true);
+                        $dir_foto_abs = $_SERVER["DOCUMENT_ROOT"] . $_ENV["APP_PATH"] . "/" . $dir_foto;
+                        if (!is_dir($dir_foto_abs)) {
+                            mkdir($dir_foto_abs, 0777, true);
                         }
                         
-                        $caminho_foto = $dir_foto . "FOTO_{$id}_" . time() . "_" . $fKey . "." . $extensao;
+                        $caminho_foto_abs = $dir_foto_abs . "FOTO_{$id}_" . time() . "_" . $fKey . "." . $extensao;
                         $conteudo = base64_decode($base64_data);
-                        if (file_put_contents($caminho_foto, $conteudo)) {
-                            $new_paths[] = $caminho_foto;
+                        if (file_put_contents($caminho_foto_abs, $conteudo)) {
+                            $new_paths[] = $dir_foto . "FOTO_{$id}_" . time() . "_" . $fKey . "." . $extensao;
                         }
                     }
                 }
