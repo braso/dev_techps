@@ -846,7 +846,7 @@ function index() {
     <?php
 
     if (!isset($_POST["busca_visao"])) {
-        $_POST["busca_visao"] = "mov";
+        $_POST["busca_visao"] = "saldo";
     }
     if (!isset($_POST["busca_status"])) {
         $_POST["busca_status"] = "ativo";
@@ -873,7 +873,7 @@ function index() {
         $fields[] = combo("Empresa", "busca_filial", $_POST["busca_filial"] ?? "", 2, $empresaOptions);
     }
     $fields[] = combo("Status", "busca_status", $_POST["busca_status"] ?? "ativo", 1, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"]);
-    $fields[] = combo("Visualização", "busca_visao", $_POST["busca_visao"] ?? "mov", 2, ["saldo" => "Saldo Atual por EPI", "mov" => "Histórico de Movimentações"]);
+    $fields[] = combo("Visualização", "busca_visao", $_POST["busca_visao"] ?? "saldo", 2, ["saldo" => "Saldo Atual por EPI", "mov" => "Histórico de Movimentações"]);
 
     $buttons = [];
     $buttons[] = botao("Buscar", "index");

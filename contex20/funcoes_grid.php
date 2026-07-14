@@ -190,7 +190,7 @@
 							'pageLength': {$paginar},
 							'order': [{$numColunaOrdem}, '{$sentidoOrdem}'],
 							'ajax':{
-								'url' :'{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/server-side.php', // json datasource
+								'url' :'{$_ENV["APP_PATH"]}/contex20/server-side.php', // json datasource
 								'type': 'post',  // method, by default get
 								'data': {
 									'path': '{$CONTEX["path"]}',
@@ -291,7 +291,7 @@
 		}
 
 		$result = 
-			"<link href='{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/css/grid_dinamico.css' rel='stylesheet' type='text/css' />
+			"<link href='{$_ENV["APP_PATH"]}/contex20/css/grid_dinamico.css' rel='stylesheet' type='text/css' />
 			<div class='col-md-{$width}'>
                 <div class='portlet light'>
                     <div class='grid-header' style='width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;'>
@@ -342,8 +342,8 @@
 
 		$result .=
 			"<script>
-				urlTableInfo = '{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}{$_ENV["CONTEX_PATH"]}/getTableInfo.php';
-				urlGridConfig = '{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/grid_config_controller.php';
+				urlTableInfo = '{$_ENV["APP_PATH"]}{$_ENV["CONTEX_PATH"]}/getTableInfo.php';
+				urlGridConfig = '{$_ENV["APP_PATH"]}/contex20/grid_config_controller.php';
 			</script>
 			<script>
 				const searchFields = ".json_encode($camposBusca).";
@@ -355,7 +355,7 @@
 			<script>
 				{$jsFunctions}
 			</script>
-			<script src='{$_ENV["URL_BASE"]}{$_ENV["APP_PATH"]}/contex20/js/grid_dinamico.js?v=2'></script>
+			<script src='{$_ENV["APP_PATH"]}/contex20/js/grid_dinamico.js?v=2'></script>
 			
 			<!-- Modal Config Grid -->
 			<div id='modalConfigGrid' class='modal fade' role='dialog' style='z-index: 10052;'>

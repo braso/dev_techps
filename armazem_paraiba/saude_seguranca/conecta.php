@@ -45,7 +45,7 @@ if (!isset($_ENV["APP_PATH"])) {
     $_ENV["APP_PATH"] = "/braso";
 }
 if (!isset($_ENV["URL_BASE"])) {
-    $_ENV["URL_BASE"] = "http://localhost:8000";
+    $_ENV["URL_BASE"] = ($_SERVER["REQUEST_SCHEME"] ?? "http") . "://" . ($_SERVER["HTTP_HOST"] ?? "localhost");
 }
 
 global $_SESSION, $CONTEX, $conn;
