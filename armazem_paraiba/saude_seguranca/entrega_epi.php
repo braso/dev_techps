@@ -1923,6 +1923,7 @@ function index() {
     $buttons = [];
     $buttons[] = botao("Buscar", "index");
     $buttons[] = botao("Lançar Entrega", "modificarEntrega", "", "", "", "", "btn btn-success");
+    $buttons[] = botao("Gerenciar Kits", "listarKits", "", "", "", "", "btn btn-info");
     $buttons[] = '<button type="button" class="btn default" onclick="imprimirFichaEpi()">Imprimir Ficha</button>';
 
     $jsImprimir = "
@@ -1963,9 +1964,9 @@ function index() {
         "FILIAL"              => "filial_nome",
         "IMAGEM"              => "ss_grid_foto_render(ss_e_tx_foto_epi)",
         "EPI"                 => "epi_nome",
-        "DATA ENTREGA"        => "ss_e_tx_data_entrega",
+        "DATA ENTREGA"        => "ss_e_tx_data_entrega_formatado",
         "QUANTIDADE"          => "ss_e_nb_quantidade",
-        "VENCIMENTO ESTIMADO" => "ss_e_tx_vencimento",
+        "VENCIMENTO ESTIMADO" => "ss_e_tx_vencimento_formatado",
         "STATUS"              => "ss_e_tx_status_formatado",
         "EPI ENTREGUE"        => "ss_grid_foto_render(ss_e_tx_foto)",
         "OBSERVAÇÃO"          => "ss_e_tx_observacao"
@@ -1984,7 +1985,10 @@ function index() {
     }
 
     $queryBase = "SELECT * FROM (
-                    SELECT ent.ss_e_nb_id, col.enti_tx_nome AS ss_c_tx_nome, IFNULL(emp.empr_tx_nome, 'Matriz') AS filial_nome, epi.ss_e_tx_foto AS ss_e_tx_foto_epi, CONCAT(epi.ss_e_tx_grupo, ' / ', IFNULL(epi.ss_e_tx_subgrupo, ''), ' / ', IFNULL(epi.ss_e_tx_item, '')) AS epi_nome, ent.ss_e_tx_data_entrega, ent.ss_e_nb_quantidade, ent.ss_e_tx_vencimento, 
+                    SELECT ent.ss_e_nb_id, col.enti_tx_nome AS ss_c_tx_nome, IFNULL(emp.empr_tx_nome, 'Matriz') AS filial_nome, epi.ss_e_tx_foto AS ss_e_tx_foto_epi, CONCAT(epi.ss_e_tx_grupo, ' / ', IFNULL(epi.ss_e_tx_subgrupo, ''), ' / ', IFNULL(epi.ss_e_tx_item, '')) AS epi_nome, 
+                           IFNULL(DATE_FORMAT(ent.ss_e_tx_data_entrega, '%d/%m/%Y'), '-') AS ss_e_tx_data_entrega_formatado, 
+                           ent.ss_e_nb_quantidade, 
+                           IFNULL(DATE_FORMAT(ent.ss_e_tx_vencimento, '%d/%m/%Y'), '-') AS ss_e_tx_vencimento_formatado, 
                            ent.ss_e_tx_status,
                            CASE ent.ss_e_tx_status 
                                WHEN 'ativo' THEN 'Entregue'
@@ -2088,5 +2092,507 @@ function index() {
     echo gridDinamico("tabelaEntregas", $gridFields, $camposBusca, $queryBase, $jsAcoes);
 
     rodape();
+}
+
+// --- CRUD DE KITS ---
+
+function listarKits() {
+    cabecalho("Gerenciamento de Kits de EPI");
+    echo '<style>#btnExportPDF { display: none !important; }</style>';
+
+    $fields = [
+        campo("Nome do Kit", "busca_nome", $_POST["busca_nome"] ?? "", 4)
+    ];
+
+    $buttons = [];
+    $buttons[] = botao("Buscar", "listarKits");
+    $buttons[] = botao("Cadastrar Kit", "modificarKit", "", "", "", "", "btn btn-success");
+    $buttons[] = botao("Voltar às Entregas", "index", "", "", "", "", "btn btn-default");
+
+    echo abre_form("Filtros de Pesquisa");
+    echo linha_form($fields);
+    echo fecha_form($buttons);
+
+    $gridFields = [
+        "CÓDIGO"        => "ss_k_nb_id",
+        "NOME"          => "ss_k_tx_nome",
+        "TIPOS DE EPI"  => "qtd_tipos",
+        "TOTAL DE EPIS" => "qtd_total",
+        "EPIs NO KIT"   => "itens_detalhes",
+        "STATUS"        => "ss_k_tx_status"
+    ];
+
+    $camposBusca = [
+        "busca_nome" => "ss_k_tx_nome"
+    ];
+
+    $queryBase = "SELECT 
+                    ss_k_nb_id, 
+                    ss_k_tx_nome, 
+                    ss_k_tx_status,
+                    (SELECT COUNT(ki.ss_ki_nb_id) FROM ss_kit_item ki WHERE ki.ss_ki_nb_kit_id = ss_kit.ss_k_nb_id) AS qtd_tipos,
+                    IFNULL((SELECT SUM(ki.ss_ki_nb_quantidade) FROM ss_kit_item ki WHERE ki.ss_ki_nb_kit_id = ss_kit.ss_k_nb_id), 0) AS qtd_total,
+                    IFNULL((SELECT GROUP_CONCAT(CONCAT('• <small>', IFNULL(e.ss_e_tx_grupo, ''), ' / ', IFNULL(e.ss_e_tx_subgrupo, ''), ' / ', IFNULL(e.ss_e_tx_item, ''), '</small> <b>(x', ki.ss_ki_nb_quantidade, ')</b>') SEPARATOR '<br>') FROM ss_kit_item ki JOIN ss_epi e ON ki.ss_ki_nb_epi_id = e.ss_e_nb_id WHERE ki.ss_ki_nb_kit_id = ss_kit.ss_k_nb_id), '<span class=\"text-muted\">Nenhum item</span>') AS itens_detalhes
+                  FROM ss_kit";
+
+    $gridFields["actions"] = [
+        '<span class="fa fa-edit acao-editar-kit" title="Alterar" style="color:#337ab7; cursor:pointer; font-size:16px; margin-right:8px;"></span>',
+        '<span class="fa fa-ban acao-inativar-kit" title="Inativar/Ativar" style="color:#f0ad4e; cursor:pointer; font-size:16px; margin-right:8px;"></span>',
+        '<span class="fa fa-trash acao-excluir-kit" title="Excluir" style="color:#d9534f; cursor:pointer; font-size:16px;"></span>'
+    ];
+
+    $jsAcoes = '
+        var funcoesInternas = function(){
+            // Bind Alterar click
+            $(".acao-editar-kit").off("click").on("click", function(event) {
+                var id = $(this).closest("tr").attr("data-row-id");
+                submitPost("", { acao: "modificarKit", id: id });
+            });
+
+            // For each row, check status and customize the inativar/ativar icon
+            $("#result tbody tr").each(function() {
+                var row = $(this);
+                var statusCell = row.find("td").eq(5); // STATUS column is index 5 (CÓDIGO, NOME, TIPOS, TOTAL, DETALHES, STATUS)
+                var statusText = statusCell.text().trim().toLowerCase();
+                
+                var inativarIcon = row.find(".acao-inativar-kit");
+                if (statusText.indexOf("inativo") >= 0 || statusText === "inativo") {
+                    inativarIcon.removeClass("fa-ban").addClass("fa-check-circle");
+                    inativarIcon.attr("title", "Ativar");
+                    inativarIcon.css("color", "#5cb85c"); // green
+                } else {
+                    inativarIcon.removeClass("fa-check-circle").addClass("fa-ban");
+                    inativarIcon.attr("title", "Inativar");
+                    inativarIcon.css("color", "#f0ad4e"); // orange
+                }
+            });
+
+            // Bind Inativar/Ativar click
+            $(".acao-inativar-kit").off("click").on("click", function(event) {
+                var row = $(this).closest("tr");
+                var id = row.attr("data-row-id");
+                var kitNome = row.find("td").eq(1).text().trim(); // NOME
+                var statusCell = row.find("td").eq(5);
+                var statusText = statusCell.text().trim().toLowerCase();
+                
+                var isCurrentlyInactive = (statusText.indexOf("inativo") >= 0 || statusText === "inativo");
+                var acaoLabel = isCurrentlyInactive ? "ativar" : "inativar";
+                var acaoPHP = isCurrentlyInactive ? "ativarKit" : "inativarKit";
+                var confirmBtnColor = isCurrentlyInactive ? "#5cb85c" : "#f0ad4e";
+                
+                Swal.fire({
+                    title: "Tem certeza?",
+                    html: "Deseja " + acaoLabel + " o Kit <b>" + kitNome + "</b>?",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: confirmBtnColor,
+                    cancelButtonColor: "#6c757d",
+                    confirmButtonText: "Sim, " + acaoLabel + "!",
+                    cancelButtonText: "Cancelar"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        submitPost("", { acao: acaoPHP, id: id });
+                    }
+                });
+            });
+
+            // Bind Excluir click
+            $(".acao-excluir-kit").off("click").on("click", function(event) {
+                var row = $(this).closest("tr");
+                var id = row.attr("data-row-id");
+                var kitNome = row.find("td").eq(1).text().trim();
+                
+                Swal.fire({
+                    title: "Tem certeza?",
+                    html: "Deseja excluir permanentemente o Kit <b>" + kitNome + "</b>?<br><br><span style=\'color:#d9534f;\'><b>Atenção:</b> Isso excluirá o kit e todos os seus itens associados!</span>",
+                    icon: "error",
+                    showCancelButton: true,
+                    confirmButtonColor: "#d9534f",
+                    cancelButtonColor: "#6c757d",
+                    confirmButtonText: "Sim, excluir!",
+                    cancelButtonText: "Cancelar"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        submitPost("", { acao: "excluirKit", id: id });
+                    }
+                });
+            });
+        };
+
+        if (typeof window.submitPost === "undefined") {
+            window.submitPost = function(action, params) {
+                var form = document.createElement("form");
+                form.setAttribute("method", "post");
+                form.setAttribute("action", action);
+                for (var key in params) {
+                    var input = document.createElement("input");
+                    input.setAttribute("type", "hidden");
+                    input.setAttribute("name", key);
+                    input.setAttribute("value", params[key]);
+                    form.appendChild(input);
+                }
+                $("form[name=\"contex_form\"] :input").each(function() {
+                    if (this.name && this.value !== "" && this.name !== "acao" && params[this.name] === undefined) {
+                        var input = document.createElement("input");
+                        input.setAttribute("type", "hidden");
+                        input.setAttribute("name", this.name);
+                        input.setAttribute("value", this.value);
+                        form.appendChild(input);
+                    }
+                });
+                document.body.appendChild(form);
+                form.submit();
+            };
+        }
+    ';
+
+    echo gridDinamico("tabelaKits", $gridFields, $camposBusca, $queryBase, $jsAcoes);
+
+    rodape();
+}
+
+function modificarKit() {
+    if (!empty($_POST["id"])) {
+        if (is_array($_POST["id"])) {
+            $_POST["id"] = $_POST["id"][0];
+        }
+        $kit = carregar("ss_kit", $_POST["id"]);
+        $_POST["nome_kit"] = $kit["ss_k_tx_nome"];
+        $_POST["status"] = $kit["ss_k_tx_status"];
+
+        $sqlItens = query("SELECT ss_ki_nb_epi_id, ss_ki_nb_quantidade 
+                           FROM ss_kit_item 
+                           WHERE ss_ki_nb_kit_id = " . (int)$_POST["id"]);
+        $kitItens = [];
+        if ($sqlItens) {
+            while ($row = mysqli_fetch_assoc($sqlItens)) {
+                $epi = carregar("ss_epi", $row["ss_ki_nb_epi_id"]);
+                $epiNome = $epi["ss_e_tx_grupo"] . " / " . $epi["ss_e_tx_subgrupo"] . " / " . $epi["ss_e_tx_item"] . " (CA: " . ($epi["ss_e_tx_ca"] ?: 'N/A') . ")";
+                $kitItens[] = [
+                    "epi_id" => $row["ss_ki_nb_epi_id"],
+                    "epi_nome" => $epiNome,
+                    "quantidade" => $row["ss_ki_nb_quantidade"],
+                    "foto" => $epi["ss_e_tx_foto"]
+                ];
+            }
+        }
+    } else {
+        $kitItens = [];
+    }
+
+    // Carregar EPIs de estoque para o kit
+    $sqlEpi = query("SELECT ss_e_nb_id, CONCAT(ss_e_tx_grupo, ' / ', IFNULL(ss_e_tx_subgrupo, ''), ' / ', IFNULL(ss_e_tx_item, ''), ' (CA: ', IFNULL(ss_e_tx_ca, 'N/A'), ')') AS epi_nome 
+                     FROM ss_epi 
+                     WHERE ss_e_tx_status = 'ativo' AND ss_e_tx_cadastro_tipo = 'estoque'
+                     ORDER BY ss_e_tx_grupo ASC");
+    $epiOptions = ["" => "Selecione o EPI"];
+    if ($sqlEpi) {
+        while ($row = mysqli_fetch_assoc($sqlEpi)) {
+            $epiOptions[$row["ss_e_nb_id"]] = $row["epi_nome"];
+        }
+    }
+
+    // Carregar mapa de fotos de EPIs
+    $sqlEpisFotos = query("SELECT ss_e_nb_id, ss_e_tx_foto FROM ss_epi WHERE ss_e_tx_status = 'ativo' AND ss_e_tx_cadastro_tipo = 'estoque'");
+    $epiFotosMap = [];
+    if ($sqlEpisFotos) {
+        while ($row = mysqli_fetch_assoc($sqlEpisFotos)) {
+            $epiFotosMap[$row["ss_e_nb_id"]] = $row["ss_e_tx_foto"];
+        }
+    }
+
+    cabecalho("Ficha de Kit de EPI");
+
+    $campo_nome   = campo("Nome do Kit*", "nome_kit", $_POST["nome_kit"] ?? "", 6, "", "maxlength='100'");
+    $campo_status = combo("Status", "status", $_POST["status"] ?? "ativo", 3, ["ativo" => "Ativo", "inativo" => "Inativo"]);
+    
+    $campo_epi = combo("EPI para Adicionar", "kit_epi_id", "", 6, $epiOptions);
+    $campo_qtd = campo("Quantidade do Item", "kit_epi_qtd", "1", 2, "MASCARA_NUMERO");
+    $btn_add   = '<div class="col-sm-4 margin-bottom-5 campo-fit-content" style="margin-top:23px;"><button type="button" class="btn btn-primary" id="btn_add_epi_kit">Adicionar ao Kit</button></div>';
+
+    echo abre_form("Dados Gerais do Kit");
+    echo linha_form([$campo_nome, $campo_status]);
+    echo fecha_form([]);
+
+    echo abre_form("Composição do Kit");
+    echo linha_form([$campo_epi, $campo_qtd, $btn_add]);
+    
+    echo "
+    <div class='table-responsive' style='margin-top: 15px;'>
+        <table class='table table-striped table-bordered table-hover' id='tabela_itens_kit'>
+            <thead>
+                <tr>
+                    <th style='width: 80px;'>Imagem</th>
+                    <th>EPI</th>
+                    <th style='width: 150px;'>Quantidade</th>
+                    <th style='width: 100px;'>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Preenchido via JS -->
+            </tbody>
+        </table>
+    </div>
+    ";
+    echo fecha_form([]);
+
+    // Form final de envio
+    echo abre_form("Salvar Kit");
+    echo '<input type="hidden" name="kit_itens_json" id="kit_itens_json" value="">';
+    echo '<input type="hidden" name="id" value="' . ($_POST["id"] ?? "") . '">';
+    echo '<input type="hidden" name="nome_kit" id="final_nome_kit" value="">';
+    echo '<input type="hidden" name="status" id="final_status" value="">';
+
+    $final_buttons = [];
+    $final_buttons[] = botao("Salvar Kit", "cadastrarKit", "", "", "", "", "btn btn-success");
+    $final_buttons[] = botao("Voltar", "listarKits", "", "", "", "", "btn btn-default");
+    echo fecha_form($final_buttons);
+
+    echo "
+    <script>
+    $(document).ready(function() {
+        $('#kit_itens_json').closest('form').attr('name', 'form_salvar_kit');
+        if (typeof $.fn.select2 === 'function') {
+            $.fn.select2.defaults.set('theme', 'bootstrap');
+            $('select[name=\"kit_epi_id\"]').select2();
+        }
+
+        let kitItens = " . json_encode($kitItens) . ";
+        const epiFotosMap = " . json_encode($epiFotosMap) . ";
+
+        if (typeof window.verImagemMaior === 'undefined') {
+            window.verImagemMaior = function(src) {
+                Swal.fire({
+                    imageUrl: src,
+                    imageAlt: 'Imagem do EPI',
+                    showConfirmButton: false,
+                    showCloseButton: true,
+                    background: '#fff',
+                    backdrop: 'rgba(0,0,0,0.8)'
+                });
+            };
+        }
+
+        function renderKitTable() {
+            const tbody = $('#tabela_itens_kit tbody');
+            tbody.empty();
+            
+            if (kitItens.length === 0) {
+                tbody.append('<tr><td colspan=\"4\" style=\"text-align: center; color: #999;\">Nenhum item adicionado ao kit.</td></tr>');
+                $('#kit_itens_json').val('');
+                return;
+            }
+            
+            kitItens.forEach((item, index) => {
+                const row = $('<tr>');
+                
+                let fotoHtml = '<span class=\"text-muted\">-</span>';
+                if (item.foto) {
+                    let resolvedSrc = ssResolveFotoUrl(item.foto);
+                    fotoHtml = '<img src=\"' + resolvedSrc + '\" class=\"thumbnail-kit-item\" onclick=\"verImagemMaior(\'' + resolvedSrc + '\')\" style=\"max-height: 40px; max-width: 40px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; object-fit: cover;\" title=\"Clique para ampliar\">';
+                }
+                row.append($('<td>').html(fotoHtml));
+                
+                row.append($('<td>').text(item.epi_nome));
+                row.append($('<td>').text(item.quantidade));
+                
+                const actionsTd = $('<td>');
+                const deleteBtn = $('<button type=\"button\" class=\"btn btn-xs btn-danger\"><i class=\"fa fa-trash\"></i></button>');
+                deleteBtn.on('click', function() {
+                    kitItens.splice(index, 1);
+                    renderKitTable();
+                });
+                actionsTd.append(deleteBtn);
+                row.append(actionsTd);
+                tbody.append(row);
+            });
+            
+            $('#kit_itens_json').val(JSON.stringify(kitItens));
+        }
+
+        $('#btn_add_epi_kit').on('click', function() {
+            const epiSelect = $('select[name=\"kit_epi_id\"]');
+            const epiId = epiSelect.val();
+            const epiNome = epiSelect.find('option:selected').text();
+            const qtd = parseInt($('#kit_epi_qtd').val(), 10) || 0;
+            
+            if (!epiId) {
+                Swal.fire('Atenção', 'Selecione um EPI para adicionar.', 'warning');
+                return;
+            }
+            if (qtd <= 0) {
+                Swal.fire('Atenção', 'A quantidade deve ser maior que zero.', 'warning');
+                return;
+            }
+            
+            const exists = kitItens.some(item => item.epi_id == epiId);
+            if (exists) {
+                Swal.fire('Atenção', 'Este EPI já foi adicionado ao kit.', 'warning');
+                return;
+            }
+            
+            const fotoPath = epiFotosMap[epiId] || '';
+            kitItens.push({
+                epi_id: epiId,
+                epi_nome: epiNome,
+                quantidade: qtd,
+                foto: fotoPath
+            });
+            
+            epiSelect.val('').trigger('change');
+            $('#kit_epi_qtd').val('1');
+            renderKitTable();
+        });
+
+        const initialKitItensStr = JSON.stringify(kitItens);
+        const initialNomeKit = $('input[name=\"nome_kit\"]').val() || '';
+        const initialStatus = $('select[name=\"status\"]').val() || 'ativo';
+        let bypassKitValidation = false;
+
+        $('form[name=\"form_salvar_kit\"]').on('submit', function(e) {
+            if (bypassKitValidation) {
+                return;
+            }
+
+            const activeBtn = $(document.activeElement);
+            if (activeBtn.attr('name') === 'acao' && activeBtn.val() === 'listarKits') {
+                const currentKitItensStr = JSON.stringify(kitItens);
+                const currentNomeKit = $('input[name=\"nome_kit\"]').val() || '';
+                const currentStatus = $('select[name=\"status\"]').val() || 'ativo';
+                
+                const hasChanges = (initialKitItensStr !== currentKitItensStr) || 
+                                    (initialNomeKit !== currentNomeKit) || 
+                                    (initialStatus !== currentStatus);
+                
+                if (hasChanges) {
+                    e.preventDefault();
+                    Swal.fire({
+                        title: 'Sair sem salvar?',
+                        text: 'Existem alterações não salvas no Kit. Deseja realmente voltar?',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Sim, sair',
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            bypassKitValidation = true;
+                            var form = $('form[name=\"form_salvar_kit\"]');
+                            var inputAcao = $('<input type=\"hidden\" name=\"acao\" value=\"listarKits\">');
+                            form.append(inputAcao);
+                            form.submit();
+                        }
+                    });
+                }
+                return;
+            }
+
+            const nomeKit = $('input[name=\"nome_kit\"]').val();
+            if (!nomeKit || nomeKit.trim() === '') {
+                e.preventDefault();
+                Swal.fire('Atenção', 'O campo Nome do Kit é obrigatório.', 'warning');
+                return;
+            }
+            if (kitItens.length === 0) {
+                e.preventDefault();
+                Swal.fire('Atenção', 'Adicione pelo menos um item à composição do kit.', 'warning');
+                return;
+            }
+            
+            $('#final_nome_kit').val(nomeKit);
+            $('#final_status').val($('select[name=\"status\"]').val());
+        });
+
+        renderKitTable();
+    });
+    </script>
+    ";
+
+    rodape();
+}
+
+function cadastrarKit() {
+    $camposObrig = [
+        "nome_kit" => "Nome do Kit"
+    ];
+    $errorMsg = conferirCamposObrig($camposObrig, $_POST);
+    if (!empty($errorMsg)) {
+        set_status("ERRO: {$errorMsg}");
+        modificarKit();
+        exit;
+    }
+
+    $nome_kit = $_POST["nome_kit"];
+    $status = $_POST["status"] ?? "ativo";
+    $userCadastro = $_SESSION["user_nb_id"] ?? 0;
+    $dataCadastro = date("Y-m-d H:i:s");
+
+    $kit = [
+        "ss_k_tx_nome" => $nome_kit,
+        "ss_k_tx_status" => $status
+    ];
+
+    if (empty($_POST["id"])) {
+        $kit["ss_k_nb_userCadastro"] = $userCadastro;
+        $kit["ss_k_tx_dataCadastro"] = $dataCadastro;
+        $res = inserir("ss_kit", array_keys($kit), array_values($kit));
+        $kitId = $res[0];
+    } else {
+        $kitId = (int)$_POST["id"];
+        $kit["ss_k_nb_userAtualiza"] = $userCadastro;
+        $kit["ss_k_tx_dataAtualiza"] = $dataCadastro;
+        atualizar("ss_kit", array_keys($kit), array_values($kit), $kitId);
+    }
+
+    // Atualizar itens
+    query("DELETE FROM ss_kit_item WHERE ss_ki_nb_kit_id = {$kitId}");
+
+    $itens = json_decode($_POST["kit_itens_json"] ?? "[]", true);
+    if (is_array($itens)) {
+        foreach ($itens as $item) {
+            $epiId = (int)$item["epi_id"];
+            $qtd = (int)$item["quantidade"];
+            if ($epiId > 0 && $qtd > 0) {
+                query("INSERT INTO ss_kit_item (ss_ki_nb_kit_id, ss_ki_nb_epi_id, ss_ki_nb_quantidade) 
+                       VALUES ({$kitId}, {$epiId}, {$qtd})");
+            }
+        }
+    }
+
+    set_status("Kit salvo com sucesso!");
+    listarKits();
+    exit;
+}
+
+function excluirKit() {
+    if (!empty($_POST["id"])) {
+        $id = (int)$_POST["id"];
+        query("DELETE FROM ss_kit WHERE ss_k_nb_id = {$id}");
+        query("DELETE FROM ss_kit_item WHERE ss_ki_nb_kit_id = {$id}");
+        set_status("Kit excluído permanentemente com sucesso!");
+    }
+    listarKits();
+    exit;
+}
+
+function inativarKit() {
+    if (!empty($_POST["id"])) {
+        $id = (int)$_POST["id"];
+        atualizar("ss_kit", ["ss_k_tx_status"], ["inativo"], $id);
+        set_status("Kit inativado com sucesso!");
+    }
+    listarKits();
+    exit;
+}
+
+function ativarKit() {
+    if (!empty($_POST["id"])) {
+        $id = (int)$_POST["id"];
+        atualizar("ss_kit", ["ss_k_tx_status"], ["ativo"], $id);
+        set_status("Kit ativado com sucesso!");
+    }
+    listarKits();
+    exit;
 }
 ?>

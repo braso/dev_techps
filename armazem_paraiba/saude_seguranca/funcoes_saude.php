@@ -68,7 +68,8 @@ function registrarMovimentacaoEstoque(
     ?string $dataRecebimento = null,
     ?string $chaveNf = null,
     ?int $empresaId = null,
-    ?string $fornecedor = null
+    ?string $fornecedor = null,
+    ?string $validade = null
 ): bool {
     global $conn;
     
@@ -95,9 +96,10 @@ function registrarMovimentacaoEstoque(
     $valChaveNf = ($chaveNf !== null && $chaveNf !== '') ? "'" . mysqli_real_escape_string($conn, $chaveNf) . "'" : "NULL";
     $valEmpresa = ($empresaId !== null && $empresaId > 0) ? (int)$empresaId : "NULL";
     $valFornecedor = ($fornecedor !== null && $fornecedor !== '') ? "'" . mysqli_real_escape_string($conn, $fornecedor) . "'" : "NULL";
+    $valValidade = ($validade !== null && $validade !== '') ? "'" . mysqli_real_escape_string($conn, $validade) . "'" : "NULL";
     
-    $sql = "INSERT INTO ss_epi_estoque (ss_e_nb_epi_id, ss_e_nb_empresa_id, ss_e_nb_quantidade, ss_e_tx_tipo, ss_e_db_valor_unitario, ss_e_db_valor_total, ss_e_tx_data_recebimento, ss_e_tx_chave_nf, ss_e_tx_fornecedor, ss_e_tx_data, ss_e_tx_motivo, ss_e_tx_foto, ss_e_nb_userCadastro)
-            VALUES ({$idEpi}, {$valEmpresa}, {$quantidade}, '{$tipo}', {$valUnit}, {$valTot}, {$valDataReceb}, {$valChaveNf}, {$valFornecedor}, '{$dataAtual}', '{$motivo}', {$valFoto}, {$userCadastro})";
+    $sql = "INSERT INTO ss_epi_estoque (ss_e_nb_epi_id, ss_e_nb_empresa_id, ss_e_nb_quantidade, ss_e_tx_tipo, ss_e_db_valor_unitario, ss_e_db_valor_total, ss_e_tx_data_recebimento, ss_e_tx_chave_nf, ss_e_tx_fornecedor, ss_e_tx_data, ss_e_tx_motivo, ss_e_tx_foto, ss_e_nb_userCadastro, ss_e_tx_validade)
+            VALUES ({$idEpi}, {$valEmpresa}, {$quantidade}, '{$tipo}', {$valUnit}, {$valTot}, {$valDataReceb}, {$valChaveNf}, {$valFornecedor}, '{$dataAtual}', '{$motivo}', {$valFoto}, {$userCadastro}, {$valValidade})";
             
     return (bool)mysqli_query($conn, $sql);
 }
@@ -297,6 +299,7 @@ function ss_inicializar_tabelas() {
         ss_e_tx_fabricante VARCHAR(255) DEFAULT NULL,
         ss_e_tx_ca VARCHAR(50) DEFAULT NULL,
         ss_e_tx_validade_ca DATE DEFAULT NULL,
+        ss_e_tx_validade_epi DATE DEFAULT NULL,
         ss_e_nb_vida_util_dias INT DEFAULT 0,
         ss_e_tx_foto VARCHAR(255) DEFAULT NULL,
         ss_e_tx_status VARCHAR(30) DEFAULT 'ativo',
@@ -307,6 +310,12 @@ function ss_inicializar_tabelas() {
         ss_e_tx_dataAtualiza DATETIME DEFAULT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
     mysqli_query($conn, $sql_epi);
+
+    // Garante que a coluna ss_e_tx_validade_epi exista em bancos já criados
+    $check_column = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi LIKE 'ss_e_tx_validade_epi'");
+    if ($check_column && mysqli_num_rows($check_column) == 0) {
+        mysqli_query($conn, "ALTER TABLE ss_epi ADD COLUMN ss_e_tx_validade_epi DATE DEFAULT NULL AFTER ss_e_tx_validade_ca");
+    }
 
     // 2. Tabela ss_colaborador
     $sql_colaborador = "CREATE TABLE IF NOT EXISTS ss_colaborador (
@@ -334,6 +343,7 @@ function ss_inicializar_tabelas() {
         ss_e_db_valor_unitario DECIMAL(10,2) DEFAULT NULL,
         ss_e_db_valor_total DECIMAL(10,2) DEFAULT NULL,
         ss_e_tx_data_recebimento DATE DEFAULT NULL,
+        ss_e_tx_validade DATE DEFAULT NULL,
         ss_e_tx_chave_nf VARCHAR(44) DEFAULT NULL,
         ss_e_tx_fornecedor VARCHAR(255) DEFAULT NULL,
         ss_e_tx_data DATETIME NOT NULL,
@@ -342,6 +352,12 @@ function ss_inicializar_tabelas() {
         ss_e_nb_userCadastro INT DEFAULT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
     mysqli_query($conn, $sql_estoque);
+
+    // Garante que a coluna ss_e_tx_validade exista em ss_epi_estoque
+    $check_column_est = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_estoque LIKE 'ss_e_tx_validade'");
+    if ($check_column_est && mysqli_num_rows($check_column_est) == 0) {
+        mysqli_query($conn, "ALTER TABLE ss_epi_estoque ADD COLUMN ss_e_tx_validade DATE DEFAULT NULL AFTER ss_e_tx_data_recebimento");
+    }
 
     // 4. Tabela ss_epi_entrega
     $sql_entrega = "CREATE TABLE IF NOT EXISTS ss_epi_entrega (
