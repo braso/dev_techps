@@ -1,8 +1,7 @@
 <?php
-/* Modo debug
-    ini_set("display_errors", 1);
-    error_reporting(E_ALL);
-//*/
+// Modo debug
+ini_set("display_errors", 1);
+error_reporting(E_ALL);
 
 if(empty(session_id())){
     $lifetime = 30*60;
