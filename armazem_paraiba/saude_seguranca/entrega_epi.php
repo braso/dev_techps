@@ -237,7 +237,11 @@ function cadastrarEntregaLoteAjax() {
 
     if ($sucessos > 0 && !empty($inserted_ids_by_colab)) {
         foreach ($inserted_ids_by_colab as $colab_id => $delivery_ids) {
-            ss_enviar_ficha_para_assinatura($colab_id, $delivery_ids);
+            try {
+                ss_enviar_ficha_para_assinatura($colab_id, $delivery_ids);
+            } catch (Throwable $t) {
+                $erros[] = "Erro ao enviar ficha para assinatura: " . $t->getMessage();
+            }
         }
     }
     
@@ -413,7 +417,11 @@ function cadastrarEntrega() {
         }
 
         if ($sucesso > 0 && !empty($inserted_delivery_ids)) {
-            ss_enviar_ficha_para_assinatura($colaborador_id, $inserted_delivery_ids);
+            try {
+                ss_enviar_ficha_para_assinatura($colaborador_id, $inserted_delivery_ids);
+            } catch (Throwable $t) {
+                // Captura erros silenciosamente para não quebrar a inserção da entrega
+            }
         }
 
         set_status("Sucesso: {$sucesso} itens do Kit processados!");
@@ -530,7 +538,11 @@ function cadastrarEntrega() {
                     registrarMovimentacaoEstoque($epi_id, $quantidade, 'saida', 'Entrega de EPI para colaborador ID: ' . $colaborador_id, null, null, '', null, null, $empresa_id);
                 }
                 
-                ss_enviar_ficha_para_assinatura($colaborador_id, [$id]);
+                try {
+                    ss_enviar_ficha_para_assinatura($colaborador_id, [$id]);
+                } catch (Throwable $t) {
+                    // Captura erros silenciosamente para não quebrar a inserção da entrega
+                }
                 
                 set_status("Entrega registrada com sucesso!");
             } else {
