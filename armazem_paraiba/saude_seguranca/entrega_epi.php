@@ -125,6 +125,7 @@ function cadastrarEntregaLoteAjax() {
     $userCadastro = $_SESSION["user_nb_id"] ?? 0;
     $dataCadastro = date("Y-m-d H:i:s");
     
+    $inserted_ids_by_colab = [];
     foreach ($lotes as $item) {
         $epi_id = (int)$item["epi_id"];
         $quantidade = (int)$item["quantidade"];
@@ -201,6 +202,7 @@ function cadastrarEntregaLoteAjax() {
         $res = inserir("ss_epi_entrega", array_keys($entrega), array_values($entrega));
         if ($res && !is_a($res[0], 'Exception')) {
             $id = (int)$res[0];
+            $inserted_ids_by_colab[$item_colaborador_id][] = $id;
             
             if (!empty($item["foto_payload"]) && strpos($item["foto_payload"], "data:image/") === 0) {
                 $partes = explode(',', $item["foto_payload"]);
@@ -230,6 +232,12 @@ function cadastrarEntregaLoteAjax() {
             $sucessos++;
         } else {
             $erros[] = "Erro ao registrar entrega do EPI ID {$epi_id} no banco de dados.";
+        }
+    }
+
+    if ($sucessos > 0 && !empty($inserted_ids_by_colab)) {
+        foreach ($inserted_ids_by_colab as $colab_id => $delivery_ids) {
+            ss_enviar_ficha_para_assinatura($colab_id, $delivery_ids);
         }
     }
     
@@ -329,6 +337,7 @@ function cadastrarEntrega() {
 
         // Processar entregas
         $sucesso = 0;
+        $inserted_delivery_ids = [];
         foreach ($itens as $item) {
             $epiId = (int)$item["epi_id"];
             $qtd = (int)$item["quantidade"];
@@ -354,6 +363,7 @@ function cadastrarEntrega() {
                 $res = inserir("ss_epi_entrega", array_keys($entrega), array_values($entrega));
                 if ($res && !is_a($res[0], 'Exception')) {
                     $id = (int)$res[0];
+                    $inserted_delivery_ids[] = $id;
                     if (!empty($item["foto_entrega"]) && strpos($item["foto_entrega"], "data:image/") === 0) {
                         $partes = explode(',', $item["foto_entrega"]);
                         if (count($partes) > 1) {
@@ -393,9 +403,17 @@ function cadastrarEntrega() {
                     "ss_e_tx_dataCadastro"   => $dataCadastro
                 ];
                 
-                inserir("ss_epi_entrega", array_keys($entrega), array_values($entrega));
-                $sucesso++;
+                $res = inserir("ss_epi_entrega", array_keys($entrega), array_values($entrega));
+                if ($res && !is_a($res[0], 'Exception')) {
+                    $id = (int)$res[0];
+                    $inserted_delivery_ids[] = $id;
+                    $sucesso++;
+                }
             }
+        }
+
+        if ($sucesso > 0 && !empty($inserted_delivery_ids)) {
+            ss_enviar_ficha_para_assinatura($colaborador_id, $inserted_delivery_ids);
         }
 
         set_status("Sucesso: {$sucesso} itens do Kit processados!");
@@ -506,10 +524,14 @@ function cadastrarEntrega() {
             
             $res = inserir("ss_epi_entrega", array_keys($entrega), array_values($entrega));
             if ($res && !is_a($res[0], 'Exception')) {
+                $id = (int)$res[0];
                 $pularSubtracao = ($status === 'devolvido' && !empty($_POST["estornar_saldo"]));
                 if (!$pularSubtracao) {
                     registrarMovimentacaoEstoque($epi_id, $quantidade, 'saida', 'Entrega de EPI para colaborador ID: ' . $colaborador_id, null, null, '', null, null, $empresa_id);
                 }
+                
+                ss_enviar_ficha_para_assinatura($colaborador_id, [$id]);
+                
                 set_status("Entrega registrada com sucesso!");
             } else {
                 set_status("ERRO ao registrar entrega.");
@@ -601,6 +623,15 @@ function modificarEntrega() {
 
     cabecalho("Registro de Entrega de EPI");
     echo '<style>#btnExportPDF { display: none !important; }</style>';
+
+    // Alerta de configuração do tipo de documento
+    $tipoDocAtivo = ss_verificar_assinatura_ativa();
+    if ($tipoDocAtivo <= 0) {
+        echo '
+        <div class="alert alert-warning" style="margin-bottom: 15px;">
+            <i class="fa fa-exclamation-triangle"></i> <strong>Informativo:</strong> Para que o Recibo de EPI seja gerado e enviado para assinatura eletrônica, é necessário cadastrar um Tipo de Documento com o nome exato <strong>Recibo de EPI</strong> e marcar a opção <strong>Assinatura</strong> como "Sim" na página de <a href="../cadastro_tipo_doc.php" target="_blank" style="font-weight: bold; text-decoration: underline;">Cadastro de Tipo de Documento</a>.
+        </div>';
+    }
 
     // Carregar todas as empresas ativas
     $sqlEmpresas = query("SELECT empr_nb_id, empr_tx_nome, empr_tx_cnpj FROM empresa WHERE empr_tx_status = 'ativo' ORDER BY empr_tx_nome ASC");
@@ -1742,10 +1773,45 @@ function excluirEntrega() {
 }
 
 function imprimirFicha() {
+    global $conn;
     $colaborador_id = (int)($_GET["colaborador_id"] ?? 0);
     if ($colaborador_id <= 0) {
         echo "Colaborador inválido.";
         exit;
+    }
+
+    $delivery_ids = [];
+    $delivRaw = trim(strval($_GET["delivery_ids"] ?? ""));
+    if ($delivRaw !== "") {
+        $delivery_ids = array_filter(array_map('intval', explode(',', $delivRaw)), fn($v) => $v > 0);
+    }
+
+    // Busca informações da última assinatura (se houver) consolidada
+    $tipoDocId = ss_verificar_assinatura_ativa();
+    $assinaturaDados = null;
+    if ($tipoDocId > 0) {
+        if (!empty($delivery_ids)) {
+            $firstId = (int)$delivery_ids[0];
+            $sqlSig = "SELECT s.id, s.id_documento, a.status, a.data_assinatura, ae.ip_address, ae.hash_assinatura, a.cpf, a.nome
+                       FROM ss_epi_entrega ent
+                       JOIN solicitacoes_assinatura s ON ent.ss_e_nb_assinatura_id = s.id
+                       JOIN assinantes a ON a.id_solicitacao = s.id AND a.enti_nb_id = ent.ss_e_nb_colaborador_id
+                       LEFT JOIN assinatura_eletronica ae ON ae.id_documento COLLATE utf8mb4_general_ci = s.id_documento COLLATE utf8mb4_general_ci AND ae.cpf COLLATE utf8mb4_general_ci = a.cpf COLLATE utf8mb4_general_ci
+                       WHERE ent.ss_e_nb_id = {$firstId}
+                       ORDER BY s.id DESC LIMIT 1";
+        } else {
+            $sqlSig = "SELECT s.id, s.id_documento, a.status, a.data_assinatura, ae.ip_address, ae.hash_assinatura, a.cpf, a.nome
+                       FROM solicitacoes_assinatura s
+                       JOIN assinantes a ON a.id_solicitacao = s.id
+                       LEFT JOIN assinatura_eletronica ae ON ae.id_documento COLLATE utf8mb4_general_ci = s.id_documento COLLATE utf8mb4_general_ci AND ae.cpf COLLATE utf8mb4_general_ci = a.cpf COLLATE utf8mb4_general_ci
+                       WHERE a.enti_nb_id = {$colaborador_id} 
+                         AND s.tipo_documento_id = {$tipoDocId}
+                       ORDER BY s.id DESC LIMIT 1";
+        }
+        $resSig = mysqli_query($conn, $sqlSig);
+        if ($resSig && $rowSig = mysqli_fetch_assoc($resSig)) {
+            $assinaturaDados = $rowSig;
+        }
     }
 
     $colabRaw = carregar("entidade", $colaborador_id);
@@ -1760,13 +1826,25 @@ function imprimirFicha() {
         "ss_c_tx_cargo"     => $colabRaw["enti_tx_ocupacao"]
     ];
 
-    global $conn;
+    $whereIds = "";
+    if (!empty($delivery_ids)) {
+        $whereIds = " AND ent.ss_e_nb_id IN (" . implode(",", $delivery_ids) . ") ";
+    }
+
     // Query concatenando Grupo, Subgrupo e Item aliando como ss_e_tx_nome para compatibilidade
-    $sql = "SELECT ent.ss_e_nb_id, CONCAT(epi.ss_e_tx_grupo, ' / ', IFNULL(epi.ss_e_tx_subgrupo, ''), ' / ', IFNULL(epi.ss_e_tx_item, '')) AS ss_e_tx_nome, epi.ss_e_tx_ca, ent.ss_e_tx_data_entrega, ent.ss_e_nb_quantidade, ent.ss_e_tx_vencimento, ent.ss_e_tx_status 
+    $sql = "SELECT ent.ss_e_nb_id, 
+                   CONCAT(epi.ss_e_tx_grupo, ' / ', IFNULL(epi.ss_e_tx_subgrupo, ''), ' / ', IFNULL(epi.ss_e_tx_item, '')) AS ss_e_tx_nome, 
+                   epi.ss_e_tx_ca, 
+                   ent.ss_e_tx_data_entrega, 
+                   ent.ss_e_nb_quantidade, 
+                   ent.ss_e_tx_vencimento, 
+                   ent.ss_e_tx_status,
+                   IFNULL(s.id_documento, '-') AS ss_e_tx_identificador
             FROM ss_epi_entrega ent 
             JOIN ss_epi epi ON ent.ss_e_nb_epi_id = epi.ss_e_nb_id 
-            WHERE ent.ss_e_nb_colaborador_id = {$colaborador_id}
-            ORDER BY ent.ss_e_tx_data_entrega DESC";
+            LEFT JOIN solicitacoes_assinatura s ON ent.ss_e_nb_assinatura_id = s.id
+            WHERE ent.ss_e_nb_colaborador_id = {$colaborador_id} AND ent.ss_e_tx_status <> 'inativo' {$whereIds}
+            ORDER BY ent.ss_e_tx_data_entrega DESC, ent.ss_e_nb_id DESC";
             
     $res = mysqli_query($conn, $sql);
     $entregas = [];
@@ -1776,12 +1854,27 @@ function imprimirFicha() {
         }
     }
 
+    $spans = [];
+    $n = count($entregas);
+    $i = 0;
+    while ($i < $n) {
+        $val = $entregas[$i]["ss_e_tx_identificador"];
+        $count = 1;
+        $j = $i + 1;
+        while ($j < $n && $entregas[$j]["ss_e_tx_identificador"] === $val) {
+            $count++;
+            $j++;
+        }
+        $spans[$i] = $count;
+        $i = $j;
+    }
+
     ?>
     <!DOCTYPE html>
     <html lang="pt-br">
     <head>
         <meta charset="UTF-8">
-        <title>Ficha de EPI - <?=$colaborador["ss_c_tx_nome"]?></title>
+        <title>Recibo de EPI - <?=$colaborador["ss_c_tx_nome"]?></title>
         <style>
             body { font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.4; color: #333; margin: 30px; }
             h1, h2 { text-align: center; margin-bottom: 5px; }
@@ -1803,11 +1896,16 @@ function imprimirFicha() {
     </head>
     <body>
         <div class="no-print" style="margin-bottom: 20px; text-align: right;">
-            <button onclick="window.print()" style="padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Imprimir Ficha</button>
+            <button onclick="window.print()" style="padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Imprimir Recibo</button>
         </div>
         
-        <h2>FICHA DE CONTROLE E REGISTRO DE ENTREGA DE EPI</h2>
-        <p style="text-align: center; font-weight: bold; margin-top: 0;">(Norma Regulamentadora NR-6 - Portaria 3.214/78)</p>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+            <img src="../imagens/logo_topo_cliente.png" style="height: 40px; object-fit: contain;">
+            <div style="text-align: right;">
+                <h2 style="margin: 0; font-size: 16pt;">RECIBO DE ENTREGA DE EPI</h2>
+                <p style="margin: 0; font-size: 9pt; font-weight: bold; color: #666;">(Norma Regulamentadora NR-6 - Portaria 3.214/78)</p>
+            </div>
+        </div>
         
         <div class="header-info">
             <table>
@@ -1834,46 +1932,70 @@ function imprimirFicha() {
             <thead>
                 <tr>
                     <th style="width: 5%;">Cód.</th>
-                    <th style="width: 40%;">Equipamento (EPI)</th>
+                    <th style="width: 52%;">Equipamento (EPI)</th>
                     <th style="width: 15%;">CA MTE</th>
-                    <th style="width: 12%;">Data Entrega</th>
-                    <th style="width: 8%;">Quant.</th>
-                    <th style="width: 12%;">Venc. Estimado</th>
-                    <th style="width: 8%;">Status</th>
+                    <th style="width: 15%;">Data Entrega</th>
+                    <th style="width: 5%;">Quant.</th>
+                    <th style="width: 8%;">Identificador</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($entregas)): ?>
                     <tr>
-                        <td colspan="7" style="text-align: center;">Nenhum EPI entregue cadastrado no histórico deste colaborador.</td>
+                        <td colspan="6" style="text-align: center;">Nenhum EPI entregue cadastrado no histórico deste colaborador.</td>
                     </tr>
                 <?php else: ?>
-                    <?php foreach ($entregas as $e): ?>
+                    <?php foreach ($entregas as $index => $e): ?>
                         <tr>
-                            <td><?=$e["ss_e_nb_id"]?></td>
-                            <td><?=$e["ss_e_tx_nome"]?></td>
-                            <td><?=$e["ss_e_tx_ca"] ?: '---'?></td>
-                            <td><?=data($e["ss_e_tx_data_entrega"])?></td>
-                            <td><?=$e["ss_e_nb_quantidade"]?></td>
-                            <td><?=data($e["ss_e_tx_vencimento"])?></td>
-                            <td><?=ucfirst($e["ss_e_tx_status"])?></td>
+                            <td style="width: 5%;"><?=$e["ss_e_nb_id"]?></td>
+                            <td style="width: 52%;"><?=$e["ss_e_tx_nome"]?></td>
+                            <td style="width: 15%;"><?=$e["ss_e_tx_ca"] ?: '---'?></td>
+                            <td style="width: 15%;"><?=data($e["ss_e_tx_data_entrega"])?></td>
+                            <td style="width: 5%;"><?=$e["ss_e_nb_quantidade"]?></td>
+                            <?php if (isset($spans[$index])): ?>
+                                <td rowspan="<?=$spans[$index]?>" style="width: 8%; font-family: monospace; font-size: 8.5pt; vertical-align: middle; text-align: center;"><?=$e["ss_e_tx_identificador"]?></td>
+                            <?php endif; ?>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
         </table>
         
-        <table class="signatures">
-            <tr>
-                <td>
-                    <div class="line">Setor de Saúde e Segurança do Trabalho</div>
-                </td>
-                <td>
-                    <div class="line">Assinatura do Colaborador</div>
-                    <span style="font-size: 8pt; color: #666;">Data de Emissão: <?=date("d/m/Y")?></span>
-                </td>
-            </tr>
-        </table>
+        <?php if ($assinaturaDados && $assinaturaDados['status'] === 'assinado'): ?>
+            <?php 
+            $cpfFmtSig = $assinaturaDados["cpf"] ? preg_replace("/(\d{3})(\d{3})(\d{3})(\d{2})/", "$1.$2.$3-$4", $assinaturaDados["cpf"]) : '---';
+            $dataAssinatura = !empty($assinaturaDados['data_assinatura']) ? date('d/m/Y H:i', strtotime($assinaturaDados['data_assinatura'])) : '';
+            $ip = $assinaturaDados['ip_address'] ?? '---';
+            $hash = $assinaturaDados['hash_assinatura'] ?? '---';
+            ?>
+            <div style="margin-top: 30px; border: 1.5px solid #0056b3; background-color: #f4f8fc; padding: 15px; border-radius: 5px; font-size: 10pt;">
+                <h4 style="color: #0056b3; margin: 0 0 5px 0; font-size: 11pt;">ASSINATURA ELETRÔNICA</h4>
+                <p style="margin: 0; line-height: 1.5;">
+                    Este documento foi assinado eletronicamente por <strong><?=htmlspecialchars($assinaturaDados['nome'])?></strong> (CPF: <?=htmlspecialchars($cpfFmtSig)?>) em <strong><?=$dataAssinatura?></strong>.<br>
+                    IP de Origem: <strong><?=htmlspecialchars($ip)?></strong> | Protocolo/Hash: <strong><?=htmlspecialchars($hash)?></strong>.<br>
+                    <span style="color: #555; font-size: 8pt; display: block; margin-top: 5px;">A concordância expressa do colaborador valida legalmente a assinatura nos termos da Medida Provisória nº 2.200-2/2001.</span>
+                </p>
+            </div>
+        <?php elseif ($assinaturaDados && $assinaturaDados['status'] === 'pendente'): ?>
+            <div style="margin-top: 30px; border: 1.5px dashed #e87e04; background-color: #fffdf4; padding: 15px; border-radius: 5px; text-align: center; font-size: 10pt;">
+                <h4 style="color: #e87e04; margin: 0 0 5px 0; font-size: 11pt;">ASSINATURA ELETRÔNICA PENDENTE</h4>
+                <p style="margin: 0; color: #666; line-height: 1.5;">
+                    Este documento foi gerado pelo sistema e aguarda a assinatura eletrônica do colaborador através do portal.
+                </p>
+            </div>
+        <?php else: ?>
+            <table class="signatures">
+                <tr>
+                    <td>
+                        <div class="line">Setor de Saúde e Segurança do Trabalho</div>
+                    </td>
+                    <td>
+                        <div class="line">Assinatura do Colaborador</div>
+                        <span style="font-size: 8pt; color: #666;">Data de Emissão: <?=date("d/m/Y")?></span>
+                    </td>
+                </tr>
+            </table>
+        <?php endif; ?>
     </body>
     </html>
     <?php
@@ -1883,6 +2005,15 @@ function imprimirFicha() {
 function index() {
     cabecalho("Entregas de EPI");
     echo '<style>#btnExportPDF { display: none !important; }</style>';
+
+    // Alerta de configuração do tipo de documento
+    $tipoDocAtivo = ss_verificar_assinatura_ativa();
+    if ($tipoDocAtivo <= 0) {
+        echo '
+        <div class="alert alert-warning" style="margin-bottom: 15px;">
+            <i class="fa fa-exclamation-triangle"></i> <strong>Informativo:</strong> Para que o Recibo de EPI seja gerado e enviado para assinatura eletrônica, é necessário cadastrar um Tipo de Documento com o nome exato <strong>Recibo de EPI</strong> e marcar a opção <strong>Assinatura</strong> como "Sim" na página de <a href="../cadastro_tipo_doc.php" target="_blank" style="font-weight: bold; text-decoration: underline;">Cadastro de Tipo de Documento</a>.
+        </div>';
+    }
 
     if (!isset($_POST["busca_status"])) {
         $_POST["busca_status"] = "ativo";
@@ -1967,7 +2098,7 @@ function index() {
         "DATA ENTREGA"        => "ss_e_tx_data_entrega_formatado",
         "QUANTIDADE"          => "ss_e_nb_quantidade",
         "VENCIMENTO ESTIMADO" => "ss_e_tx_vencimento_formatado",
-        "STATUS"              => "ss_e_tx_status_formatado",
+        "IDENTIFICADOR"       => "ss_e_tx_identificador",
         "EPI ENTREGUE"        => "ss_grid_foto_render(ss_e_tx_foto)",
         "OBSERVAÇÃO"          => "ss_e_tx_observacao"
     ];
@@ -1997,11 +2128,13 @@ function index() {
                                WHEN 'perdido' THEN 'Perdido/Extraviado'
                                ELSE ent.ss_e_tx_status 
                            END AS ss_e_tx_status_formatado, ent.ss_e_tx_foto, ent.ss_e_tx_observacao,
-                           ent.ss_e_nb_colaborador_id, ent.ss_e_nb_epi_id
+                           ent.ss_e_nb_colaborador_id, ent.ss_e_nb_epi_id,
+                           IFNULL(s.id_documento, '-') AS ss_e_tx_identificador
                     FROM ss_epi_entrega ent 
                     JOIN entidade col ON ent.ss_e_nb_colaborador_id = col.enti_nb_id 
                     JOIN ss_epi epi ON ent.ss_e_nb_epi_id = epi.ss_e_nb_id
                     LEFT JOIN empresa emp ON ent.ss_e_nb_empresa_id = emp.empr_nb_id
+                    LEFT JOIN solicitacoes_assinatura s ON ent.ss_e_nb_assinatura_id = s.id
                     WHERE ent.ss_e_tx_status <> 'inativo' {$condFilial}
                   ) AS ent";
 

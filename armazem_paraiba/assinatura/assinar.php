@@ -651,6 +651,13 @@ if (!$jaAssinado) {
         mysqli_stmt_close($stmtUpd);
     }
 
+    // Se o assinante que acabou de assinar tem funcao 'Responsável', vamos marcar todos os outros assinantes com funcao 'Responsável' desta mesma solicitação como 'dispensado'.
+    // Isso garante que apenas um responsável precise assinar.
+    $funcaoAssinante = strtolower(trim(strval($row["funcao"] ?? "")));
+    if ($funcaoAssinante === 'responsável') {
+        mysqli_query($conn, "UPDATE assinantes SET status = 'dispensado' WHERE id_solicitacao = {$idSolicitacao} AND LOWER(funcao) = 'responsável' AND status = 'pendente'");
+    }
+
     $stmtUpSol = mysqli_prepare($conn, "UPDATE solicitacoes_assinatura SET caminho_arquivo = ?, status = 'em_progresso' WHERE id = ? LIMIT 1");
     if ($stmtUpSol) {
         mysqli_stmt_bind_param($stmtUpSol, "si", $caminhoRel, $idSolicitacao);
@@ -694,7 +701,7 @@ if (!$jaAssinado) {
 }
 $total = 0;
 $assinados = 0;
-$stmtCount = mysqli_prepare($conn, "SELECT COUNT(*) as total, SUM(CASE WHEN LOWER(status) = 'assinado' THEN 1 ELSE 0 END) as assinados FROM assinantes WHERE id_solicitacao = ?");
+$stmtCount = mysqli_prepare($conn, "SELECT COUNT(*) as total, SUM(CASE WHEN LOWER(status) IN ('assinado', 'dispensado') THEN 1 ELSE 0 END) as assinados FROM assinantes WHERE id_solicitacao = ?");
 if ($stmtCount) {
     mysqli_stmt_bind_param($stmtCount, "i", $idSolicitacao);
     mysqli_stmt_execute($stmtCount);
@@ -707,7 +714,7 @@ if ($stmtCount) {
 $ultimo = ($total > 0 && $assinados >= $total);
 $pendentes = [];
 if (!$ultimo) {
-    $stmtPend = mysqli_prepare($conn, "SELECT ordem, nome, funcao FROM assinantes WHERE id_solicitacao = ? AND LOWER(status) <> 'assinado' ORDER BY ordem ASC, id ASC");
+    $stmtPend = mysqli_prepare($conn, "SELECT ordem, nome, funcao FROM assinantes WHERE id_solicitacao = ? AND LOWER(status) NOT IN ('assinado', 'dispensado') ORDER BY ordem ASC, id ASC");
     if ($stmtPend) {
         mysqli_stmt_bind_param($stmtPend, "i", $idSolicitacao);
         mysqli_stmt_execute($stmtPend);
@@ -726,7 +733,7 @@ if (!$ultimo) {
 }
 
 if (!$ultimo) {
-    $stmtNext = mysqli_prepare($conn, "SELECT nome, email, token, funcao, enti_nb_id FROM assinantes WHERE id_solicitacao = ? AND LOWER(status) <> 'assinado' ORDER BY ordem ASC, id ASC LIMIT 1");
+    $stmtNext = mysqli_prepare($conn, "SELECT nome, email, token, funcao, enti_nb_id FROM assinantes WHERE id_solicitacao = ? AND LOWER(status) NOT IN ('assinado', 'dispensado') ORDER BY ordem ASC, id ASC LIMIT 1");
     if ($stmtNext) {
         mysqli_stmt_bind_param($stmtNext, "i", $idSolicitacao);
         mysqli_stmt_execute($stmtNext);
