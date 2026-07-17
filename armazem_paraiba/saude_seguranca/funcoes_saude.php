@@ -3,6 +3,14 @@
 ss_inicializar_tabelas();
 
 /**
+ * Redireciona para uma URL e encerra a execução do script.
+ */
+function redireciona(string $url): void {
+    header("Location: " . $url);
+    exit;
+}
+
+/**
  * Retorna o saldo líquido atual de um EPI em estoque.
  * Soma as entradas e subtrai as saídas.
  *
