@@ -339,7 +339,7 @@ if (!empty($assinante) && isset($assinante["id_solicitacao"])) {
     $idSolicitacao = intval($assinante["id_solicitacao"]);
     $total = 0;
     $assinados = 0;
-    $stmtCount = mysqli_prepare($conn, "SELECT COUNT(*) as total, SUM(CASE WHEN LOWER(status) = 'assinado' THEN 1 ELSE 0 END) as assinados FROM assinantes WHERE id_solicitacao = ?");
+    $stmtCount = mysqli_prepare($conn, "SELECT COUNT(*) as total, SUM(CASE WHEN LOWER(status) IN ('assinado', 'dispensado') THEN 1 ELSE 0 END) as assinados FROM assinantes WHERE id_solicitacao = ?");
     if ($stmtCount) {
         mysqli_stmt_bind_param($stmtCount, "i", $idSolicitacao);
         mysqli_stmt_execute($stmtCount);
@@ -351,7 +351,7 @@ if (!empty($assinante) && isset($assinante["id_solicitacao"])) {
     $assinatura_is_final = ($total > 0 && $assinados >= $total);
 
     if (!$assinatura_is_final) {
-        $stmtPend = mysqli_prepare($conn, "SELECT ordem, nome, funcao FROM assinantes WHERE id_solicitacao = ? AND LOWER(status) <> 'assinado' ORDER BY ordem ASC, id ASC");
+        $stmtPend = mysqli_prepare($conn, "SELECT ordem, nome, funcao FROM assinantes WHERE id_solicitacao = ? AND LOWER(status) NOT IN ('assinado', 'dispensado') ORDER BY ordem ASC, id ASC");
         if ($stmtPend) {
             mysqli_stmt_bind_param($stmtPend, "i", $idSolicitacao);
             mysqli_stmt_execute($stmtPend);

@@ -42,12 +42,12 @@ if($hasAss && mysqli_num_rows($hasAss) > 0 && $hasSol && mysqli_num_rows($hasSol
 		JOIN solicitacoes_assinatura s ON s.id = a.id_solicitacao
 		LEFT JOIN tipos_documentos t ON t.tipo_nb_id = s.tipo_documento_id
 		WHERE a.enti_nb_id = ?
-			AND LOWER(TRIM(a.status)) <> 'assinado'
+			AND LOWER(TRIM(a.status)) = 'pendente'
 			AND a.ordem = (
 				SELECT MIN(a2.ordem)
 				FROM assinantes a2
 				WHERE a2.id_solicitacao = a.id_solicitacao
-					AND LOWER(TRIM(a2.status)) <> 'assinado'
+					AND LOWER(TRIM(a2.status)) = 'pendente'
 			)
 			AND (s.status = 'pendente' OR s.status = 'em_progresso')
 		ORDER BY s.data_solicitacao DESC, s.id DESC

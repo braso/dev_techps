@@ -1,4 +1,5 @@
 <?php
+ob_start();
 ini_set("display_errors", 1);
 error_reporting(E_ALL);
 
@@ -385,14 +386,48 @@ function index() {
     cabecalho("Cadastro de EPIs (Universal)");
     echo '<style>#btnExportPDF { display: none !important; }</style>';
 
+    if (isset($_SESSION["import_csv_success"])) {
+        $success = (int)$_SESSION["import_csv_success"];
+        unset($_SESSION["import_csv_success"]);
+        
+        $errorsList = "";
+        if (isset($_SESSION["import_csv_errors"]) && is_array($_SESSION["import_csv_errors"])) {
+            $errs = $_SESSION["import_csv_errors"];
+            unset($_SESSION["import_csv_errors"]);
+            
+            $errorsList = "<hr><h5 class='bold' style='text-align:left;'>Ocorrências / Linhas com Erro:</h5><ul style='max-height: 200px; overflow-y: auto; text-align: left; padding-left: 20px;'>";
+            foreach ($errs as $err) {
+                $errorsList .= "<li>" . htmlspecialchars($err) . "</li>";
+            }
+            $errorsList .= "</ul>";
+        }
+        
+        $swalWidth = empty($errorsList) ? '400px' : '650px';
+        $swalIcon = empty($errorsList) ? 'success' : 'warning';
+        
+        echo "
+        <script>
+        $(document).ready(function() {
+            Swal.fire({
+                title: 'Resultado da Importação',
+                html: 'Importados com sucesso: <b>{$success}</b> itens.{$errorsList}',
+                icon: '{$swalIcon}',
+                width: '{$swalWidth}',
+                confirmButtonText: 'OK'
+            });
+        });
+        </script>
+        ";
+    }
+
     if (!isset($_POST["busca_status"])) {
         $_POST["busca_status"] = "ativo";
     }
 
     $fields = [
-        campo("Código", "busca_codigo", $_POST["busca_codigo"] ?? "", 1, "MASCARA_NUMERO"),
-        campo("Grupo", "busca_grupo", $_POST["busca_grupo"] ?? "", 3),
-        campo("EPI", "busca_subgrupo", $_POST["busca_subgrupo"] ?? "", 3),
+        campo("Código", "busca_codigo", $_POST["busca_codigo"] ?? "", 2, "MASCARA_NUMERO"),
+        campo("Grupo", "busca_grupo", $_POST["busca_grupo"] ?? "", 4),
+        campo("EPI", "busca_subgrupo", $_POST["busca_subgrupo"] ?? "", 4),
         combo("Status", "busca_status", $_POST["busca_status"] ?? "", 2, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"]),
         campo_hidden("busca_cadastro_tipo", "universal")
     ];
@@ -401,9 +436,25 @@ function index() {
     $buttons[] = botao("Buscar", "index");
     $buttons[] = botao("Cadastrar Grupo", "modificarEpi", "", "", "", "", "btn btn-success");
 
-    echo abre_form("Filtros de Busca");
+    echo abre_form("Filtros de Busca", 6);
     echo linha_form($fields);
     echo fecha_form($buttons);
+
+    // Form for CSV Import
+    $importFields = [
+        '<div class="col-sm-12 margin-bottom-5">
+            <label class="control-label">Selecionar Arquivo CSV de Importação</label>
+            <input type="file" name="csv_import" accept=".csv" class="form-control input-sm" style="height: 30px; padding: 4px 10px;">
+         </div>'
+    ];
+    $importButtons = [
+        botao("Baixar Modelo CSV", "baixarModeloCsv", "", "", "formnovalidate", false, "btn btn-info"),
+        botao("Importar Itens", "importarCsv", "", "", "", false, "btn btn-primary")
+    ];
+
+    echo abre_form("Importação de EPIs em Massa (CSV)", 6);
+    echo linha_form($importFields);
+    echo fecha_form($importButtons);
 
     $gridFields = [
         "CÓDIGO" => "ss_e_nb_id",
@@ -536,5 +587,176 @@ function index() {
     echo gridDinamico("tabelaEpis", $gridFields, $camposBusca, $queryBase, $jsFunctions);
 
     rodape();
+}
+
+function baixarModeloCsv() {
+    if (ob_get_level() > 0) {
+        ob_clean();
+    }
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename=modelo_importacao_epis.csv');
+    
+    // Output UTF-8 BOM for Excel compatibility in PT-BR
+    echo "\xEF\xBB\xBF";
+    
+    echo "# INSTRUÇÕES DE PREENCHIMENTO DO CSV:\r\n";
+    echo "# - Campos OBRIGATÓRIOS: Grupo, EPI / Subgrupo, Descrição / Item.\r\n";
+    echo "# - Campos OPCIONAIS: Observações do Grupo, Observações.\r\n";
+    echo "# - Formato padrão do Grupo: PROTEÇÃO DA CABEÇA, PROTEÇÃO AUDITIVA, etc.\r\n";
+    echo "# - A primeira linha de dados abaixo é uma linha de EXEMPLO e serve como orientação.\r\n";
+    echo "# --------------------------------------------------------------------------\r\n";
+    
+    $headers = ["Grupo", "Observações do Grupo", "EPI / Subgrupo", "Descrição / Item", "Observações"];
+    echo implode(';', $headers) . "\r\n";
+    
+    // Sample row
+    echo "PROTEÇÃO DA CABEÇA (EXEMPLO DE PREENCHIMENTO);Observações gerais do grupo cabeça (Opcional);Capacete de Segurança;Capacete de proteção classe B com jugular;Jugular de tecido resistente (Opcional)\r\n";
+    
+    exit;
+}
+
+function importarCsv() {
+    global $conn;
+    if (empty($_FILES["csv_import"]["tmp_name"])) {
+        set_status("ERRO: Nenhum arquivo CSV enviado!");
+        index();
+        exit;
+    }
+    
+    $file = $_FILES["csv_import"]["tmp_name"];
+    
+    // Read the whole file content to handle encoding
+    $content = file_get_contents($file);
+    
+    // Detect and convert encoding from Windows-1252/ISO-8859-1 to UTF-8 if necessary
+    $encoding = mb_detect_encoding($content, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true);
+    if ($encoding !== 'UTF-8') {
+        $content = mb_convert_encoding($content, 'UTF-8', $encoding ?: 'ISO-8859-1');
+    }
+    
+    // Clean UTF-8 BOM if present
+    if (substr($content, 0, 3) === "\xEF\xBB\xBF") {
+        $content = substr($content, 3);
+    }
+    
+    // Normalize line endings
+    $content = str_replace("\r\n", "\n", $content);
+    $content = str_replace("\r", "\n", $content);
+    $lines = explode("\n", $content);
+    
+    // Find the header line (first line that does not start with # and is not empty)
+    $headerLineIndex = 0;
+    while ($headerLineIndex < count($lines) && (empty(trim($lines[$headerLineIndex])) || substr(trim($lines[$headerLineIndex]), 0, 1) === '#')) {
+        $headerLineIndex++;
+    }
+    
+    if ($headerLineIndex >= count($lines)) {
+        set_status("ERRO: O arquivo CSV está vazio ou possui formato inválido.");
+        index();
+        exit;
+    }
+    
+    $headerLine = $lines[$headerLineIndex];
+    $separator = (strpos($headerLine, ';') !== false) ? ';' : ',';
+    
+    $successCount = 0;
+    $errors = [];
+    
+    for ($i = $headerLineIndex + 1; $i < count($lines); $i++) {
+        $line = trim($lines[$i]);
+        if (empty($line) || substr($line, 0, 1) === '#') {
+            continue; // Skip empty lines and comment lines
+        }
+        
+        $row = str_getcsv($line, $separator);
+        if (count($row) < 3) {
+            $errors[] = "Linha " . ($i + 1) . ": Formato de linha inválido (menos de 3 colunas encontradas).";
+            continue;
+        }
+        
+        $grupo         = trim($row[0] ?? "");
+        $grupo_obs     = trim($row[1] ?? "");
+        $subgrupo      = trim($row[2] ?? "");
+        $item          = trim($row[3] ?? "");
+        $item_obs      = trim($row[4] ?? "");
+        
+        // Skip example row if user uploaded it back without editing
+        if (strpos(mb_strtolower($grupo, 'UTF-8'), '(exemplo') !== false) {
+            continue;
+        }
+        
+        // Validation
+        if (empty($grupo)) {
+            $errors[] = "Linha " . ($i + 1) . ": O campo 'Grupo' é obrigatório.";
+            continue;
+        }
+        if (empty($subgrupo)) {
+            $errors[] = "Linha " . ($i + 1) . ": O campo 'EPI / Subgrupo' é obrigatório.";
+            continue;
+        }
+        if (empty($item)) {
+            $errors[] = "Linha " . ($i + 1) . ": O campo 'Descrição / Item' é obrigatório.";
+            continue;
+        }
+        
+        // Let's see if the group already exists in database
+        $grupo_escaped = mysqli_real_escape_string($conn, $grupo);
+        $sqlGroup = query("SELECT ss_e_nb_id, ss_e_tx_descricao FROM ss_epi WHERE ss_e_tx_cadastro_tipo = 'universal' AND ss_e_tx_grupo = '{$grupo_escaped}' AND (ss_e_tx_subgrupo = '' OR ss_e_tx_subgrupo IS NULL) LIMIT 1");
+        
+        if ($sqlGroup && mysqli_num_rows($sqlGroup) > 0) {
+            $rowGroup = mysqli_fetch_assoc($sqlGroup);
+            $grupo_id = (int)$rowGroup["ss_e_nb_id"];
+            
+            // If the CSV has observations for the group, and the group does not currently have observations, update it
+            if (!empty($grupo_obs) && empty($rowGroup["ss_e_tx_descricao"])) {
+                atualizar("ss_epi", ["ss_e_tx_descricao"], [$grupo_obs], $grupo_id);
+            }
+        } else {
+            // Let's create the group first
+            $newGroupData = [
+                "ss_e_tx_grupo"         => $grupo,
+                "ss_e_tx_subgrupo"      => "",
+                "ss_e_tx_item"          => "",
+                "ss_e_tx_descricao"     => $grupo_obs,
+                "ss_e_tx_status"        => "ativo",
+                "ss_e_tx_cadastro_tipo" => "universal"
+            ];
+            $res = inserir("ss_epi", array_keys($newGroupData), array_values($newGroupData));
+            $grupo_id = (int)$res[0];
+        }
+        
+        // Now let's check if the child item (subgrupo + item) already exists in this group
+        $subgrupo_escaped = mysqli_real_escape_string($conn, $subgrupo);
+        $item_escaped     = mysqli_real_escape_string($conn, $item);
+        
+        $sqlCheckChild = query("SELECT ss_e_nb_id FROM ss_epi WHERE ss_e_tx_cadastro_tipo = 'universal' AND ss_e_tx_grupo = '{$grupo_escaped}' AND ss_e_tx_subgrupo = '{$subgrupo_escaped}' AND ss_e_tx_item = '{$item_escaped}' LIMIT 1");
+        
+        if ($sqlCheckChild && mysqli_num_rows($sqlCheckChild) > 0) {
+            $errors[] = "Linha " . ($i + 1) . ": O EPI '{$subgrupo}' com a descrição '{$item}' já está cadastrado no grupo '{$grupo}'.";
+            continue;
+        } else {
+            // Create the child EPI
+            $newChildData = [
+                "ss_e_tx_grupo"         => $grupo,
+                "ss_e_tx_subgrupo"      => $subgrupo,
+                "ss_e_tx_item"          => $item,
+                "ss_e_tx_descricao"     => $item_obs,
+                "ss_e_tx_status"        => "ativo",
+                "ss_e_tx_cadastro_tipo" => "universal"
+            ];
+            inserir("ss_epi", array_keys($newChildData), array_values($newChildData));
+            $successCount++;
+        }
+    }
+    
+    // Save report in session so we can show it as an alert
+    if (!empty($errors)) {
+        $_SESSION["import_csv_errors"] = $errors;
+    }
+    $_SESSION["import_csv_success"] = $successCount;
+    
+    set_status("Importação concluída: {$successCount} itens cadastrados com sucesso.");
+    index();
+    exit;
 }
 ?>
