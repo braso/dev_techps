@@ -1808,14 +1808,14 @@ function imprimirFicha() {
                        FROM ss_epi_entrega ent
                        JOIN solicitacoes_assinatura s ON ent.ss_e_nb_assinatura_id = s.id
                        JOIN assinantes a ON a.id_solicitacao = s.id AND a.enti_nb_id = ent.ss_e_nb_colaborador_id
-                       LEFT JOIN assinatura_eletronica ae ON ae.id_documento COLLATE utf8mb4_general_ci = s.id_documento COLLATE utf8mb4_general_ci AND ae.cpf COLLATE utf8mb4_general_ci = a.cpf COLLATE utf8mb4_general_ci
+                       LEFT JOIN assinatura_eletronica ae ON CONVERT(ae.id_documento USING utf8mb4) COLLATE utf8mb4_general_ci = CONVERT(s.id_documento USING utf8mb4) COLLATE utf8mb4_general_ci AND CONVERT(ae.cpf USING utf8mb4) COLLATE utf8mb4_general_ci = CONVERT(a.cpf USING utf8mb4) COLLATE utf8mb4_general_ci
                        WHERE ent.ss_e_nb_id = {$firstId}
                        ORDER BY s.id DESC LIMIT 1";
         } else {
             $sqlSig = "SELECT s.id, s.id_documento, a.status, a.data_assinatura, ae.ip_address, ae.hash_assinatura, a.cpf, a.nome
                        FROM solicitacoes_assinatura s
                        JOIN assinantes a ON a.id_solicitacao = s.id
-                       LEFT JOIN assinatura_eletronica ae ON ae.id_documento COLLATE utf8mb4_general_ci = s.id_documento COLLATE utf8mb4_general_ci AND ae.cpf COLLATE utf8mb4_general_ci = a.cpf COLLATE utf8mb4_general_ci
+                       LEFT JOIN assinatura_eletronica ae ON CONVERT(ae.id_documento USING utf8mb4) COLLATE utf8mb4_general_ci = CONVERT(s.id_documento USING utf8mb4) COLLATE utf8mb4_general_ci AND CONVERT(ae.cpf USING utf8mb4) COLLATE utf8mb4_general_ci = CONVERT(a.cpf USING utf8mb4) COLLATE utf8mb4_general_ci
                        WHERE a.enti_nb_id = {$colaborador_id} 
                          AND s.tipo_documento_id = {$tipoDocId}
                        ORDER BY s.id DESC LIMIT 1";
