@@ -196,7 +196,8 @@
             "finalDateTime" => $ponto["pont_tx_data"],
             "type"          => $type,
             "breakType"     => $btype,
-            "breaks"        => null
+            "breaks"        => null,
+            "placa"         => $ponto["pont_tx_placa"] ?? null
         ];
         
         if($btype==""){
