@@ -298,12 +298,22 @@
         $data = get_data(
             "SELECT p.plac_nb_id AS id, p.plac_tx_placa AS plate, p.plac_tx_modelo AS model
             FROM placa p
-            JOIN entidade e ON e.enti_nb_empresa = p.plac_nb_empresa
-            JOIN user u ON u.user_nb_entidade = e.enti_nb_id
-            WHERE u.user_nb_id = ?
-            AND (p.plac_nb_entidade IS NULL OR p.plac_nb_entidade = e.enti_nb_id)
+            WHERE (
+                p.plac_nb_empresa IS NOT NULL
+                AND p.plac_nb_empresa = (
+                    SELECT e.enti_nb_empresa FROM entidade e
+                    JOIN user u ON u.user_nb_entidade = e.enti_nb_id
+                    WHERE u.user_nb_id = ?
+                )
+            )
+            OR (
+                p.plac_nb_entidade IS NOT NULL
+                AND p.plac_nb_entidade = (
+                    SELECT u.user_nb_entidade FROM user u WHERE u.user_nb_id = ?
+                )
+            )
             ORDER BY p.plac_tx_placa ASC",
-            [$userId]
+            [$userId, $userId]
         );
 
         header('Content-Type: application/json');
