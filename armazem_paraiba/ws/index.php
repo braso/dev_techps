@@ -8,7 +8,7 @@
     $elements = explode('/', $path);
     //após a linha acima temos elements[0]=api e o elements[1]=login
     
-    if(empty($elements[0]) || empty($elements[1]) || !in_array($elements[1], ['login', 'login_step1', 'login_step2', 'login_rfid', 'login_digital', 'refresh', 'users', 'journeys', 'delLastRegister', 'loginRfid', 'loginSE'])){
+    if(empty($elements[0]) || empty($elements[1]) || !in_array($elements[1], ['login', 'login_step1', 'login_step2', 'login_rfid', 'login_digital', 'refresh', 'users', 'journeys', 'delLastRegister', 'loginRfid', 'loginSE', 'plates'])){
         echo "not found";
         exit;
     }
@@ -44,6 +44,12 @@
         
         case 'users':
             get_user($elements[2]);
+        break;
+
+        case 'plates':
+            if($_SERVER['REQUEST_METHOD'] === 'GET'){
+                get_plates($elements[2]);
+            }
         break;
         
         case 'journeys':

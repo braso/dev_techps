@@ -284,6 +284,33 @@
         exit;
     }
 
+    function get_plates($userId = null){
+        try{
+            $decoded = validate_token($_ENV["APP_KEY"]);
+        }catch(Exception $e){
+            die($e->getMessage());
+        }
+
+        if(empty($userId)){
+            $userId = $decoded->data->user_id;
+        }
+
+        $data = get_data(
+            "SELECT p.plac_nb_id AS id, p.plac_tx_placa AS plate, p.plac_tx_modelo AS model
+            FROM placa p
+            JOIN entidade e ON e.enti_nb_empresa = p.plac_nb_empresa
+            JOIN user u ON u.user_nb_entidade = e.enti_nb_id
+            WHERE u.user_nb_id = ?
+            AND (p.plac_nb_entidade IS NULL OR p.plac_nb_entidade = e.enti_nb_id)
+            ORDER BY p.plac_tx_placa ASC",
+            [$userId]
+        );
+
+        header('Content-Type: application/json');
+        echo json_encode($data ?: []);
+        exit;
+    }
+
     function begin_journey(){
         try{
             $decoded = validate_token($_ENV["APP_KEY"]);
@@ -499,7 +526,8 @@
             "pont_tx_latitude" => (!empty($_POST["latitude"])? $_POST["latitude"]: null),
             "pont_tx_longitude" => (!empty($_POST["longitude"])? $_POST["longitude"]: null),
             "pont_tx_status" => 'ativo',
-            "pont_tx_justificativa" => null
+            "pont_tx_justificativa" => null,
+            "pont_tx_placa" => (!empty($_POST["placa"])? $_POST["placa"]: null)
         ];
 
         $query =
@@ -695,7 +723,8 @@
             "pont_tx_latitude"      => (!empty($requestdata->latitude)? $requestdata->latitude: null),
             "pont_tx_longitude"     => (!empty($requestdata->longitude)? $requestdata->longitude: null),
             "pont_tx_status"        => 'ativo',
-            "pont_tx_justificativa" => null
+            "pont_tx_justificativa" => null,
+            "pont_tx_placa"         => (!empty($requestdata->placa)? $requestdata->placa: null)
         ];
 
         $query =
