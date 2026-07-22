@@ -412,6 +412,136 @@ function ss_inicializar_tabelas() {
         ss_ki_nb_quantidade INT NOT NULL DEFAULT 1
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
     mysqli_query($conn, $sql_kit_item);
+
+    // 7. Garante EPIs universais padrão pré-cadastrados
+    ss_inicializar_epis_padrao();
+}
+
+/**
+ * Garante que os EPIs universais padrão pré-cadastrados existam no banco de dados.
+ */
+function ss_inicializar_epis_padrao() {
+    global $conn;
+
+    if (!$conn) {
+        return;
+    }
+
+    $episPadrao = [
+        [
+            "grupo"    => "PROTEÇÃO DA CABEÇA",
+            "subgrupo" => "Capacete de Segurança",
+            "item"     => "capacete para proteção contra impactos de objetos sobre o crânio"
+        ],
+        [
+            "grupo"    => "PROTEÇÃO DA CABEÇA",
+            "subgrupo" => "Capacete de Segurança Com Carneira",
+            "item"     => "capacete para proteção contra impactos de objetos sobre o crânio"
+        ],
+        [
+            "grupo"    => "EPI PARA PROTEÇÃO DOS OLHOS E FACE",
+            "subgrupo" => "Óculos de Segurança Anti-Embaçante",
+            "item"     => "óculos para proteção dos olhos contra impactos de partículas volantes"
+        ],
+        [
+            "grupo"    => "EPI PARA PROTEÇÃO DOS OLHOS E FACE",
+            "subgrupo" => "Óculos Ampla Visão",
+            "item"     => "óculos para proteção dos olhos contra impactos de partículas volantes"
+        ],
+        [
+            "grupo"    => "EPI PARA PROTEÇÃO AUDITIVA",
+            "subgrupo" => "Protetor Auricular de Silicone Tipo Plug",
+            "item"     => "para proteção do sistema auditivo contra níveis de pressão sonora superiores ao estabelecido na NR-15, Anexos nº 1 e 2"
+        ],
+        [
+            "grupo"    => "EPI PARA PROTEÇÃO AUDITIVA",
+            "subgrupo" => "Protetor Auricular Abafador Concha",
+            "item"     => "para proteção do sistema auditivo contra níveis de pressão sonora superiores ao estabelecido na NR-15, Anexos nº 1 e 2; e"
+        ],
+        [
+            "grupo"    => "EPI PARA PROTEÇÃO RESPIRATÓRIA",
+            "subgrupo" => "Respirador purificador de ar não motorizado",
+            "item"     => "com filtros combinados para proteção das vias respiratórias contra gases e vapores"
+        ],
+        [
+            "grupo"    => "EPI PARA PROTEÇÃO RESPIRATÓRIA",
+            "subgrupo" => "Máscara Descartável Pff2",
+            "item"     => "peça semifacial filtrante para partículas PFF2 para proteção das vias respiratórias contra poeiras, névoas e fumos"
+        ],
+        [
+            "grupo"    => "EPI PARA PROTEÇÃO DOS MEMBROS SUPERIORES",
+            "subgrupo" => "luvas pvc",
+            "item"     => "luvas para proteção das mãos contra agentes químicos"
+        ],
+        [
+            "grupo"    => "EPI PARA PROTEÇÃO DOS MEMBROS SUPERIORES",
+            "subgrupo" => "luvas nitrilica",
+            "item"     => "luvas para proteção das mãos contra agentes químicos"
+        ],
+        [
+            "grupo"    => "EPI PARA PROTEÇÃO DOS MEMBROS SUPERIORES",
+            "subgrupo" => "luvas algodao",
+            "item"     => "luvas para proteção das mãos contra vibrações"
+        ],
+        [
+            "grupo"    => "EPI PARA PROTEÇÃO DOS MEMBROS INFERIORES",
+            "subgrupo" => "Bota Botina Bico PVC",
+            "item"     => "calçado para proteção contra impactos de quedas de objetos sobre os artelhos"
+        ],
+        [
+            "grupo"    => "EPI PARA PROTEÇÃO CONTRA QUEDAS COM DIFERENÇA DE NÍVEL",
+            "subgrupo" => "Cinto Paraquedista",
+            "item"     => "Cinturão de segurança com dispositivo trava-queda para proteção do usuário contra quedas em operações com movimentação vertical ou horizontal"
+        ],
+        [
+            "grupo"    => "EPI PARA PROTEÇÃO CONTRA QUEDAS COM DIFERENÇA DE NÍVEL",
+            "subgrupo" => "Cinto Paraquedista + Talabarte",
+            "item"     => "cinturão de segurança com talabarte para proteção do usuário contra riscos de queda no posicionamento em trabalhos em altura"
+        ],
+        [
+            "grupo"    => "EPI PARA PROTEÇÃO CONTRA QUEDAS COM DIFERENÇA DE NÍVEL",
+            "subgrupo" => "Talabarte",
+            "item"     => "talabarte para proteção do usuário contra riscos de queda no posicionamento em trabalhos em altura"
+        ]
+    ];
+
+    $res = mysqli_query($conn, "SELECT ss_e_tx_grupo, ss_e_tx_subgrupo, ss_e_tx_item FROM ss_epi WHERE ss_e_tx_cadastro_tipo = 'universal'");
+    $existingGroups = [];
+    $existingItems = [];
+    if ($res) {
+        while ($r = mysqli_fetch_assoc($res)) {
+            $g = $r['ss_e_tx_grupo'];
+            $sub = $r['ss_e_tx_subgrupo'];
+            $it = $r['ss_e_tx_item'];
+
+            if (empty($sub) && empty($it)) {
+                $existingGroups[$g] = true;
+            } else {
+                $existingItems[$g . '|' . $sub . '|' . $it] = true;
+            }
+        }
+    }
+
+    foreach ($episPadrao as $epiData) {
+        $g = $epiData['grupo'];
+        $sub = $epiData['subgrupo'];
+        $it = $epiData['item'];
+
+        if (!isset($existingGroups[$g])) {
+            $gEsc = mysqli_real_escape_string($conn, $g);
+            mysqli_query($conn, "INSERT INTO ss_epi (ss_e_tx_grupo, ss_e_tx_subgrupo, ss_e_tx_item, ss_e_tx_descricao, ss_e_tx_status, ss_e_tx_cadastro_tipo) VALUES ('{$gEsc}', '', '', '', 'ativo', 'universal')");
+            $existingGroups[$g] = true;
+        }
+
+        $itemKey = $g . '|' . $sub . '|' . $it;
+        if (!isset($existingItems[$itemKey])) {
+            $gEsc = mysqli_real_escape_string($conn, $g);
+            $subEsc = mysqli_real_escape_string($conn, $sub);
+            $itEsc = mysqli_real_escape_string($conn, $it);
+            mysqli_query($conn, "INSERT INTO ss_epi (ss_e_tx_grupo, ss_e_tx_subgrupo, ss_e_tx_item, ss_e_tx_descricao, ss_e_tx_status, ss_e_tx_cadastro_tipo) VALUES ('{$gEsc}', '{$subEsc}', '{$itEsc}', '', 'ativo', 'universal')");
+            $existingItems[$itemKey] = true;
+        }
+    }
 }
 
 function ss_verificar_assinatura_ativa() {
