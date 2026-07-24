@@ -7,6 +7,14 @@
     require_once "../load_env.php";
     require_once "lib.php";
 
+    // Auto-create pont_tx_fotoPlaca column if not exists
+    try {
+        $check = get_data("SHOW COLUMNS FROM ponto LIKE 'pont_tx_fotoPlaca'");
+        if (empty($check)) {
+            insert_data("ALTER TABLE ponto ADD pont_tx_fotoPlaca VARCHAR(255) NULL", []);
+        }
+    } catch (Exception $e) {}
+
     // 1. Login padrão com usuário e senha
     function make_login(){
         $msg = "";
@@ -525,6 +533,20 @@
             }
         //}
 
+        $fotoPlacaPath = null;
+        if (!empty($_POST["placaPhoto"])) {
+            $base64 = $_POST["placaPhoto"];
+            if (strpos($base64, 'base64,') !== false) $base64 = substr($base64, strpos($base64, 'base64,') + 7);
+            $imgData = base64_decode($base64);
+            if ($imgData !== false) {
+                $uploadDir = __DIR__ . "/../uploads/placa/";
+                if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+                $fileName = "placa_{$entity['enti_tx_matricula']}_" . date("YmdHis") . ".jpg";
+                file_put_contents($uploadDir . $fileName, $imgData);
+                $fotoPlacaPath = "uploads/placa/" . $fileName;
+            }
+        }
+
         $ponto = [
             "pont_nb_userCadastro" => $decoded->data->user_id,
             "pont_tx_dataCadastro" => date("Y-m-d H:i:s"),
@@ -537,7 +559,8 @@
             "pont_tx_longitude" => (!empty($_POST["longitude"])? $_POST["longitude"]: null),
             "pont_tx_status" => 'ativo',
             "pont_tx_justificativa" => null,
-            "pont_tx_placa" => (!empty($_POST["placa"])? $_POST["placa"]: null)
+            "pont_tx_placa" => (!empty($_POST["placa"])? $_POST["placa"]: null),
+            "pont_tx_fotoPlaca" => $fotoPlacaPath
         ];
 
         $query =
@@ -722,6 +745,20 @@
             }
         //}
 
+        $fotoPlacaPath = null;
+        if (!empty($requestdata->placaPhoto)) {
+            $base64 = $requestdata->placaPhoto;
+            if (strpos($base64, 'base64,') !== false) $base64 = substr($base64, strpos($base64, 'base64,') + 7);
+            $imgData = base64_decode($base64);
+            if ($imgData !== false) {
+                $uploadDir = __DIR__ . "/../uploads/placa/";
+                if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+                $fileName = "placa_{$userEntityRegistry['enti_tx_matricula']}_" . date("YmdHis") . ".jpg";
+                file_put_contents($uploadDir . $fileName, $imgData);
+                $fotoPlacaPath = "uploads/placa/" . $fileName;
+            }
+        }
+
         $ponto = [
             "pont_nb_userCadastro"  => $decoded->data->user_id,
             "pont_tx_dataCadastro"  => date("Y-m-d H:i:s"),
@@ -734,7 +771,8 @@
             "pont_tx_longitude"     => (!empty($requestdata->longitude)? $requestdata->longitude: null),
             "pont_tx_status"        => 'ativo',
             "pont_tx_justificativa" => null,
-            "pont_tx_placa"         => (!empty($requestdata->placa)? $requestdata->placa: null)
+            "pont_tx_placa"         => (!empty($requestdata->placa)? $requestdata->placa: null),
+            "pont_tx_fotoPlaca"     => $fotoPlacaPath
         ];
 
         $query =
