@@ -1606,7 +1606,7 @@ AJUSTEPOIJS;
 					var txt = (tds[fotoIdx].textContent || '').trim();
 					if (txt.length > 0) {
 						var path = txt;
-						tds[fotoIdx].innerHTML = '<a href=\"#\" onclick=\"event.preventDefault(); document.getElementById(\\'fotoModalImage\\').src = \\''+path+'\\'; document.getElementById(\\'fotoModal\\').style.display = \\'flex\\';\" style=\"cursor:pointer;font-size:18px;\" title=\"Ver foto\">👁️</a>';
+						tds[fotoIdx].innerHTML = '<img src=\"'+path+'\" style=\"width:60px;height:40px;object-fit:cover;border-radius:4px;cursor:pointer;border:1px solid #ddd;\" onclick=\"event.preventDefault(); document.getElementById(\\'fotoModalImage\\').src = \\''+path+'\\'; document.getElementById(\\'fotoModal\\').style.display = \\'flex\\';\" title=\"Ver foto\">';
 					}
 				}
 			});
