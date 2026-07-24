@@ -1538,7 +1538,8 @@ AJUSTEPOIJS;
 				"(SELECT user_tx_nome FROM user WHERE user.user_nb_id = pont_nb_userCadastro LIMIT 1) as userCadastro", 
 				"pont_nb_userCadastro",
 				"pont_tx_dataCadastro", 
-				"pont_tx_placa", 
+				"pont_tx_placa",
+				"pont_tx_fotoPlaca",
 				"pont_tx_latitude", 
 				"pont_tx_longitude",
 				"pont_tx_dataAtualiza",
@@ -1547,10 +1548,18 @@ AJUSTEPOIJS;
 			]
 		);
 
+		$fotoPlacaIcone = "CONCAT(
+			IF(pont_tx_fotoPlaca IS NOT NULL AND pont_tx_fotoPlaca != '',
+				CONCAT('<a href=\"#\" onclick=\"event.preventDefault(); document.getElementById(\\'fotoModalImage\\').src = \\'',pont_tx_fotoPlaca,'\\'; document.getElementById(\\'fotoModal\\').style.display = \\'flex\\';\" style=\"cursor:pointer;font-size:18px;\" title=\"Ver foto\">👁️</a>'),
+				''
+			)
+		)";
+
 		$gridFields = [
             "CÓD"										=> "pont_nb_id",
 			"DATA"										=> "data(pont_tx_data,1)",
 			"PLACA"									=> "pont_tx_placa",
+			"FOTO"										=> $fotoPlacaIcone,
 			"TIPO"										=> "destacarJornadas(macr_tx_nome)",
 			"MOTIVO"									=> "moti_tx_nome",
 			"LEGENDA"									=> "moti_tx_legenda",
@@ -1748,6 +1757,14 @@ AJUSTEPOIJS;
 			})();
 			</script>";
 		}
+
+		echo "
+		<div id='fotoModal' style='display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:99999;justify-content:center;align-items:center;' onclick='this.style.display=\"none\"'>
+			<div style='position:relative;max-width:90%;max-height:90%;'>
+				<button onclick='document.getElementById(\"fotoModal\").style.display=\"none\"' style='position:absolute;top:-40px;right:0;background:none;border:none;color:#fff;font-size:30px;cursor:pointer;'>&times;</button>
+				<img id='fotoModalImage' src='' style='max-width:100%;max-height:80vh;border-radius:8px;box-shadow:0 0 20px rgba(0,0,0,0.5);'/>
+			</div>
+		</div>";
 
 		carregarJS();
 
