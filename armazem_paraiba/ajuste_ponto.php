@@ -456,8 +456,23 @@
 		$__tiposPoi = [];
 		$__rsTipos = query("SELECT poti_tx_codigo, poti_tx_nome, poti_tx_emoji FROM poi_tipo WHERE poti_tx_status = 'ativo' ORDER BY poti_tx_nome ASC");
 		while($__rsTipos && ($__r = mysqli_fetch_assoc($__rsTipos))){ $__tiposPoi[] = $__r; }
-		$__tiposPoiJson = json_encode($__tiposPoi ?: [], JSON_UNESCAPED_UNICODE);
-		$__poisJson = json_encode($__pois ?: [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+		if (empty($__tiposPoi)) {
+			$__tiposPadrao = [
+				['codigo' => 'carga',        'nome' => 'Carga/Descarga',   'emoji' => '📦'],
+				['codigo' => 'espera',       'nome' => 'Espera',           'emoji' => '⏳'],
+				['codigo' => 'refeicao',     'nome' => 'Refeição',         'emoji' => '🍽️'],
+				['codigo' => 'descanso',     'nome' => 'Descanso',         'emoji' => '😴'],
+				['codigo' => 'abastecimento','nome' => 'Abastecimento',    'emoji' => '⛽'],
+			];
+			foreach ($__tiposPadrao as $t) {
+				query("INSERT IGNORE INTO poi_tipo (poti_tx_codigo, poti_tx_nome, poti_tx_emoji) VALUES (?, ?, ?)", "sss", [$t['codigo'], $t['nome'], $t['emoji']]);
+			}
+			$__tiposPoi = [];
+			$__rsTipos = query("SELECT poti_tx_codigo, poti_tx_nome, poti_tx_emoji FROM poi_tipo WHERE poti_tx_status = 'ativo' ORDER BY poti_tx_nome ASC");
+			while($__rsTipos && ($__r = mysqli_fetch_assoc($__rsTipos))){ $__tiposPoi[] = $__r; }
+		}
+		$__tiposPoiJson = json_encode($__tiposPoi ?: [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
+		$__poisJson = json_encode($__pois ?: [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG);
 		$__sqlErr = $GLOBALS["last_sql_error"] ?? null;
 		echo "<script>console.log('[AJUSTE POI] tipos carregados no PHP: ', ".count($__tiposPoi)."); ";
 		if($__sqlErr){
@@ -1524,6 +1539,10 @@ AJUSTEPOIJS;
 		$iconeExcluir = criarSQLIconeTabela("pont_nb_id", "excluirPonto", "Excluir", "glyphicon glyphicon-remove", "Deseja inativar o registro?", "excluirPontoJS(',pont_nb_id,')");
 		$checkboxBulk = "CONCAT('<input type=\"checkbox\" class=\"bulk-excluir\" data-id=\"', pont_nb_id, '\"/>')";
 
+		$rsFotoPlaca = query("SHOW COLUMNS FROM ponto LIKE 'pont_tx_fotoPlaca'");
+		if ($rsFotoPlaca && !mysqli_fetch_assoc($rsFotoPlaca)) {
+			query("ALTER TABLE ponto ADD COLUMN pont_tx_fotoPlaca VARCHAR(255) NULL");
+		}
 
 		$sql = pegarSqlDia(
 			$motorista["enti_tx_matricula"], 
@@ -1548,13 +1567,11 @@ AJUSTEPOIJS;
 			]
 		);
 
-		$fotoPlacaIcone = "IF(pont_tx_fotoPlaca IS NOT NULL AND pont_tx_fotoPlaca != '', CONCAT('👁️', '|', pont_tx_fotoPlaca), '')";
-
 		$gridFields = [
             "CÓD"										=> "pont_nb_id",
 			"DATA"										=> "data(pont_tx_data,1)",
 			"PLACA"									=> "pont_tx_placa",
-			"FOTO"										=> $fotoPlacaIcone,
+			"FOTO"										=> "pont_tx_fotoPlaca",
 			"TIPO"										=> "destacarJornadas(macr_tx_nome)",
 			"MOTIVO"									=> "moti_tx_nome",
 			"LEGENDA"									=> "moti_tx_legenda",
@@ -1570,16 +1587,29 @@ AJUSTEPOIJS;
 		grid($sql, array_keys($gridFields), array_values($gridFields), "", "12", 1, "desc", -1);
 
 		echo "<script>
-		document.addEventListener('DOMContentLoaded', function(){
-			setTimeout(function(){
-				document.querySelectorAll('td').forEach(function(td){
-					if(td.textContent.includes('👁️|')){
-						var parts = td.textContent.split('|');
-						var path = parts[1];
-						td.innerHTML = '<a href=\"#\" onclick=\"event.preventDefault(); document.getElementById(\\'fotoModalImage\\').src = \\''+path+'\\'; document.getElementById(\\'fotoModal\\').style.display = \\'flex\\';\" style=\"cursor:pointer;font-size:18px;\" title=\"Ver foto\">👁️</a>';
+		$(document).ready(function(){
+			$('[id^=\"contex-grid-\"]').on('draw.dt', function(){
+				var tbl = this;
+				var ths = tbl.querySelectorAll('thead tr th');
+				var fotoIdx = -1;
+				for (var i = 0; i < ths.length; i++) {
+					if ((ths[i].textContent || '').trim().toUpperCase() === 'FOTO') {
+						fotoIdx = i;
+						break;
 					}
-				});
-			}, 500);
+				}
+				if (fotoIdx < 0) return;
+				var rows = tbl.querySelectorAll('tbody tr');
+				for (var r = 0; r < rows.length; r++) {
+					var tds = rows[r].children;
+					if (!tds || tds.length <= fotoIdx) continue;
+					var txt = (tds[fotoIdx].textContent || '').trim();
+					if (txt.length > 0) {
+						var path = txt;
+						tds[fotoIdx].innerHTML = '<a href=\"#\" onclick=\"event.preventDefault(); document.getElementById(\\'fotoModalImage\\').src = \\''+path+'\\'; document.getElementById(\\'fotoModal\\').style.display = \\'flex\\';\" style=\"cursor:pointer;font-size:18px;\" title=\"Ver foto\">👁️</a>';
+					}
+				}
+			});
 		});
 		</script>";
 
