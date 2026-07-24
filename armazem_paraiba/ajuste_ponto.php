@@ -1548,12 +1548,7 @@ AJUSTEPOIJS;
 			]
 		);
 
-		$fotoPlacaIcone = "CONCAT(
-			IF(pont_tx_fotoPlaca IS NOT NULL AND pont_tx_fotoPlaca != '',
-				CONCAT('<a href=\"#\" onclick=\"event.preventDefault(); document.getElementById(\\'fotoModalImage\\').src = \\'',pont_tx_fotoPlaca,'\\'; document.getElementById(\\'fotoModal\\').style.display = \\'flex\\';\" style=\"cursor:pointer;font-size:18px;\" title=\"Ver foto\">👁️</a>'),
-				''
-			)
-		)";
+		$fotoPlacaIcone = "IF(pont_tx_fotoPlaca IS NOT NULL AND pont_tx_fotoPlaca != '', CONCAT('👁️', '|', pont_tx_fotoPlaca), '')";
 
 		$gridFields = [
             "CÓD"										=> "pont_nb_id",
@@ -1573,6 +1568,20 @@ AJUSTEPOIJS;
         ];
 
 		grid($sql, array_keys($gridFields), array_values($gridFields), "", "12", 1, "desc", -1);
+
+		echo "<script>
+		document.addEventListener('DOMContentLoaded', function(){
+			setTimeout(function(){
+				document.querySelectorAll('td').forEach(function(td){
+					if(td.textContent.includes('👁️|')){
+						var parts = td.textContent.split('|');
+						var path = parts[1];
+						td.innerHTML = '<a href=\"#\" onclick=\"event.preventDefault(); document.getElementById(\\'fotoModalImage\\').src = \\''+path+'\\'; document.getElementById(\\'fotoModal\\').style.display = \\'flex\\';\" style=\"cursor:pointer;font-size:18px;\" title=\"Ver foto\">👁️</a>';
+					}
+				});
+			}, 500);
+		});
+		</script>";
 
 		$logoEmpresa = mysqli_fetch_assoc(query(
             "SELECT empr_tx_logo FROM empresa
