@@ -67,12 +67,12 @@ O módulo cria e gerencia as seguintes tabelas MySQL:
 
 ### `funcoes_saude.php`
 
-#### `obterSaldoEstoque(int $idEpi, ?int $empresaId = null, bool $conferirTodasFiliais = false): int`
+#### `obterSaldoEstoque(int $idEpi, ?int $empresaId = null, bool $conferirTodasFiliais = false, ?string $variacao = null): int`
 * **Finalidade**: Retorna o saldo disponível de determinado EPI.
-* **Comportamento**: Se a consulta for feita informando a ID da Matriz, o banco consolida os registros cuja coluna `empresa_id` seja o ID da Matriz, `0` ou `NULL`, garantindo retrocompatibilidade. Se `$conferirTodasFiliais` for verdadeiro, calcula a soma agregada em toda a rede.
+* **Comportamento**: Se a consulta for feita informando a ID da Matriz, o banco consolida os registros cuja coluna `empresa_id` seja o ID da Matriz, `0` ou `NULL`, garantindo retrocompatibilidade. Se `$conferirTodasFiliais` for verdadeiro, calcula a soma agregada em toda a rede. Se `$variacao` for informada (ex: numeração/tamanho), calcula o saldo apenas daquela variação.
 
-#### `registrarMovimentacaoEstoque(int $idEpi, int $qtd, string $tipo, string $motivo, ... ?int $empresaId = null): bool`
-* **Finalidade**: Insere um registro de movimentação de entrada/saída na tabela `ss_epi_estoque` para atualizar os saldos.
+#### `registrarMovimentacaoEstoque(int $idEpi, int $qtd, string $tipo, string $motivo, ... ?int $empresaId = null, ?string $variacao = null): bool`
+* **Finalidade**: Insere um registro de movimentação de entrada/saída na tabela `ss_epi_estoque` para atualizar os saldos. O parâmetro `$variacao` (opcional) registra a numeração/tamanho movimentada (ex: bota 42).
 
 #### `calcularVencimentoEpi(string $dataEntrega, int $vidaUtilDias): string`
 * **Finalidade**: Calcula e retorna a data exata de vencimento estimada somando os dias de vida útil à data de entrega original.

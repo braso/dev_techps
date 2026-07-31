@@ -10,8 +10,9 @@ include "conecta.php";
 function get_saldo() {
     $epi_id = (int)($_GET['epi_id'] ?? 0);
     $empresa_id = (int)($_GET['empresa_id'] ?? 0);
+    $variacao = trim($_GET['variacao'] ?? "");
     ob_clean();
-    echo obterSaldoEstoque($epi_id, $empresa_id);
+    echo obterSaldoEstoque($epi_id, $empresa_id, false, $variacao !== "" ? $variacao : null);
     exit;
 }
 
@@ -121,6 +122,7 @@ function cadastrarEntregaLoteAjax() {
     
     $sucessos = 0;
     $erros = [];
+    $saved_unique_ids = [];
     
     $userCadastro = $_SESSION["user_nb_id"] ?? 0;
     $dataCadastro = date("Y-m-d H:i:s");
@@ -132,6 +134,7 @@ function cadastrarEntregaLoteAjax() {
         $status = $item["status"] ?? "ativo";
         $assinatura = $item["assinatura"] ?? "";
         $foto = $item["foto"] ?? "";
+        $variacao = !empty($item["variacao"]) ? trim($item["variacao"]) : null;
         $empresa_id = !empty($item["empresa_id"]) ? (int)$item["empresa_id"] : null;
         if ($empresa_id === 0) {
             $empresa_id = null; // Matriz
@@ -140,6 +143,18 @@ function cadastrarEntregaLoteAjax() {
         $item_colaborador_id = !empty($item["colaborador_id"]) ? (int)$item["colaborador_id"] : $colaborador_id;
         if ($item_colaborador_id <= 0) {
             $erros[] = "Colaborador inválido para o item do EPI ID {$epi_id}.";
+            continue;
+        }
+        
+        // EPI e validação de variação
+        $epi = carregar("ss_epi", $epi_id);
+        if (empty($epi)) {
+            $erros[] = "EPI não encontrado para ID {$epi_id}.";
+            continue;
+        }
+        $temVariacoes = !empty($epi["ss_e_tx_variacoes"]);
+        if ($temVariacoes && empty($variacao)) {
+            $erros[] = "O EPI '{$epi['ss_e_tx_subgrupo']} / {$epi['ss_e_tx_item']}' possui variações cadastradas. Selecione a variação (numeração/tamanho).";
             continue;
         }
         
@@ -152,17 +167,17 @@ function cadastrarEntregaLoteAjax() {
         
         // 1. Process inter-branch stock transfer if specified
         if ($import_de !== null) {
-            $saldoSource = obterSaldoEstoque($epi_id, $import_de_clean);
+            $saldoSource = obterSaldoEstoque($epi_id, $import_de_clean, false, $variacao);
             if ($quantidade > $saldoSource) {
-                $erros[] = "Transferência falhou: estoque insuficiente na origem para o EPI ID {$epi_id}. Saldo na origem: {$saldoSource}.";
+                $erros[] = "Transferência falhou: estoque insuficiente na origem para o EPI ID {$epi_id}" . ($variacao ? " (variação: {$variacao})" : "") . ". Saldo na origem: {$saldoSource}.";
                 continue;
             }
             
             $descSaida = "Transferência inter-filial para Filial ID " . ($empresa_id ?? "Matriz") . " para entrega Colaborador ID: " . $item_colaborador_id;
-            $sucessoSaida = registrarMovimentacaoEstoque($epi_id, $quantidade, 'saida', $descSaida, null, null, '', null, null, $import_de_clean);
+            $sucessoSaida = registrarMovimentacaoEstoque($epi_id, $quantidade, 'saida', $descSaida, null, null, '', null, null, $import_de_clean, null, null, $variacao);
             
             $descEntrada = "Transferência inter-filial recebida de Filial ID " . ($import_de_clean ?? "Matriz") . " para entrega Colaborador ID: " . $item_colaborador_id;
-            $sucessoEntrada = registrarMovimentacaoEstoque($epi_id, $quantidade, 'entrada', $descEntrada, null, null, '', null, null, $empresa_id);
+            $sucessoEntrada = registrarMovimentacaoEstoque($epi_id, $quantidade, 'entrada', $descEntrada, null, null, '', null, null, $empresa_id, null, null, $variacao);
             
             if (!$sucessoSaida || !$sucessoEntrada) {
                 $erros[] = "Erro interno ao realizar transferência de estoque para o EPI ID {$epi_id}.";
@@ -171,15 +186,9 @@ function cadastrarEntregaLoteAjax() {
         }
         
         // 2. Register delivery
-        $epi = carregar("ss_epi", $epi_id);
-        if (empty($epi)) {
-            $erros[] = "EPI não encontrado para ID {$epi_id}.";
-            continue;
-        }
-        
-        $saldoDest = obterSaldoEstoque($epi_id, $empresa_id);
+        $saldoDest = obterSaldoEstoque($epi_id, $empresa_id, false, $variacao);
         if ($quantidade > $saldoDest) {
-            $erros[] = "Estoque insuficiente na filial selecionada para o EPI ID {$epi_id}. Saldo atual: {$saldoDest}.";
+            $erros[] = "Estoque insuficiente na filial selecionada para o EPI ID {$epi_id}" . ($variacao ? " (variação: {$variacao})" : "") . ". Saldo atual: {$saldoDest}.";
             continue;
         }
         
@@ -189,6 +198,7 @@ function cadastrarEntregaLoteAjax() {
             "ss_e_nb_colaborador_id" => $item_colaborador_id,
             "ss_e_nb_epi_id"         => $epi_id,
             "ss_e_nb_empresa_id"     => $empresa_id,
+            "ss_e_tx_variacao"       => $variacao,
             "ss_e_tx_data_entrega"   => $data_entrega,
             "ss_e_nb_quantidade"     => $quantidade,
             "ss_e_tx_vencimento"     => $vencimento,
@@ -227,9 +237,12 @@ function cadastrarEntregaLoteAjax() {
             
             $pularSubtracao = ($status === 'devolvido' && !empty($item["estornar_saldo"]));
             if (!$pularSubtracao) {
-                registrarMovimentacaoEstoque($epi_id, $quantidade, 'saida', 'Entrega de EPI para colaborador ID: ' . $item_colaborador_id, null, null, '', null, null, $empresa_id);
+                registrarMovimentacaoEstoque($epi_id, $quantidade, 'saida', 'Entrega de EPI para colaborador ID: ' . $item_colaborador_id, null, null, '', null, null, $empresa_id, null, null, $variacao);
             }
             $sucessos++;
+            if (!empty($item["unique_id"])) {
+                $saved_unique_ids[] = $item["unique_id"];
+            }
         } else {
             $erros[] = "Erro ao registrar entrega do EPI ID {$epi_id} no banco de dados.";
         }
@@ -249,7 +262,8 @@ function cadastrarEntregaLoteAjax() {
     echo json_encode([
         "status" => count($erros) === 0 ? "success" : "partial",
         "sucessos" => $sucessos,
-        "erros" => $erros
+        "erros" => $erros,
+        "ids" => $saved_unique_ids
     ]);
     exit;
 }
@@ -330,7 +344,16 @@ function cadastrarEntrega() {
             if ($item["entregar"] == 1) {
                 $epiId = (int)$item["epi_id"];
                 $qtd = (int)$item["quantidade"];
-                $saldo = obterSaldoEstoque($epiId, $empresa_id);
+                $variacao = !empty($item["variacao"]) ? trim($item["variacao"]) : null;
+                
+                $epiKit = carregar("ss_epi", $epiId);
+                if (!empty($epiKit["ss_e_tx_variacoes"] ?? "") && empty($variacao)) {
+                    set_status("ERRO: O EPI '{$epiKit['ss_e_tx_subgrupo']} / {$epiKit['ss_e_tx_item']}' possui variações cadastradas. Selecione a variação.");
+                    modificarEntrega();
+                    exit;
+                }
+                
+                $saldo = obterSaldoEstoque($epiId, $empresa_id, false, $variacao);
                 if ($qtd > $saldo) {
                     set_status("ERRO: Estoque insuficiente para registrar entrega.");
                     modificarEntrega();
@@ -347,6 +370,7 @@ function cadastrarEntrega() {
             $qtd = (int)$item["quantidade"];
             $entregar = (int)$item["entregar"];
             $justificativa = $item["justificativa"] ?? "";
+            $variacao = !empty($item["variacao"]) ? trim($item["variacao"]) : null;
             
             if ($entregar == 1) {
                 $vencimento = calcularVencimentoEpi($data_entrega, (int)$item["vida_util"]);
@@ -354,6 +378,7 @@ function cadastrarEntrega() {
                     "ss_e_nb_colaborador_id" => $colaborador_id,
                     "ss_e_nb_epi_id"         => $epiId,
                     "ss_e_nb_empresa_id"     => $empresa_id,
+                    "ss_e_tx_variacao"       => $variacao,
                     "ss_e_tx_data_entrega"   => $data_entrega,
                     "ss_e_nb_quantidade"     => $qtd,
                     "ss_e_tx_vencimento"     => $vencimento,
@@ -388,7 +413,7 @@ function cadastrarEntrega() {
                             }
                         }
                     }
-                    registrarMovimentacaoEstoque($epiId, $qtd, 'saida', 'Entrega de Kit para colaborador ID: ' . $colaborador_id, null, null, '', null, null, $empresa_id);
+                    registrarMovimentacaoEstoque($epiId, $qtd, 'saida', 'Entrega de Kit para colaborador ID: ' . $colaborador_id, null, null, '', null, null, $empresa_id, null, null, $variacao);
                     $sucesso++;
                 }
             } else {
@@ -397,6 +422,7 @@ function cadastrarEntrega() {
                     "ss_e_nb_colaborador_id" => $colaborador_id,
                     "ss_e_nb_epi_id"         => $epiId,
                     "ss_e_nb_empresa_id"     => $empresa_id,
+                    "ss_e_tx_variacao"       => $variacao,
                     "ss_e_tx_data_entrega"   => $data_entrega,
                     "ss_e_nb_quantidade"     => $qtd,
                     "ss_e_tx_vencimento"     => null,
@@ -433,6 +459,7 @@ function cadastrarEntrega() {
         $quantidade     = (int)$_POST["quantidade"];
         $status         = $_POST["status"] ?? "ativo";
         $assinatura     = $_POST["assinatura"] ?? "";
+        $variacao       = !empty($_POST["variacao"]) ? trim($_POST["variacao"]) : null;
 
         if ($epi_id <= 0) {
             $_POST["errorFields"][] = "epi_id";
@@ -455,6 +482,14 @@ function cadastrarEntrega() {
             exit;
         }
 
+        // Se o EPI possui variações cadastradas, exige informar a variação
+        if (!empty($epi["ss_e_tx_variacoes"]) && empty($variacao)) {
+            $_POST["errorFields"][] = "variacao";
+            set_status("ERRO: Este EPI possui variações cadastradas. Selecione a variação (numeração/tamanho).");
+            modificarEntrega();
+            exit;
+        }
+
         if (!empty($epi["ss_e_tx_validade_ca"])) {
             if (verificarCAVencido($data_entrega, $epi["ss_e_tx_validade_ca"])) {
                 $_POST["errorFields"][] = "data_entrega";
@@ -465,7 +500,7 @@ function cadastrarEntrega() {
         }
 
         if (empty($_POST["id"])) {
-            $saldo = obterSaldoEstoque($epi_id, $empresa_id);
+            $saldo = obterSaldoEstoque($epi_id, $empresa_id, false, $variacao);
             if ($quantidade > $saldo) {
                 $_POST["errorFields"][] = "quantidade";
                 set_status("ERRO: Estoque insuficiente para entrega. Saldo atual: {$saldo}.");
@@ -518,6 +553,7 @@ function cadastrarEntrega() {
             "ss_e_nb_colaborador_id" => $colaborador_id,
             "ss_e_nb_epi_id"         => $epi_id,
             "ss_e_nb_empresa_id"     => $empresa_id,
+            "ss_e_tx_variacao"       => $variacao,
             "ss_e_tx_data_entrega"   => $data_entrega,
             "ss_e_nb_quantidade"     => $quantidade,
             "ss_e_tx_vencimento"     => $vencimento,
@@ -535,7 +571,7 @@ function cadastrarEntrega() {
                 $id = (int)$res[0];
                 $pularSubtracao = ($status === 'devolvido' && !empty($_POST["estornar_saldo"]));
                 if (!$pularSubtracao) {
-                    registrarMovimentacaoEstoque($epi_id, $quantidade, 'saida', 'Entrega de EPI para colaborador ID: ' . $colaborador_id, null, null, '', null, null, $empresa_id);
+                    registrarMovimentacaoEstoque($epi_id, $quantidade, 'saida', 'Entrega de EPI para colaborador ID: ' . $colaborador_id, null, null, '', null, null, $empresa_id, null, null, $variacao);
                 }
                 
                 try {
@@ -559,7 +595,8 @@ function cadastrarEntrega() {
             if ($entregaAnterior["ss_e_tx_status"] !== 'devolvido' && $status === 'devolvido') {
                 if (!empty($_POST["estornar_saldo"])) {
                     $empresa_id_prev = (int)($entregaAnterior["ss_e_nb_empresa_id"] ?? 0);
-                    registrarMovimentacaoEstoque($epi_id, $quantidade, 'entrada', 'Devolução de EPI de colaborador ID: ' . $colaborador_id, null, null, '', null, null, $empresa_id_prev);
+                    $variacao_prev = !empty($entregaAnterior["ss_e_tx_variacao"]) ? $entregaAnterior["ss_e_tx_variacao"] : $variacao;
+                    registrarMovimentacaoEstoque($epi_id, $quantidade, 'entrada', 'Devolução de EPI de colaborador ID: ' . $colaborador_id, null, null, '', null, null, $empresa_id_prev, null, null, $variacao_prev);
                 }
             }
             
@@ -593,7 +630,7 @@ function modificarEntrega() {
         while ($row = mysqli_fetch_assoc($sqlKits)) {
             $kitId = (int)$row["ss_k_nb_id"];
             $sqlItens = query("SELECT ki.ss_ki_nb_epi_id, ki.ss_ki_nb_quantidade, 
-                                      epi.ss_e_tx_grupo, epi.ss_e_tx_subgrupo, epi.ss_e_tx_item, epi.ss_e_tx_ca, epi.ss_e_tx_fabricante, epi.ss_e_nb_vida_util, epi.ss_e_tx_foto
+                                      epi.ss_e_tx_grupo, epi.ss_e_tx_subgrupo, epi.ss_e_tx_item, epi.ss_e_tx_ca, epi.ss_e_tx_fabricante, epi.ss_e_nb_vida_util, epi.ss_e_tx_foto, epi.ss_e_tx_variacoes
                                FROM ss_kit_item ki
                                JOIN ss_epi epi ON ki.ss_ki_nb_epi_id = epi.ss_e_nb_id
                                WHERE ki.ss_ki_nb_kit_id = {$kitId} AND epi.ss_e_tx_status = 'ativo'");
@@ -612,6 +649,7 @@ function modificarEntrega() {
                         "fabricante" => $itemRow["ss_e_tx_fabricante"],
                         "vida_util" => (int)$itemRow["ss_e_nb_vida_util"],
                         "foto" => $itemRow["ss_e_tx_foto"],
+                        "variacoes" => $itemRow["ss_e_tx_variacoes"] ?? "",
                         "saldo" => $saldo
                     ];
                 }
@@ -630,6 +668,15 @@ function modificarEntrega() {
     if ($sqlEpisFotos) {
         while ($row = mysqli_fetch_assoc($sqlEpisFotos)) {
             $epiFotosMap[$row["ss_e_nb_id"]] = $row["ss_e_tx_foto"];
+        }
+    }
+
+    // Carregar mapa de variações dos EPIs de estoque
+    $sqlEpisVariacoes = query("SELECT ss_e_nb_id, ss_e_tx_variacoes FROM ss_epi WHERE ss_e_tx_status = 'ativo' AND ss_e_tx_cadastro_tipo = 'estoque'");
+    $epiVariacoesMap = [];
+    if ($sqlEpisVariacoes) {
+        while ($row = mysqli_fetch_assoc($sqlEpisVariacoes)) {
+            $epiVariacoesMap[(int)$row["ss_e_nb_id"]] = $row["ss_e_tx_variacoes"] ?? "";
         }
     }
 
@@ -756,6 +803,16 @@ function modificarEntrega() {
         "perdido" => "Perdido/Extraviado"
     ]);
 
+    $campo_variacao = '
+        <div class="col-sm-2 margin-bottom-5 campo-fit-content" id="container_variacao" style="display: none;">
+            <label class="control-label">Variação (Numeração/Tamanho)</label>
+            <select name="variacao" id="variacao" class="form-control input-sm">
+                <option value="">Selecione a variação</option>
+            </select>
+            <span class="help-block" style="font-size: 11px; margin-top: 2px; margin-bottom: 0;">Ex.: botas 42, 44, 46</span>
+        </div>
+    ';
+
     $campo_estorno = '
         <div class="col-sm-2 margin-bottom-5 campo-fit-content" id="container_estorno" style="display: none; padding-top: 23px;">
             <label style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-weight: bold;">
@@ -831,14 +888,15 @@ function modificarEntrega() {
                                     <th style='width: 70px; text-align: center;'>Entregar?</th>
                                     <th style='width: 80px;'>Imagem</th>
                                     <th>EPI</th>
-                                    <th style='width: 100px;'>Qtd. Kit</th>
+                                    <th style='width: 90px;'>Qtd. Kit</th>
+                                    <th style='width: 110px;'>Variação</th>
                                     <th style='width: 150px;'>Saldo Estoque</th>
                                     <th style='width: 140px;'>Foto da Entrega</th>
                                     <th>Justificativa (se não entregar)</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr><td colspan='7' style='text-align: center; color: #999;'>Selecione um kit para carregar os itens.</td></tr>
+                                <tr><td colspan='8' style='text-align: center; color: #999;'>Selecione um kit para carregar os itens.</td></tr>
                             </tbody>
                          </table>
                      </div>
@@ -862,7 +920,7 @@ function modificarEntrega() {
     echo linha_form([$campo_empresa, $campo_colaborador, $campo_tipo_entrega]);
     echo linha_form([$campo_epi, $campo_kit]);
     echo linha_form([$preview_epi_div]);
-    echo linha_form([$campo_data, $campo_quant, $campo_status, $campo_estorno]);
+    echo linha_form([$campo_data, $campo_quant, $campo_status, $campo_variacao, $campo_estorno]);
     echo linha_form([$campo_foto]);
     
     $legenda_html = '
@@ -906,6 +964,7 @@ function modificarEntrega() {
     var kitsData = " . json_encode($kitsData) . ";
     var empresasNomes = " . $jsEmpresas . ";
     var epiFotosMap = " . json_encode($epiFotosMap) . ";
+    var epiVariacoes = " . json_encode($epiVariacoesMap) . ";
     const userEmpresaId = " . json_encode($_SESSION["user_nb_empresa"] ?? "") . ";
     const isEditMode = " . (!empty($_POST["id"]) ? "true" : "false") . ";
     var allEpis = " . json_encode($allEpisArr) . ";
@@ -1019,12 +1078,36 @@ function modificarEntrega() {
                 if (!$('#saldo_individual_badge').length) {
                     $('select[name=\"epi_id\"]').closest('.col-sm-4').find('label').append(' <span id=\"saldo_individual_badge\" class=\"label label-info\" style=\"display: none;\"></span>');
                 }
-                $.get('entrega_epi.php?acao=get_saldo&epi_id=' + epiId + '&empresa_id=' + empresaId, function(saldo) {
-                    $('#saldo_individual_badge').html('Saldo: ' + saldo).show();
+                const variacao = $('#variacao').val() || '';
+                $.get('entrega_epi.php?acao=get_saldo&epi_id=' + epiId + '&empresa_id=' + empresaId + '&variacao=' + encodeURIComponent(variacao), function(saldo) {
+                    $('#saldo_individual_badge').html('Saldo' + (variacao ? ' (' + variacao + ')' : '') + ': ' + saldo).show();
                 });
             } else {
                 $('#saldo_individual_badge').hide();
             }
+        }
+
+        function atualizarVariacoes() {
+            const epiId = $('select[name=\"epi_id\"]').val();
+            const selectVar = $('#variacao');
+            selectVar.empty().append('<option value=\"\">Selecione a variação</option>');
+            
+            const variacoesStr = epiVariacoes[epiId] || '';
+            const lista = variacoesStr.split(',').map(function(v) { return v.trim(); }).filter(Boolean);
+            
+            if (lista.length > 0) {
+                lista.forEach(function(v) {
+                    selectVar.append('<option value=\"' + v + '\">' + v + '</option>');
+                });
+                const currentVar = " . json_encode($_POST["variacao"] ?? "") . ";
+                if (currentVar) {
+                    selectVar.val(currentVar);
+                }
+                $('#container_variacao').show();
+            } else {
+                $('#container_variacao').hide();
+            }
+            updateIndividualEpiSaldo();
         }
 
         function updateKitTableSaldos() {
@@ -1035,9 +1118,10 @@ function modificarEntrega() {
                 const chk = tr.find('.chk_item_entregar');
                 const epiId = chk.val();
                 if (epiId) {
-                    $.get('entrega_epi.php?acao=get_saldo&epi_id=' + epiId + '&empresa_id=' + empresaId, function(saldo) {
+                    const variacao = tr.find('.sel_item_variacao').val() || '';
+                    $.get('entrega_epi.php?acao=get_saldo&epi_id=' + epiId + '&empresa_id=' + empresaId + '&variacao=' + encodeURIComponent(variacao), function(saldo) {
                         saldo = parseInt(saldo) || 0;
-                        const tdSaldo = tr.find('td').eq(4);
+                        const tdSaldo = tr.find('td').eq(5);
                         const qtd = parseInt(tr.find('td').eq(3).text()) || 0;
                         if (saldo >= qtd) {
                             tdSaldo.html('<span class=\"label label-success\">Saldo: ' + saldo + '</span>');
@@ -1053,7 +1137,12 @@ function modificarEntrega() {
         }
         
         $('select[name=\"epi_id\"]').on('change', function() {
+            atualizarVariacoes();
             updateIndividualEpiPreview();
+            updateIndividualEpiSaldo();
+        });
+        
+        $('#variacao').on('change', function() {
             updateIndividualEpiSaldo();
         });
         
@@ -1064,6 +1153,7 @@ function modificarEntrega() {
         
         updateIndividualEpiPreview();
         updateIndividualEpiSaldo();
+        atualizarVariacoes();
 
         $('#foto').on('change', function(event) {
             $('#new_photos_container').empty();
@@ -1107,6 +1197,7 @@ function modificarEntrega() {
                 $('select[name=\"epi_id\"]').closest('.col-sm-4').hide();
                 $('input[name=\"quantidade\"]').closest('.col-sm-2').hide();
                 $('select[name=\"status\"]').closest('.col-sm-2').hide();
+                $('#container_variacao').hide();
                 $('#preview_epi_individual_container').hide();
                 $('#saldo_individual_badge').hide();
                 
@@ -1224,11 +1315,21 @@ function modificarEntrega() {
                     const tdFoto = $('<td style=\"text-align: center;\">').append(fotoHtml);
                     const tdEpi = $('<td>').text(item.grupo + ' / ' + item.subgrupo + ' / ' + item.item + ' (CA: ' + (item.ca || 'N/A') + ')');
                     const tdQtd = $('<td>').text(item.quantidade);
+                    
+                    let variacaoHtml = '<span class=\"text-muted\">-</span>';
+                    if (item.variacoes) {
+                        const listaVar = item.variacoes.split(',').map(function(v) { return v.trim(); }).filter(Boolean);
+                        if (listaVar.length > 0) {
+                            variacaoHtml = '<select class=\"form-control input-sm sel_item_variacao\"><option value=\"\">Selecione</option>' + listaVar.map(function(v) { return '<option value=\"' + v + '\">' + v + '</option>'; }).join('') + '</select>';
+                        }
+                    }
+                    const tdVariacao = $('<td style=\"text-align: center;\">').html(variacaoHtml);
+                    
                     const tdSaldo = $('<td>').html('<span class=\"label label-warning\">Buscando...</span>');
                     const tdFotoEntrega = $('<td style=\"text-align: center;\">').html('<input type=\"file\" class=\"file_foto_entrega\" accept=\"image/*\" style=\"max-width: 130px;\">');
                     const tdJust = $('<td>').html('<input type=\"text\" class=\"form-control input-sm txt_item_justificativa\" placeholder=\"Justificativa se desmarcado\" disabled style=\"width: 100%;\">');
                     
-                    tr.append(tdCheck).append(tdFoto).append(tdEpi).append(tdQtd).append(tdSaldo).append(tdFotoEntrega).append(tdJust);
+                    tr.append(tdCheck).append(tdFoto).append(tdEpi).append(tdQtd).append(tdVariacao).append(tdSaldo).append(tdFotoEntrega).append(tdJust);
                     tbody.append(tr);
                 });
                 
@@ -1238,9 +1339,10 @@ function modificarEntrega() {
                     const chk = tr.find('.chk_item_entregar');
                     const epiId = chk.val();
                     if (epiId) {
-                        $.get('entrega_epi.php?acao=get_saldo&epi_id=' + epiId + '&empresa_id=' + empresaId, function(saldo) {
+                        const variacao = tr.find('.sel_item_variacao').val() || '';
+                        $.get('entrega_epi.php?acao=get_saldo&epi_id=' + epiId + '&empresa_id=' + empresaId + '&variacao=' + encodeURIComponent(variacao), function(saldo) {
                             saldo = parseInt(saldo) || 0;
-                            const tdSaldo = tr.find('td').eq(4);
+                            const tdSaldo = tr.find('td').eq(5);
                             const qtd = parseInt(tr.find('td').eq(3).text()) || 0;
                             if (saldo >= qtd) {
                                 tdSaldo.html('<span class=\"label label-success\">Saldo: ' + saldo + '</span>');
@@ -1265,7 +1367,7 @@ function modificarEntrega() {
                     const itemOriginal = kitsData[kitId].itens[index];
                     
                     const chkVal = tr.find('.chk_item_entregar').val();
-                    const tdSaldo = tr.find('td').eq(4).text();
+                    const tdSaldo = tr.find('td').eq(5).text();
                     let currentSaldo = 0;
                     if (tdSaldo.indexOf('Saldo: ') !== -1) {
                         currentSaldo = parseInt(tdSaldo.replace('Saldo: ', '')) || 0;
@@ -1277,6 +1379,7 @@ function modificarEntrega() {
                         epi_id: itemOriginal.epi_id,
                         quantidade: itemOriginal.quantidade,
                         vida_util: itemOriginal.vida_util,
+                        variacao: tr.find('.sel_item_variacao').val() || '',
                         entregar: checked ? 1 : 0,
                         saldo: currentSaldo,
                         justificativa: justificativa,
@@ -1293,6 +1396,27 @@ function modificarEntrega() {
                 inputJust.prop('disabled', checked);
                 if (checked) {
                     inputJust.val('');
+                }
+                updateKitJson();
+            });
+
+            $(document).on('change', '.sel_item_variacao', function() {
+                const tr = $(this).closest('tr');
+                const epiId = tr.find('.chk_item_entregar').val();
+                const variacao = $(this).val() || '';
+                const empresaId = $('select[name=\"empresa_id\"]').val() || userEmpresaId || '';
+                if (epiId) {
+                    $.get('entrega_epi.php?acao=get_saldo&epi_id=' + epiId + '&empresa_id=' + empresaId + '&variacao=' + encodeURIComponent(variacao), function(saldo) {
+                        saldo = parseInt(saldo) || 0;
+                        const tdSaldo = tr.find('td').eq(5);
+                        const qtd = parseInt(tr.find('td').eq(3).text()) || 0;
+                        if (saldo >= qtd) {
+                            tdSaldo.html('<span class=\"label label-success\">Saldo: ' + saldo + '</span>');
+                        } else {
+                            tdSaldo.html('<span class=\"label label-danger\">Insuficiente: ' + saldo + '</span>');
+                        }
+                        updateKitJson();
+                    });
                 }
                 updateKitJson();
             });
@@ -1334,16 +1458,30 @@ function modificarEntrega() {
                     }
                     const items = JSON.parse(jsonStr);
                     let insufficientItems = [];
+                    let missingVariacaoItems = [];
                     items.forEach(function(item) {
                         if (item.entregar === 1) {
+                            const kit = kitsData[kitId];
+                            const matched = kit.itens.find(i => i.epi_id == item.epi_id);
+                            const name = matched ? (matched.grupo + ' / ' + matched.subgrupo + ' / ' + matched.item) : 'EPI ID: ' + item.epi_id;
+                            
+                            if (matched && matched.variacoes && !item.variacao) {
+                                missingVariacaoItems.push(name);
+                            }
                             if (item.saldo < item.quantidade) {
-                                const kit = kitsData[kitId];
-                                const matched = kit.itens.find(i => i.epi_id == item.epi_id);
-                                const name = matched ? (matched.grupo + ' / ' + matched.subgrupo + ' / ' + matched.item) : 'EPI ID: ' + item.epi_id;
                                 insufficientItems.push(name + ' (Necessário: ' + item.quantidade + ', Saldo: ' + item.saldo + ')');
                             }
                         }
                     });
+                    if (missingVariacaoItems.length > 0) {
+                        e.preventDefault();
+                        Swal.fire({
+                            title: 'Variação obrigatória!',
+                            html: 'Selecione a variação (numeração/tamanho) para os seguintes itens:<br><br>' + missingVariacaoItems.join('<br>'),
+                            icon: 'error'
+                        });
+                        return;
+                    }
                     if (insufficientItems.length > 0) {
                         e.preventDefault();
                         Swal.fire({
@@ -1392,6 +1530,14 @@ function modificarEntrega() {
             return;
         }
         
+        var variacao = $('#variacao').val() || '';
+        var variacoesStr = epiVariacoes[epiId] || '';
+        var temVariacoes = variacoesStr.split(',').map(function(v) { return v.trim(); }).filter(Boolean).length > 0;
+        if (temVariacoes && !variacao) {
+            alert('Este EPI possui variações cadastradas. Selecione a variação (numeração/tamanho).');
+            return;
+        }
+        
         var fotoInput = $('#foto')[0];
         var files = (fotoInput && fotoInput.files) ? fotoInput.files : [];
         
@@ -1399,11 +1545,11 @@ function modificarEntrega() {
             var reader = new FileReader();
             reader.onload = function(e) {
                 var payload = e.target.result;
-                addItemObj(colabId, colabNome, epiId, epiNome, quantidade, status, empresaId, payload);
+                addItemObj(colabId, colabNome, epiId, epiNome, quantidade, status, empresaId, payload, variacao);
             };
             reader.readAsDataURL(files[0]);
         } else {
-            addItemObj(colabId, colabNome, epiId, epiNome, quantidade, status, empresaId, \"\");
+            addItemObj(colabId, colabNome, epiId, epiNome, quantidade, status, empresaId, \"\", variacao);
         }
     }
 
@@ -1425,13 +1571,13 @@ function modificarEntrega() {
         
         kit.itens.forEach(function(item) {
             var epiNome = item.grupo + ' / ' + item.subgrupo + ' / ' + item.item + ' (CA: ' + (item.ca || 'N/A') + ')';
-            addItemObj(colabId, colabNome, item.epi_id, epiNome, item.quantidade, 'ativo', empresaId, \"\");
+            addItemObj(colabId, colabNome, item.epi_id, epiNome, item.quantidade, 'ativo', empresaId, \"\", '', item.variacoes);
         });
         
         $('#kit_id').val('').trigger('change');
     }
 
-    function addItemObj(colabId, colabNome, epiId, epiNome, quantidade, status, empresaId, fotoPayload) {
+    function addItemObj(colabId, colabNome, epiId, epiNome, quantidade, status, empresaId, fotoPayload, variacao, variacoes) {
         var uniqueId = new Date().getTime() + '_' + Math.random().toString(36).substr(2, 5);
         
         var item = {
@@ -1443,6 +1589,8 @@ function modificarEntrega() {
             quantidade: parseInt(quantidade, 10),
             status: status,
             empresa_id: empresaId,
+            variacao: variacao || '',
+            variacoes: variacoes || epiVariacoes[epiId] || '',
             foto_payload: fotoPayload,
             import_de: \"\"
         };
@@ -1513,6 +1661,7 @@ function modificarEntrega() {
                                     '<th style=\"width: 70px; text-align: center;\">Foto</th>' +
                                     '<th>EPI</th>' +
                                     '<th style=\"text-align: center; width: 80px;\">Qtd</th>' +
+                                    '<th style=\"width: 120px;\">Variação</th>' +
                                     '<th>Filial de Origem</th>' +
                                     '<th style=\"text-align: center;\">Status</th>' +
                                     '<th style=\"width: 250px;\">Estoque / Importação</th>' +
@@ -1538,6 +1687,18 @@ function modificarEntrega() {
                 if (item.status === 'devolvido') statusLabel = '<span class=\"label label-sm label-info\">Devolvido</span>';
                 else if (item.status === 'perdido') statusLabel = '<span class=\"label label-sm label-danger\">Perdido</span>';
                 else if (item.status === 'substituido') statusLabel = '<span class=\"label label-sm label-warning\">Substituído</span>';
+                
+                var variacaoCellHtml = '<span class=\"text-muted\">-</span>';
+                if (item.variacoes) {
+                    var listaVar = item.variacoes.split(',').map(function(v) { return v.trim(); }).filter(Boolean);
+                    if (listaVar.length > 0) {
+                        var opts = '<option value=\"\">Selecione</option>';
+                        listaVar.forEach(function(v) {
+                            opts += '<option value=\"' + v + '\"' + (item.variacao === v ? ' selected' : '') + '>' + v + '</option>';
+                        });
+                        variacaoCellHtml = '<select class=\"form-control input-sm sel_lote_variacao\" data-unique=\"' + item.unique_id + '\">' + opts + '</select>';
+                    }
+                }
                 
                 var origNome = empresasNomes[item.empresa_id] || 'Matriz';
                 
@@ -1574,6 +1735,7 @@ function modificarEntrega() {
                     '<td style=\"text-align: center; vertical-align: middle;\">' + fotoHtml + '</td>' +
                     '<td style=\"vertical-align: middle;\">' + item.epi_nome + '</td>' +
                     '<td style=\"text-align: center; font-weight: bold; vertical-align: middle;\">' + item.quantidade + '</td>' +
+                    '<td style=\"text-align: center; vertical-align: middle;\">' + variacaoCellHtml + '</td>' +
                     '<td style=\"vertical-align: middle;\">' + origNome + '</td>' +
                     '<td style=\"text-align: center; vertical-align: middle;\">' + statusLabel + '</td>' +
                     '<td style=\"vertical-align: middle;\">' + estoqueBadge + importDropdown + '</td>' +
@@ -1602,6 +1764,14 @@ function modificarEntrega() {
             item.import_de = val;
         }
     }
+
+    $(document).on('change', '.sel_lote_variacao', function() {
+        var uniqueId = $(this).attr('data-unique');
+        var item = itensEntregaLote.find(function(it) { return it.unique_id === uniqueId; });
+        if (item) {
+            item.variacao = $(this).val() || '';
+        }
+    });
     
     function removerItemEntrega(uniqueId) {
         itensEntregaLote = itensEntregaLote.filter(function(it) { return it.unique_id !== uniqueId; });
@@ -1619,6 +1789,17 @@ function modificarEntrega() {
         if (itensFunc.length === 0) return;
         
         var colabNome = itensFunc[0] ? itensFunc[0].colaborador_nome : '';
+        
+        var hasMissingVariacao = false;
+        itensFunc.forEach(function(item) {
+            if (item.variacoes && !item.variacao) {
+                hasMissingVariacao = true;
+            }
+        });
+        if (hasMissingVariacao) {
+            alert('Erro: Um ou mais itens possuem variações cadastradas e nenhuma variação foi selecionada.');
+            return;
+        }
         
         var hasStockIssues = false;
         itensFunc.forEach(function(item) {
@@ -1654,20 +1835,33 @@ function modificarEntrega() {
             dataType: 'json',
             success: function(response) {
                 if (response.status === 'success' || response.status === 'partial') {
-                    if (response.erros && response.erros.length > 0) {
-                        alert('Avisos durante a gravação das entregas:\\n\\n' + response.erros.join('\\n'));
-                    }
-                    
-                    // Remove these items from global array
-                    itensEntregaLote = itensEntregaLote.filter(function(item) { return item.colaborador_id != colabId; });
+                    var idsSalvos = response.ids || [];
+                    itensEntregaLote = itensEntregaLote.filter(function(item) {
+                        if (item.colaborador_id != colabId) return true;
+                        return idsSalvos.indexOf(item.unique_id) === -1;
+                    });
                     desenharListas();
-                    alert('Entregas de ' + colabNome + ' registradas com sucesso!');
+                    
+                    var msg = response.sucessos > 0
+                        ? 'Entregas de ' + colabNome + ' registradas com sucesso!'
+                        : 'Nenhuma entrega foi registrada.';
+                    if (response.erros && response.erros.length > 0) {
+                        msg += '\\n\\nFalhas:\\n' + response.erros.join('\\n');
+                    }
+                    alert(msg);
                 } else {
                     alert('Erro ao registrar entregas: ' + (response.message || ''));
                 }
             },
-            error: function() {
-                alert('Erro na comunicação com o servidor.');
+            error: function(xhr) {
+                var msg = '';
+                try {
+                    var parsed = JSON.parse(xhr.responseText);
+                    msg = parsed.message || '';
+                } catch (e) {
+                    msg = (xhr.responseText || '').substring(0, 500);
+                }
+                alert('Erro na comunicação com o servidor: ' + msg);
             }
         });
     }
@@ -1676,6 +1870,17 @@ function modificarEntrega() {
         var dataEntrega = $('#data_entrega').val();
         if (!dataEntrega) {
             alert('Por favor, informe a Data de Entrega.');
+            return;
+        }
+        
+        var hasMissingVariacao = false;
+        itensEntregaLote.forEach(function(item) {
+            if (item.variacoes && !item.variacao) {
+                hasMissingVariacao = true;
+            }
+        });
+        if (hasMissingVariacao) {
+            alert('Erro: Um ou mais itens possuem variações cadastradas e nenhuma variação foi selecionada.');
             return;
         }
         
@@ -1713,19 +1918,38 @@ function modificarEntrega() {
             dataType: 'json',
             success: function(response) {
                 if (response.status === 'success' || response.status === 'partial') {
-                    if (response.erros && response.erros.length > 0) {
-                        alert('Avisos durante a gravação das entregas:\\n\\n' + response.erros.join('\\n'));
-                    }
-                    itensEntregaLote = [];
+                    var idsSalvos = response.ids || [];
+                    itensEntregaLote = itensEntregaLote.filter(function(item) {
+                        return idsSalvos.indexOf(item.unique_id) === -1;
+                    });
                     desenharListas();
-                    alert('Todas as entregas registradas com sucesso!');
-                    window.location.href = 'entrega_epi.php';
+                    
+                    var msg = '';
+                    if (response.status === 'success') {
+                        msg = 'Todas as entregas registradas com sucesso!';
+                        alert(msg);
+                        window.location.href = 'entrega_epi.php';
+                        return;
+                    }
+                    if (response.sucessos > 0) {
+                        msg = 'Algumas entregas foram registradas, mas houve falhas:\\n\\n' + (response.erros || []).join('\\n');
+                    } else {
+                        msg = 'Nenhuma entrega foi registrada:\\n\\n' + (response.erros || []).join('\\n');
+                    }
+                    alert(msg);
                 } else {
                     alert('Erro ao registrar entregas: ' + (response.message || ''));
                 }
             },
-            error: function() {
-                alert('Erro na comunicação com o servidor.');
+            error: function(xhr) {
+                var msg = '';
+                try {
+                    var parsed = JSON.parse(xhr.responseText);
+                    msg = parsed.message || '';
+                } catch (e) {
+                    msg = (xhr.responseText || '').substring(0, 500);
+                }
+                alert('Erro na comunicação com o servidor: ' + msg);
             }
         });
     }
@@ -1756,6 +1980,7 @@ function excluirEntrega() {
             $epi_id = (int)$entrega["ss_e_nb_epi_id"];
             $quantidade = (int)$entrega["ss_e_nb_quantidade"];
             $empresa_id = !empty($entrega["ss_e_nb_empresa_id"]) ? (int)$entrega["ss_e_nb_empresa_id"] : null;
+            $variacao = !empty($entrega["ss_e_tx_variacao"]) ? $entrega["ss_e_tx_variacao"] : null;
             
             if ($estornar) {
                 // Reverter saldo no estoque (entrada)
@@ -1769,7 +1994,10 @@ function excluirEntrega() {
                     '', 
                     null, 
                     null, 
-                    $empresa_id
+                    $empresa_id,
+                    null,
+                    null,
+                    $variacao
                 );
                 set_status("Entrega excluída com sucesso e estoque estornado!");
             } else {
@@ -1845,7 +2073,7 @@ function imprimirFicha() {
 
     // Query concatenando Grupo, Subgrupo e Item aliando como ss_e_tx_nome para compatibilidade
     $sql = "SELECT ent.ss_e_nb_id, 
-                   CONCAT(epi.ss_e_tx_grupo, ' / ', IFNULL(epi.ss_e_tx_subgrupo, ''), ' / ', IFNULL(epi.ss_e_tx_item, '')) AS ss_e_tx_nome, 
+                   CONCAT(epi.ss_e_tx_grupo, ' / ', IFNULL(epi.ss_e_tx_subgrupo, ''), ' / ', IFNULL(epi.ss_e_tx_item, ''), IFNULL(CONCAT(' (Var: ', ent.ss_e_tx_variacao, ')'), '')) AS ss_e_tx_nome, 
                    epi.ss_e_tx_ca, 
                    ent.ss_e_tx_data_entrega, 
                    ent.ss_e_nb_quantidade, 
@@ -2128,7 +2356,7 @@ function index() {
     }
 
     $queryBase = "SELECT * FROM (
-                    SELECT ent.ss_e_nb_id, col.enti_tx_nome AS ss_c_tx_nome, IFNULL(emp.empr_tx_nome, 'Matriz') AS filial_nome, epi.ss_e_tx_foto AS ss_e_tx_foto_epi, CONCAT(epi.ss_e_tx_grupo, ' / ', IFNULL(epi.ss_e_tx_subgrupo, ''), ' / ', IFNULL(epi.ss_e_tx_item, '')) AS epi_nome, 
+                    SELECT ent.ss_e_nb_id, col.enti_tx_nome AS ss_c_tx_nome, IFNULL(emp.empr_tx_nome, 'Matriz') AS filial_nome, epi.ss_e_tx_foto AS ss_e_tx_foto_epi, CONCAT(epi.ss_e_tx_grupo, ' / ', IFNULL(epi.ss_e_tx_subgrupo, ''), ' / ', IFNULL(epi.ss_e_tx_item, ''), IFNULL(CONCAT(' (Var: ', ent.ss_e_tx_variacao, ')'), '')) AS epi_nome, 
                            IFNULL(DATE_FORMAT(ent.ss_e_tx_data_entrega, '%d/%m/%Y'), '-') AS ss_e_tx_data_entrega_formatado, 
                            ent.ss_e_nb_quantidade, 
                            IFNULL(DATE_FORMAT(ent.ss_e_tx_vencimento, '%d/%m/%Y'), '-') AS ss_e_tx_vencimento_formatado, 

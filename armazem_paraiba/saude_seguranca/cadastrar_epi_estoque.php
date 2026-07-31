@@ -14,6 +14,7 @@ function cadastrarEpiEstoque() {
             "ss_e_tx_descricao"     => $_POST["descricao"],
             "ss_e_tx_fabricante"    => $_POST["fabricante"],
             "ss_e_tx_modelo"        => $_POST["modelo"] ?? "",
+            "ss_e_tx_variacoes"     => $_POST["variacoes"] ?? "",
             "ss_e_tx_ca"            => $_POST["ca"],
             "ss_e_nb_vida_util"     => $vida_util,
             "ss_e_tx_status"        => $_POST["status"] ?? "ativo"
@@ -76,6 +77,7 @@ function cadastrarEpiEstoque() {
             "ss_e_tx_descricao"     => $item["descricao"],
             "ss_e_tx_fabricante"    => $item["fabricante"],
             "ss_e_tx_modelo"        => $item["modelo"] ?? "",
+            "ss_e_tx_variacoes"     => $item["variacoes"] ?? "",
             "ss_e_tx_ca"            => $item["ca"],
             "ss_e_nb_vida_util"     => $vida_util,
             "ss_e_tx_status"        => $item["status"] ?? "ativo",
@@ -156,14 +158,15 @@ function index() {
     }
 
     // Carregar EPIs universais para selects encadeados
-    $sqlUniversal = query("SELECT DISTINCT ss_e_tx_grupo, ss_e_tx_subgrupo, ss_e_tx_item FROM ss_epi WHERE ss_e_tx_cadastro_tipo = 'universal' AND ss_e_tx_status = 'ativo' ORDER BY ss_e_tx_grupo, ss_e_tx_subgrupo, ss_e_tx_item");
+    $sqlUniversal = query("SELECT DISTINCT ss_e_tx_grupo, ss_e_tx_subgrupo, ss_e_tx_item, ss_e_tx_variacoes FROM ss_epi WHERE ss_e_tx_cadastro_tipo = 'universal' AND ss_e_tx_status = 'ativo' ORDER BY ss_e_tx_grupo, ss_e_tx_subgrupo, ss_e_tx_item");
     $universalEpis = [];
     if ($sqlUniversal) {
         while ($row = mysqli_fetch_assoc($sqlUniversal)) {
             $universalEpis[] = [
                 "grupo" => $row["ss_e_tx_grupo"],
                 "subgrupo" => $row["ss_e_tx_subgrupo"],
-                "item" => $row["ss_e_tx_item"]
+                "item" => $row["ss_e_tx_item"],
+                "variacoes" => $row["ss_e_tx_variacoes"] ?? ""
             ];
         }
     }
@@ -200,6 +203,8 @@ function index() {
     $campo_modelo       = campo("Modelo", "modelo", $_POST["modelo"] ?? "", 3, "", "maxlength='100'");
     $campo_ca           = campo("MTE Certificado de Aprovacão (CA)", "ca", $_POST["ca"] ?? "", 3, "", "maxlength='50'");
     $campo_vida_util    = campo("Vida Útil (dias)", "vida_util", $_POST["vida_util"] ?? "0", 3, "MASCARA_NUMERO");
+
+    $campo_variacoes    = campo("Variações (Numeração/Tamanho)", "variacoes", $_POST["variacoes"] ?? "", 3, "", "maxlength='255' placeholder='Ex: 42, 44, 46'");
 
     $campo_status       = combo("Status", "status", $_POST["status"] ?? "ativo", 3, ["ativo" => "Ativo", "inativo" => "Inativo"]);
     $campo_foto = '
@@ -247,7 +252,7 @@ function index() {
     echo campo_hidden("fotos_mantidas", $_POST["foto"] ?? "");
     echo linha_form([$campo_grupo, $campo_subgrupo, $campo_item]);
     echo linha_form([$campo_fabricante, $campo_modelo, $campo_ca, $campo_vida_util]);
-    echo linha_form([$campo_status, $campo_foto]);
+    echo linha_form([$campo_variacoes, $campo_status, $campo_foto]);
     echo linha_form([$preview_div]);
     echo linha_form([$campo_descricao]);
     echo fecha_form($buttons);
@@ -272,6 +277,7 @@ function index() {
                                 <th>Descrição</th>
                                 <th>Fabricante</th>
                                 <th>Modelo</th>
+                                <th>Variações</th>
                                 <th>CA</th>
                                 <th>Vida Útil</th>
                                 <th>Imagem</th>
@@ -404,6 +410,12 @@ function index() {
             if (typeof $.fn.select2 === 'function') {
                 $itemSelect.select2();
             }
+
+            // Preencher automaticamente as variações do item universal selecionado
+            const matchedItem = data.find(d => d.grupo === $grupoSelect.val() && d.item === $(this).val());
+            if (matchedItem && matchedItem.variacoes) {
+                $('input[name="variacoes"]').val(matchedItem.variacoes);
+            }
         });
 
         populateGrupos();
@@ -474,7 +486,7 @@ function index() {
                 tbody.empty();
                 
                 if (itemsList.length === 0) {
-                    tbody.append('<tr><td colspan="10" style="text-align: center; color: #999;">Nenhum item adicionado à lista.</td></tr>');
+                    tbody.append('<tr><td colspan="11" style="text-align: center; color: #999;">Nenhum item adicionado à lista.</td></tr>');
                     $('#itens_json').val('');
                     return;
                 }
@@ -486,6 +498,7 @@ function index() {
                     row.append($('<td>').text(item.item));
                     row.append($('<td>').text(item.fabricante || '---'));
                     row.append($('<td>').text(item.modelo || '---'));
+                    row.append($('<td>').text(item.variacoes || '---'));
                     row.append($('<td>').text(item.ca || '---'));
                     row.append($('<td>').text(item.vida_util + ' dias'));
                     
@@ -533,6 +546,7 @@ function index() {
                 
                 $('input[name="fabricante"]').val(item.fabricante);
                 $('input[name="modelo"]').val(item.modelo || '');
+                $('input[name="variacoes"]').val(item.variacoes || '');
                 $('input[name="ca"]').val(item.ca);
                 $('input[name="vida_util"]').val(item.vida_util);
                 $('select[name="status"]').val(item.status).trigger('change');
@@ -610,6 +624,7 @@ function index() {
                 $('select[name="grupo"]').val('').trigger('change');
                 $('input[name="fabricante"]').val('');
                 $('input[name="modelo"]').val('');
+                $('input[name="variacoes"]').val('');
                 $('input[name="ca"]').val('');
                 $('input[name="vida_util"]').val('0');
                 $('select[name="status"]').val('ativo').trigger('change');
@@ -635,6 +650,7 @@ function index() {
                     item: itemVal,
                     fabricante: $('input[name="fabricante"]').val(),
                     modelo: $('input[name="modelo"]').val(),
+                    variacoes: $('input[name="variacoes"]').val(),
                     ca: $('input[name="ca"]').val(),
                     vida_util: parseInt($('input[name="vida_util"]').val(), 10) || 0,
                     status: $('select[name="status"]').val() || 'ativo',

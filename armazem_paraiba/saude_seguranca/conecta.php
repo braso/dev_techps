@@ -141,6 +141,12 @@ if ($checkModeloEpi && mysqli_num_rows($checkModeloEpi) == 0) {
     mysqli_query($conn, "ALTER TABLE ss_epi ADD COLUMN ss_e_tx_modelo VARCHAR(255) NULL AFTER ss_e_tx_fabricante;");
 }
 
+// Variações do EPI (ex: numeração/tamanho - 42, 44, 46)
+$checkVariacoesEpi = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi LIKE 'ss_e_tx_variacoes'");
+if ($checkVariacoesEpi && mysqli_num_rows($checkVariacoesEpi) == 0) {
+    mysqli_query($conn, "ALTER TABLE ss_epi ADD COLUMN ss_e_tx_variacoes VARCHAR(255) NULL AFTER ss_e_tx_modelo;");
+}
+
 // 3. Tabela ss_epi_estoque (Controle de Estoque/Movimentação)
 // Usando prefixo ss_e para corresponder ao substr(tabela, 0, 4)
 $sqlEstoque = "CREATE TABLE IF NOT EXISTS ss_epi_estoque (
@@ -260,9 +266,22 @@ $checkEmpresaEstoque = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_estoque LIK
 if ($checkEmpresaEstoque && mysqli_num_rows($checkEmpresaEstoque) == 0) {
     mysqli_query($conn, "ALTER TABLE ss_epi_estoque ADD COLUMN ss_e_nb_empresa_id INT NULL AFTER ss_e_nb_epi_id;");
 }
+
+// Variação da movimentação de estoque (ex: numeração/tamanho)
+$checkVariacaoEstoque = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_estoque LIKE 'ss_e_tx_variacao'");
+if ($checkVariacaoEstoque && mysqli_num_rows($checkVariacaoEstoque) == 0) {
+    mysqli_query($conn, "ALTER TABLE ss_epi_estoque ADD COLUMN ss_e_tx_variacao VARCHAR(100) NULL AFTER ss_e_nb_empresa_id;");
+}
+
 $checkEmpresaEntrega = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_entrega LIKE 'ss_e_nb_empresa_id'");
 if ($checkEmpresaEntrega && mysqli_num_rows($checkEmpresaEntrega) == 0) {
     mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_nb_empresa_id INT NULL AFTER ss_e_nb_epi_id;");
+}
+
+// Variação da entrega (ex: numeração/tamanho)
+$checkVariacaoEntrega = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_entrega LIKE 'ss_e_tx_variacao'");
+if ($checkVariacaoEntrega && mysqli_num_rows($checkVariacaoEntrega) == 0) {
+    mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_tx_variacao VARCHAR(100) NULL AFTER ss_e_nb_empresa_id;");
 }
 
 $checkFornecedor = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_estoque LIKE 'ss_e_tx_fornecedor'");

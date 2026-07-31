@@ -1,5 +1,22 @@
 <?php
+ob_start();
 include "conecta.php";
+
+// Garante resposta JSON válida mesmo com erros PHP (avisos/fatais) no endpoint AJAX
+if (($_GET["acao"] ?? "") === "lancarEstoqueLoteAjax") {
+    set_error_handler(function ($errno, $errstr, $errfile, $errline) {
+        if (ob_get_level() > 0) ob_clean();
+        echo json_encode(["status" => "error", "message" => "Erro PHP ({$errno}): {$errstr} (linha {$errline} em " . basename($errfile) . ")"]);
+        exit;
+    });
+    register_shutdown_function(function () {
+        $err = error_get_last();
+        if ($err && in_array($err["type"], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true)) {
+            if (ob_get_level() > 0) ob_clean();
+            echo json_encode(["status" => "error", "message" => "Erro fatal PHP: " . $err["message"] . " (linha " . $err["line"] . " em " . basename($err["file"]) . ")"]);
+        }
+    });
+}
 
 function parseBrValor($val) {
     if (empty($val)) return null;
@@ -15,6 +32,7 @@ function lancarEstoqueLoteAjax() {
     $lotes = json_decode($_POST["lotes"] ?? "[]", true);
     $sucessos = 0;
     $erros = [];
+    $saved_ids = [];
     
     foreach ($lotes as $item) {
         $epi_id = (int)$item["epi_id"];
@@ -27,6 +45,7 @@ function lancarEstoqueLoteAjax() {
         $chave_nf = !empty($item["chave_nf"]) ? $item["chave_nf"] : null;
         $fornecedor = !empty($item["fornecedor"]) ? $item["fornecedor"] : null;
         $validade_epi = !empty($item["validade_epi"]) ? $item["validade_epi"] : null;
+        $variacao = !empty($item["variacao"]) ? trim($item["variacao"]) : null;
         
         $empresa_id = !empty($item["empresa_id"]) ? (int)$item["empresa_id"] : null;
         if ($empresa_id === 0) {
@@ -38,17 +57,32 @@ function lancarEstoqueLoteAjax() {
             continue;
         }
         
+        // Se o EPI possui variações cadastradas, exige informar a variação
+        $epi = carregar("ss_epi", $epi_id);
+        if (empty($epi)) {
+            $erros[] = "EPI ID {$epi_id} não encontrado no cadastro.";
+            continue;
+        }
+        $temVariacoes = !empty($epi["ss_e_tx_variacoes"] ?? "");
+        if ($temVariacoes && empty($variacao)) {
+            $erros[] = "O EPI ID {$epi_id} possui variações cadastradas. Selecione a variação (numeração/tamanho).";
+            continue;
+        }
+        
         if ($tipo === 'saida') {
-            $saldoAtual = obterSaldoEstoque($epi_id, $empresa_id);
+            $saldoAtual = obterSaldoEstoque($epi_id, $empresa_id, false, $variacao);
             if ($quantidade > $saldoAtual) {
-                $erros[] = "Estoque insuficiente para saída do EPI ID {$epi_id}. Saldo atual: {$saldoAtual}.";
+                $erros[] = "Estoque insuficiente para saída do EPI ID {$epi_id}" . ($variacao ? " (variação: {$variacao})" : "") . ". Saldo atual: {$saldoAtual}.";
                 continue;
             }
         }
         
-        $sucesso = registrarMovimentacaoEstoque($epi_id, $quantidade, $tipo, $motivo, $valor_unitario, $valor_total, "", $data_recebimento, $chave_nf, $empresa_id, $fornecedor, $validade_epi);
+        $sucesso = registrarMovimentacaoEstoque($epi_id, $quantidade, $tipo, $motivo, $valor_unitario, $valor_total, "", $data_recebimento, $chave_nf, $empresa_id, $fornecedor, $validade_epi, $variacao);
         if ($sucesso) {
             $sucessos++;
+            if (!empty($item["unique_id"])) {
+                $saved_ids[] = $item["unique_id"];
+            }
         } else {
             $erros[] = "Erro ao registrar movimentação para o EPI ID {$epi_id}.";
         }
@@ -58,7 +92,8 @@ function lancarEstoqueLoteAjax() {
     echo json_encode([
         "status" => count($erros) === 0 ? "success" : "partial",
         "sucessos" => $sucessos,
-        "erros" => $erros
+        "erros" => $erros,
+        "ids" => $saved_ids
     ]);
     exit;
 }
@@ -80,6 +115,7 @@ function lancarEstoque() {
     $chave_nf = !empty($_POST["chave_nf"]) ? $_POST["chave_nf"] : null;
     $fornecedor = !empty($_POST["fornecedor"]) ? $_POST["fornecedor"] : null;
     $validade_epi = !empty($_POST["validade_epi"]) ? $_POST["validade_epi"] : null;
+    $variacao = !empty($_POST["variacao"]) ? trim($_POST["variacao"]) : null;
 
     if ($epi_id <= 0) {
         $_POST["errorFields"][] = "epi_id";
@@ -95,8 +131,21 @@ function lancarEstoque() {
         exit;
     }
 
+    // Se o EPI possui variações cadastradas, exige informar a variação
+    $epi = carregar("ss_epi", $epi_id);
+    if (empty($epi)) {
+        set_status("ERRO: EPI não encontrado no cadastro.");
+        redireciona("movimentacao_estoque.php");
+        exit;
+    }
+    if (!empty($epi["ss_e_tx_variacoes"] ?? "") && empty($variacao)) {
+        set_status("ERRO: Este EPI possui variações cadastradas. Selecione a variação (numeração/tamanho).");
+        redireciona("movimentacao_estoque.php");
+        exit;
+    }
+
     if ($tipo === 'saida') {
-        $saldoAtual = obterSaldoEstoque($epi_id, $empresa_id);
+        $saldoAtual = obterSaldoEstoque($epi_id, $empresa_id, false, $variacao);
         if ($quantidade > $saldoAtual) {
             $_POST["errorFields"][] = "quantidade";
             set_status("ERRO: Estoque insuficiente. Saldo atual: {$saldoAtual}.");
@@ -105,7 +154,7 @@ function lancarEstoque() {
         }
     }
 
-    $sucesso = registrarMovimentacaoEstoque($epi_id, $quantidade, $tipo, $motivo, $valor_unitario, $valor_total, "", $data_recebimento, $chave_nf, $empresa_id, $fornecedor, $validade_epi);
+    $sucesso = registrarMovimentacaoEstoque($epi_id, $quantidade, $tipo, $motivo, $valor_unitario, $valor_total, "", $data_recebimento, $chave_nf, $empresa_id, $fornecedor, $validade_epi, $variacao);
     if ($sucesso) {
         set_status("Movimentação registrada com sucesso!");
     } else {
@@ -119,14 +168,16 @@ function lancarEstoque() {
 function index() {
     cabecalho("Lançar Movimentação de Estoque");
 
-    $sql = query("SELECT ss_e_nb_id, CONCAT(IFNULL(ss_e_tx_subgrupo, ''), ' - ', IFNULL(ss_e_tx_item, ''), ' - ', IFNULL(ss_e_tx_ca, 'N/A')) AS epi_nome 
+    $sql = query("SELECT ss_e_nb_id, CONCAT(IFNULL(ss_e_tx_subgrupo, ''), ' - ', IFNULL(ss_e_tx_item, ''), ' - ', IFNULL(ss_e_tx_ca, 'N/A')) AS epi_nome, ss_e_tx_variacoes 
                   FROM ss_epi 
                   WHERE ss_e_tx_status = 'ativo' AND ss_e_tx_cadastro_tipo = 'estoque'
                   ORDER BY ss_e_tx_subgrupo ASC, ss_e_tx_item ASC");
     $epiOptions = ["" => "Selecione o EPI"];
+    $epiVariacoesMap = [];
     if ($sql) {
         while ($row = mysqli_fetch_assoc($sql)) {
             $epiOptions[$row["ss_e_nb_id"]] = $row["epi_nome"];
+            $epiVariacoesMap[(int)$row["ss_e_nb_id"]] = $row["ss_e_tx_variacoes"] ?? "";
         }
     }
 
@@ -151,6 +202,29 @@ function index() {
     $campo_epi      = combo("EPI*", "epi_id", $_POST["epi_id"] ?? "", 4, $epiOptions);
     $campo_quant    = campo("Quantidade*", "quantidade", $_POST["quantidade"] ?? "", 2, "MASCARA_NUMERO");
     $campo_tipo     = combo("Tipo*", "tipo", $_POST["tipo"] ?? "entrada", 3, ["entrada" => "Entrada (Compra/Ajuste)", "saida" => "Saída (Descarte/Ajuste)"]);
+    $campo_variacao = '
+        <div class="col-sm-12 margin-bottom-5" id="container_variacao" style="display: none;">
+            <div class="portlet light bordered" style="margin-bottom: 10px;">
+                <div class="portlet-title" style="margin-bottom: 5px;">
+                    <div class="caption font-dark">
+                        <i class="fa fa-th-list font-dark"></i>
+                        <span class="caption-subject bold uppercase">Quantidade por Variação (Numeração/Tamanho)</span>
+                    </div>
+                </div>
+                <div class="portlet-body">
+                    <table class="table table-bordered" style="max-width: 500px; margin-bottom: 5px;">
+                        <thead>
+                            <tr>
+                                <th>Variação</th>
+                                <th style="width: 160px; text-align: center;">Quantidade</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpo_variacoes"></tbody>
+                    </table>
+                    <span class="help-block" style="font-size: 11px;">Informe a quantidade para cada variação. Ex.: bota 42 → 10, bota 44 → 5, bota 46 → 3. Cada variação com quantidade vira um item no lançamento.</span>
+                </div>
+            </div>
+        </div>';
 
     $campo_motivo   = campo("Motivo/Observação", "motivo", $_POST["motivo"] ?? "", 4, "", "maxlength='255'");
     $campo_valor_unitario = campo("Valor Unitário", "valor_unitario", $_POST["valor_unitario"] ?? "", 4, "MASCARA_VALOR");
@@ -167,6 +241,7 @@ function index() {
 
     echo abre_form("Dados da Movimentação");
     echo linha_form([$campo_empresa, $campo_epi, $campo_quant, $campo_tipo]);
+    echo linha_form([$campo_variacao]);
     echo linha_form([$campo_motivo, $campo_valor_unitario, $campo_valor_total]);
     echo linha_form([$campo_data_receb, $campo_chave_nf, $campo_fornecedor, $campo_validade_epi]);
     echo fecha_form($buttons);
@@ -186,12 +261,48 @@ function index() {
     <script>
     var itensLote = {};
     var empresasNomes = <?php echo $jsEmpresas; ?>;
+    var epiVariacoes = <?php echo json_encode($epiVariacoesMap); ?>;
 
     $(document).ready(function() {
         if (typeof $.fn.select2 === 'function') {
             $.fn.select2.defaults.set('theme', 'bootstrap');
             $('select[name="epi_id"], select[name="empresa_id"]').select2();
         }
+
+        function atualizarVariacoes() {
+            var epiId = $('select[name="epi_id"]').val();
+            var variacoesStr = epiVariacoes[epiId] || '';
+            var lista = variacoesStr.split(',').map(function(v) { return v.trim(); }).filter(Boolean);
+            var corpo = $('#corpo_variacoes');
+            corpo.empty();
+            
+            if (lista.length > 0) {
+                lista.forEach(function(v) {
+                    corpo.append(
+                        '<tr>' +
+                            '<td style="vertical-align: middle;"><strong>' + v + '</strong></td>' +
+                            '<td style="text-align: center;"><input type="number" min="0" step="1" class="form-control input-sm qtd_variacao" data-variacao="' + v + '" value="0" style="text-align: center;"></td>' +
+                        '</tr>'
+                    );
+                });
+                $('#container_variacao').show();
+                $('input[name="quantidade"]').prop('disabled', true).val('');
+            } else {
+                $('#container_variacao').hide();
+                $('input[name="quantidade"]').prop('disabled', false);
+            }
+        }
+
+        $(document).on('input change', '.qtd_variacao', function() {
+            var total = 0;
+            $('.qtd_variacao').each(function() {
+                total += parseInt($(this).val(), 10) || 0;
+            });
+            $('#quantidade').val(total > 0 ? total : '');
+            calcularTotal();
+        });
+
+        $('select[name="epi_id"]').on('change', atualizarVariacoes);
 
         function calcularTotal() {
             let quant = parseInt($('#quantidade').val(), 10) || 0;
@@ -228,7 +339,6 @@ function index() {
         var epiSelect = $('select[name="epi_id"]');
         var epiId = epiSelect.val();
         var epiNome = epiSelect.find('option:selected').text();
-        var quantidade = $('#quantidade').val();
         var tipo = $('select[name="tipo"]').val();
         var motivo = $('#motivo').val();
         var valorUnitario = $('#valor_unitario').val();
@@ -244,35 +354,63 @@ function index() {
             alert('Por favor, selecione um EPI.');
             return;
         }
-        if (!quantidade || parseInt(quantidade, 10) <= 0) {
-            alert('Por favor, informe uma quantidade maior que zero.');
-            return;
-        }
         if (!empresaId) {
             alert('Por favor, selecione a Empresa.');
             return;
         }
         
-        var item = {
-            unique_id: new Date().getTime() + '_' + Math.random().toString(36).substr(2, 5),
-            epi_id: epiId,
-            epi_nome: epiNome,
-            quantidade: parseInt(quantidade, 10),
-            tipo: tipo,
-            motivo: motivo,
-            valor_unitario: valorUnitario,
-            valor_total: valorTotal,
-            data_recebimento: dataRecebimento,
-            chave_nf: chaveNf,
-            fornecedor: fornecedor,
-            validade_epi: validadeEpi,
-            empresa_id: empresaId
-        };
+        var variacoesStr = epiVariacoes[epiId] || '';
+        var listaVariacoes = variacoesStr.split(',').map(function(v) { return v.trim(); }).filter(Boolean);
         
-        if (!itensLote[empresaId]) {
-            itensLote[empresaId] = [];
+        var itensParaAdicionar = [];
+        
+        if (listaVariacoes.length > 0) {
+            var total = 0;
+            $('#corpo_variacoes .qtd_variacao').each(function() {
+                var q = parseInt($(this).val(), 10) || 0;
+                if (q > 0) {
+                    total += q;
+                    itensParaAdicionar.push({
+                        variacao: $(this).attr('data-variacao'),
+                        quantidade: q
+                    });
+                }
+            });
+            if (total <= 0) {
+                alert('Informe a quantidade de pelo menos uma variação.');
+                return;
+            }
+        } else {
+            var quantidade = parseInt($('#quantidade').val(), 10) || 0;
+            if (quantidade <= 0) {
+                alert('Por favor, informe uma quantidade maior que zero.');
+                return;
+            }
+            itensParaAdicionar.push({ variacao: '', quantidade: quantidade });
         }
-        itensLote[empresaId].push(item);
+        
+        itensParaAdicionar.forEach(function(iva) {
+            var item = {
+                unique_id: new Date().getTime() + '_' + Math.random().toString(36).substr(2, 5),
+                epi_id: epiId,
+                epi_nome: epiNome,
+                quantidade: iva.quantidade,
+                tipo: tipo,
+                variacao: iva.variacao,
+                motivo: motivo,
+                valor_unitario: valorUnitario,
+                valor_total: valorTotal,
+                data_recebimento: dataRecebimento,
+                chave_nf: chaveNf,
+                fornecedor: fornecedor,
+                validade_epi: validadeEpi,
+                empresa_id: empresaId
+            };
+            if (!itensLote[empresaId]) {
+                itensLote[empresaId] = [];
+            }
+            itensLote[empresaId].push(item);
+        });
         
         epiSelect.val('').trigger('change');
         $('#quantidade').val('');
@@ -280,6 +418,7 @@ function index() {
         $('#valor_total').val('');
         $('#motivo').val('');
         $('#validade_epi').val('');
+        $('#corpo_variacoes .qtd_variacao').val('0');
         
         desenharListas();
     }
@@ -309,18 +448,19 @@ function index() {
                 '<div class="portlet-body">' +
                     '<div class="table-responsive">' +
                         '<table class="table table-striped table-bordered table-hover">' +
-                            '<thead>' +
-                                '<tr>' +
-                                    '<th>EPI</th>' +
-                                    '<th style="text-align: center;">Operação</th>' +
-                                    '<th style="text-align: center; width: 80px;">Qtd</th>' +
-                                    '<th>Fornecedor</th>' +
-                                    '<th>NF / Recebimento / Validade</th>' +
-                                    '<th>Valor (Unit/Total)</th>' +
-                                    '<th>Motivo</th>' +
-                                    '<th style="width: 50px; text-align: center;">Ações</th>' +
-                                '</tr>' +
-                            '</thead>' +
+                        '<thead>' +
+                            '<tr>' +
+                                '<th>EPI</th>' +
+                                '<th style="text-align: center;">Operação</th>' +
+                                '<th style="text-align: center; width: 80px;">Qtd</th>' +
+                                '<th style="width: 100px;">Variação</th>' +
+                                '<th>Fornecedor</th>' +
+                                '<th>NF / Recebimento / Validade</th>' +
+                                '<th>Valor (Unit/Total)</th>' +
+                                '<th>Motivo</th>' +
+                                '<th style="width: 50px; text-align: center;">Ações</th>' +
+                            '</tr>' +
+                        '</thead>' +
                             '<tbody>';
             
             for (var i = 0; i < itens.length; i++) {
@@ -333,6 +473,7 @@ function index() {
                                 '<td style="vertical-align: middle;">' + it.epi_nome + '</td>' +
                                 '<td style="text-align: center; vertical-align: middle;">' + badgeTipo + '</td>' +
                                 '<td style="text-align: center; font-weight: bold; vertical-align: middle;">' + it.quantidade + '</td>' +
+                                '<td style="vertical-align: middle;">' + (it.variacao ? '<span class="label label-info">' + it.variacao + '</span>' : '<span class="text-muted">-</span>') + '</td>' +
                                 '<td style="vertical-align: middle;">' + (it.fornecedor || '-') + '</td>' +
                                 '<td style="vertical-align: middle;">NF: ' + (it.chave_nf || '-') + '<br><small class="text-muted">receb: ' + (it.data_recebimento || '-') + '</small><br><small class="text-muted">validade: ' + (it.validade_epi || '-') + '</small></td>' +
                                 '<td style="vertical-align: middle;">U: ' + (it.valor_unitario || '-') + '<br>T: ' + (it.valor_total || '-') + '</td>' +
@@ -373,10 +514,11 @@ function index() {
         
         if (!confirm('Deseja salvar os lançamentos desta empresa/filial?')) return;
         
-        enviarLotesAjax(itens, function() {
-            delete itensLote[empresaId];
+        enviarLotesAjax(itens, function(idsSalvos) {
+            itensLote[empresaId] = itensLote[empresaId].filter(function(item) {
+                return idsSalvos.indexOf(item.unique_id) === -1;
+            });
             desenharListas();
-            alert('Lançamentos salvos com sucesso!');
         });
     }
 
@@ -389,10 +531,13 @@ function index() {
         
         if (!confirm('Deseja salvar todos os lançamentos de todas as empresas/filiais?')) return;
         
-        enviarLotesAjax(todosItens, function() {
-            itensLote = {};
+        enviarLotesAjax(todosItens, function(idsSalvos) {
+            for (var empId in itensLote) {
+                itensLote[empId] = itensLote[empId].filter(function(item) {
+                    return idsSalvos.indexOf(item.unique_id) === -1;
+                });
+            }
             desenharListas();
-            alert('Todos os lançamentos salvos com sucesso!');
         });
     }
 
@@ -404,16 +549,27 @@ function index() {
             dataType: 'json',
             success: function(response) {
                 if (response.status === 'success' || response.status === 'partial') {
+                    var msg = response.sucessos > 0
+                        ? 'Lançamentos salvos com sucesso!'
+                        : 'Nenhum lançamento foi salvo.';
                     if (response.erros && response.erros.length > 0) {
-                        alert('Avisos durante a gravação:\n\n' + response.erros.join('\n'));
+                        msg += '\n\nFalhas:\n' + response.erros.join('\n');
                     }
-                    callbackSucesso();
+                    alert(msg);
+                    callbackSucesso(response.ids || []);
                 } else {
-                    alert('Erro ao salvar lançamentos.');
+                    alert('Erro ao salvar lançamentos: ' + (response.message || 'Resposta inválida do servidor.'));
                 }
             },
-            error: function() {
-                alert('Erro na comunicação com o servidor.');
+            error: function(xhr) {
+                var msg = '';
+                try {
+                    var parsed = JSON.parse(xhr.responseText);
+                    msg = parsed.message || '';
+                } catch (e) {
+                    msg = (xhr.responseText || '').substring(0, 500);
+                }
+                alert('Erro na comunicação com o servidor: ' + msg);
             }
         });
     }
