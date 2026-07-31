@@ -38,6 +38,8 @@ deployment:
     - export GST=/home/tech1694/public_html/gestaodeponto/gst
     - export ARMAPLAST=/home/tech1694/public_html/gestaodeponto/armaplast
     - export HARMONYVET=/home/tech1694/public_html/gestaodeponto/harmonyvet
+    - export TRANSROCHA=/home/tech1694/public_html/gestaodeponto/transrocha
+    - export TRANSRAISSA=/home/tech1694/public_html/gestaodeponto/trans_raissa
 
 
 
@@ -75,5 +77,7 @@ deployment:
     - /bin/cp -R $DOMAIN $GST
     - /bin/cp -R $DOMAIN $ARMAPLAST
     - /bin/cp -R $DOMAIN $HARMONYVET
+    - /bin/cp -R $DOMAIN $TRANSROCHA
+    - /bin/cp -R $DOMAIN $TRANSRAISSA
 
 

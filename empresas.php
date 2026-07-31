@@ -40,6 +40,8 @@
         "GST"                   => "gst",
         "ARMAPLAST"             => "armaplast",
         "HARMONY VET"           => "harmonyvet",
+        "TRANS ROCHA"           => "transrocha",
+        "TRANSP RAISSA"           => "trans_raissa",
 
     ];
 
@@ -76,7 +78,9 @@
         "demo"              => "Demo",
         "gst"               => "GST",
         "armaplast"         => "ARMAPLAST",
-        "harmonyvet"         => "HARMONY VET"
+        "harmonyvet"         => "HARMONY VET",
+        "transrocha"         => "TRANS ROCHA",
+        "trans_raissa"         => "TRANSP RAISSA",
     ];
 
     $empresa_array = array_values($empresas); //Utilizado nos arquivos que importam este.
