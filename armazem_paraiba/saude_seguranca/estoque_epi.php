@@ -14,16 +14,28 @@ function detalhesFilialAjax() {
     
     if ($filial_id === 0) {
         $cond = " AND (est.ss_e_nb_empresa_id IS NULL OR est.ss_e_nb_empresa_id = 0 OR est.ss_e_nb_empresa_id = {$user_empresa})";
+        $condVar = " AND (ss_e_nb_empresa_id IS NULL OR ss_e_nb_empresa_id = 0 OR ss_e_nb_empresa_id = {$user_empresa})";
+        $condSaldo = " AND (est2.ss_e_nb_empresa_id IS NULL OR est2.ss_e_nb_empresa_id = 0 OR est2.ss_e_nb_empresa_id = {$user_empresa})";
     } else {
         $cond = " AND est.ss_e_nb_empresa_id = {$filial_id}";
+        $condVar = " AND ss_e_nb_empresa_id = {$filial_id}";
+        $condSaldo = " AND est2.ss_e_nb_empresa_id = {$filial_id}";
     }
     
     // 1. Consulta Saldo Atual
     $sqlDetails = query("
-        SELECT epi.ss_e_nb_id, epi.ss_e_tx_foto, epi.ss_e_tx_grupo, epi.ss_e_tx_subgrupo, epi.ss_e_tx_item, epi.ss_e_tx_fabricante, epi.ss_e_tx_modelo, epi.ss_e_tx_ca,
-               IFNULL(SUM(CASE WHEN est.ss_e_tx_tipo = 'entrada' THEN est.ss_e_nb_quantidade ELSE -est.ss_e_nb_quantidade END), 0) AS saldo
+        SELECT epi.ss_e_nb_id, epi.ss_e_tx_foto, epi.ss_e_tx_grupo, epi.ss_e_tx_subgrupo, epi.ss_e_tx_item, epi.ss_e_tx_fabricante, epi.ss_e_tx_modelo, epi.ss_e_tx_ca, epi.ss_e_tx_variacoes,
+               IFNULL((SELECT SUM(CASE WHEN est2.ss_e_tx_tipo = 'entrada' THEN est2.ss_e_nb_quantidade ELSE -est2.ss_e_nb_quantidade END)
+                       FROM ss_epi_estoque est2
+                       WHERE est2.ss_e_nb_epi_id = epi.ss_e_nb_id {$condSaldo}), 0) AS saldo,
+               IFNULL(GROUP_CONCAT(DISTINCT CONCAT(IFNULL(v.variacao, ''), ': ', v.saldo_var) SEPARATOR ' | '), '') AS variacoes_detalhe
         FROM ss_epi epi
         JOIN ss_epi_estoque est ON est.ss_e_nb_epi_id = epi.ss_e_nb_id {$cond}
+        LEFT JOIN (SELECT ss_e_nb_epi_id, ss_e_tx_variacao AS variacao,
+                          SUM(CASE WHEN ss_e_tx_tipo = 'entrada' THEN ss_e_nb_quantidade ELSE -ss_e_nb_quantidade END) AS saldo_var
+                   FROM ss_epi_estoque
+                   WHERE IFNULL(ss_e_tx_variacao, '') <> '' {$condVar}
+                   GROUP BY ss_e_nb_epi_id, ss_e_tx_variacao) v ON v.ss_e_nb_epi_id = epi.ss_e_nb_id
         WHERE epi.ss_e_tx_cadastro_tipo = 'estoque' AND epi.ss_e_tx_status = 'ativo'
         GROUP BY epi.ss_e_nb_id
         HAVING saldo > 0
@@ -32,7 +44,7 @@ function detalhesFilialAjax() {
     
     // 2. Consulta Histórico de Movimentações
     $sqlMovs = query("
-        SELECT est.ss_e_nb_id, epi.ss_e_tx_grupo, epi.ss_e_tx_subgrupo, epi.ss_e_tx_item, est.ss_e_tx_tipo, est.ss_e_nb_quantidade, est.ss_e_db_valor_unitario, est.ss_e_db_valor_total, est.ss_e_tx_motivo, est.ss_e_tx_data, est.ss_e_tx_fornecedor,
+        SELECT est.ss_e_nb_id, epi.ss_e_tx_grupo, epi.ss_e_tx_subgrupo, epi.ss_e_tx_item, est.ss_e_tx_variacao, est.ss_e_tx_tipo, est.ss_e_nb_quantidade, est.ss_e_db_valor_unitario, est.ss_e_db_valor_total, est.ss_e_tx_motivo, est.ss_e_tx_data, est.ss_e_tx_fornecedor,
                IFNULL(DATE_FORMAT(est.ss_e_tx_data_recebimento, '%d/%m/%Y'), '-') AS data_receb_fmt,
                IFNULL(est.ss_e_tx_chave_nf, '-') AS chave_nf,
                IFNULL(DATE_FORMAT(est.ss_e_tx_validade, '%d/%m/%Y'), '-') AS validade_fmt
@@ -75,6 +87,10 @@ function detalhesFilialAjax() {
         while ($row = mysqli_fetch_assoc($sqlDetails)) {
             $hasDetails = true;
             $fotoHtml = ss_grid_foto_render($row["ss_e_tx_foto"]);
+            $variacoesHtml = "";
+            if (!empty($row["variacoes_detalhe"])) {
+                $variacoesHtml = '<br><small class="text-muted">Var.: ' . htmlspecialchars($row["variacoes_detalhe"]) . '</small>';
+            }
             echo '
                         <tr>
                             <td style="text-align: center; vertical-align: middle;">' . $fotoHtml . '</td>
@@ -82,7 +98,7 @@ function detalhesFilialAjax() {
                             <td style="vertical-align: middle;">' . htmlspecialchars($row["ss_e_tx_item"]) . '</td>
                             <td style="vertical-align: middle;">' . htmlspecialchars($row["ss_e_tx_fabricante"] ?? "-") . '<br><small class="text-muted">' . htmlspecialchars($row["ss_e_tx_modelo"] ?? "-") . '</small></td>
                             <td style="text-align: center; vertical-align: middle;"><strong>' . htmlspecialchars($row["ss_e_tx_ca"] ?? "-") . '</strong></td>
-                            <td style="text-align: center; vertical-align: middle;"><span class="badge badge-success" style="font-size: 14px; padding: 6px 10px; font-weight: bold;">' . $row["saldo"] . '</span></td>
+                            <td style="text-align: center; vertical-align: middle;"><span class="badge badge-success" style="font-size: 14px; padding: 6px 10px; font-weight: bold;">' . $row["saldo"] . '</span>' . $variacoesHtml . '</td>
                         </tr>';
         }
     }
@@ -126,7 +142,7 @@ function detalhesFilialAjax() {
                         <tr>
                             <td style="vertical-align: middle;">' . $dataFmt . '</td>
                             <td style="text-align: center; vertical-align: middle;">' . $badgeOperacao . '</td>
-                            <td style="vertical-align: middle;"><strong>' . htmlspecialchars($rowMov["ss_e_tx_grupo"]) . '</strong><br><span class="text-muted">' . htmlspecialchars($rowMov["ss_e_tx_subgrupo"] . ' / ' . $rowMov["ss_e_tx_item"]) . '</span></td>
+                            <td style="vertical-align: middle;"><strong>' . htmlspecialchars($rowMov["ss_e_tx_grupo"]) . '</strong><br><span class="text-muted">' . htmlspecialchars($rowMov["ss_e_tx_subgrupo"] . ' / ' . $rowMov["ss_e_tx_item"]) . '</span>' . (!empty($rowMov["ss_e_tx_variacao"]) ? '<br><span class="label label-info">Var: ' . htmlspecialchars($rowMov["ss_e_tx_variacao"]) . '</span>' : '') . '</td>
                             <td style="text-align: center; vertical-align: middle; font-weight: bold;">' . $rowMov["ss_e_nb_quantidade"] . '</td>
                             <td style="vertical-align: middle;">' . htmlspecialchars($rowMov["ss_e_tx_fornecedor"] ?? "-") . '</td>
                             <td style="vertical-align: middle;">NF: ' . htmlspecialchars($rowMov["chave_nf"]) . '<br><small class="text-muted">receb: ' . $rowMov["data_receb_fmt"] . '</small><br><small class="text-muted">validade: ' . $rowMov["validade_fmt"] . '</small></td>
@@ -448,6 +464,7 @@ function index() {
             "GRUPO"             => "ss_e_tx_grupo",
             "EPI"               => "ss_e_tx_subgrupo",
             "DESCRIÇÃO"         => "ss_e_tx_item",
+            "VARIAÇÃO"          => "ss_e_tx_variacao",
             "TIPO"              => "ss_e_tx_tipo",
             "QUANTIDADE"        => "ss_e_nb_quantidade",
             "VLR. UNITÁRIO"     => "ss_e_db_valor_unitario",
@@ -476,7 +493,7 @@ function index() {
         }
 
         $queryBase = "SELECT * FROM (
-                        SELECT est.ss_e_nb_id, est.ss_e_nb_epi_id, epi.ss_e_tx_grupo, CONCAT(IFNULL(epi.ss_e_tx_subgrupo, ''), ' - CA: ', IFNULL(epi.ss_e_tx_ca, 'N/A')) AS ss_e_tx_subgrupo, epi.ss_e_tx_item, est.ss_e_tx_tipo, est.ss_e_nb_quantidade, est.ss_e_db_valor_unitario, est.ss_e_db_valor_total, est.ss_e_tx_motivo, est.ss_e_tx_data, est.ss_e_tx_fornecedor,
+                        SELECT est.ss_e_nb_id, est.ss_e_nb_epi_id, epi.ss_e_tx_grupo, CONCAT(IFNULL(epi.ss_e_tx_subgrupo, ''), ' - CA: ', IFNULL(epi.ss_e_tx_ca, 'N/A')) AS ss_e_tx_subgrupo, epi.ss_e_tx_item, est.ss_e_tx_variacao, est.ss_e_tx_tipo, est.ss_e_nb_quantidade, est.ss_e_db_valor_unitario, est.ss_e_db_valor_total, est.ss_e_tx_motivo, est.ss_e_tx_data, est.ss_e_tx_fornecedor,
                              epi.ss_e_tx_ca, epi.ss_e_tx_modelo, epi.ss_e_tx_status,
                              IFNULL(emp.empr_tx_nome, 'Matriz') AS filial_nome,
                              IFNULL(DATE_FORMAT(est.ss_e_tx_data_recebimento, '%d/%m/%Y'), '-') AS data_receb_fmt,
@@ -504,7 +521,8 @@ function index() {
             "MODELO"       => "ss_e_tx_modelo",
             "CA"           => "ss_e_tx_ca",
             "STATUS"       => "ss_e_tx_status",
-            "SALDO ATUAL"  => "saldo"
+            "SALDO ATUAL"  => "saldo",
+            "VARIAÇÕES"    => "variacoes_detalhe"
         ];
 
         $camposBusca = [
@@ -518,15 +536,26 @@ function index() {
         ];
 
         $joinCond = "";
+        $condVar = "";
+        $joinCondSaldo = "";
         if (!empty($busca_filial)) {
             $joinCond = " AND est.ss_e_nb_empresa_id = " . (int)$busca_filial;
+            $condVar = " AND ss_e_nb_empresa_id = " . (int)$busca_filial;
+            $joinCondSaldo = " AND est2.ss_e_nb_empresa_id = " . (int)$busca_filial;
         }
 
         $queryBase = "SELECT * FROM (
                         SELECT epi.ss_e_nb_id, epi.ss_e_tx_foto, epi.ss_e_tx_grupo, CONCAT(IFNULL(epi.ss_e_tx_subgrupo, ''), ' - CA: ', IFNULL(epi.ss_e_tx_ca, 'N/A')) AS ss_e_tx_subgrupo, epi.ss_e_tx_item, epi.ss_e_tx_fabricante, epi.ss_e_tx_modelo, epi.ss_e_tx_ca, epi.ss_e_tx_status, epi.ss_e_tx_cadastro_tipo,
-                               IFNULL(SUM(CASE WHEN est.ss_e_tx_tipo = 'entrada' THEN est.ss_e_nb_quantidade ELSE -est.ss_e_nb_quantidade END), 0) AS saldo 
+                               IFNULL((SELECT SUM(CASE WHEN est2.ss_e_tx_tipo = 'entrada' THEN est2.ss_e_nb_quantidade ELSE -est2.ss_e_nb_quantidade END)
+                                       FROM ss_epi_estoque est2
+                                       WHERE est2.ss_e_nb_epi_id = epi.ss_e_nb_id {$joinCondSaldo}), 0) AS saldo,
+                               IFNULL(GROUP_CONCAT(DISTINCT CONCAT(IFNULL(v.variacao, ''), ': ', v.saldo_var) SEPARATOR ' | '), '') AS variacoes_detalhe
                         FROM ss_epi epi 
-                        LEFT JOIN ss_epi_estoque est ON est.ss_e_nb_epi_id = epi.ss_e_nb_id {$joinCond}
+                        LEFT JOIN (SELECT ss_e_nb_epi_id, ss_e_tx_variacao AS variacao,
+                                          SUM(CASE WHEN ss_e_tx_tipo = 'entrada' THEN ss_e_nb_quantidade ELSE -ss_e_nb_quantidade END) AS saldo_var
+                                   FROM ss_epi_estoque
+                                   WHERE IFNULL(ss_e_tx_variacao, '') <> '' {$condVar}
+                                   GROUP BY ss_e_nb_epi_id, ss_e_tx_variacao) v ON v.ss_e_nb_epi_id = epi.ss_e_nb_id
                         WHERE epi.ss_e_tx_cadastro_tipo = 'estoque'
                         GROUP BY epi.ss_e_nb_id
                       ) AS epi";

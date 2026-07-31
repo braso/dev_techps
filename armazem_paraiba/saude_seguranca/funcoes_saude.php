@@ -15,9 +15,13 @@ function redireciona(string $url): void {
  * Soma as entradas e subtrai as saídas.
  *
  * @param int $idEpi
+ * @param int|null $empresaId
+ * @param bool $conferirTodasFiliais
+ * @param string|null $variacao Variação específica (ex: numeração/tamanho). Quando informada,
+ *                              o saldo é calculado apenas para aquela variação.
  * @return int
  */
-function obterSaldoEstoque(int $idEpi, ?int $empresaId = null, bool $conferirTodasFiliais = false): int {
+function obterSaldoEstoque(int $idEpi, ?int $empresaId = null, bool $conferirTodasFiliais = false, ?string $variacao = null): int {
     global $conn;
     
     $idEpi = (int)$idEpi;
@@ -42,10 +46,16 @@ function obterSaldoEstoque(int $idEpi, ?int $empresaId = null, bool $conferirTod
         }
     }
     
+    $condVariacao = "";
+    if ($variacao !== null && $variacao !== '') {
+        $variacaoEsc = mysqli_real_escape_string($conn, $variacao);
+        $condVariacao = " AND ss_e_tx_variacao = '{$variacaoEsc}'";
+    }
+    
     $sql = "SELECT 
                 SUM(CASE WHEN ss_e_tx_tipo = 'entrada' THEN ss_e_nb_quantidade ELSE -ss_e_nb_quantidade END) as saldo
             FROM ss_epi_estoque 
-            WHERE ss_e_nb_epi_id = {$idEpi} {$cond}";
+            WHERE ss_e_nb_epi_id = {$idEpi} {$cond} {$condVariacao}";
             
     $res = mysqli_query($conn, $sql);
     if ($res) {
@@ -77,7 +87,8 @@ function registrarMovimentacaoEstoque(
     ?string $chaveNf = null,
     ?int $empresaId = null,
     ?string $fornecedor = null,
-    ?string $validade = null
+    ?string $validade = null,
+    ?string $variacao = null
 ): bool {
     global $conn;
     
@@ -105,9 +116,10 @@ function registrarMovimentacaoEstoque(
     $valEmpresa = ($empresaId !== null && $empresaId > 0) ? (int)$empresaId : "NULL";
     $valFornecedor = ($fornecedor !== null && $fornecedor !== '') ? "'" . mysqli_real_escape_string($conn, $fornecedor) . "'" : "NULL";
     $valValidade = ($validade !== null && $validade !== '') ? "'" . mysqli_real_escape_string($conn, $validade) . "'" : "NULL";
+    $valVariacao = ($variacao !== null && $variacao !== '') ? "'" . mysqli_real_escape_string($conn, $variacao) . "'" : "NULL";
     
-    $sql = "INSERT INTO ss_epi_estoque (ss_e_nb_epi_id, ss_e_nb_empresa_id, ss_e_nb_quantidade, ss_e_tx_tipo, ss_e_db_valor_unitario, ss_e_db_valor_total, ss_e_tx_data_recebimento, ss_e_tx_chave_nf, ss_e_tx_fornecedor, ss_e_tx_data, ss_e_tx_motivo, ss_e_tx_foto, ss_e_nb_userCadastro, ss_e_tx_validade)
-            VALUES ({$idEpi}, {$valEmpresa}, {$quantidade}, '{$tipo}', {$valUnit}, {$valTot}, {$valDataReceb}, {$valChaveNf}, {$valFornecedor}, '{$dataAtual}', '{$motivo}', {$valFoto}, {$userCadastro}, {$valValidade})";
+    $sql = "INSERT INTO ss_epi_estoque (ss_e_nb_epi_id, ss_e_nb_empresa_id, ss_e_tx_variacao, ss_e_nb_quantidade, ss_e_tx_tipo, ss_e_db_valor_unitario, ss_e_db_valor_total, ss_e_tx_data_recebimento, ss_e_tx_chave_nf, ss_e_tx_fornecedor, ss_e_tx_data, ss_e_tx_motivo, ss_e_tx_foto, ss_e_nb_userCadastro, ss_e_tx_validade)
+            VALUES ({$idEpi}, {$valEmpresa}, {$valVariacao}, {$quantidade}, '{$tipo}', {$valUnit}, {$valTot}, {$valDataReceb}, {$valChaveNf}, {$valFornecedor}, '{$dataAtual}', '{$motivo}', {$valFoto}, {$userCadastro}, {$valValidade})";
             
     return (bool)mysqli_query($conn, $sql);
 }
@@ -325,6 +337,12 @@ function ss_inicializar_tabelas() {
         mysqli_query($conn, "ALTER TABLE ss_epi ADD COLUMN ss_e_tx_validade_epi DATE DEFAULT NULL AFTER ss_e_tx_validade_ca");
     }
 
+    // Garante que a coluna de variações (ex: numeração/tamanho) exista
+    $check_column_variacoes = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi LIKE 'ss_e_tx_variacoes'");
+    if ($check_column_variacoes && mysqli_num_rows($check_column_variacoes) == 0) {
+        mysqli_query($conn, "ALTER TABLE ss_epi ADD COLUMN ss_e_tx_variacoes VARCHAR(255) DEFAULT NULL AFTER ss_e_tx_modelo");
+    }
+
     // 2. Tabela ss_colaborador
     $sql_colaborador = "CREATE TABLE IF NOT EXISTS ss_colaborador (
         ss_c_nb_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -367,6 +385,12 @@ function ss_inicializar_tabelas() {
         mysqli_query($conn, "ALTER TABLE ss_epi_estoque ADD COLUMN ss_e_tx_validade DATE DEFAULT NULL AFTER ss_e_tx_data_recebimento");
     }
 
+    // Garante que a coluna de variação exista em ss_epi_estoque
+    $check_column_est_var = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_estoque LIKE 'ss_e_tx_variacao'");
+    if ($check_column_est_var && mysqli_num_rows($check_column_est_var) == 0) {
+        mysqli_query($conn, "ALTER TABLE ss_epi_estoque ADD COLUMN ss_e_tx_variacao VARCHAR(100) DEFAULT NULL AFTER ss_e_nb_empresa_id");
+    }
+
     // 4. Tabela ss_epi_entrega
     $sql_entrega = "CREATE TABLE IF NOT EXISTS ss_epi_entrega (
         ss_e_nb_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -390,6 +414,12 @@ function ss_inicializar_tabelas() {
     $check_column_ent = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_entrega LIKE 'ss_e_nb_assinatura_id'");
     if ($check_column_ent && mysqli_num_rows($check_column_ent) == 0) {
         mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_nb_assinatura_id INT DEFAULT NULL");
+    }
+
+    // Garante que a coluna de variação exista em ss_epi_entrega
+    $check_column_ent_var = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_entrega LIKE 'ss_e_tx_variacao'");
+    if ($check_column_ent_var && mysqli_num_rows($check_column_ent_var) == 0) {
+        mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_tx_variacao VARCHAR(100) DEFAULT NULL AFTER ss_e_nb_empresa_id");
     }
 
     // 5. Tabela ss_kit
@@ -767,7 +797,7 @@ function ss_gerar_pdf_ficha_epi($colaborador_id, $delivery_ids = [], $recibo_uui
     }
 
     $sql = "SELECT ent.ss_e_nb_id, 
-                   CONCAT(epi.ss_e_tx_grupo, ' / ', IFNULL(epi.ss_e_tx_subgrupo, ''), ' / ', IFNULL(epi.ss_e_tx_item, '')) AS ss_e_tx_nome, 
+                   CONCAT(epi.ss_e_tx_grupo, ' / ', IFNULL(epi.ss_e_tx_subgrupo, ''), ' / ', IFNULL(epi.ss_e_tx_item, ''), IFNULL(CONCAT(' - Var: ', ent.ss_e_tx_variacao), '')) AS ss_e_tx_nome, 
                    epi.ss_e_tx_ca, 
                    ent.ss_e_tx_data_entrega, 
                    ent.ss_e_nb_quantidade, 
