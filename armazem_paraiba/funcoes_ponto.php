@@ -1330,18 +1330,28 @@
 			if((empty($motorista["para_tx_ignorarCampos"]) || is_bool(strpos($motorista["para_tx_ignorarCampos"], "mdc"))) && in_array($motorista["enti_tx_ocupacao"], ["Ajudante", "Motorista"])){
 				$intervalos = [];
 				$interAtivo = null;
+				$jornadaFechada = false;
 				foreach($pontosDia as $ponto){
 					if(empty($interAtivo)){
 						$interAtivo = new DateTime($ponto["pont_tx_data"]);
+						$jornadaFechada = ($tipos[$ponto["pont_tx_tipo"]] == "fimJornada");
 						continue;
 					}
 					
 					$iniciandoTrabalho = ($tipos[$ponto["pont_tx_tipo"]] == "inicioJornada" || (is_int(strpos($tipos[$ponto["pont_tx_tipo"]], "fim")) && $tipos[$ponto["pont_tx_tipo"]] != "fimJornada"));
+					if($jornadaFechada && !$iniciandoTrabalho){//Após o fim da jornada, o período até a próxima jornada não é direção
+						$iniciandoTrabalho = true;
+					}
 					$intervalos[] = [
 						!($iniciandoTrabalho), 
 						date_diff($interAtivo, new DateTime($ponto["pont_tx_data"]))
 					];
 					$interAtivo = new DateTime($ponto["pont_tx_data"]);
+					if($tipos[$ponto["pont_tx_tipo"]] == "fimJornada"){
+						$jornadaFechada = true;
+					}elseif($tipos[$ponto["pont_tx_tipo"]] == "inicioJornada"){
+						$jornadaFechada = false;
+					}
 				}
 				$aRetorno["maximoDirecaoContinua"] = verificarAlertaMDC($intervalos);
 			}
