@@ -971,8 +971,8 @@ function index() {
                 "cadastro_usuario.php", 
                 "modificarUsuario", 
                 "excluirUsuario", 
-                "Deseja excluir o usuário código: ", 
-                "CÓDIGO"
+                "CÓDIGO",
+                "Deseja excluir o usuário código: {CÓDIGO}?"
             );
 
             $gridFields["actions"] = $acoesGrid["tags"];
@@ -1071,7 +1071,7 @@ function index() {
                     // Esconde a lixeira baseando-se na posição atualizada da coluna STATUS
                     var idxStatus = pegarIndiceColuna('STATUS');
                     if (idxStatus !== -1) {
-                        esconderInativar('glyphicon glyphicon-remove search-button', idxStatus);
+                        esconderInativar('glyphicon glyphicon-remove search-remove', idxStatus);
                     }
                 };
             ";

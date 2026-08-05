@@ -175,7 +175,7 @@ function ss_gerarAcoesComConfirmacao(
 
     $encPadrao = rawurlencode($templatePadrao);
 
-    $actions["tags"][1] = '<span class="glyphicon glyphicon-remove search-button" ' . 
+    $actions["tags"][1] = '<span class="glyphicon glyphicon-remove search-remove" ' . 
                           'onclick="confirmarExclusaoEpi(this, \'' . $nomeAcaoExcluir . '\', \'' . $nomeColunaTituloId . '\', \'' . $encPadrao . '\')" ' . 
                           'title="Excluir" style="color:#d9534f; cursor:pointer;"></span>';
 
