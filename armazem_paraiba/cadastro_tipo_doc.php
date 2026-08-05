@@ -23,6 +23,27 @@
 	}
 	ensureCampDocumentoModuloTable();
 
+	function ensureTipoDocumentoReciboEpi(){
+		// Cria o documento padrão "Recibo de EPI" apenas se ainda não existir,
+		// para nunca duplicar ou recriar documentos editados/excluídos.
+		$jaExiste = query("SELECT tipo_nb_id FROM tipos_documentos WHERE tipo_tx_nome = 'Recibo de EPI' LIMIT 1");
+		if($jaExiste && mysqli_num_rows($jaExiste) > 0){
+			return;
+		}
+
+		$setor = query("SELECT grup_nb_id FROM grupos_documentos WHERE grup_tx_nome = 'Recursos Humanos - RH' AND grup_tx_status = 'ativo' LIMIT 1");
+		if(!$setor || mysqli_num_rows($setor) == 0){
+			return;
+		}
+		$setorId = (int)mysqli_fetch_assoc($setor)["grup_nb_id"];
+
+		query(
+			"INSERT INTO tipos_documentos (tipo_tx_nome, tipo_nb_grupo, tipo_nb_sbgrupo, tipo_tx_vencimento, tipo_tx_assinatura, tipo_tx_status)
+			 VALUES ('Recibo de EPI', {$setorId}, NULL, 'nao', 'sim', 'ativo')"
+		);
+	}
+	ensureTipoDocumentoReciboEpi();
+
     function excluirTipoDoc(){
 		remover("tipos_documentos",$_POST["id"]);
 		index();

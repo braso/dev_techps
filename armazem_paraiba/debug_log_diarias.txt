@@ -50,3 +50,4 @@ Stack trace:
 2026-08-04 09:52:00 | Deposito lancado: entidade 1, data 2026-08-04, dias 10, valor 1070
 2026-08-04 09:52:18 | Consumo lancado: entidade 1, data 2026-08-04, tipo cheia, valor 107
 2026-08-04 09:52:29 | Consumo lancado: entidade 1, data 2026-08-03, tipo cheia, valor 107
+2026-08-05 09:23:41 | Deposito lancado: entidade 7, data 2026-08-03, dias 10, valor 1070
