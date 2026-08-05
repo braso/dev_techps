@@ -313,8 +313,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (idx >= 0) pdfDoc.removePage(idx);
                     }
                 };
+                const winAnsiSafe = (str) => {
+                    let s = String(str ?? '');
+                    try { s = s.normalize('NFC'); } catch (e) {}
+                    s = s.replace(/[\u0300-\u036F\u00AD\u200B-\u200F\uFEFF]/g, '');
+                    return s.replace(/[^\x00-\x7F\u00A0-\u00FF\u20AC\u0192\u201A\u201E\u2026\u2020\u2021\u02C6\u2030\u0160\u2039\u0152\u017D\u2018\u2019\u201C\u201D\u2022\u2013\u2014\u02DC\u2122\u0161\u203A\u0153\u017E\u0178]/g, '?');
+                };
                 const wrapText = (text, font, size, maxWidth, maxLines = 99) => {
-                    const t = String(text || '').replace(/\s+/g, ' ').trim();
+                    const t = winAnsiSafe(text).replace(/\s+/g, ' ').trim();
                     if (!t) return [];
                     const words = t.split(' ');
                     const lines = [];
@@ -391,7 +397,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             page.drawText(ln, { x: pageMargin, y: y, size: baseFontSize, font: helveticaFont, color: rgb(0.1, 0.1, 0.1) });
                             y -= lineH;
                         }
-                        page.drawText(idLine, { x: pageMargin, y: y, size: smallFontSize, font: helveticaFont, color: rgb(0.35, 0.35, 0.35) });
+                        page.drawText(winAnsiSafe(idLine), { x: pageMargin, y: y, size: smallFontSize, font: helveticaFont, color: rgb(0.35, 0.35, 0.35) });
                         y -= 10;
                         page.drawLine({ start: { x: pageMargin, y: y }, end: { x: width - pageMargin, y: y }, thickness: 1, color: rgb(0.85, 0.85, 0.85) });
                         y -= 12;
@@ -403,7 +409,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         const footerY = pageMargin - 18;
                         page.drawLine({ start: { x: pageMargin, y: footerY + 12 }, end: { x: width - pageMargin, y: footerY + 12 }, thickness: 1, color: rgb(0.9, 0.9, 0.9) });
                         page.drawText('TechPS - Tecnologia e Sistemas', { x: pageMargin, y: footerY, size: 7.5, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) });
-                        const gen = `Gerado em: ${dataHora}`;
+                        const gen = winAnsiSafe(`Gerado em: ${dataHora}`);
                         page.drawText(gen, { x: width - pageMargin - helveticaFont.widthOfTextAtSize(gen, 7.5), y: footerY, size: 7.5, font: helveticaFont, color: rgb(0.4, 0.4, 0.4) });
                     };
 
@@ -434,21 +440,21 @@ document.addEventListener('DOMContentLoaded', function() {
                         page.drawRectangle({ x, y: bottomY, width: w, height: cardH, borderWidth: 1, borderColor: rgb(0.88, 0.88, 0.88), color: rgb(0.98, 0.98, 0.98) });
 
                         let cy = topY - cardPad - 2;
-                        page.drawText(headerText, { x: x + cardPad, y: cy, size: baseFontSize, font: helveticaBold, color: rgb(0, 0, 0) });
+                        page.drawText(winAnsiSafe(headerText), { x: x + cardPad, y: cy, size: baseFontSize, font: helveticaBold, color: rgb(0, 0, 0) });
                         cy -= (lineH - 1);
 
                         const leftX = x + cardPad;
                         const cpfText = entry.cpf ? `CPF: ${entry.cpf}` : '';
                         const rgText = entry.rg ? `RG: ${entry.rg}` : '';
                         const cpfRg = (cpfText && rgText) ? `${cpfText} • ${rgText}` : (cpfText || rgText || '—');
-                        page.drawText(cpfRg, { x: leftX, y: cy, size: smallFontSize, font: helveticaFont, color: rgb(0.2, 0.2, 0.2) });
+                        page.drawText(winAnsiSafe(cpfRg), { x: leftX, y: cy, size: smallFontSize, font: helveticaFont, color: rgb(0.2, 0.2, 0.2) });
                         cy -= (lineH - 1);
 
                         const dtLine = `Data/Hora: ${entry.data_hora || '—'}`;
-                        page.drawText(dtLine, { x: leftX, y: cy, size: smallFontSize, font: helveticaFont, color: rgb(0.2, 0.2, 0.2) });
+                        page.drawText(winAnsiSafe(dtLine), { x: leftX, y: cy, size: smallFontSize, font: helveticaFont, color: rgb(0.2, 0.2, 0.2) });
                         cy -= (lineH - 1);
                         const ipLine = `IP: ${entry.ip || '—'}`;
-                        page.drawText(ipLine, { x: leftX, y: cy, size: smallFontSize, font: helveticaFont, color: rgb(0.2, 0.2, 0.2) });
+                        page.drawText(winAnsiSafe(ipLine), { x: leftX, y: cy, size: smallFontSize, font: helveticaFont, color: rgb(0.2, 0.2, 0.2) });
                         cy -= (lineH - 1);
 
                         page.drawText('Hash:', { x: leftX, y: cy, size: smallFontSize, font: helveticaBold, color: rgb(0.25, 0.25, 0.25) });
