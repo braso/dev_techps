@@ -171,7 +171,12 @@
 	}
 
 	function excluirFerias(){
-		$ferias = mysqli_fetch_assoc(query("SELECT * from ferias LIMIT 1;"));
+		$ferias = mysqli_fetch_assoc(query(
+			"SELECT feri_nb_id FROM ferias 
+				WHERE feri_tx_status = 'ativo'
+					AND feri_nb_id = ".((int)($_POST["id"]?? 0))."
+			LIMIT 1;"
+		));
 
 		if(empty($ferias)){
 			set_status("Férias já inativada.");
@@ -251,7 +256,8 @@
             "cadastro_ferias.php", 
             "editarFerias", 
             "excluirFerias",
-			"tem certeza que deseja excluir o registro de férias código: " 
+            "CÓDIGO",
+            "Tem certeza que deseja excluir o registro de férias código: {CÓDIGO}?" 
         );
 
         $gridFields["actions"] = $configuracao["tags"];

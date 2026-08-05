@@ -23,7 +23,7 @@ function gerarAcoesComConfirmacao(
     $encPadrao = rawurlencode($templatePadrao);
     $encCondicao = rawurlencode($templateCondicao);
 
-    $actions["tags"][1] = '<span class="glyphicon glyphicon-remove search-button" ' . 
+    $actions["tags"][1] = '<span class="glyphicon glyphicon-remove search-remove" ' . 
                           'onclick="confirmarExclusaoGenerica(this, \'' . $nomeAcaoExcluir . '\', \'' . $nomeColunaTituloId . '\', \'' . $encPadrao . '\', \'' . $colunaCondicao . '\', \'' . $encCondicao . '\')" ' . 
                           'title="Excluir" style="color:#d9534f; cursor:pointer;"></span>';
 
