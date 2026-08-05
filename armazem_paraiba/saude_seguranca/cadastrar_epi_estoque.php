@@ -25,7 +25,7 @@ function cadastrarEpiEstoque() {
         $fotos_mantidas = !empty($_POST["fotos_mantidas"]) ? $_POST["fotos_mantidas"] : "";
         $new_paths = [];
         if (!empty($_FILES["foto"]["name"][0])) {
-            $allowed = ["image/jpeg", "image/png", "image/jpg"];
+            $allowed = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
             $total_files = count($_FILES["foto"]["name"]);
             $dir_foto = "arquivos/epi/{$id}/";
             $dir_foto_abs = $_SERVER["DOCUMENT_ROOT"] . $_ENV["APP_PATH"] . "/" . $dir_foto;
@@ -208,9 +208,19 @@ function index() {
 
     $campo_status       = combo("Status", "status", $_POST["status"] ?? "ativo", 3, ["ativo" => "Ativo", "inativo" => "Inativo"]);
     $campo_foto = '
-        <div class="col-sm-3 margin-bottom-5 campo-fit-content">
-            <label>Imagens (Selecione uma ou mais)</label>
-            <input name="foto[]" id="foto_input" autocomplete="off" type="file" class="form-control input-sm campo-fit-content" multiple accept="image/jpeg,image/png,image/jpg">
+        <div class="col-sm-12 margin-bottom-5 campo-fit-content" data-dropzone-foto>
+            <label>Imagens do EPI (Opcional)</label>
+            <div id="dropzone_foto" data-dropzone-area style="border: 2px dashed #b0b9c4; border-radius: 8px; background: #f8fafc; padding: 22px 15px; text-align: center; cursor: pointer; transition: all .2s;">
+                <div style="font-size: 30px; color: #337ab7;"><i class="fa fa-cloud-upload"></i></div>
+                <div style="font-size: 15px; font-weight: bold; color: #333; margin-top: 6px;">Arraste e solte as imagens aqui</div>
+                <div style="color: #888; margin-top: 3px;">Você também pode clicar aqui para escolher da galeria ou usar a câmera</div>
+                <div style="margin-top: 12px;">
+                    <button type="button" class="btn btn-sm btn-primary" id="btn_escolher_fotos" data-galeria><i class="fa fa-folder-open"></i> Escolher da Galeria</button>
+                    <button type="button" class="btn btn-sm btn-success" id="btn_tirar_foto" data-camera-btn><i class="fa fa-camera"></i> Tirar Foto (Câmera)</button>
+                </div>
+            </div>
+            <input name="foto[]" id="foto_input" autocomplete="off" type="file" accept="image/*" multiple style="display: none;">
+            <input name="foto_cam[]" id="foto_camera_input" autocomplete="off" type="file" accept="image/*" capture="environment" data-camera style="display: none;">
         </div>';
 
     $fotos = [];
@@ -455,6 +465,67 @@ function index() {
                     reader.readAsDataURL(file);
                 }
             }
+        });
+
+        // Dropzone: arrastar e soltar imagens, galeria ou câmera
+        var dropzoneEl = document.getElementById('dropzone_foto');
+        var fotoInputEl = document.getElementById('foto_input');
+
+        function adicionarArquivosAoSistema(novosArquivos) {
+            if (!window.DataTransfer || !fotoInputEl || !novosArquivos || novosArquivos.length === 0) {
+                return false;
+            }
+            var dt = new DataTransfer();
+            var existentes = fotoInputEl.files ? Array.prototype.slice.call(fotoInputEl.files) : [];
+            existentes.forEach(function(f) { dt.items.add(f); });
+            Array.prototype.slice.call(novosArquivos).forEach(function(f) { dt.items.add(f); });
+            fotoInputEl.files = dt.files;
+            return true;
+        }
+
+        if (dropzoneEl) {
+            $(dropzoneEl).on('dragover', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $(dropzoneEl).css('border-color', '#337ab7').css('background', '#eef4fb');
+            });
+            $(dropzoneEl).on('dragleave', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $(dropzoneEl).css('border-color', '#b0b9c4').css('background', '#f8fafc');
+            });
+            $(dropzoneEl).on('drop', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $(dropzoneEl).css('border-color', '#b0b9c4').css('background', '#f8fafc');
+                var arquivos = e.originalEvent.dataTransfer ? e.originalEvent.dataTransfer.files : null;
+                if (!arquivos || arquivos.length === 0) return;
+                if (adicionarArquivosAoSistema(arquivos)) {
+                    $('#foto_input').trigger('change');
+                } else {
+                    alert('Seu navegador não suporta arrastar arquivos. Use os botões abaixo.');
+                }
+            });
+            $(dropzoneEl).on('click', function() {
+                $('#foto_input').click();
+            });
+        }
+
+        $('#btn_escolher_fotos').on('click', function(e) {
+            e.stopPropagation();
+            $('#foto_input').click();
+        });
+        $('#btn_tirar_foto').on('click', function(e) {
+            e.stopPropagation();
+            $('#foto_camera_input').click();
+        });
+        $('#foto_camera_input').on('change', function() {
+            var arquivos = this.files;
+            if (!arquivos || arquivos.length === 0) return;
+            if (adicionarArquivosAoSistema(arquivos)) {
+                $('#foto_input').trigger('change');
+            }
+            this.value = '';
         });
 
         // Clique para remover foto existente
@@ -713,6 +784,7 @@ function index() {
         }
     });
     </script>
+    <script src="<?php echo $_ENV["APP_PATH"]; ?>/armazem_paraiba/saude_seguranca/js/dropzone_foto.js"></script>
     <?php
     rodape();
 }

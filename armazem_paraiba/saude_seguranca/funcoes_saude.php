@@ -443,17 +443,57 @@ function ss_inicializar_tabelas() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
     mysqli_query($conn, $sql_kit_item);
 
+    // 6.1 Tabela ss_fornecedor (Fornecedores do módulo)
+    $sql_fornecedor = "CREATE TABLE IF NOT EXISTS ss_fornecedor (
+        ss_f_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        ss_f_tx_razao_social VARCHAR(255) NOT NULL,
+        ss_f_tx_nome_fantasia VARCHAR(255) DEFAULT NULL,
+        ss_f_tx_cnpj VARCHAR(20) DEFAULT NULL,
+        ss_f_tx_telefone VARCHAR(30) DEFAULT NULL,
+        ss_f_tx_status VARCHAR(30) DEFAULT 'ativo',
+        ss_f_nb_userCadastro INT DEFAULT NULL,
+        ss_f_tx_dataCadastro DATETIME DEFAULT NULL,
+        ss_f_nb_userAtualiza INT DEFAULT NULL,
+        ss_f_tx_dataAtualiza DATETIME DEFAULT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+    mysqli_query($conn, $sql_fornecedor);
+
+    // 6.2 Tabela ss_epi_transferencia (Transferências de estoque entre empresas)
+    $sql_transferencia = "CREATE TABLE IF NOT EXISTS ss_epi_transferencia (
+        ss_t_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        ss_t_nb_epi_id INT NOT NULL,
+        ss_t_nb_quantidade INT NOT NULL,
+        ss_t_nb_empresa_origem INT NULL,
+        ss_t_nb_empresa_destino INT NULL,
+        ss_t_tx_variacao VARCHAR(100) DEFAULT NULL,
+        ss_t_tx_motivo VARCHAR(255) DEFAULT NULL,
+        ss_t_tx_data DATETIME DEFAULT NULL,
+        ss_t_nb_userCadastro INT DEFAULT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+    mysqli_query($conn, $sql_transferencia);
+
     // 7. Garante EPIs universais padrão pré-cadastrados
     ss_inicializar_epis_padrao();
 }
 
 /**
  * Garante que os EPIs universais padrão pré-cadastrados existam no banco de dados.
+ * Somente executa quando a tabela está totalmente vazia (primeira execução),
+ * para nunca recriar itens que o usuário tenha editado ou excluído.
  */
 function ss_inicializar_epis_padrao() {
     global $conn;
 
     if (!$conn) {
+        return;
+    }
+
+    $res = mysqli_query($conn, "SELECT COUNT(*) AS total FROM ss_epi");
+    if (!$res) {
+        return;
+    }
+    $row = mysqli_fetch_assoc($res);
+    if ((int)$row["total"] > 0) {
         return;
     }
 

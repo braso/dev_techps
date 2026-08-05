@@ -848,9 +848,19 @@ function modificarEntrega() {
     }
 
     $campo_foto = "
-        <div class='col-sm-4 margin-bottom-5 campo-fit-content' id='container_foto' style='display: none;'>
-            <label>Fotos do EPI Entregue (Selecione uma ou mais)</label>
-            <input name='foto[]' id='foto' type='file' class='form-control input-sm' accept='image/*' multiple>
+        <div class='col-sm-12 margin-bottom-5 campo-fit-content' id='container_foto' style='display: none;' data-dropzone-foto>
+            <label>Fotos do EPI Entregue (Opcional)</label>
+            <div id='dropzone_foto' data-dropzone-area style='border: 2px dashed #b0b9c4; border-radius: 8px; background: #f8fafc; padding: 22px 15px; text-align: center; cursor: pointer; transition: all .2s;'>
+                <div style='font-size: 30px; color: #337ab7;'><i class='fa fa-cloud-upload'></i></div>
+                <div style='font-size: 15px; font-weight: bold; color: #333; margin-top: 6px;'>Arraste e solte as imagens aqui</div>
+                <div style='color: #888; margin-top: 3px;'>Você também pode clicar aqui para escolher da galeria ou usar a câmera</div>
+                <div style='margin-top: 12px;'>
+                    <button type='button' class='btn btn-sm btn-primary' id='btn_escolher_fotos' data-galeria><i class='fa fa-folder-open'></i> Escolher da Galeria</button>
+                    <button type='button' class='btn btn-sm btn-success' id='btn_tirar_foto' data-camera-btn><i class='fa fa-camera'></i> Tirar Foto (Câmera)</button>
+                </div>
+            </div>
+            <input name='foto[]' id='foto' type='file' accept='image/*' multiple style='display: none;'>
+            <input name='foto_cam[]' id='foto_camera_input' type='file' accept='image/*' capture='environment' data-camera style='display: none;'>
             <div id='existing_photos_container' style='margin-top: 10px; display: block;'>{$foto_atual_html}</div>
             <div id='new_photos_container' style='margin-top: 10px; display: block;'></div>
         </div>
@@ -1171,6 +1181,67 @@ function modificarEntrega() {
                     reader.readAsDataURL(file);
                 }
             }
+        });
+
+        // Dropzone: arrastar e soltar imagens, galeria ou câmera
+        var dropzoneEl = document.getElementById('dropzone_foto');
+        var fotoInputEl = document.getElementById('foto');
+
+        function adicionarArquivosAoSistema(novosArquivos) {
+            if (!window.DataTransfer || !fotoInputEl || !novosArquivos || novosArquivos.length === 0) {
+                return false;
+            }
+            var dt = new DataTransfer();
+            var existentes = fotoInputEl.files ? Array.prototype.slice.call(fotoInputEl.files) : [];
+            existentes.forEach(function(f) { dt.items.add(f); });
+            Array.prototype.slice.call(novosArquivos).forEach(function(f) { dt.items.add(f); });
+            fotoInputEl.files = dt.files;
+            return true;
+        }
+
+        if (dropzoneEl) {
+            $(dropzoneEl).on('dragover', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $(dropzoneEl).css('border-color', '#337ab7').css('background', '#eef4fb');
+            });
+            $(dropzoneEl).on('dragleave', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $(dropzoneEl).css('border-color', '#b0b9c4').css('background', '#f8fafc');
+            });
+            $(dropzoneEl).on('drop', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $(dropzoneEl).css('border-color', '#b0b9c4').css('background', '#f8fafc');
+                var arquivos = e.originalEvent.dataTransfer ? e.originalEvent.dataTransfer.files : null;
+                if (!arquivos || arquivos.length === 0) return;
+                if (adicionarArquivosAoSistema(arquivos)) {
+                    $('#foto').trigger('change');
+                } else {
+                    alert('Seu navegador não suporta arrastar arquivos. Use os botões abaixo.');
+                }
+            });
+            $(dropzoneEl).on('click', function() {
+                $('#foto').click();
+            });
+        }
+
+        $('#btn_escolher_fotos').on('click', function(e) {
+            e.stopPropagation();
+            $('#foto').click();
+        });
+        $('#btn_tirar_foto').on('click', function(e) {
+            e.stopPropagation();
+            $('#foto_camera_input').click();
+        });
+        $('#foto_camera_input').on('change', function() {
+            var arquivos = this.files;
+            if (!arquivos || arquivos.length === 0) return;
+            if (adicionarArquivosAoSistema(arquivos)) {
+                $('#foto').trigger('change');
+            }
+            this.value = '';
         });
 
         // Clique para remover foto existente
@@ -1964,6 +2035,7 @@ function modificarEntrega() {
         }
     }
     </script>
+    <script src='{$_ENV["APP_PATH"]}/armazem_paraiba/saude_seguranca/js/dropzone_foto.js'></script>
     ";
 
     rodape();

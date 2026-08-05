@@ -18,7 +18,7 @@ function gravarSubEpi() {
     
     $subgrupo = trim($_POST["subgrupo"]);
     $item = trim($_POST["item"]);
-    $descricao = trim($_POST["descricao"]);
+    $descricao = trim($_POST["descricao"] ?? "");
     $variacoes = trim($_POST["variacoes"] ?? "");
     $status = $_POST["status"] ?? "ativo";
     $sub_id = !empty($_POST["sub_id"]) ? (int)$_POST["sub_id"] : 0;
@@ -216,9 +216,9 @@ function modificarEpi() {
             while ($row = mysqli_fetch_assoc($sqlEpis)) {
                 $hasEpis = true;
                 $row_id = $row["ss_e_nb_id"];
-                $sub_escaped = htmlspecialchars($row["ss_e_tx_subgrupo"]);
-                $item_escaped = htmlspecialchars($row["ss_e_tx_item"]);
-                $desc_escaped = htmlspecialchars($row["ss_e_tx_descricao"]);
+                $sub_escaped = htmlspecialchars($row["ss_e_tx_subgrupo"] ?? "");
+                $item_escaped = htmlspecialchars($row["ss_e_tx_item"] ?? "");
+                $desc_escaped = htmlspecialchars($row["ss_e_tx_descricao"] ?? "");
                 $variacoes_escaped = htmlspecialchars($row["ss_e_tx_variacoes"] ?? "");
                 
                 echo '
@@ -250,6 +250,7 @@ function modificarEpi() {
                         <input type="hidden" name="acao" value="gravarSubEpi">
                         <input type="hidden" name="grupo_id" value="' . $id . '">
                         <input type="hidden" name="sub_id" id="sub_id" value="">
+                        <input type="hidden" name="descricao" id="sub_desc" value="">
                         
                         <div class="row">
                             <div class="col-md-4">
@@ -284,6 +285,31 @@ function modificarEpi() {
         </div>
         
         <script>
+            if (typeof window.submitPost === "undefined") {
+                window.submitPost = function(action, params) {
+                    var form = document.createElement("form");
+                    form.setAttribute("method", "post");
+                    form.setAttribute("action", action);
+                    for (var key in params) {
+                        var input = document.createElement("input");
+                        input.setAttribute("type", "hidden");
+                        input.setAttribute("name", key);
+                        input.setAttribute("value", params[key]);
+                        form.appendChild(input);
+                    }
+                    $("form[name=\"contex_form\"] :input").each(function() {
+                        if (this.name && this.value !== "" && this.name !== "acao" && params[this.name] === undefined) {
+                            var input = document.createElement("input");
+                            input.setAttribute("type", "hidden");
+                            input.setAttribute("name", this.name);
+                            input.setAttribute("value", this.value);
+                            form.appendChild(input);
+                        }
+                    });
+                    document.body.appendChild(form);
+                    form.submit();
+                };
+            }
             $(document).ready(function() {
                 // Editar sub-EPI
                 $(".btn-edit-sub").on("click", function() {
@@ -430,7 +456,7 @@ function index() {
     }
 
     if (!isset($_POST["busca_status"])) {
-        $_POST["busca_status"] = "ativo";
+        $_POST["busca_status"] = "";
     }
 
     $fields = [
