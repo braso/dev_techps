@@ -481,12 +481,12 @@ function ss_inicializar_epis_padrao() {
         [
             "grupo"    => "EPI PARA PROTEÇÃO AUDITIVA",
             "subgrupo" => "Protetor Auricular de Silicone Tipo Plug",
-            "item"     => "para proteção do sistema auditivo contra níveis de pressão sonora superiores ao estabelecido na NR-15, Anexos nº 1 e 2"
+            "item"     => "para proteção do sistema auditivo contra níveis de pressão sonora superiores ao estabelecido na NR-15 Anexos nº 1 e 2"
         ],
         [
             "grupo"    => "EPI PARA PROTEÇÃO AUDITIVA",
             "subgrupo" => "Protetor Auricular Abafador Concha",
-            "item"     => "para proteção do sistema auditivo contra níveis de pressão sonora superiores ao estabelecido na NR-15, Anexos nº 1 e 2; e"
+            "item"     => "para proteção do sistema auditivo contra níveis de pressão sonora superiores ao estabelecido na NR-15 Anexos nº 1 e 2; e"
         ],
         [
             "grupo"    => "EPI PARA PROTEÇÃO RESPIRATÓRIA",
@@ -496,7 +496,7 @@ function ss_inicializar_epis_padrao() {
         [
             "grupo"    => "EPI PARA PROTEÇÃO RESPIRATÓRIA",
             "subgrupo" => "Máscara Descartável Pff2",
-            "item"     => "peça semifacial filtrante para partículas PFF2 para proteção das vias respiratórias contra poeiras, névoas e fumos"
+            "item"     => "peça semifacial filtrante para partículas PFF2 para proteção das vias respiratórias contra poeiras névoas e fumos"
         ],
         [
             "grupo"    => "EPI PARA PROTEÇÃO DOS MEMBROS SUPERIORES",

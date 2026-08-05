@@ -1,0 +1,52 @@
+2026-08-04 11:21:16 | FATAL | Uncaught Error: Call to undefined function query() in /var/www/html/braso/armazem_paraiba/diarias/helpers_diarias.php:6
+Stack trace:
+#0 /var/www/html/braso/armazem_paraiba/diarias/helpers_diarias.php(50): diar_query('CREATE TABLE IF...')
+#1 /var/www/html/braso/armazem_paraiba/diarias/solicitar_diaria.php(18): diar_ensureSchema()
+#2 /tmp/test_diarias.php(23): include('/var/www/html/b...')
+#3 {main}
+  thrown | /var/www/html/braso/armazem_paraiba/diarias/helpers_diarias.php:6
+2026-08-04 11:21:22 | FATAL | Uncaught Error: Call to undefined function query() in /var/www/html/braso/armazem_paraiba/diarias/helpers_diarias.php:6
+Stack trace:
+#0 /var/www/html/braso/armazem_paraiba/diarias/helpers_diarias.php(50): diar_query('CREATE TABLE IF...')
+#1 /var/www/html/braso/armazem_paraiba/diarias/solicitar_diaria.php(18): diar_ensureSchema()
+#2 /tmp/test_diarias.php(23): include('/var/www/html/b...')
+#3 {main}
+  thrown | /var/www/html/braso/armazem_paraiba/diarias/helpers_diarias.php:6
+2026-08-04 11:21:28 | FATAL | Uncaught Error: Call to undefined function query() in /var/www/html/braso/armazem_paraiba/diarias/helpers_diarias.php:6
+Stack trace:
+#0 /var/www/html/braso/armazem_paraiba/diarias/helpers_diarias.php(50): diar_query('CREATE TABLE IF...')
+#1 /var/www/html/braso/armazem_paraiba/diarias/solicitar_diaria.php(18): diar_ensureSchema()
+#2 /tmp/test_diarias.php(23): include('/var/www/html/b...')
+#3 {main}
+  thrown | /var/www/html/braso/armazem_paraiba/diarias/helpers_diarias.php:6
+2026-08-04 11:21:34 | FATAL | Uncaught Error: Call to undefined function query() in /var/www/html/braso/armazem_paraiba/diarias/helpers_diarias.php:6
+Stack trace:
+#0 /var/www/html/braso/armazem_paraiba/diarias/helpers_diarias.php(50): diar_query('CREATE TABLE IF...')
+#1 /var/www/html/braso/armazem_paraiba/diarias/solicitar_diaria.php(18): diar_ensureSchema()
+#2 /tmp/test_diarias.php(23): include('/var/www/html/b...')
+#3 {main}
+  thrown | /var/www/html/braso/armazem_paraiba/diarias/helpers_diarias.php:6
+2026-08-04 11:21:41 | FATAL | Uncaught Error: Call to undefined function query() in /var/www/html/braso/armazem_paraiba/diarias/helpers_diarias.php:6
+Stack trace:
+#0 /var/www/html/braso/armazem_paraiba/diarias/helpers_diarias.php(50): diar_query('CREATE TABLE IF...')
+#1 /var/www/html/braso/armazem_paraiba/diarias/solicitar_diaria.php(18): diar_ensureSchema()
+#2 /tmp/test_diarias.php(23): include('/var/www/html/b...')
+#3 {main}
+  thrown | /var/www/html/braso/armazem_paraiba/diarias/helpers_diarias.php:6
+2026-08-04 11:21:53 | FATAL | Uncaught Error: Call to undefined function query() in /var/www/html/braso/armazem_paraiba/diarias/helpers_diarias.php:6
+Stack trace:
+#0 /var/www/html/braso/armazem_paraiba/diarias/helpers_diarias.php(50): diar_query('CREATE TABLE IF...')
+#1 /var/www/html/braso/armazem_paraiba/diarias/solicitar_diaria.php(18): diar_ensureSchema()
+#2 /tmp/test_diarias.php(28): include('/var/www/html/b...')
+#3 {main}
+  thrown | /var/www/html/braso/armazem_paraiba/diarias/helpers_diarias.php:6
+2026-08-04 08:24:24 | POST iniciar envio solicitacao de diaria
+2026-08-04 08:24:24 | POST retorno inserir recebido
+2026-08-04 08:24:24 | POST aprovadores processados
+2026-08-04 08:24:24 | POST solicitacao enviada com sucesso: 1
+2026-08-04 09:18:24 | Deposito lancado: entidade 7, data 2026-08-04, dias 10, valor 550
+2026-08-04 09:18:24 | Consumo lancado: entidade 7, data 2026-08-04, tipo cheia, valor 107
+2026-08-04 09:18:53 | Consumo lancado: entidade 7, data 2026-08-04, tipo outra, valor 80
+2026-08-04 09:52:00 | Deposito lancado: entidade 1, data 2026-08-04, dias 10, valor 1070
+2026-08-04 09:52:18 | Consumo lancado: entidade 1, data 2026-08-04, tipo cheia, valor 107
+2026-08-04 09:52:29 | Consumo lancado: entidade 1, data 2026-08-03, tipo cheia, valor 107
