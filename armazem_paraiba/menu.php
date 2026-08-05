@@ -86,6 +86,10 @@
                 "/trocadeturno/gestao_troca_turno.php" => "Gestão de Turno",
                 "/trocadeturno/solicitar_troca_turno.php" => "Troca de Turno"
 			],
+            "diárias" => [
+                "/diarias/gestao_diarias.php" => "Gestão de Diárias",
+                "/diarias/parametros_diarias.php" => "Parâmetros de Diárias"
+            ],
 			"painel" => [
 				"/paineis/ajustes.php"			=> "Ajustes",
 				"/paineis/disponibilidade.php"	=> "Disponibilidade",
@@ -135,6 +139,7 @@ if ($showComunicado) {
             "epi" => "",
             "relatórios" => "",
             "assinatura" => "",
+            "diárias" => "",
             "suporte" => "",
         ];
         // Perfil vinculado ao usuário (se existir)
@@ -179,6 +184,7 @@ if ($showComunicado) {
             "epi" => "fa fa-shield-alt",
             "relatórios" => "fa fa-file-alt",
             "assinatura" => "fa fa-file-contract",
+            "diárias" => "fa fa-money-bill-wave",
             "suporte" => "fa fa-life-ring",
         ];
         $iconMap = [
@@ -219,7 +225,9 @@ if ($showComunicado) {
             "Signatários Externos" => "fa fa-address-card",
             "Cadastro de EPI" => "fa fa-plus-circle",
             "Entrega de EPI" => "fa fa-exchange-alt",
-            "Estoque de EPI" => "fa fa-boxes"
+            "Estoque de EPI" => "fa fa-boxes",
+            "Gestão de Diárias" => "fa fa-hand-holding-usd",
+            "Parâmetros de Diárias" => "fa fa-sliders-h"
         ];
 
         // Verifica se existe pelo menos uma placa cadastrada para mostrar o menu Logística.
@@ -305,7 +313,7 @@ if ($showComunicado) {
 
         $isAdmin = is_int(strpos($nivel, "Administrador"));
         $isSuperAdmin = is_int(strpos($nivel, "Super Administrador"));
-        $menusConcat = $menus["cadastros"].$menus["ponto"].$menus["painel"].($menus["logística"] ?? "").($menus["epi"] ?? "").($menus["assinatura"] ?? "").($menus["suporte"]?? "").($menus["relatórios"] ?? "");
+        $menusConcat = $menus["cadastros"].$menus["ponto"].$menus["painel"].($menus["logística"] ?? "").($menus["epi"] ?? "").($menus["assinatura"] ?? "").($menus["diárias"] ?? "").($menus["suporte"]?? "").($menus["relatórios"] ?? "");
         if ($isSuperAdmin) {
             return $menusConcat;
         }
