@@ -18,6 +18,18 @@ require __DIR__ . '/../../PHPMailer/src/SMTP.php';
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
+function normalizarNomeArquivo(string $nome): string {
+    if(class_exists("Normalizer")){
+        $n = Normalizer::normalize($nome, Normalizer::FORM_C);
+        if(is_string($n)){
+            $nome = $n;
+        }
+    }
+    $nome = preg_replace('/[\x{0300}-\x{036F}\x{200B}-\x{200F}\x{FEFF}\x{00AD}]/u', '', $nome);
+    $nome = preg_replace('/[\x00-\x1F\x7F]/', '', $nome);
+    return $nome;
+}
+
 function redirectTo(string $redirectTo, string $status, ?string $message = null): void {
     $sep = (strpos($redirectTo, "?") === false) ? "?" : "&";
     $url = $redirectTo . $sep . "status=" . urlencode($status);
@@ -360,7 +372,7 @@ if($modo_envio === "funcionarios"){
         }
 
         $tmp = $arquivos["tmp_name"][$idEntidade] ?? "";
-        $original = $arquivos["name"][$idEntidade] ?? "";
+        $original = normalizarNomeArquivo(strval($arquivos["name"][$idEntidade] ?? ""));
         if($tmp === "" || $original === ""){
             $erros++;
             continue;
@@ -465,7 +477,7 @@ if($modo_envio === "separar_paginas"){
     }
 
     $path = strval($tokens[$token]["path"] ?? "");
-    $original = strval($tokens[$token]["name"] ?? "documento.pdf");
+    $original = normalizarNomeArquivo(strval($tokens[$token]["name"] ?? "documento.pdf"));
     $pagesStored = intval($tokens[$token]["pages"] ?? 0);
 
     $dirTmp = realpath(__DIR__ . "/uploads/tmp/");
@@ -697,7 +709,7 @@ if($modo_envio === "avulso" && $avulsoDestino === "todos"){
     }
 
     $fileTmpPath = $_FILES['arquivo']['tmp_name'];
-    $fileName = $_FILES['arquivo']['name'];
+    $fileName = normalizarNomeArquivo(strval($_FILES['arquivo']['name']));
     $fileNameCmps = explode(".", $fileName);
     $fileExtension = strtolower(end($fileNameCmps));
     if ($fileExtension !== 'pdf') {
@@ -1048,7 +1060,7 @@ if($modo_envio === "avulso" && $documentoAssinar === "nao"){
     }
 
     $fileTmpPath = $_FILES['arquivo']['tmp_name'];
-    $fileName = $_FILES['arquivo']['name'];
+    $fileName = normalizarNomeArquivo(strval($_FILES['arquivo']['name']));
     $fileNameCmps = explode(".", $fileName);
     $fileExtension = strtolower(end($fileNameCmps));
     if ($fileExtension !== 'pdf') {
@@ -1176,7 +1188,7 @@ if (!isset($_FILES['arquivo']) || $_FILES['arquivo']['error'] !== UPLOAD_ERR_OK)
 }
 
 $fileTmpPath = $_FILES['arquivo']['tmp_name'];
-$fileName = $_FILES['arquivo']['name'];
+$fileName = normalizarNomeArquivo(strval($_FILES['arquivo']['name']));
 $fileSize = $_FILES['arquivo']['size'];
 $fileType = $_FILES['arquivo']['type'];
 $fileNameCmps = explode(".", $fileName);
