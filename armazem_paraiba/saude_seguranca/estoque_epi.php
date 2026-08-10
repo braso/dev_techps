@@ -163,9 +163,247 @@ function detalhesFilialAjax() {
     exit;
 }
 
+function detalhesEpiAjax() {
+    ob_clean();
+    $epi_id = isset($_GET["epi_id"]) ? (int)$_GET["epi_id"] : 0;
+    if ($epi_id === 0) {
+        echo '<div class="alert alert-danger">EPI não identificado.</div>';
+        exit;
+    }
+
+    // 1. Dados cadastrais do EPI
+    $sqlEpi = query("SELECT * FROM ss_epi WHERE ss_e_nb_id = {$epi_id} LIMIT 1");
+    $epi = $sqlEpi ? mysqli_fetch_assoc($sqlEpi) : null;
+    if (empty($epi)) {
+        echo '<div class="alert alert-danger">EPI não encontrado.</div>';
+        exit;
+    }
+
+    // 2. Saldo consolidado por empresa (CNPJ), com saldo separado por variação
+    $sqlPorEmpresa = query("
+        SELECT IFNULL(e.empr_nb_id, 0) AS empresa_id,
+               IFNULL(e.empr_tx_nome, 'Matriz') AS empresa_nome,
+               IFNULL(e.empr_tx_cnpj, '-') AS empresa_cnpj,
+               agg.total_entradas,
+               agg.total_saidas,
+               agg.saldo,
+               agg.valor_total,
+               v.variacoes_saldo
+        FROM (
+            SELECT IFNULL(ss_e_nb_empresa_id, 0) AS empresa_id,
+                   SUM(CASE WHEN ss_e_tx_tipo = 'entrada' THEN ss_e_nb_quantidade ELSE 0 END) AS total_entradas,
+                   SUM(CASE WHEN ss_e_tx_tipo <> 'entrada' THEN ss_e_nb_quantidade ELSE 0 END) AS total_saidas,
+                   SUM(CASE WHEN ss_e_tx_tipo = 'entrada' THEN ss_e_nb_quantidade ELSE -ss_e_nb_quantidade END) AS saldo,
+                   SUM(CASE WHEN ss_e_tx_tipo = 'entrada' THEN IFNULL(ss_e_db_valor_total, 0) ELSE -IFNULL(ss_e_db_valor_total, 0) END) AS valor_total
+            FROM ss_epi_estoque
+            WHERE ss_e_nb_epi_id = {$epi_id}
+            GROUP BY empresa_id
+        ) agg
+        LEFT JOIN (
+            SELECT empresa_id,
+                   GROUP_CONCAT(CONCAT(IFNULL(variacao, ''), ':', saldo_var) SEPARATOR '|') AS variacoes_saldo
+            FROM (
+                SELECT IFNULL(ss_e_nb_empresa_id, 0) AS empresa_id,
+                       ss_e_tx_variacao AS variacao,
+                       SUM(CASE WHEN ss_e_tx_tipo = 'entrada' THEN ss_e_nb_quantidade ELSE -ss_e_nb_quantidade END) AS saldo_var
+                FROM ss_epi_estoque
+                WHERE ss_e_nb_epi_id = {$epi_id} AND IFNULL(ss_e_tx_variacao, '') <> ''
+                GROUP BY ss_e_nb_epi_id, empresa_id, variacao
+            ) sub
+            GROUP BY empresa_id
+        ) v ON v.empresa_id = agg.empresa_id
+        LEFT JOIN empresa e ON agg.empresa_id = e.empr_nb_id
+        ORDER BY agg.saldo DESC, empresa_nome ASC
+    ");
+
+    // 3. Variações com saldo
+    $sqlVariacoes = query("
+        SELECT ss_e_tx_variacao,
+               SUM(CASE WHEN ss_e_tx_tipo = 'entrada' THEN ss_e_nb_quantidade ELSE -ss_e_nb_quantidade END) AS saldo_var
+        FROM ss_epi_estoque
+        WHERE ss_e_nb_epi_id = {$epi_id} AND IFNULL(ss_e_tx_variacao, '') <> ''
+        GROUP BY ss_e_tx_variacao
+        ORDER BY ss_e_tx_variacao ASC
+    ");
+
+    // 4. Acumula totais
+    $totalSaldo = 0;
+    $totalValor = 0;
+    $totalEntradas = 0;
+    $totalSaidas = 0;
+    $empresasHtml = "";
+    if ($sqlPorEmpresa) {
+        while ($rowEmp = mysqli_fetch_assoc($sqlPorEmpresa)) {
+            $totalSaldo += (int)$rowEmp["saldo"];
+            $totalValor += (float)$rowEmp["valor_total"];
+            $totalEntradas += (int)$rowEmp["total_entradas"];
+            $totalSaidas += (int)$rowEmp["total_saidas"];
+
+            $cnpj = trim($rowEmp["empresa_cnpj"] ?? "-");
+            if (preg_match('/^\d{14}$/', $cnpj)) {
+                $cnpj = substr($cnpj, 0, 2) . "." . substr($cnpj, 2, 3) . "." . substr($cnpj, 5, 3) . "/" . substr($cnpj, 8, 4) . "-" . substr($cnpj, 12, 2);
+            }
+
+            $badgeSaldo = 'badge-warning';
+            if ((int)$rowEmp["saldo"] <= 0) {
+                $badgeSaldo = 'badge-danger';
+            } elseif ((int)$rowEmp["saldo"] <= 5) {
+                $badgeSaldo = 'badge-warning';
+            } else {
+                $badgeSaldo = 'badge-success';
+            }
+
+            // Badges do saldo por variação desta empresa
+            $variacaoBadges = "";
+            if (!empty($rowEmp["variacoes_saldo"])) {
+                foreach (explode("|", $rowEmp["variacoes_saldo"]) as $varItem) {
+                    $partes = explode(":", $varItem, 2);
+                    $varNome = $partes[0] ?? "";
+                    $varSaldo = (int)($partes[1] ?? 0);
+                    $varBadge = 'label-info';
+                    if ($varSaldo <= 0) {
+                        $varBadge = 'label-danger';
+                    } elseif ($varSaldo <= 5) {
+                        $varBadge = 'label-warning';
+                    }
+                    $variacaoBadges .= '<span class="label ' . $varBadge . '" style="font-size: 11px; margin: 2px; display: inline-block;">' . htmlspecialchars($varNome) . ': <strong>' . $varSaldo . '</strong></span>';
+                }
+            }
+            if (empty($variacaoBadges)) {
+                $variacaoBadges = '<span class="text-muted">-</span>';
+            }
+
+            $empresasHtml .= '
+            <tr>
+                <td style="vertical-align: middle;"><strong>' . htmlspecialchars($rowEmp["empresa_nome"]) . '</strong><br><small class="text-muted">CNPJ: ' . htmlspecialchars($cnpj) . '</small></td>
+                <td style="vertical-align: middle; white-space: nowrap;">' . $variacaoBadges . '</td>
+                <td style="text-align: center; vertical-align: middle;"><span class="label label-sm label-success" style="font-weight: bold;">+' . (int)$rowEmp["total_entradas"] . '</span></td>
+                <td style="text-align: center; vertical-align: middle;"><span class="label label-sm label-danger" style="font-weight: bold;">-' . (int)$rowEmp["total_saidas"] . '</span></td>
+                <td style="text-align: center; vertical-align: middle;"><span class="badge ' . $badgeSaldo . '" style="font-size: 13px; padding: 5px 9px; font-weight: bold;">' . (int)$rowEmp["saldo"] . '</span></td>
+                <td style="text-align: right; vertical-align: middle; white-space: nowrap;">R$ ' . number_format((float)$rowEmp["valor_total"], 2, ",", ".") . '</td>
+            </tr>';
+        }
+    }
+    if (empty($empresasHtml)) {
+        $empresasHtml = '<tr><td colspan="6" class="text-center" style="padding: 20px; font-style: italic; color: #777;">Nenhuma movimentação registrada para este EPI.</td></tr>';
+    }
+
+    // Variações
+    $variacoesHtml = "";
+    if ($sqlVariacoes) {
+        while ($rowVar = mysqli_fetch_assoc($sqlVariacoes)) {
+            $variacoesHtml .= '<span class="label label-info" style="font-size: 11px; margin: 2px; display: inline-block;">' . htmlspecialchars($rowVar["ss_e_tx_variacao"]) . ': <strong>' . (int)$rowVar["saldo_var"] . '</strong></span>';
+        }
+    }
+    if (empty($variacoesHtml)) {
+        $variacoesHtml = '<span class="text-muted">Sem variações cadastradas para este item.</span>';
+    }
+
+    // Alertas (criatividade: CA vencido, validade do EPI e estoque baixo)
+    $alertsHtml = "";
+    $hoje = date("Y-m-d");
+    if (!empty($epi["ss_e_tx_validade_ca"]) && $epi["ss_e_tx_validade_ca"] != "0000-00-00" && $epi["ss_e_tx_validade_ca"] < $hoje) {
+        $alertsHtml .= '<div class="alert alert-danger" style="margin-bottom: 8px; padding: 8px 12px; font-size: 12px;"><i class="fa fa-exclamation-triangle"></i> <strong>CA vencido em ' . date("d/m/Y", strtotime($epi["ss_e_tx_validade_ca"])) . '!</strong> Este EPI não pode ser utilizado legalmente até a renovação do Certificado de Aprovação.</div>';
+    }
+    if (!empty($epi["ss_e_tx_validade_epi"]) && $epi["ss_e_tx_validade_epi"] != "0000-00-00" && $epi["ss_e_tx_validade_epi"] < $hoje) {
+        $alertsHtml .= '<div class="alert alert-warning" style="margin-bottom: 8px; padding: 8px 12px; font-size: 12px;"><i class="fa fa-clock-o"></i> <strong>Validade do EPI expirada em ' . date("d/m/Y", strtotime($epi["ss_e_tx_validade_epi"])) . '.</strong> Verifique a necessidade de descarte/renovação do lote.</div>';
+    }
+    if ($totalSaldo <= 5) {
+        $alertsHtml .= '<div class="alert alert-warning" style="margin-bottom: 8px; padding: 8px 12px; font-size: 12px;"><i class="fa fa-exclamation-circle"></i> <strong>Estoque baixo:</strong> restam apenas ' . $totalSaldo . ' unidade(s). Considere realizar uma nova entrada.</div>';
+    }
+
+    // Foto
+    $fotoHtml = "";
+    if (!empty($epi["ss_e_tx_foto"])) {
+        $paths = array_filter(explode(",", $epi["ss_e_tx_foto"]));
+        $primeira = reset($paths);
+        if (!empty($primeira)) {
+            $src = ss_resolve_foto_url($primeira);
+            if (!empty($src)) {
+                $fotoHtml = '<img src="' . $src . '" style="max-height: 110px; max-width: 110px; border-radius: 8px; border: 1px solid #ddd; object-fit: cover; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">';
+            }
+        }
+    }
+
+    echo '
+    <div class="row" style="margin-bottom: 15px;">
+        <div class="col-sm-2 text-center">' . ($fotoHtml ?: '<div style="width: 110px; height: 110px; border-radius: 8px; border: 1px dashed #ccc; display: inline-flex; align-items: center; justify-content: center; color: #aaa;"><i class="fa fa-hard-hat fa-3x"></i></div>') . '</div>
+        <div class="col-sm-10">
+            <h4 style="margin: 0 0 4px 0; font-weight: bold;">' . htmlspecialchars($epi["ss_e_tx_item"] ?: "EPI") . '</h4>
+            <span class="text-muted">' . htmlspecialchars($epi["ss_e_tx_grupo"] ?? "") . (!empty($epi["ss_e_tx_subgrupo"]) ? ' > ' . htmlspecialchars($epi["ss_e_tx_subgrupo"]) : '') . '</span>
+            <br><br>
+            <table class="table table-condensed" style="margin-bottom: 0;">
+                <tr>
+                    <td style="border: none; padding: 2px 8px 2px 0;"><strong>Fabricante:</strong></td><td style="border: none; padding: 2px 8px;">' . htmlspecialchars($epi["ss_e_tx_fabricante"] ?? "-") . '</td>
+                    <td style="border: none; padding: 2px 8px 2px 20px;"><strong>Modelo:</strong></td><td style="border: none; padding: 2px 8px;">' . htmlspecialchars($epi["ss_e_tx_modelo"] ?? "-") . '</td>
+                </tr>
+                <tr>
+                    <td style="border: none; padding: 2px 8px 2px 0;"><strong>CA:</strong></td><td style="border: none; padding: 2px 8px;">' . htmlspecialchars($epi["ss_e_tx_ca"] ?? "-") . '</td>
+                    <td style="border: none; padding: 2px 8px 2px 20px;"><strong>Validade do CA:</strong></td><td style="border: none; padding: 2px 8px;">' . (!empty($epi["ss_e_tx_validade_ca"]) && $epi["ss_e_tx_validade_ca"] != "0000-00-00" ? date("d/m/Y", strtotime($epi["ss_e_tx_validade_ca"])) : "-") . '</td>
+                </tr>
+                <tr>
+                    <td style="border: none; padding: 2px 8px 2px 0;"><strong>Validade EPI:</strong></td><td style="border: none; padding: 2px 8px;">' . (!empty($epi["ss_e_tx_validade_epi"]) && $epi["ss_e_tx_validade_epi"] != "0000-00-00" ? date("d/m/Y", strtotime($epi["ss_e_tx_validade_epi"])) : "-") . '</td>
+                    <td style="border: none; padding: 2px 8px 2px 20px;"><strong>Vida útil:</strong></td><td style="border: none; padding: 2px 8px;">' . (int)($epi["ss_e_nb_vida_util"] ?? 0) . ' dias</td>
+                </tr>
+                ' . (!empty($epi["ss_e_tx_descricao"]) ? '<tr><td colspan="4" style="border: none; padding: 4px 8px 2px 0;"><em>' . htmlspecialchars($epi["ss_e_tx_descricao"]) . '</em></td></tr>' : '') . '
+            </table>
+        </div>
+    </div>
+
+    ' . $alertsHtml . '
+
+    <div class="row" style="margin-bottom: 15px;">
+        <div class="col-sm-3">
+            <div style="background: #f8f9fa; border-radius: 6px; padding: 10px; text-align: center; border: 1px solid #e4e7eb;">
+                <div style="font-size: 20px; font-weight: 800; color: ' . ($totalSaldo <= 5 ? "#e35b5a" : "#32c5d2") . ';">' . $totalSaldo . '</div>
+                <div style="font-size: 11px; color: #777; text-transform: uppercase; font-weight: bold;">Saldo total</div>
+            </div>
+        </div>
+        <div class="col-sm-3">
+            <div style="background: #f8f9fa; border-radius: 6px; padding: 10px; text-align: center; border: 1px solid #e4e7eb;">
+                <div style="font-size: 20px; font-weight: 800; color: #5cb85c;">+' . $totalEntradas . '</div>
+                <div style="font-size: 11px; color: #777; text-transform: uppercase; font-weight: bold;">Entradas</div>
+            </div>
+        </div>
+        <div class="col-sm-3">
+            <div style="background: #f8f9fa; border-radius: 6px; padding: 10px; text-align: center; border: 1px solid #e4e7eb;">
+                <div style="font-size: 20px; font-weight: 800; color: #d9534f;">-' . $totalSaidas . '</div>
+                <div style="font-size: 11px; color: #777; text-transform: uppercase; font-weight: bold;">Saídas</div>
+            </div>
+        </div>
+        <div class="col-sm-3">
+            <div style="background: #f8f9fa; border-radius: 6px; padding: 10px; text-align: center; border: 1px solid #e4e7eb;">
+                <div style="font-size: 20px; font-weight: 800; color: #337ab7;">R$ ' . number_format($totalValor, 2, ",", ".") . '</div>
+                <div style="font-size: 11px; color: #777; text-transform: uppercase; font-weight: bold;">Valor em estoque</div>
+            </div>
+        </div>
+    </div>
+
+    <h5 style="font-weight: bold; margin-top: 0;"><i class="fa fa-building"></i> Saldo por Empresa (CNPJ)</h5>
+    <div class="table-responsive" style="margin-bottom: 20px;">
+        <table class="table table-striped table-bordered table-hover">
+            <thead>
+                <tr style="background-color: #f9f9f9;">
+                    <th>Empresa</th>
+                    <th>Saldo por Variação</th>
+                    <th style="text-align: center;">Entradas</th>
+                    <th style="text-align: center;">Saídas</th>
+                    <th style="text-align: center;">Saldo</th>
+                    <th style="text-align: right;">Valor total</th>
+                </tr>
+            </thead>
+            <tbody>' . $empresasHtml . '</tbody>
+        </table>
+    </div>
+
+    <h5 style="font-weight: bold;"><i class="fa fa-tags"></i> Variações</h5>
+    <div style="margin-bottom: 20px;">' . $variacoesHtml . '</div>
+    ';
+    exit;
+}
+
 function index() {
     cabecalho("Controle de Estoque de EPI");
-    echo '<style>#btnExportPDF { display: none !important; }</style>';
     
     $temFiliais = ss_tem_filiais_cadastradas();
     if ($temFiliais) {
@@ -407,8 +645,8 @@ function index() {
         .custom-dashboard-card:hover .card-footer-action i {
             transform: translateX(4px);
         }
-        #btnExportPDF {
-            display: none !important;
+        #result tbody tr {
+            cursor: pointer;
         }
     </style>
     <?php
@@ -561,6 +799,7 @@ function index() {
                       ) AS epi";
 
         $gridFields["actions"] = [
+            '<span class="fa fa-eye acao-detalhes-epi-est" title="Ver detalhes / saldo por CNPJ" style="color:#5bc0de; cursor:pointer; font-size:16px; margin-right:8px;"></span>',
             '<span class="fa fa-edit acao-editar-epi-est" title="Alterar" style="color:#337ab7; cursor:pointer; font-size:16px; margin-right:8px;"></span>',
             '<span class="fa fa-ban acao-inativar-epi-est" title="Inativar/Ativar" style="color:#f0ad4e; cursor:pointer; font-size:16px; margin-right:8px;"></span>',
             '<span class="fa fa-trash acao-excluir-epi-est" title="Excluir" style="color:#d9534f; cursor:pointer; font-size:16px;"></span>'
@@ -568,6 +807,24 @@ function index() {
 
         $jsAcoes = '
             var funcoesInternas = function(){
+                // Abre o modal de detalhes do EPI ao clicar na linha do grid
+                $("#result tbody tr").off("click").on("click", function(event) {
+                    if ($(event.target).closest(".acao-editar-epi-est, .acao-inativar-epi-est, .acao-excluir-epi-est, .acao-detalhes-epi-est, a, img, button, .btn").length) {
+                        return;
+                    }
+                    var id = $(this).attr("data-row-id");
+                    if (id) {
+                        abrirDetalhesEpi(id);
+                    }
+                });
+
+                // Bind detalhes click (ícone de olho)
+                $(".acao-detalhes-epi-est").off("click").on("click", function(event) {
+                    event.stopPropagation();
+                    var id = $(this).closest("tr").attr("data-row-id");
+                    abrirDetalhesEpi(id);
+                });
+
                 // Bind Alterar click
                 $(".acao-editar-epi-est").off("click").on("click", function(event) {
                     var id = $(this).closest("tr").attr("data-row-id");
@@ -752,6 +1009,45 @@ function index() {
         </script>
         ';
     }
+
+    // Modal de detalhes do item de EPI (disponível sempre, com ou sem filiais)
+    echo '
+    <div class="modal fade" id="modalDetalhesEpi" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content" style="border-radius: 6px;">
+                <div class="modal-header" style="background-color: #f5f5f5; border-bottom: 1px solid #ddd; border-top-left-radius: 6px; border-top-right-radius: 6px;">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
+                    <h4 class="modal-title" style="font-weight: bold; color: #333;"><i class="fa fa-hard-hat"></i> Detalhes do Item de EPI</h4>
+                </div>
+                <div class="modal-body" id="modalDetalhesEpiBody" style="max-height: 600px; overflow-y: auto; padding: 20px;">
+                    <div class="text-center" style="padding: 30px;"><i class="fa fa-spinner fa-spin fa-2x"></i> Carregando detalhes do item...</div>
+                </div>
+                <div class="modal-footer" style="background-color: #f5f5f5; border-top: 1px solid #ddd; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px;">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function abrirDetalhesEpi(epiId) {
+        if (!epiId) return;
+        $("#modalDetalhesEpiBody").html("<div class=\'text-center\' style=\'padding: 30px;\'><i class=\'fa fa-spinner fa-spin fa-2x\'></i> Carregando detalhes do item...</div>");
+        $("#modalDetalhesEpi").modal("show");
+        $.ajax({
+            url: "estoque_epi.php?acao=detalhesEpiAjax",
+            type: "GET",
+            data: { epi_id: epiId },
+            success: function(response) {
+                $("#modalDetalhesEpiBody").html(response);
+            },
+            error: function() {
+                $("#modalDetalhesEpiBody").html("<div class=\'alert alert-danger\'>Ocorreu um erro ao carregar os detalhes do item. Tente novamente.</div>");
+            }
+        });
+    }
+    </script>
+    ';
 
     rodape();
 }
