@@ -1,5 +1,6 @@
 deployment:
   tasks:
+  #DEV
     # Diretórios gerais
     - export GENERAL=/home/devtechpsgj/repositories/dev_techps/*
     - export DOMAIN=/home/devtechpsgj/repositories/dev_techps/armazem_paraiba/*
