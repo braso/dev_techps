@@ -42,7 +42,6 @@
 			 VALUES ('Recibo de EPI', {$setorId}, NULL, 'nao', 'sim', 'ativo')"
 		);
 	}
-	ensureTipoDocumentoReciboEpi();
 
     function excluirTipoDoc(){
 		remover("tipos_documentos",$_POST["id"]);
@@ -246,6 +245,7 @@
         global $CONTEX;
 
         ensureCampDocumentoModuloTable();
+        ensureTipoDocumentoReciboEpi();
 		
         //ARQUIVO QUE VALIDA A PERMISSAO VIA PERFIL DE USUARIO VINCULADO
         include "check_permission.php";
