@@ -1,6 +1,5 @@
 deployment:
   tasks:
-  #DEV
     # Diretórios gerais
     - export GENERAL=/home/devtechpsgj/repositories/dev_techps/*
     - export DOMAIN=/home/devtechpsgj/repositories/dev_techps/armazem_paraiba/*
@@ -20,6 +19,7 @@ deployment:
     - export DEVTRANSCOPEL=/home/devtechpsgj/public_html/dev/devtranscopel
     - export QUALY=/home/devtechpsgj/public_html/dev/qualy_transportes
     - export GST=/home/devtechpsgj/public_html/dev/gst
+    - export DEMO=/home/devtechpsgj/public_html/dev/demo
 
 
     # Copiando diretórios
@@ -35,5 +35,6 @@ deployment:
     - /bin/cp -R $DOMAIN $DEVTRANSCOPEL
     - /bin/cp -R $DOMAIN $LEMON
     - /bin/cp -R $DOMAIN $QUALY
-    - /bin/cp -R $DOMAIN $GST             
+    - /bin/cp -R $DOMAIN $GST   
+    - /bin/cp -R $DOMAIN $DEMO          
     
