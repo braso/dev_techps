@@ -16,6 +16,49 @@
     $__adminKey = strval($_ENV["SUPORTE_ADMIN_KEY"] ?? "");
     $__empresaAtual = trim(strval($_ENV["CONTEX_PATH"] ?? ""), "/");
 
+    // ── Ação: empresa responde o chamado (mesmo token assinado do widget) ──
+    $__msg = "";
+    if ($_SERVER["REQUEST_METHOD"] === "POST") {
+        $acao = $_POST["acao"] ?? "";
+        if ($acao === "resposta") {
+            $idResp = (int) ($_POST["id"] ?? 0);
+            $texto = trim(strval($_POST["texto"] ?? ""));
+            if ($idResp === $__id && $texto !== "") {
+                $__supKey = strval($_ENV["SUPORTE_API_KEY"] ?? "");
+                $__uid = strval($_SESSION["user_nb_id"] ?? "");
+                $__unome = trim(strval($_SESSION["user_tx_nome"] ?? ""));
+                $__ulogin = trim(strval($_SESSION["user_tx_login"] ?? ""));
+                $__exp = time() + 300;
+                $__json = json_encode([
+                    "empresa"      => $__empresaAtual,
+                    "empresa_nome" => $__empresaAtual,
+                    "uid"          => $__uid,
+                    "ulogin"       => $__ulogin,
+                    "unome"        => $__unome,
+                    "exp"          => $__exp,
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                $__b64p = rtrim(strtr(base64_encode($__json), "+/", "-_"), "=");
+                $__keyD = hash_hmac("sha256", "techps_suporte|" . $__empresaAtual, $__supKey, true);
+                $__sig  = rtrim(strtr(base64_encode(hash_hmac("sha256", $__b64p, $__keyD, true)), "+/", "-_"), "=");
+
+                $__ch = curl_init($__apiUrl . "/suporte/tickets/{$idResp}/comentarios");
+                curl_setopt_array($__ch, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT        => 20,
+                    CURLOPT_SSL_VERIFYPEER => true,
+                    CURLOPT_POST           => true,
+                    CURLOPT_POSTFIELDS     => http_build_query(["texto" => $texto]),
+                    CURLOPT_HTTPHEADER     => ["Authorization: Bearer " . $__b64p . "." . $__sig],
+                ]);
+                $__resp = json_decode((string) curl_exec($__ch), true);
+                curl_close($__ch);
+                $__msg = !empty($__resp["ok"]) ? "Resposta enviada ao chamado." : ("Erro ao enviar resposta. " . ($__resp["msg"] ?? ""));
+            }
+            echo "<script>alert(" . json_encode($__msg) . "); window.location.href='detalhe.php?id=" . $__id . "';</script>";
+            exit;
+        }
+    }
+
     $__ch = curl_init($__apiUrl . "/suporte/tickets/" . $__id);
     curl_setopt_array($__ch, [
         CURLOPT_RETURNTRANSFER => true,
@@ -30,11 +73,13 @@
     $__dados = json_decode((string) $__resposta, true);
     $__ticket = [];
     $__arquivos = [];
+    $__comentarios = [];
     if ($__httpCode >= 200 && $__httpCode < 300 && is_array($__dados) && !empty($__dados["ticket"])) {
         // Isolamento por tenant: só mostra chamado da própria empresa.
         if (strval($__dados["ticket"]["empresa_key"] ?? "") === $__empresaAtual) {
             $__ticket = $__dados["ticket"];
             $__arquivos = is_array($__dados["arquivos"] ?? null) ? $__dados["arquivos"] : [];
+            $__comentarios = is_array($__dados["comentarios"] ?? null) ? $__dados["comentarios"] : [];
         }
     }
 
@@ -104,6 +149,39 @@
                 <?php else: ?>
                     <p class="text-muted"><i class="fa fa-info-circle"></i> Este chamado não possui imagens anexadas.</p>
                 <?php endif; ?>
+
+                <!-- Comentários do gestor -->
+                <h4 style="margin-top:25px;"><i class="fa fa-comments"></i> Comentários (<?= count($__comentarios) ?>)</h4>
+                <?php if (empty($__comentarios)): ?>
+                    <p class="text-muted"><i class="fa fa-info-circle"></i> Nenhum comentário ainda. Acompanhe este espaço para respostas da equipe TechPS.</p>
+                <?php endif; ?>
+                <?php foreach ($__comentarios as $__c): ?>
+                    <?php
+                        $__ehEmpresa = (strval($__c["autor_tipo"] ?? "") === "empresa");
+                        $__bg = $__ehEmpresa ? "#e8f0fe" : "#f9f9f9";
+                        $__label = $__ehEmpresa
+                            ? '<span class="label label-primary" style="margin-left:6px;">Empresa</span>'
+                            : '<span class="label label-info" style="margin-left:6px;">TechPS</span>';
+                    ?>
+                    <div style="border:1px solid #ddd;border-radius:6px;padding:10px 12px;margin-bottom:8px;background:<?= $__bg ?>;">
+                        <div style="font-size:12px;color:#888;margin-bottom:4px;">
+                            <i class="fa fa-user-circle"></i> <strong><?= htmlspecialchars(strval($__c["autor"] ?? "")) ?></strong>
+                            <?= $__label ?>
+                            <span style="margin-left:8px;"><?= htmlspecialchars(strval($__c["created_at"] ?? "")) ?></span>
+                        </div>
+                        <div style="white-space:pre-wrap;"><?= htmlspecialchars(strval($__c["texto"] ?? "")) ?></div>
+                    </div>
+                <?php endforeach; ?>
+
+                <!-- Responder (empresa) -->
+                <form method="post" style="margin-top:15px;border-top:1px solid #eee;padding-top:12px;">
+                    <input type="hidden" name="acao" value="resposta" />
+                    <input type="hidden" name="id" value="<?= $__id ?>" />
+                    <textarea name="texto" rows="3" maxlength="1000" required placeholder="Escreva sua resposta para a equipe TechPS..." style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+                    <div style="margin-top:8px;text-align:right;">
+                        <button type="submit" class="btn blue"><i class="fa fa-reply"></i> Responder chamado</button>
+                    </div>
+                </form>
 
             </div>
         </div>

@@ -127,6 +127,11 @@
 $path = strtolower($_SERVER['REQUEST_URI']);  
 $showComunicado = (strpos($path, "/techps") !== false);
 
+// Gestão de Suporte: visível apenas no domínio TechPS (gestão central).
+if (strpos($path, "/techps") !== false) {
+    $paginas["suporte"]["/suporte/gestao.php"] = "Gestão de Suporte";
+}
+
 if ($showComunicado) {
     $paginas["cadastros"]["/cadastro_comunicado.php"] = "Comunicado";
 }
@@ -227,7 +232,8 @@ if ($showComunicado) {
             "Estoque de EPI" => "fa fa-boxes",
             "Gestão de Diárias" => "fa fa-hand-holding-usd",
             "Parâmetros de Diárias" => "fa fa-sliders-h",
-            "Chamados de Suporte" => "fa fa-life-ring"
+            "Chamados de Suporte" => "fa fa-life-ring",
+            "Gestão de Suporte" => "fa fa-tasks"
         ];
 
         // Verifica se existe pelo menos uma placa cadastrada para mostrar o menu Logística.

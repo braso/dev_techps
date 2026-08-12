@@ -950,6 +950,19 @@ function criarTabelasSuporte() {
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             KEY idx_rate_empresa_user (empresa_key, user_id, created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+        `CREATE TABLE IF NOT EXISTS suporte_comentario (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            ticket_id BIGINT UNSIGNED NOT NULL,
+            autor VARCHAR(150) NOT NULL DEFAULT '',
+            autor_login VARCHAR(100) NOT NULL DEFAULT '',
+            autor_tipo ENUM('gestor','empresa') NOT NULL DEFAULT 'gestor',
+            texto TEXT NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_comentario_ticket (ticket_id),
+            CONSTRAINT fk_comentario_ticket FOREIGN KEY (ticket_id)
+                REFERENCES suporte_ticket (id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     ];
     sqls.forEach((sql) => {
@@ -1166,10 +1179,80 @@ app.get("/suporte/tickets/:id", exigirAdminSuporte, async (req, res) => {
             [id]
         );
 
-        res.json({ ok: true, ticket: linhas[0], arquivos });
+        const comentarios = await suporteQuery(
+            "SELECT id, autor, autor_login, autor_tipo, texto, created_at FROM suporte_comentario WHERE ticket_id = ? ORDER BY created_at ASC",
+            [id]
+        );
+
+        res.json({ ok: true, ticket: linhas[0], arquivos, comentarios });
     } catch (err) {
         console.error("[SUPORTE] Erro ao buscar chamado:", err);
         res.status(500).json({ ok: false, msg: "Erro ao buscar chamado." });
+    }
+});
+
+// Lista empresas que possuem chamados (painel de gestão)
+app.get("/suporte/empresas", exigirAdminSuporte, async (req, res) => {
+    try {
+        const linhas = await suporteQuery(
+            "SELECT empresa_key, MAX(empresa_nome) AS empresa_nome, COUNT(*) AS total_chamados FROM suporte_ticket GROUP BY empresa_key ORDER BY empresa_nome ASC",
+            []
+        );
+        res.json({ ok: true, empresas: linhas });
+    } catch (err) {
+        console.error("[SUPORTE] Erro ao listar empresas:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao listar empresas." });
+    }
+});
+
+// Adiciona comentário ao chamado.
+// Autor gestor: x-api-key (painel TechPS) | Autor empresa: Bearer token (widget/app, com tenant check)
+app.post("/suporte/tickets/:id/comentarios", async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        if (!id || id < 1) return res.status(400).json({ ok: false, msg: "ID inválido." });
+
+        let texto = String(req.body.texto || "").trim();
+        texto = texto.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+        if (texto.length < 1 || texto.length > 1000) {
+            return res.status(400).json({ ok: false, msg: "Comentário deve ter entre 1 e 1000 caracteres." });
+        }
+
+        let autor = "";
+        let autorLogin = "";
+        let autorTipo = "";
+
+        const chaveAdmin = req.headers["x-api-key"] || "";
+        if (SUPORTE.adminKey && chaveAdmin === SUPORTE.adminKey) {
+            // Gestor TechPS
+            autor = String(req.body.autor || "Gestor TechPS").slice(0, 150);
+            autorLogin = String(req.body.autor_login || "").slice(0, 100);
+            autorTipo = "gestor";
+        } else {
+            // Empresa (token assinado do widget/app) — valida que o chamado é da própria empresa
+            const payload = validarTokenSuporte(req.headers.authorization);
+            if (!payload) {
+                return res.status(401).json({ ok: false, msg: "Acesso não autorizado." });
+            }
+            const chk = await suporteQuery("SELECT empresa_key FROM suporte_ticket WHERE id = ?", [id]);
+            if (!chk.length) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
+            if (chk[0].empresa_key !== payload.empresa) {
+                return res.status(403).json({ ok: false, msg: "Este chamado pertence a outra empresa." });
+            }
+            autor = String(payload.unome || payload.ulogin || "Usuário").slice(0, 150);
+            autorLogin = String(payload.ulogin || "").slice(0, 100);
+            autorTipo = "empresa";
+        }
+
+        const ins = await suporteQuery(
+            "INSERT INTO suporte_comentario (ticket_id, autor, autor_login, autor_tipo, texto) VALUES (?, ?, ?, ?, ?)",
+            [id, autor, autorLogin, autorTipo, texto]
+        );
+
+        res.status(201).json({ ok: true, comentario_id: ins.insertId, msg: "Comentário adicionado." });
+    } catch (err) {
+        console.error("[SUPORTE] Erro ao adicionar comentário:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao adicionar comentário." });
     }
 });
 
