@@ -9,7 +9,8 @@
     include_once __DIR__ . "/../check_permission.php";
 
     $__empresaAtual = trim(strval($_ENV["CONTEX_PATH"] ?? ""), "/");
-    if (strpos($__empresaAtual, "techps") === false) {
+    // Gestão central: domínios TechPS (produção) e Demo (desenvolvimento).
+    if (strpos($__empresaAtual, "techps") === false && strpos($__empresaAtual, "demo") === false) {
         http_response_code(403);
         exit;
     }

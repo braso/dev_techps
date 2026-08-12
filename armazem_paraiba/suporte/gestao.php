@@ -9,7 +9,8 @@
     include_once __DIR__ . "/../check_permission.php";
 
     $__empresaAtual = trim(strval($_ENV["CONTEX_PATH"] ?? ""), "/");
-    if (strpos($__empresaAtual, "demo") === false) {
+    // Gestão central: domínios TechPS (produção) e Demo (desenvolvimento).
+    if (strpos($__empresaAtual, "techps") === false && strpos($__empresaAtual, "demo") === false) {
         echo "<script>alert('Acesso restrito ao domínio TechPS.'); window.location.href='" . ($_ENV["CONTEX_PATH"] ?? "") . "/batida_ponto.php';</script>";
         exit;
     }
@@ -51,9 +52,11 @@
     }
 
     // ── Ações (status / comentário) ────────────────────────────────────
+    // Campo "sup_acao" de propósito: o campo "acao" é interceptado pelo
+    // dispatcher legado de contex20/funcoes.php (eval + exit).
     $__msg = "";
     if ($_SERVER["REQUEST_METHOD"] === "POST") {
-        $acao = $_POST["acao"] ?? "";
+        $acao = $_POST["sup_acao"] ?? "";
         if ($acao === "status") {
             $id = (int) ($_POST["id"] ?? 0);
             $novoStatus = $_POST["status"] ?? "";
@@ -175,7 +178,7 @@
 
         <!-- Formulário de comentário (gestor) -->
         <form method="post" style="margin-top:15px;">
-            <input type="hidden" name="acao" value="comentario" />
+            <input type="hidden" name="sup_acao" value="comentario" />
             <input type="hidden" name="id" value="<?= $__verId ?>" />
             <textarea name="texto" rows="3" maxlength="1000" required placeholder="Escreva um comentário para a empresa..." style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
             <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end;">
@@ -185,7 +188,7 @@
 
         <!-- Troca de status -->
         <form method="post" style="margin-top:10px;">
-            <input type="hidden" name="acao" value="status" />
+            <input type="hidden" name="sup_acao" value="status" />
             <input type="hidden" name="id" value="<?= $__verId ?>" />
             <?php if ($__status === "aberto"): ?>
                 <input type="hidden" name="status" value="resolvido" />
@@ -321,3 +324,4 @@
 </div>
 
 <?php rodape(); ?>
+
