@@ -43,9 +43,11 @@
     }
 
     // ── Ações ─────────────────────────────────────────────────────────
+    // Campo "sup_acao" de propósito: o campo "acao" é interceptado pelo
+    // dispatcher legado de contex20/funcoes.php (eval + exit).
     $__msg = "";
     if ($_SERVER["REQUEST_METHOD"] === "POST") {
-        $acao = $_POST["acao"] ?? "";
+        $acao = $_POST["sup_acao"] ?? "";
         if ($acao === "status") {
             $id = (int) ($_POST["id"] ?? 0);
             $novoStatus = $_POST["status"] ?? "";
@@ -174,14 +176,14 @@
                                     <a href="detalhe.php?id=<?= (int) ($__t["id"] ?? 0) ?>" class="btn btn-xs blue"><i class="fa fa-eye"></i> Ver</a>
                                     <?php if ($__status === "aberto"): ?>
                                         <form method="post" style="display:inline;">
-                                            <input type="hidden" name="acao" value="status" />
+                                            <input type="hidden" name="sup_acao" value="status" />
                                             <input type="hidden" name="id" value="<?= (int) ($__t["id"] ?? 0) ?>" />
                                             <input type="hidden" name="status" value="resolvido" />
                                             <button type="submit" class="btn btn-xs btn-success" onclick="return confirm('Marcar chamado #<?= (int) ($__t["id"] ?? 0) ?> como resolvido?');"><i class="fa fa-check"></i> Resolver</button>
                                         </form>
                                     <?php else: ?>
                                         <form method="post" style="display:inline;">
-                                            <input type="hidden" name="acao" value="status" />
+                                            <input type="hidden" name="sup_acao" value="status" />
                                             <input type="hidden" name="id" value="<?= (int) ($__t["id"] ?? 0) ?>" />
                                             <input type="hidden" name="status" value="aberto" />
                                             <button type="submit" class="btn btn-xs btn-warning" onclick="return confirm('Reabrir chamado #<?= (int) ($__t["id"] ?? 0) ?>?');"><i class="fa fa-undo"></i> Reabrir</button>

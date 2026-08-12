@@ -17,9 +17,11 @@
     $__empresaAtual = trim(strval($_ENV["CONTEX_PATH"] ?? ""), "/");
 
     // ── Ação: empresa responde o chamado (mesmo token assinado do widget) ──
+    // Campo "sup_acao" de propósito: o campo "acao" é interceptado pelo
+    // dispatcher legado de contex20/funcoes.php (eval + exit).
     $__msg = "";
     if ($_SERVER["REQUEST_METHOD"] === "POST") {
-        $acao = $_POST["acao"] ?? "";
+        $acao = $_POST["sup_acao"] ?? "";
         if ($acao === "resposta") {
             $idResp = (int) ($_POST["id"] ?? 0);
             $texto = trim(strval($_POST["texto"] ?? ""));
@@ -175,7 +177,7 @@
 
                 <!-- Responder (empresa) -->
                 <form method="post" style="margin-top:15px;border-top:1px solid #eee;padding-top:12px;">
-                    <input type="hidden" name="acao" value="resposta" />
+                    <input type="hidden" name="sup_acao" value="resposta" />
                     <input type="hidden" name="id" value="<?= $__id ?>" />
                     <textarea name="texto" rows="3" maxlength="1000" required placeholder="Escreva sua resposta para a equipe TechPS..." style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
                     <div style="margin-top:8px;text-align:right;">

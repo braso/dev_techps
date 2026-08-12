@@ -127,8 +127,8 @@
 $path = strtolower($_SERVER['REQUEST_URI']);  
 $showComunicado = (strpos($path, "/techps") !== false);
 
-// Gestão de Suporte: visível apenas no domínio TechPS (gestão central).
-if (strpos($path, "/techps") !== false) {
+// Gestão de Suporte: visível nos domínios TechPS (produção) e Demo (desenvolvimento).
+if (strpos($path, "/techps") !== false || strpos($path, "/demo") !== false) {
     $paginas["suporte"]["/suporte/gestao.php"] = "Gestão de Suporte";
 }
 
