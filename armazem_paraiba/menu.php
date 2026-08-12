@@ -120,11 +120,10 @@
                 "/saude_seguranca/entrega_epi.php"  => "Entrega de EPI",
                 "/saude_seguranca/estoque_epi.php"  => "Estoque de EPI"
             ],
-			// "suporte" => [
-			// 	"/#" 		=> "Perguntas Frequentes", 
-			// 	"/doc.php" 	=> "Ver Documentação"
-			// ]
-		];
+            "suporte" => [
+                "/suporte/index.php" => "Chamados de Suporte",
+            ],
+        ];
 $path = strtolower($_SERVER['REQUEST_URI']);  
 $showComunicado = (strpos($path, "/techps") !== false);
 
@@ -227,7 +226,8 @@ if ($showComunicado) {
             "Entrega de EPI" => "fa fa-exchange-alt",
             "Estoque de EPI" => "fa fa-boxes",
             "Gestão de Diárias" => "fa fa-hand-holding-usd",
-            "Parâmetros de Diárias" => "fa fa-sliders-h"
+            "Parâmetros de Diárias" => "fa fa-sliders-h",
+            "Chamados de Suporte" => "fa fa-life-ring"
         ];
 
         // Verifica se existe pelo menos uma placa cadastrada para mostrar o menu Logística.
@@ -300,10 +300,12 @@ if ($showComunicado) {
             }
         }
 		
+		/*
 		if(is_bool(strpos($_SERVER["REQUEST_URI"], 'dev'))){
 			// unset($menus["relatórios"]);
 			unset($menus["suporte"]);
 		}
+		*/
 	
         // Menu enxuto para perfis operacionais (inclui terceirizado).
         $menuMotorista = 

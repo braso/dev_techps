@@ -62,5 +62,7 @@
 
             document.getElementsByClassName('loading')[0].style.display = 'none';
         </script>
+
+        <?php include_once __DIR__ . "/suporte_widget.php"; ?>
     </body>
 </html>
