@@ -686,6 +686,7 @@ function index() {
     $buttons[] = '<a href="cadastrar_epi_estoque.php" class="btn btn-primary"><i class="fa fa-plus"></i> Cadastrar Item no Estoque</a>';
     $buttons[] = '<a href="movimentacao_estoque.php" class="btn btn-success"><i class="fa fa-exchange"></i> Lançar Movimentação Estoque</a>';
     $buttons[] = '<a href="devolucao_epi.php" class="btn btn-warning"><i class="fa fa-arrow-circle-left"></i> Gestão de Devoluções</a>';
+    $buttons[] = '<a href="mapa_epi.php" class="btn btn-info"><i class="fa fa-sitemap"></i> Mapa de EPIs</a>';
 
     echo abre_form("Filtros de Pesquisa");
     echo linha_form($fields);

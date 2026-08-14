@@ -33,6 +33,7 @@ function index() {
     $buttons[] = botao("Buscar", "index");
     $buttons[] = '<a href="lancar_devolucao_epi.php" class="btn btn-success"><i class="fa fa-arrow-circle-left"></i> Lançar Devolução</a>';
     $buttons[] = '<a href="inspecao_devolucao_epi.php" class="btn btn-warning"><i class="fa fa-search"></i> Inspeção de Devoluções</a>';
+    $buttons[] = '<a href="mapa_epi.php" class="btn btn-info"><i class="fa fa-sitemap"></i> Mapa de EPIs</a>';
     $buttons[] = '<a href="entrega_epi.php" class="btn btn-default"><i class="fa fa-exchange"></i> Lançar Entrega</a>';
     $buttons[] = '<a href="estoque_epi.php" class="btn btn-default"><i class="fa fa-cubes"></i> Estoque de EPI</a>';
 
