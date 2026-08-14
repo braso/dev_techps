@@ -16,6 +16,42 @@ function get_saldo() {
     exit;
 }
 
+function obterSaldosVariacoesAjax() {
+    $epi_id = (int)($_GET["epi_id"] ?? 0);
+    $empresa_id = (int)($_GET["empresa_id"] ?? 0);
+    ob_clean();
+    if ($epi_id <= 0) {
+        echo json_encode([]);
+        exit;
+    }
+    $user_empresa = !empty($_SESSION["user_nb_empresa"]) ? (int)$_SESSION["user_nb_empresa"] : 0;
+    if ($empresa_id > 0) {
+        if ($user_empresa > 0 && $empresa_id == $user_empresa) {
+            $cond = " AND (ss_e_nb_empresa_id = {$empresa_id} OR ss_e_nb_empresa_id IS NULL OR ss_e_nb_empresa_id = 0)";
+        } else {
+            $cond = " AND ss_e_nb_empresa_id = {$empresa_id}";
+        }
+    } else {
+        $cond = " AND (ss_e_nb_empresa_id IS NULL OR ss_e_nb_empresa_id = 0 OR ss_e_nb_empresa_id = {$user_empresa})";
+    }
+    $sql = query(
+        "SELECT IFNULL(ss_e_tx_variacao, '') AS variacao,
+                SUM(CASE WHEN ss_e_tx_tipo = 'entrada' THEN ss_e_nb_quantidade ELSE -ss_e_nb_quantidade END) AS saldo
+         FROM ss_epi_estoque
+         WHERE ss_e_nb_epi_id = {$epi_id} AND IFNULL(ss_e_tx_variacao, '') <> '' {$cond}
+         GROUP BY variacao
+         ORDER BY variacao ASC"
+    );
+    $list = [];
+    if ($sql) {
+        while ($row = mysqli_fetch_assoc($sql)) {
+            $list[] = ["variacao" => $row["variacao"], "saldo" => (int)$row["saldo"]];
+        }
+    }
+    echo json_encode($list);
+    exit;
+}
+
 function obter_colaboradores_empresa() {
     $empId = $_GET["empresa_id"] ?? "";
     $cond = "";
@@ -158,6 +194,34 @@ function cadastrarEntregaLoteAjax() {
             continue;
         }
         
+        // Gestão de devolução: justificativa e estorno informados pelo operador
+        $justificativa = trim($item["justificativa"] ?? "");
+        $estornar = !empty($item["estornar"]) ? "sim" : "nao";
+        $eEventoDevolucao = in_array($status, ["substituido", "devolvido", "perdido"]);
+        if ($eEventoDevolucao && empty($justificativa)) {
+            $erros[] = "Justificativa obrigatória para o status '{$status}' do EPI ID {$epi_id}.";
+            continue;
+        }
+        $data_devolucao = $eEventoDevolucao ? $data_entrega : null;
+        
+        // Vincula automaticamente a entrega anterior do mesmo EPI para o mesmo colaborador
+        $entrega_anterior_id = null;
+        if (in_array($status, ["substituido", "devolvido"])) {
+            $sqlAnt = query(
+                "SELECT ss_e_nb_id FROM ss_epi_entrega
+                 WHERE ss_e_nb_colaborador_id = ? AND ss_e_nb_epi_id = ?
+                   AND ss_e_tx_status NOT IN ('inativo')
+                   AND (ss_e_tx_justificativa IS NULL OR ss_e_tx_justificativa = '')
+                 ORDER BY ss_e_tx_data_entrega DESC, ss_e_nb_id DESC
+                 LIMIT 1",
+                "ii",
+                [$item_colaborador_id, $epi_id]
+            );
+            if ($sqlAnt && $rowAnt = mysqli_fetch_assoc($sqlAnt)) {
+                $entrega_anterior_id = (int)$rowAnt["ss_e_nb_id"];
+            }
+        }
+        
         $import_de = (isset($item["import_de"]) && $item["import_de"] !== "") ? (int)$item["import_de"] : null;
         if ($import_de === 0) {
             $import_de_clean = null; // Matriz
@@ -195,18 +259,22 @@ function cadastrarEntregaLoteAjax() {
         $vencimento = calcularVencimentoEpi($data_entrega, (int)$epi["ss_e_nb_vida_util"]);
         
         $entrega = [
-            "ss_e_nb_colaborador_id" => $item_colaborador_id,
-            "ss_e_nb_epi_id"         => $epi_id,
-            "ss_e_nb_empresa_id"     => $empresa_id,
-            "ss_e_tx_variacao"       => $variacao,
-            "ss_e_tx_data_entrega"   => $data_entrega,
-            "ss_e_nb_quantidade"     => $quantidade,
-            "ss_e_tx_vencimento"     => $vencimento,
-            "ss_e_tx_status"         => $status,
-            "ss_e_tx_assinatura"     => $assinatura,
-            "ss_e_tx_foto"           => $foto,
-            "ss_e_nb_userCadastro"   => $userCadastro,
-            "ss_e_tx_dataCadastro"   => $dataCadastro
+            "ss_e_nb_colaborador_id"      => $item_colaborador_id,
+            "ss_e_nb_epi_id"              => $epi_id,
+            "ss_e_nb_empresa_id"          => $empresa_id,
+            "ss_e_tx_variacao"            => $variacao,
+            "ss_e_tx_data_entrega"        => $data_entrega,
+            "ss_e_nb_quantidade"          => $quantidade,
+            "ss_e_tx_vencimento"          => $vencimento,
+            "ss_e_tx_status"              => $status,
+            "ss_e_tx_assinatura"          => $assinatura,
+            "ss_e_tx_foto"                => $foto,
+            "ss_e_tx_justificativa"       => $justificativa,
+            "ss_e_tx_estornado"           => $estornar,
+            "ss_e_tx_data_devolucao"      => $data_devolucao,
+            "ss_e_nb_entrega_anterior_id" => $entrega_anterior_id,
+            "ss_e_nb_userCadastro"        => $userCadastro,
+            "ss_e_tx_dataCadastro"        => $dataCadastro
         ];
         
         $res = inserir("ss_epi_entrega", array_keys($entrega), array_values($entrega));
@@ -235,9 +303,18 @@ function cadastrarEntregaLoteAjax() {
                 }
             }
             
-            $pularSubtracao = ($status === 'devolvido' && !empty($item["estornar_saldo"]));
+            // Regras de estoque para gestão de devoluções:
+            // - devolvido/perdido: apenas registram o evento (não geram nova baixa)
+            // - substituido: a nova entrega dá baixa normalmente; se o EPI antigo for retornado, gera entrada
+            $pularSubtracao = in_array($status, ["devolvido", "perdido"]);
             if (!$pularSubtracao) {
                 registrarMovimentacaoEstoque($epi_id, $quantidade, 'saida', 'Entrega de EPI para colaborador ID: ' . $item_colaborador_id, null, null, '', null, null, $empresa_id, null, null, $variacao);
+            }
+            if (in_array($status, ["devolvido", "substituido"]) && $estornar === "sim") {
+                $motivoEntrada = ($status === "substituido")
+                    ? 'Devolução de EPI substituído (colaborador ID: ' . $item_colaborador_id . ')'
+                    : 'Devolução de EPI (colaborador ID: ' . $item_colaborador_id . ')';
+                registrarMovimentacaoEstoque($epi_id, $quantidade, 'entrada', $motivoEntrada, null, null, '', null, null, $empresa_id, null, null, $variacao);
             }
             $sucessos++;
             if (!empty($item["unique_id"])) {
@@ -549,17 +626,51 @@ function cadastrarEntrega() {
 
         $vencimento = calcularVencimentoEpi($data_entrega, (int)$epi["ss_e_nb_vida_util"]);
 
+        // Gestão de devolução: justificativa e estorno informados pelo operador
+        $justificativa = trim($_POST["status_justificativa"] ?? "");
+        $estornar = (!empty($_POST["status_estornar"]) || !empty($_POST["estornar_saldo"])) ? "sim" : "nao";
+        $eEventoDevolucao = in_array($status, ["substituido", "devolvido", "perdido"]);
+        if ($eEventoDevolucao && empty($justificativa)) {
+            $_POST["errorFields"][] = "status";
+            set_status("ERRO: Justificativa obrigatória para o status '{$status}'.");
+            modificarEntrega();
+            exit;
+        }
+        $data_devolucao = $eEventoDevolucao ? $data_entrega : null;
+
+        // Vincula automaticamente a entrega anterior do mesmo EPI para o mesmo colaborador
+        $entrega_anterior_id = null;
+        if (in_array($status, ["substituido", "devolvido"])) {
+            $sqlAnt = query(
+                "SELECT ss_e_nb_id FROM ss_epi_entrega
+                 WHERE ss_e_nb_colaborador_id = ? AND ss_e_nb_epi_id = ?
+                   AND ss_e_tx_status NOT IN ('inativo')
+                   AND (ss_e_tx_justificativa IS NULL OR ss_e_tx_justificativa = '')
+                 ORDER BY ss_e_tx_data_entrega DESC, ss_e_nb_id DESC
+                 LIMIT 1",
+                "ii",
+                [$colaborador_id, $epi_id]
+            );
+            if ($sqlAnt && $rowAnt = mysqli_fetch_assoc($sqlAnt)) {
+                $entrega_anterior_id = (int)$rowAnt["ss_e_nb_id"];
+            }
+        }
+
         $entrega = [
-            "ss_e_nb_colaborador_id" => $colaborador_id,
-            "ss_e_nb_epi_id"         => $epi_id,
-            "ss_e_nb_empresa_id"     => $empresa_id,
-            "ss_e_tx_variacao"       => $variacao,
-            "ss_e_tx_data_entrega"   => $data_entrega,
-            "ss_e_nb_quantidade"     => $quantidade,
-            "ss_e_tx_vencimento"     => $vencimento,
-            "ss_e_tx_status"         => $status,
-            "ss_e_tx_assinatura"     => $assinatura,
-            "ss_e_tx_foto"           => $foto_caminho
+            "ss_e_nb_colaborador_id"      => $colaborador_id,
+            "ss_e_nb_epi_id"              => $epi_id,
+            "ss_e_nb_empresa_id"          => $empresa_id,
+            "ss_e_tx_variacao"            => $variacao,
+            "ss_e_tx_data_entrega"        => $data_entrega,
+            "ss_e_nb_quantidade"          => $quantidade,
+            "ss_e_tx_vencimento"          => $vencimento,
+            "ss_e_tx_status"              => $status,
+            "ss_e_tx_assinatura"          => $assinatura,
+            "ss_e_tx_foto"                => $foto_caminho,
+            "ss_e_tx_justificativa"       => $justificativa,
+            "ss_e_tx_estornado"           => $estornar,
+            "ss_e_tx_data_devolucao"      => $data_devolucao,
+            "ss_e_nb_entrega_anterior_id" => $entrega_anterior_id
         ];
 
         if (empty($_POST["id"])) {
@@ -569,9 +680,18 @@ function cadastrarEntrega() {
             $res = inserir("ss_epi_entrega", array_keys($entrega), array_values($entrega));
             if ($res && !is_a($res[0], 'Exception')) {
                 $id = (int)$res[0];
-                $pularSubtracao = ($status === 'devolvido' && !empty($_POST["estornar_saldo"]));
+                // Regras de estoque para gestão de devoluções:
+                // - devolvido/perdido: apenas registram o evento (não geram nova baixa)
+                // - substituido: a nova entrega dá baixa normalmente; se o EPI antigo for retornado, gera entrada
+                $pularSubtracao = in_array($status, ["devolvido", "perdido"]);
                 if (!$pularSubtracao) {
                     registrarMovimentacaoEstoque($epi_id, $quantidade, 'saida', 'Entrega de EPI para colaborador ID: ' . $colaborador_id, null, null, '', null, null, $empresa_id, null, null, $variacao);
+                }
+                if (in_array($status, ["devolvido", "substituido"]) && $estornar === "sim") {
+                    $motivoEntrada = ($status === "substituido")
+                        ? 'Devolução de EPI substituído (colaborador ID: ' . $colaborador_id . ')'
+                        : 'Devolução de EPI (colaborador ID: ' . $colaborador_id . ')';
+                    registrarMovimentacaoEstoque($epi_id, $quantidade, 'entrada', $motivoEntrada, null, null, '', null, null, $empresa_id, null, null, $variacao);
                 }
                 
                 try {
@@ -592,12 +712,17 @@ function cadastrarEntrega() {
             
             atualizar("ss_epi_entrega", array_keys($entrega), array_values($entrega), $_POST["id"]);
             
-            if ($entregaAnterior["ss_e_tx_status"] !== 'devolvido' && $status === 'devolvido') {
-                if (!empty($_POST["estornar_saldo"])) {
-                    $empresa_id_prev = (int)($entregaAnterior["ss_e_nb_empresa_id"] ?? 0);
-                    $variacao_prev = !empty($entregaAnterior["ss_e_tx_variacao"]) ? $entregaAnterior["ss_e_tx_variacao"] : $variacao;
-                    registrarMovimentacaoEstoque($epi_id, $quantidade, 'entrada', 'Devolução de EPI de colaborador ID: ' . $colaborador_id, null, null, '', null, null, $empresa_id_prev, null, null, $variacao_prev);
-                }
+            // Ao transicionar para um status de devolução com estorno, devolve a quantidade ao estoque
+            $statusAnterior = $entregaAnterior["ss_e_tx_status"] ?? "";
+            $estornadoAnterior = $entregaAnterior["ss_e_tx_estornado"] ?? "nao";
+            if (in_array($status, ["devolvido", "substituido"]) && $estornar === "sim"
+                && (!in_array($statusAnterior, ["devolvido", "substituido"]) || $estornadoAnterior !== "sim")) {
+                $empresa_id_prev = (int)($entregaAnterior["ss_e_nb_empresa_id"] ?? 0);
+                $variacao_prev = !empty($entregaAnterior["ss_e_tx_variacao"]) ? $entregaAnterior["ss_e_tx_variacao"] : $variacao;
+                $motivoEntrada = ($status === "substituido")
+                    ? 'Devolução de EPI substituído (colaborador ID: ' . $colaborador_id . ')'
+                    : 'Devolução de EPI (colaborador ID: ' . $colaborador_id . ')';
+                registrarMovimentacaoEstoque($epi_id, $quantidade, 'entrada', $motivoEntrada, null, null, '', null, null, $empresa_id_prev, null, null, $variacao_prev);
             }
             
             set_status("Entrega atualizada com sucesso!");
@@ -620,6 +745,14 @@ function modificarEntrega() {
             if (empty($_POST[$cleanedKey])) {
                 $_POST[$cleanedKey] = $value;
             }
+        }
+
+        // Preenche os campos ocultos da gestão de devolução ao editar registros existentes
+        if (empty($_POST["status_justificativa"]) && !empty($entrega["ss_e_tx_justificativa"])) {
+            $_POST["status_justificativa"] = $entrega["ss_e_tx_justificativa"];
+        }
+        if (empty($_POST["status_estornar"]) && empty($_POST["estornar_saldo"]) && ($entrega["ss_e_tx_estornado"] ?? "nao") === "sim") {
+            $_POST["status_estornar"] = "1";
         }
     }
 
@@ -796,12 +929,6 @@ function modificarEntrega() {
 
     $campo_data        = campo_data("Data de Entrega*", "data_entrega", $_POST["data_entrega"] ?? date("Y-m-d"), 2);
     $campo_quant       = campo("Quantidade*", "quantidade", $_POST["quantidade"] ?? "1", 2, "MASCARA_NUMERO");
-    $campo_status      = combo("Status", "status", $_POST["status"] ?? "ativo", 2, [
-        "ativo" => "Entregue", 
-        "substituido" => "Substituído", 
-        "devolvido" => "Devolvido", 
-        "perdido" => "Perdido/Extraviado"
-    ]);
 
     $campo_variacao = '
         <div class="col-sm-2 margin-bottom-5 campo-fit-content" id="container_variacao" style="display: none;">
@@ -813,14 +940,8 @@ function modificarEntrega() {
         </div>
     ';
 
-    $campo_estorno = '
-        <div class="col-sm-2 margin-bottom-5 campo-fit-content" id="container_estorno" style="display: none; padding-top: 23px;">
-            <label style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-weight: bold;">
-                <input type="checkbox" name="estornar_saldo" id="estornar_saldo" value="1">
-                Estornar ao estoque?
-            </label>
-        </div>
-    ';
+    // Obs.: o campo Status foi removido desta página — devoluções/substituições/perdas
+    // são lançadas exclusivamente na página de devoluções (lancar_devolucao_epi.php).
 
     $foto_atual_html = "";
     if (!empty($_POST["foto"])) {
@@ -930,19 +1051,13 @@ function modificarEntrega() {
     echo linha_form([$campo_empresa, $campo_colaborador, $campo_tipo_entrega]);
     echo linha_form([$campo_epi, $campo_kit]);
     echo linha_form([$preview_epi_div]);
-    echo linha_form([$campo_data, $campo_quant, $campo_status, $campo_variacao, $campo_estorno]);
+    echo linha_form([$campo_data, $campo_quant, $campo_variacao]);
     echo linha_form([$campo_foto]);
     
     $legenda_html = '
     <div class="col-sm-12" style="margin-top: 15px; margin-bottom: 15px;">
-        <div class="alert alert-info" style="background-color: #f7f9fa; border-color: #e3e8ec; color: #333; border-radius: 6px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-            <h4 style="margin-top: 0; font-weight: bold; color: #31708f;"><i class="fa fa-info-circle"></i> Legenda de Situações / Status</h4>
-            <ul style="padding-left: 20px; margin-bottom: 0; line-height: 1.6;">
-                <li><strong>Entregue</strong>: Quando entrega o EPI pela primeira vez ao funcionário.</li>
-                <li><strong>Substituído</strong>: Quando o EPI foi avariado, quebrado ou precisa ser trocado.</li>
-                <li><strong>Perdido/Extraviado</strong>: De fato quando ocorrer a perda ou extravio do item.</li>
-                <li><strong>Devolvido</strong>: Apenas para registrar que o item foi devolvido à empresa pelo funcionário. Por padrão, <strong>não altera o saldo do item no estoque</strong> (fica apenas como histórico do colaborador). Caso deseje devolver a quantidade ao saldo de estoque, marque a opção "Estornar ao estoque".</li>
-            </ul>
+        <div class="alert alert-info" style="background-color: #f7f9fa; border-color: #e3e8ec; color: #333; border-radius: 6px; padding: 12px 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <i class="fa fa-info-circle"></i> <strong>Devoluções, substituições e perdas</strong> são lançadas na página de <a href="lancar_devolucao_epi.php" style="font-weight: bold;">Devolução de EPI</a> — esta página registra apenas entregas.
         </div>
     </div>
     ';
@@ -1088,12 +1203,48 @@ function modificarEntrega() {
                 if (!$('#saldo_individual_badge').length) {
                     $('select[name=\"epi_id\"]').closest('.col-sm-4').find('label').append(' <span id=\"saldo_individual_badge\" class=\"label label-info\" style=\"display: none;\"></span>');
                 }
+                if (!$('#saldos_variacoes_badge').length) {
+                    $('<div id=\"saldos_variacoes_badge\" style=\"display: none; margin-top: 4px;\"></div>').insertAfter($('select[name=\"epi_id\"]'));
+                }
                 const variacao = $('#variacao').val() || '';
-                $.get('entrega_epi.php?acao=get_saldo&epi_id=' + epiId + '&empresa_id=' + empresaId + '&variacao=' + encodeURIComponent(variacao), function(saldo) {
-                    $('#saldo_individual_badge').html('Saldo' + (variacao ? ' (' + variacao + ')' : '') + ': ' + saldo).show();
-                });
+                const variacoesStr = epiVariacoes[epiId] || '';
+                const temVariacoes = variacoesStr.split(',').map(function(v) { return v.trim(); }).filter(Boolean).length > 0;
+                if (temVariacoes) {
+                    $.get('entrega_epi.php?acao=obterSaldosVariacoesAjax&epi_id=' + epiId + '&empresa_id=' + empresaId, function(saldosVar) {
+                        let total = 0;
+                        if (saldosVar && saldosVar.length > 0) {
+                            saldosVar.forEach(function(s) { total += (parseInt(s.saldo) || 0); });
+                        }
+                        // Badge principal reflete a variação selecionada
+                        let saldoSelecionado = null;
+                        if (saldosVar && variacao) {
+                            saldosVar.forEach(function(s) { if (s.variacao === variacao) saldoSelecionado = parseInt(s.saldo) || 0; });
+                        }
+                        const badgePrincipal = variacao
+                            ? 'Saldo (' + variacao + '): <strong>' + (saldoSelecionado !== null ? saldoSelecionado : 0) + '</strong>'
+                            : 'Saldo total: <strong>' + total + '</strong>';
+                        $('#saldo_individual_badge').html(badgePrincipal).show();
+                        let html = '';
+                        if (saldosVar && saldosVar.length > 0) {
+                            html = '<span class=\"label label-default\" style=\"margin-right: 2px; font-size: 11px;\"><i class=\"fa fa-tags\"></i> Saldo por variação:</span> ';
+                            saldosVar.forEach(function(s) {
+                                const destaque = (s.variacao === variacao) ? 'background-color: #31708f; color: #fff; font-weight: bold;' : '';
+                                html += '<span class=\"label label-info\" style=\"margin: 1px; font-size: 11px;' + destaque + '\">' + s.variacao + ': ' + s.saldo + '</span> ';
+                            });
+                        } else {
+                            html = '<span class=\"text-muted\" style=\"font-size: 11px;\">Sem saldo registrado por variação.</span>';
+                        }
+                        $('#saldos_variacoes_badge').html(html).show();
+                    });
+                } else {
+                    $('#saldos_variacoes_badge').hide();
+                    $.get('entrega_epi.php?acao=get_saldo&epi_id=' + epiId + '&empresa_id=' + empresaId + '&variacao=' + encodeURIComponent(variacao), function(saldo) {
+                        $('#saldo_individual_badge').html('Saldo: ' + saldo).show();
+                    });
+                }
             } else {
                 $('#saldo_individual_badge').hide();
+                $('#saldos_variacoes_badge').hide();
             }
         }
 
@@ -1133,10 +1284,22 @@ function modificarEntrega() {
                         saldo = parseInt(saldo) || 0;
                         const tdSaldo = tr.find('td').eq(5);
                         const qtd = parseInt(tr.find('td').eq(3).text()) || 0;
-                        if (saldo >= qtd) {
-                            tdSaldo.html('<span class=\"label label-success\">Saldo: ' + saldo + '</span>');
+                        const semSaldo = (saldo < qtd);
+                        if (semSaldo) {
+                            tdSaldo.html('<span class=\"label label-danger\">Sem saldo: ' + saldo + '</span>');
+                            tr.addClass('sem-saldo-kit');
+                            // Item sem saldo não será lançado: desmarca e desabilita a entrega
+                            chk.prop('checked', false).prop('disabled', true);
+                            const inputJust = tr.find('.txt_item_justificativa');
+                            inputJust.prop('disabled', false).attr('placeholder', 'Sem saldo — informe o motivo (opcional)');
                         } else {
-                            tdSaldo.html('<span class=\"label label-danger\">Insuficiente: ' + saldo + '</span>');
+                            tdSaldo.html('<span class=\"label label-success\">Saldo: ' + saldo + '</span>');
+                            tr.removeClass('sem-saldo-kit');
+                            chk.prop('disabled', false);
+                            const inputJust = tr.find('.txt_item_justificativa');
+                            if (chk.is(':checked')) {
+                                inputJust.prop('disabled', true);
+                            }
                         }
                         if (typeof updateKitJson === 'function') {
                             updateKitJson();
@@ -1267,7 +1430,6 @@ function modificarEntrega() {
             if (tipo === 'kit') {
                 $('select[name=\"epi_id\"]').closest('.col-sm-4').hide();
                 $('input[name=\"quantidade\"]').closest('.col-sm-2').hide();
-                $('select[name=\"status\"]').closest('.col-sm-2').hide();
                 $('#container_variacao').hide();
                 $('#preview_epi_individual_container').hide();
                 $('#saldo_individual_badge').hide();
@@ -1289,7 +1451,6 @@ function modificarEntrega() {
             } else {
                 $('select[name=\"epi_id\"]').closest('.col-sm-4').show();
                 $('input[name=\"quantidade\"]').closest('.col-sm-2').show();
-                $('select[name=\"status\"]').closest('.col-sm-2').show();
                 
                 $('#container_foto').show();
                 $('#container_foto').find('label').text('Foto do EPI Entregue');
@@ -1308,20 +1469,6 @@ function modificarEntrega() {
         
         $('select[name=\"tipo_entrega\"]').on('change', toggleEntregaTipo);
         toggleEntregaTipo();
-
-        function toggleEstornoCheckbox() {
-            let status = $('select[name=\"status\"]').val();
-            let tipo = $('select[name=\"tipo_entrega\"]').val();
-            if (status === 'devolvido' && tipo !== 'kit') {
-                $('#container_estorno').show();
-            } else {
-                $('#container_estorno').hide();
-                $('#estornar_saldo').prop('checked', false);
-            }
-        }
-        $('select[name=\"status\"]').on('change', toggleEstornoCheckbox);
-        $('select[name=\"tipo_entrega\"]').on('change', toggleEstornoCheckbox);
-        toggleEstornoCheckbox();
 
         function carregarColaboradoresEmpresa(callback) {
             const empresaId = $('select[name=\"empresa_id\"]').val() || '0';
@@ -1587,7 +1734,7 @@ function modificarEntrega() {
         var epiId = epiSelect.val();
         var epiNome = epiSelect.find('option:selected').text();
         var quantidade = $('#quantidade').val();
-        var status = $('select[name=\"status\"]').val();
+        var status = 'ativo';
         
         var empresaId = $('select[name=\"empresa_id\"]').length > 0 ? $('select[name=\"empresa_id\"]').val() : '0';
         if (empresaId === '') empresaId = '0';
@@ -1609,6 +1756,10 @@ function modificarEntrega() {
             return;
         }
         
+        finalizarAdicaoItem(colabId, colabNome, epiId, epiNome, quantidade, status, empresaId, variacao);
+    }
+
+    function finalizarAdicaoItem(colabId, colabNome, epiId, epiNome, quantidade, status, empresaId, variacao) {
         var fotoInput = $('#foto')[0];
         var files = (fotoInput && fotoInput.files) ? fotoInput.files : [];
         
@@ -1658,7 +1809,7 @@ function modificarEntrega() {
             epi_id: epiId,
             epi_nome: epiNome,
             quantidade: parseInt(quantidade, 10),
-            status: status,
+            status: 'ativo',
             empresa_id: empresaId,
             variacao: variacao || '',
             variacoes: variacoes || epiVariacoes[epiId] || '',
@@ -1672,6 +1823,15 @@ function modificarEntrega() {
         $('#quantidade').val('1');
         $('#foto').val('');
         $('#new_photos_container').empty();
+        
+        // Se o item já veio com variação selecionada, busca o saldo específico dela
+        if (item.variacao) {
+            var empresaIdBusca = item.empresa_id || '0';
+            $.get('entrega_epi.php?acao=get_saldo&epi_id=' + epiId + '&empresa_id=' + empresaIdBusca + '&variacao=' + encodeURIComponent(item.variacao), function(saldo) {
+                item.saldo_variacao_atual = parseInt(saldo) || 0;
+                desenharListas();
+            });
+        }
         
         $.ajax({
             url: 'entrega_epi.php?acao=obterSaldosEpiFiliaisAjax',
@@ -1692,6 +1852,11 @@ function modificarEntrega() {
     function desenharListas() {
         var container = $('#container_listas_entregas');
         container.empty();
+
+        // Estilos para itens sem saldo (cinza — não serão lançados)
+        if (!$('#estilo_sem_saldo_epi').length) {
+            $('<style id=\"estilo_sem_saldo_epi\">.sem-saldo-lote,.sem-saldo-kit{background-color:#f0f0f0 !important;opacity:.7}.sem-saldo-lote td,.sem-saldo-kit td{color:#999 !important}</style>').appendTo('head');
+        }
         
         if (itensEntregaLote.length === 0) {
             $('#container_acoes_globais').hide();
@@ -1759,6 +1924,13 @@ function modificarEntrega() {
                 else if (item.status === 'perdido') statusLabel = '<span class=\"label label-sm label-danger\">Perdido</span>';
                 else if (item.status === 'substituido') statusLabel = '<span class=\"label label-sm label-warning\">Substituído</span>';
                 
+                if (item.justificativa) {
+                    statusLabel += '<br><small style=\"color: #555;\">Just.: ' + item.justificativa + '</small>';
+                }
+                if (item.estornar == 1) {
+                    statusLabel += '<br><span class=\"label label-success label-xs\" style=\"margin-top: 3px;\"><i class=\"fa fa-arrow-circle-left\"></i> Retorna ao estoque</span>';
+                }
+                
                 var variacaoCellHtml = '<span class=\"text-muted\">-</span>';
                 if (item.variacoes) {
                     var listaVar = item.variacoes.split(',').map(function(v) { return v.trim(); }).filter(Boolean);
@@ -1782,34 +1954,30 @@ function modificarEntrega() {
                     }
                 }
                 var currentStock = currentStockEntry ? currentStockEntry.saldo : 0;
-                
-                var estoqueBadge = '';
-                var importDropdown = '';
-                
-                if (currentStock >= item.quantidade) {
-                    estoqueBadge = '<span class=\"label label-success\" style=\"font-weight: bold;\">Disponível: ' + currentStock + '</span>';
-                } else {
-                    estoqueBadge = '<span class=\"label label-danger\" style=\"font-weight: bold; display: block; margin-bottom: 5px;\">Insuficiente: ' + currentStock + '</span>';
-                    
-                    var options = '<option value=\"\">Não importar (Erro ao gravar)</option>';
-                    saldos.forEach(function(s) {
-                        if (s.empresa_id != item.empresa_id && s.saldo >= item.quantidade) {
-                            var selectedAttr = item.import_de == s.empresa_id ? 'selected' : '';
-                            options += '<option value=\"' + s.empresa_id + '\" ' + selectedAttr + '>Importar de ' + s.empresa_nome + ' (Saldo: ' + s.saldo + ')</option>';
-                        }
-                    });
-                    
-                    importDropdown = '<select class=\"form-control input-sm\" style=\"margin-top: 5px;\" onchange=\"definirImportOrigem(\'' + item.unique_id + '\', this.value)\">' + options + '</select>';
+                // Com variação selecionada na sacola, usa o saldo específico da variação
+                if (item.variacao && typeof item.saldo_variacao_atual !== 'undefined') {
+                    currentStock = item.saldo_variacao_atual;
                 }
                 
-                tableHtml += '<tr>' +
+                // Item sem saldo: permanece na lista em cinza e NÃO será lançado
+                var semSaldo = (currentStock < item.quantidade);
+                item.semSaldo = semSaldo ? true : false;
+                
+                var estoqueBadge = '';
+                if (!semSaldo) {
+                    estoqueBadge = '<span class=\"label label-success\" style=\"font-weight: bold;\">Disponível: ' + currentStock + (item.variacao ? ' (var. ' + item.variacao + ')' : '') + '</span>';
+                } else {
+                    estoqueBadge = '<span class=\"label label-danger\" style=\"font-weight: bold;\"><i class=\"fa fa-ban\"></i> Sem saldo: ' + currentStock + (item.variacao ? ' (var. ' + item.variacao + ')' : '') + ' — não será lançado</span>';
+                }
+                
+                tableHtml += '<tr' + (semSaldo ? ' class=\"sem-saldo-lote\"' : '') + '>' +
                     '<td style=\"text-align: center; vertical-align: middle;\">' + fotoHtml + '</td>' +
                     '<td style=\"vertical-align: middle;\">' + item.epi_nome + '</td>' +
                     '<td style=\"text-align: center; font-weight: bold; vertical-align: middle;\">' + item.quantidade + '</td>' +
                     '<td style=\"text-align: center; vertical-align: middle;\">' + variacaoCellHtml + '</td>' +
                     '<td style=\"vertical-align: middle;\">' + origNome + '</td>' +
                     '<td style=\"text-align: center; vertical-align: middle;\">' + statusLabel + '</td>' +
-                    '<td style=\"vertical-align: middle;\">' + estoqueBadge + importDropdown + '</td>' +
+                    '<td style=\"vertical-align: middle;\">' + estoqueBadge + '</td>' +
                     '<td style=\"text-align: center; vertical-align: middle;\">' +
                         '<button type=\"button\" class=\"btn btn-danger btn-xs\" onclick=\"removerItemEntrega(\'' + item.unique_id + '\')\"><i class=\"fa fa-trash\"></i></button>' +
                     '</td>' +
@@ -1829,18 +1997,21 @@ function modificarEntrega() {
         });
     }
     
-    function definirImportOrigem(uniqueId, val) {
-        var item = itensEntregaLote.find(function(it) { return it.unique_id === uniqueId; });
-        if (item) {
-            item.import_de = val;
-        }
-    }
-
     $(document).on('change', '.sel_lote_variacao', function() {
         var uniqueId = $(this).attr('data-unique');
         var item = itensEntregaLote.find(function(it) { return it.unique_id === uniqueId; });
         if (item) {
             item.variacao = $(this).val() || '';
+            if (item.variacao) {
+                var empresaId = item.empresa_id || '0';
+                $.get('entrega_epi.php?acao=get_saldo&epi_id=' + item.epi_id + '&empresa_id=' + empresaId + '&variacao=' + encodeURIComponent(item.variacao), function(saldo) {
+                    item.saldo_variacao_atual = parseInt(saldo) || 0;
+                    desenharListas();
+                });
+            } else {
+                item.saldo_variacao_atual = undefined;
+                desenharListas();
+            }
         }
     });
     
@@ -1863,7 +2034,7 @@ function modificarEntrega() {
         
         var hasMissingVariacao = false;
         itensFunc.forEach(function(item) {
-            if (item.variacoes && !item.variacao) {
+            if (item.variacoes && !item.variacao && !item.semSaldo) {
                 hasMissingVariacao = true;
             }
         });
@@ -1872,24 +2043,16 @@ function modificarEntrega() {
             return;
         }
         
-        var hasStockIssues = false;
-        itensFunc.forEach(function(item) {
-            var saldos = item.saldos_filiais || [];
-            var currentStockEntry = null;
-            for (var i = 0; i < saldos.length; i++) {
-                if (saldos[i].empresa_id == item.empresa_id) {
-                    currentStockEntry = saldos[i];
-                    break;
-                }
+        // Itens sem saldo não são lançados (transferência inter-filial é feita na página de transferência)
+        var itensSemSaldo = itensFunc.filter(function(item) { return item.semSaldo; });
+        if (itensSemSaldo.length > 0) {
+            if (!confirm(itensSemSaldo.length + ' item(ns) estão sem saldo e NÃO serão lançados. Deseja continuar com os demais?')) {
+                return;
             }
-            var currentStock = currentStockEntry ? currentStockEntry.saldo : 0;
-            if (currentStock < item.quantidade && !item.import_de) {
-                hasStockIssues = true;
-            }
-        });
-        
-        if (hasStockIssues) {
-            alert('Erro: Um ou mais itens possuem estoque insuficiente e nenhuma filial de origem foi selecionada para importação.');
+            itensFunc = itensFunc.filter(function(item) { return !item.semSaldo; });
+        }
+        if (itensFunc.length === 0) {
+            alert('Nenhum item com saldo disponível para lançar.');
             return;
         }
         
@@ -1946,7 +2109,7 @@ function modificarEntrega() {
         
         var hasMissingVariacao = false;
         itensEntregaLote.forEach(function(item) {
-            if (item.variacoes && !item.variacao) {
+            if (item.variacoes && !item.variacao && !item.semSaldo) {
                 hasMissingVariacao = true;
             }
         });
@@ -1955,24 +2118,16 @@ function modificarEntrega() {
             return;
         }
         
-        var hasStockIssues = false;
-        itensEntregaLote.forEach(function(item) {
-            var saldos = item.saldos_filiais || [];
-            var currentStockEntry = null;
-            for (var i = 0; i < saldos.length; i++) {
-                if (saldos[i].empresa_id == item.empresa_id) {
-                    currentStockEntry = saldos[i];
-                    break;
-                }
+        // Itens sem saldo não são lançados (transferência inter-filial é feita na página de transferência)
+        var itensSemSaldo = itensEntregaLote.filter(function(item) { return item.semSaldo; });
+        if (itensSemSaldo.length > 0) {
+            if (!confirm(itensSemSaldo.length + ' item(ns) estão sem saldo e NÃO serão lançados. Deseja continuar com os demais?')) {
+                return;
             }
-            var currentStock = currentStockEntry ? currentStockEntry.saldo : 0;
-            if (currentStock < item.quantidade && !item.import_de) {
-                hasStockIssues = true;
-            }
-        });
-        
-        if (hasStockIssues) {
-            alert('Erro: Um ou mais itens possuem estoque insuficiente e nenhuma filial de origem foi selecionada para importação.');
+        }
+        var itensParaGravar = itensEntregaLote.filter(function(item) { return !item.semSaldo; });
+        if (itensParaGravar.length === 0) {
+            alert('Nenhum item com saldo disponível para lançar.');
             return;
         }
         
@@ -1984,7 +2139,7 @@ function modificarEntrega() {
             data: {
                 colaborador_id: 0,
                 data_entrega: dataEntrega,
-                lotes: JSON.stringify(itensEntregaLote)
+                lotes: JSON.stringify(itensParaGravar)
             },
             dataType: 'json',
             success: function(response) {
@@ -2367,6 +2522,7 @@ function index() {
     $buttons[] = botao("Buscar", "index");
     $buttons[] = botao("Lançar Entrega", "modificarEntrega", "", "", "", "", "btn btn-success");
     $buttons[] = botao("Gerenciar Kits", "listarKits", "", "", "", "", "btn btn-info");
+    $buttons[] = '<a href="devolucao_epi.php" class="btn btn-warning"><i class="fa fa-arrow-circle-left"></i> Gestão de Devoluções</a>';
     $buttons[] = '<button type="button" class="btn default" onclick="imprimirFichaEpi()">Imprimir Ficha</button>';
 
     $jsImprimir = "
