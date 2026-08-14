@@ -809,16 +809,8 @@ function index() {
 
         $jsAcoes = '
             var funcoesInternas = function(){
-                // Abre o modal de detalhes do EPI ao clicar na linha do grid
-                $("#result tbody tr").off("click").on("click", function(event) {
-                    if ($(event.target).closest(".acao-editar-epi-est, .acao-inativar-epi-est, .acao-excluir-epi-est, .acao-detalhes-epi-est, a, img, button, .btn").length) {
-                        return;
-                    }
-                    var id = $(this).attr("data-row-id");
-                    if (id) {
-                        abrirDetalhesEpi(id);
-                    }
-                });
+                // O clique na linha apenas destaca (destaque global do grid);
+                // o modal de detalhes abre somente pelo ícone de olho abaixo.
 
                 // Bind detalhes click (ícone de olho)
                 $(".acao-detalhes-epi-est").off("click").on("click", function(event) {

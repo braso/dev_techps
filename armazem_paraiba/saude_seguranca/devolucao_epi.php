@@ -179,15 +179,6 @@ function index() {
 
     $jsAcoes = '
         var funcoesInternas = function(){
-            // Destaque da linha clicada (identifica o registro entre muitos)
-            if (!$("#estilo_linha_destaque").length) {
-                $("<style id=\"estilo_linha_destaque\">#result tbody tr.linha-selecionada{background-color:#ffd54f !important;box-shadow:inset 4px 0 0 #f0ad4e;}#result tbody tr.linha-selecionada td{background-color:transparent !important;color:#333 !important;font-weight:bold;}</style>").appendTo("head");
-            }
-            $("#result tbody tr").off("click.linha").on("click.linha", function() {
-                $("#result tbody tr").removeClass("linha-selecionada");
-                $(this).addClass("linha-selecionada");
-            });
-
             // Alterar registro (abre o form de entrega em modo edição)
             $(".acao-editar-devolucao").off("click").on("click", function(event) {
                 var id = $(this).closest("tr").attr("data-row-id");
