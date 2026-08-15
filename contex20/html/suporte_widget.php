@@ -17,8 +17,13 @@
     $__supEmpNome = trim(strval($_SESSION["empr_tx_nome"] ?? "")) !== "" ? trim(strval($_SESSION["empr_tx_nome"])) : $__supEmpresa;
     $__supNome    = trim(strval($_SESSION["user_tx_nome"] ?? ""));
     $__supLogin   = trim(strval($_SESSION["user_tx_login"] ?? ""));
+    $__supEmail   = trim(strval($_SESSION["user_tx_email"] ?? ""));
     if ($__supEmpresa === "" || $__supNome === "" || $__supLogin === "") {
         return;
+    }
+    // Valida formato simples do e-mail (usado para notificações do chamado).
+    if (!filter_var($__supEmail, FILTER_VALIDATE_EMAIL)) {
+        $__supEmail = "";
     }
 
     // Token de curta duração (5 min) — assinado com chave derivada por empresa.
@@ -29,6 +34,7 @@
         "uid"          => $__supUid,
         "ulogin"       => $__supLogin,
         "unome"        => $__supNome,
+        "user_email"   => $__supEmail,
         "exp"          => $__supExp,
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     $__supPayload = rtrim(strtr(base64_encode($__supJson), "+/", "-_"), "=");

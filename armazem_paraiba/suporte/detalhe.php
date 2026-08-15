@@ -5,6 +5,7 @@
     include __DIR__ . "/../load_env.php";
     include_once __DIR__ . "/../conecta.php";
     include_once __DIR__ . "/../check_permission.php";
+    include_once __DIR__ . "/_timeline.php";
 
     $__id = (int) ($_GET["id"] ?? 0);
     if ($__id < 1) {
@@ -76,19 +77,32 @@
     $__ticket = [];
     $__arquivos = [];
     $__comentarios = [];
+    $__eventos = [];
     if ($__httpCode >= 200 && $__httpCode < 300 && is_array($__dados) && !empty($__dados["ticket"])) {
         // Isolamento por tenant: só mostra chamado da própria empresa.
         if (strval($__dados["ticket"]["empresa_key"] ?? "") === $__empresaAtual) {
             $__ticket = $__dados["ticket"];
             $__arquivos = is_array($__dados["arquivos"] ?? null) ? $__dados["arquivos"] : [];
             $__comentarios = is_array($__dados["comentarios"] ?? null) ? $__dados["comentarios"] : [];
+            $__eventos = is_array($__dados["eventos"] ?? null) ? $__dados["eventos"] : [];
         }
     }
 
     $__status = $__ticket["status"] ?? "";
-    $__badge = $__status === "resolvido"
-        ? '<span class="label label-success">Resolvido</span>'
-        : '<span class="label label-warning">Aberto</span>';
+    $__statusMap = [
+        "aberto"             => '<span class="label label-warning">Aberto</span>',
+        "em_andamento"       => '<span class="label label-info">Em Andamento</span>',
+        "aguardando_cliente" => '<span class="label label-primary">Aguardando retorno do cliente</span>',
+        "resolvido"          => '<span class="label label-success">Resolvido</span>',
+        "cancelado"          => '<span class="label label-default">Cancelado</span>',
+        "reaberto"           => '<span class="label label-warning">Reaberto</span>',
+        "encaminhado_ssi"    => '<span class="label label-danger">Encaminhado a SSI</span>',
+    ];
+    $__badge = $__statusMap[$__status] ?? '<span class="label label-default">' . htmlspecialchars($__status) . '</span>';
+    $__tipoMap = ["duvida" => "Dúvida operacional", "sugestao" => "Sugestão", "bug" => "Bug de sistema"];
+    $__tipo = strval($__ticket["tipo"] ?? "");
+    $__ssiCodigo = strval($__ticket["ssi_codigo"] ?? "");
+    $__ssiPrioridade = strval($__ticket["ssi_prioridade"] ?? "");
 
     cabecalho("Chamado #" . $__id);
 ?>
@@ -120,6 +134,10 @@
                             <tr><th>Usuário</th><td><?= htmlspecialchars(strval($__ticket["user_nome"] ?? "")) ?> (<?= htmlspecialchars(strval($__ticket["user_login"] ?? "")) ?>)</td></tr>
                             <tr><th>Data de abertura</th><td><?= htmlspecialchars(strval($__ticket["created_at"] ?? "")) ?></td></tr>
                             <tr><th>Status</th><td><?= $__badge ?></td></tr>
+                            <tr><th>Tipo</th><td><?= isset($__tipoMap[$__tipo]) ? htmlspecialchars($__tipoMap[$__tipo]) : '<span class="text-muted">Em análise</span>' ?></td></tr>
+                            <?php if ($__ssiCodigo !== ""): ?>
+                                <tr><th>SSI</th><td><span class="label label-danger"><?= htmlspecialchars($__ssiCodigo) ?></span> — <?= $__ssiPrioridade === "urgente" ? "Prioritária (urgente em produção)" : "Próxima atualização" ?></td></tr>
+                            <?php endif; ?>
                             <tr><th>Página</th><td style="word-break:break-all;"><small><?= htmlspecialchars(strval($__ticket["pagina_url"] ?? "")) ?></small></td></tr>
                         </table>
                     </div>
@@ -184,6 +202,10 @@
                         <button type="submit" class="btn blue"><i class="fa fa-reply"></i> Responder chamado</button>
                     </div>
                 </form>
+
+                <!-- Timeline -->
+                <h4 style="margin-top:28px;"><i class="fa fa-history"></i> Linha do tempo do chamado</h4>
+                <?= suporte_render_timeline($__eventos) ?>
 
             </div>
         </div>
