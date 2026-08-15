@@ -860,6 +860,92 @@ const multer = require("multer");
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
+const nodemailer = require("nodemailer");
+
+// Status permitidos do chamado (fluxo de atendimento).
+const SUPORTE_STATUS = {
+    aberto:               "Aberto",
+    em_andamento:         "Em Andamento",
+    aguardando_cliente:   "Aguardando retorno do cliente",
+    resolvido:            "Resolvido",
+    cancelado:            "Cancelado",
+    reaberto:             "Reaberto",
+    encaminhado_ssi:      "Encaminhado a SSI"
+};
+
+const SUPORTE_TIPOS = {
+    duvida:   "Dúvida operacional",
+    sugestao: "Sugestão",
+    bug:      "Bug de sistema"
+};
+
+// Envia e-mail transacional do chamado (Titan/outro SMTP). Nunca derruba a requisição.
+function enviarEmailSuporte(para, assunto, html) {
+    return new Promise((resolve) => {
+        try {
+            const host = process.env.SUPORTE_MAIL_HOST || "";
+            const user = process.env.SUPORTE_MAIL_USER || "";
+            const pass = process.env.SUPORTE_MAIL_PASSWORD || "";
+            const from = process.env.SUPORTE_MAIL_FROM || user;
+            const fromName = process.env.SUPORTE_MAIL_FROM_NAME || "Tech PS Suporte";
+            if (!host || !user || !pass || !para) {
+                console.warn("[SUPORTE] E-mail não enviado: SMTP ou destinatário ausentes.");
+                return resolve(false);
+            }
+            const transporter = nodemailer.createTransport({
+                host: host,
+                port: parseInt(process.env.SUPORTE_MAIL_PORT || "465", 10),
+                secure: parseInt(process.env.SUPORTE_MAIL_PORT || "465", 10) === 465,
+                auth: { user: user, pass: pass }
+            });
+            transporter.sendMail({
+                from: '"' + fromName + '" <' + from + '>',
+                to: para,
+                subject: assunto,
+                html: html
+            }).then(() => {
+                console.log("[SUPORTE] E-mail enviado para " + para);
+                resolve(true);
+            }).catch((err) => {
+                console.error("[SUPORTE] Erro ao enviar e-mail:", err.message);
+                resolve(false);
+            });
+        } catch (err) {
+            console.error("[SUPORTE] Erro no envio de e-mail:", err.message);
+            resolve(false);
+        }
+    });
+}
+
+// Escape de conteúdo do usuário em HTML de e-mail (anti-XSS).
+function escH(s) {
+    return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// Corpo padrão do e-mail de chamado.
+function htmlEmailSuporte(ticket, titulo, avisos) {
+    const statusLabel = SUPORTE_STATUS[ticket.status] || ticket.status;
+    const tipoLabel = SUPORTE_TIPOS[ticket.tipo] || "";
+    const ss = ticket.ssi_codigo ? ("<br>SSI: <strong>" + escH(ticket.ssi_codigo) + "</strong> (" + (ticket.ssi_prioridade === "urgente" ? "Prioritária — urgente em produção" : "Próxima atualização") + ")") : "";
+    return (
+        "<div style='font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;'>" +
+        "<h2 style='color:#337ab7;margin-bottom:4px;'>" + escH(titulo) + "</h2>" +
+        "<p style='color:#888;margin-top:0;font-size:13px;'>Chamado #" + escH(ticket.id) + " — " + escH(ticket.empresa_nome || ticket.empresa_key || "") + "</p>" +
+        "<table style='border-collapse:collapse;width:100%;font-size:14px;'>" +
+        "<tr><td style='padding:6px 0;color:#555;width:130px;'><strong>Status:</strong></td><td>" + escH(statusLabel) + "</td></tr>" +
+        (tipoLabel ? "<tr><td style='padding:6px 0;color:#555;'><strong>Tipo:</strong></td><td>" + escH(tipoLabel) + "</td></tr>" : "") +
+        (ticket.atendente_nome ? "<tr><td style='padding:6px 0;color:#555;'><strong>Atendente:</strong></td><td>" + escH(ticket.atendente_nome) + "</td></tr>" : "") +
+        ss +
+        "</table>" +
+        "<div style='background:#f7f7f7;border:1px solid #eee;border-radius:6px;padding:12px;margin-top:12px;'>" +
+        "<strong style='color:#555;'>Descrição do problema:</strong><br>" +
+        "<span style='white-space:pre-wrap;color:#333;'>" + escH(ticket.descricao || "") + "</span>" +
+        "</div>" +
+        (avisos ? "<p style='color:#555;font-size:14px;margin-top:14px;'>" + avisos + "</p>" : "") +
+        "<p style='color:#aaa;font-size:12px;margin-top:20px;'>Tech PS — Sistema de Suporte</p>" +
+        "</div>"
+    );
+}
 
 const SUPORTE = {
     apiKey: process.env.SUPORTE_API_KEY || "",
@@ -921,9 +1007,15 @@ function criarTabelasSuporte() {
             user_id VARCHAR(50) NOT NULL DEFAULT '',
             user_login VARCHAR(100) NOT NULL DEFAULT '',
             user_nome VARCHAR(150) NOT NULL DEFAULT '',
+            user_email VARCHAR(190) NOT NULL DEFAULT '',
             pagina_url VARCHAR(500) NOT NULL DEFAULT '',
             descricao TEXT NOT NULL,
-            status ENUM('aberto','resolvido') NOT NULL DEFAULT 'aberto',
+            status ENUM('aberto','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi') NOT NULL DEFAULT 'aberto',
+            tipo ENUM('duvida','sugestao','bug') DEFAULT NULL,
+            ssi_codigo VARCHAR(30) DEFAULT NULL,
+            ssi_prioridade ENUM('urgente','proxima_atualizacao') DEFAULT NULL,
+            atendente_nome VARCHAR(150) DEFAULT NULL,
+            aceito_em DATETIME DEFAULT NULL,
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             KEY idx_ticket_empresa_data (empresa_key, created_at),
@@ -963,6 +1055,18 @@ function criarTabelasSuporte() {
             KEY idx_comentario_ticket (ticket_id),
             CONSTRAINT fk_comentario_ticket FOREIGN KEY (ticket_id)
                 REFERENCES suporte_ticket (id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+        `CREATE TABLE IF NOT EXISTS suporte_evento (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            ticket_id BIGINT UNSIGNED NOT NULL,
+            evento VARCHAR(50) NOT NULL,
+            descricao VARCHAR(500) NOT NULL DEFAULT '',
+            autor VARCHAR(150) NOT NULL DEFAULT '',
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_evento_ticket (ticket_id),
+            CONSTRAINT fk_evento_ticket FOREIGN KEY (ticket_id)
+                REFERENCES suporte_ticket (id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     ];
     sqls.forEach((sql) => {
@@ -970,6 +1074,32 @@ function criarTabelasSuporte() {
             .then(() => console.log("[SUPORTE] Tabela verificada."))
             .catch((err) => console.error("[SUPORTE] Erro ao criar tabela:", err.message));
     });
+}
+
+// Migra tabelas existentes (bancos criados antes desta versão).
+function migrarTabelasSuporte() {
+    const migracoes = [
+        "ALTER TABLE suporte_ticket ADD COLUMN user_email VARCHAR(190) NOT NULL DEFAULT ''",
+        "ALTER TABLE suporte_ticket ADD COLUMN tipo ENUM('duvida','sugestao','bug') DEFAULT NULL",
+        "ALTER TABLE suporte_ticket ADD COLUMN ssi_codigo VARCHAR(30) DEFAULT NULL",
+        "ALTER TABLE suporte_ticket ADD COLUMN ssi_prioridade ENUM('urgente','proxima_atualizacao') DEFAULT NULL",
+        "ALTER TABLE suporte_ticket ADD COLUMN atendente_nome VARCHAR(150) DEFAULT NULL",
+        "ALTER TABLE suporte_ticket ADD COLUMN aceito_em DATETIME DEFAULT NULL",
+        "ALTER TABLE suporte_ticket ADD COLUMN fechado_em DATETIME DEFAULT NULL",
+        "ALTER TABLE suporte_ticket MODIFY status ENUM('aberto','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi') NOT NULL DEFAULT 'aberto'"
+    ];
+    const roda = (sql) => {
+        suporteQuery(sql, [])
+            .then(() => console.log("[SUPORTE] Migração OK: " + sql.slice(0, 60)))
+            .catch((err) => {
+                if (err && err.code === "ER_DUP_FIELDNAME") {
+                    console.log("[SUPORTE] Coluna já existente (ignorado).");
+                } else {
+                    console.error("[SUPORTE] Migração falhou: " + err.message);
+                }
+            });
+    };
+    migracoes.forEach(roda);
 }
 
 function suporteQuery(sql, params) {
@@ -983,6 +1113,14 @@ function suporteQuery(sql, params) {
             else resolve(results);
         });
     });
+}
+
+// Registra evento na timeline do chamado (nunca derruba a requisição).
+function registrarEventoSuporte(ticketId, evento, descricao, autor) {
+    suporteQuery(
+        "INSERT INTO suporte_evento (ticket_id, evento, descricao, autor) VALUES (?, ?, ?, ?)",
+        [ticketId, evento, String(descricao || "").slice(0, 500), String(autor || "").slice(0, 150)]
+    ).catch((err) => console.error("[SUPORTE] Erro ao registrar evento:", err.message));
 }
 
 function b64urlEncode(buffer) {
@@ -1055,6 +1193,8 @@ app.post("/suporte/tickets", uploadSuporte.array("imagens", SUPORTE.maxImagens),
         const uid = String(payload.uid).slice(0, 50);
         const ulogin = String(payload.ulogin).slice(0, 100);
         const unome = String(payload.unome || "").slice(0, 150);
+        const uemail = String(payload.user_email || "").slice(0, 190);
+        const uemailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(uemail) ? uemail : "";
 
         let descricao = String(req.body.descricao || "").trim();
         let paginaUrl = String(req.body.pagina_url || "").trim();
@@ -1096,8 +1236,8 @@ app.post("/suporte/tickets", uploadSuporte.array("imagens", SUPORTE.maxImagens),
         }
 
         const ins = await suporteQuery(
-            "INSERT INTO suporte_ticket (empresa_key, empresa_nome, user_id, user_login, user_nome, pagina_url, descricao) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [empresa, empresaNome, uid, ulogin, unome, paginaUrl, descricao]
+            "INSERT INTO suporte_ticket (empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, pagina_url, descricao) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [empresa, empresaNome, uid, ulogin, unome, uemailValido, paginaUrl, descricao]
         );
         const ticketId = ins.insertId;
 
@@ -1119,6 +1259,25 @@ app.post("/suporte/tickets", uploadSuporte.array("imagens", SUPORTE.maxImagens),
         }
 
         await suporteQuery("INSERT INTO suporte_rate (empresa_key, user_id) VALUES (?, ?)", [empresa, uid]);
+
+        // Timeline: abertura do chamado.
+        registrarEventoSuporte(ticketId, "aberto", "Chamado aberto pelo cliente", unome || ulogin);
+
+        // E-mail de abertura do chamado.
+        if (uemailValido) {
+            enviarEmailSuporte(
+                uemailValido,
+                "Chamado #" + ticketId + " aberto com sucesso — TechPS",
+                htmlEmailSuporte({
+                    id: ticketId,
+                    empresa_key: empresa,
+                    empresa_nome: empresaNome,
+                    status: "aberto",
+                    descricao: descricao,
+                    atendente_nome: ""
+                }, "Seu chamado foi aberto!", "Nossa equipe de suporte irá analisar e retornar por aqui. Acompanhe o status pelo sistema.")
+            );
+        }
 
         res.status(201).json({ ok: true, ticket_id: ticketId, msg: "Chamado aberto com sucesso." });
     } catch (err) {
@@ -1147,7 +1306,7 @@ app.get("/suporte/tickets", exigirAdminSuporte, async (req, res) => {
         const filtro = where.length ? "WHERE " + where.join(" AND ") : "";
 
         const linhas = await suporteQuery(
-            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, pagina_url, descricao, status, created_at FROM suporte_ticket " + filtro + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, pagina_url, descricao, status, tipo, ssi_codigo, ssi_prioridade, atendente_nome, aceito_em, fechado_em, created_at FROM suporte_ticket " + filtro + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
             params.concat([limite, offset])
         );
         const totalRows = await suporteQuery(
@@ -1169,7 +1328,7 @@ app.get("/suporte/tickets/:id", exigirAdminSuporte, async (req, res) => {
         if (!id || id < 1) return res.status(400).json({ ok: false, msg: "ID inválido." });
 
         const linhas = await suporteQuery(
-            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, pagina_url, descricao, status, created_at FROM suporte_ticket WHERE id = ?",
+            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, pagina_url, descricao, status, tipo, ssi_codigo, ssi_prioridade, atendente_nome, aceito_em, fechado_em, created_at FROM suporte_ticket WHERE id = ?",
             [id]
         );
         if (!linhas.length) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
@@ -1184,7 +1343,12 @@ app.get("/suporte/tickets/:id", exigirAdminSuporte, async (req, res) => {
             [id]
         );
 
-        res.json({ ok: true, ticket: linhas[0], arquivos, comentarios });
+        const eventos = await suporteQuery(
+            "SELECT id, evento, descricao, autor, created_at FROM suporte_evento WHERE ticket_id = ? ORDER BY created_at ASC",
+            [id]
+        );
+
+        res.json({ ok: true, ticket: linhas[0], arquivos, comentarios, eventos });
     } catch (err) {
         console.error("[SUPORTE] Erro ao buscar chamado:", err);
         res.status(500).json({ ok: false, msg: "Erro ao buscar chamado." });
@@ -1249,6 +1413,23 @@ app.post("/suporte/tickets/:id/comentarios", async (req, res) => {
             [id, autor, autorLogin, autorTipo, texto]
         );
 
+        // E-mail ao cliente quando o suporte (gestor) responde.
+        if (autorTipo === "gestor") {
+            const chkMail = await suporteQuery("SELECT * FROM suporte_ticket WHERE id = ?", [id]);
+            if (chkMail.length && chkMail[0].user_email) {
+                enviarEmailSuporte(
+                    chkMail[0].user_email,
+                    "Nova resposta no chamado #" + id + " — TechPS",
+                    htmlEmailSuporte(chkMail[0], "Nova resposta da equipe TechPS", "Resposta de " + escH(autor) + ":<br><div style='background:#f7f7f7;border:1px solid #eee;border-radius:6px;padding:10px;white-space:pre-wrap;'>" + escH(texto) + "</div>")
+                );
+            }
+            // Timeline: resposta do suporte.
+            registrarEventoSuporte(id, "comentario_gestor", "Resposta do suporte", autor);
+        } else {
+            // Timeline: resposta do cliente.
+            registrarEventoSuporte(id, "comentario_empresa", "Resposta do cliente", autor);
+        }
+
         res.status(201).json({ ok: true, comentario_id: ins.insertId, msg: "Comentário adicionado." });
     } catch (err) {
         console.error("[SUPORTE] Erro ao adicionar comentário:", err);
@@ -1285,18 +1466,123 @@ app.get("/suporte/tickets/:id/arquivos/:arquivoId", exigirAdminSuporte, async (r
     }
 });
 
+// Aceita o chamado (atendente assume o atendimento)
+app.post("/suporte/tickets/:id/aceitar", exigirAdminSuporte, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        if (!id || id < 1) return res.status(400).json({ ok: false, msg: "ID inválido." });
+
+        const atendente = String(req.body.atendente || "Atendente TechPS").slice(0, 150);
+        const chk = await suporteQuery("SELECT * FROM suporte_ticket WHERE id = ?", [id]);
+        if (!chk.length) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
+
+        const upd = await suporteQuery(
+            "UPDATE suporte_ticket SET status = 'em_andamento', atendente_nome = ?, aceito_em = NOW() WHERE id = ?",
+            [atendente, id]
+        );
+        if (!upd.affectedRows) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
+
+        // Timeline: aceite do chamado.
+        registrarEventoSuporte(id, "aceito", "Atendimento iniciado pelo suporte (" + atendente + ")", atendente);
+
+        if (chk[0].user_email) {
+            enviarEmailSuporte(
+                chk[0].user_email,
+                "Chamado #" + id + " em atendimento — TechPS",
+                htmlEmailSuporte({ ...chk[0], status: "em_andamento", atendente_nome: atendente }, "Seu chamado entrou em atendimento!", "O atendente " + escH(atendente) + " iniciou o atendimento do seu chamado.")
+            );
+        }
+
+        res.json({ ok: true, msg: "Chamado aceito e em atendimento." });
+    } catch (err) {
+        console.error("[SUPORTE] Erro ao aceitar chamado:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao aceitar chamado." });
+    }
+});
+
+// Classifica o chamado (dúvida / sugestão / bug)
+app.post("/suporte/tickets/:id/tipo", exigirAdminSuporte, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        const tipo = String(req.body.tipo || "").trim();
+        if (!id || id < 1) return res.status(400).json({ ok: false, msg: "ID inválido." });
+        if (!["duvida", "sugestao", "bug"].includes(tipo)) {
+            return res.status(400).json({ ok: false, msg: "Tipo deve ser duvida, sugestao ou bug." });
+        }
+        const upd = await suporteQuery("UPDATE suporte_ticket SET tipo = ? WHERE id = ?", [tipo, id]);
+        if (!upd.affectedRows) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
+
+        // Timeline: classificação do chamado.
+        registrarEventoSuporte(id, "tipo", "Chamado classificado como " + (SUPORTE_TIPOS[tipo] || tipo), "Gestão TechPS");
+
+        res.json({ ok: true, msg: "Tipo do chamado atualizado." });
+    } catch (err) {
+        console.error("[SUPORTE] Erro ao classificar chamado:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao classificar chamado." });
+    }
+});
+
 // Altera status do chamado (painel de gestão)
 app.post("/suporte/tickets/:id/status", exigirAdminSuporte, async (req, res) => {
     try {
         const id = parseInt(req.params.id, 10);
         const status = String(req.body.status || "").trim();
         if (!id || id < 1) return res.status(400).json({ ok: false, msg: "ID inválido." });
-        if (status !== "aberto" && status !== "resolvido") {
-            return res.status(400).json({ ok: false, msg: "Status deve ser 'aberto' ou 'resolvido'." });
+        if (!SUPORTE_STATUS[status]) {
+            return res.status(400).json({ ok: false, msg: "Status inválido." });
         }
 
-        const upd = await suporteQuery("UPDATE suporte_ticket SET status = ? WHERE id = ?", [status, id]);
+        const chk = await suporteQuery("SELECT * FROM suporte_ticket WHERE id = ?", [id]);
+        if (!chk.length) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
+
+        // Encaminhado a SSI: gera código e exige prioridade.
+        let ssiCodigo = null;
+        let ssiPrioridade = null;
+        if (status === "encaminhado_ssi") {
+            ssiPrioridade = String(req.body.ssi_prioridade || "").trim();
+            if (!["urgente", "proxima_atualizacao"].includes(ssiPrioridade)) {
+                return res.status(400).json({ ok: false, msg: "Informe a prioridade da SSI (urgente ou proxima_atualizacao)." });
+            }
+            ssiCodigo = "SSI-" + new Date().getFullYear() + "-" + crypto.randomInt(1000, 9999);
+        }
+
+        const upd = await suporteQuery(
+            "UPDATE suporte_ticket SET status = ?, ssi_codigo = COALESCE(?, ssi_codigo), ssi_prioridade = COALESCE(?, ssi_prioridade), " +
+            "fechado_em = CASE WHEN ? IN ('resolvido','cancelado') THEN NOW() WHEN ? IN ('aberto','reaberto') THEN NULL ELSE fechado_em END " +
+            "WHERE id = ?",
+            [status, ssiCodigo, ssiPrioridade, status, status, id]
+        );
         if (!upd.affectedRows) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
+
+        // Timeline: mudança de status (com horário de fechamento).
+        let descStatus = "Status alterado para " + (SUPORTE_STATUS[status] || status);
+        if (status === "resolvido" || status === "cancelado") {
+            descStatus += " — chamado fechado";
+        } else if (status === "encaminhado_ssi") {
+            descStatus += " (SSI " + (ssiCodigo || chk[0].ssi_codigo) + ")";
+        }
+        registrarEventoSuporte(id, "status", descStatus, "Gestão TechPS");
+
+        const novoTicket = { ...chk[0], status, ssi_codigo: ssiCodigo || chk[0].ssi_codigo, ssi_prioridade: ssiPrioridade || chk[0].ssi_prioridade };
+
+        // E-mails de status / encerramento.
+        if (chk[0].user_email) {
+            const ehEncerramento = (status === "resolvido" || status === "cancelado");
+            const ehReaberto = (status === "reaberto");
+            let titulo = "Chamado #" + id + " atualizado — TechPS";
+            let avisos = "";
+            if (ehEncerramento) {
+                titulo = status === "resolvido" ? "Chamado #" + id + " resolvido — TechPS" : "Chamado #" + id + " cancelado — TechPS";
+                avisos = "Este chamado foi encerrado. Se precisar de mais alguma coisa, é só abrir um novo chamado.";
+            } else if (ehReaberto) {
+                avisos = "O chamado foi reaberto e voltou para análise da equipe.";
+            } else if (status === "aguardando_cliente") {
+                avisos = "Estamos aguardando o seu retorno para dar continuidade ao atendimento.";
+            } else if (status === "encaminhado_ssi") {
+                avisos = "O chamado foi encaminhado ao setor de suporte interno (SSI " + novoTicket.ssi_codigo + "). " + (novoTicket.ssi_prioridade === "urgente" ? "Tratamento prioritário — solução urgente em produção." : "Será resolvido na próxima atualização do sistema.");
+            }
+            enviarEmailSuporte(chk[0].user_email, titulo, htmlEmailSuporte(novoTicket, titulo, avisos));
+        }
 
         res.json({ ok: true, msg: "Status atualizado." });
     } catch (err) {
@@ -1326,6 +1612,7 @@ app.use((err, req, res, next) => {
 
 // Cria as tabelas do banco externo ao iniciar (se configurado).
 criarTabelasSuporte();
+migrarTabelasSuporte();
 
 // Configuração do servidor HTTP para aceitar requisições HTTP
 const httpServer = http.createServer(app);

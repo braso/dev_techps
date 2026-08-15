@@ -67,7 +67,8 @@
     $__fPagina  = max((int) ($_GET["pagina"] ?? 1), 1);
 
     $__queryFiltro = ["empresa" => $__fEmpresa, "pagina" => $__fPagina, "limit" => 25];
-    if ($__fStatus === "aberto" || $__fStatus === "resolvido") $__queryFiltro["status"] = $__fStatus;
+    $__statusPermitidos = ["aberto", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi"];
+    if (in_array($__fStatus, $__statusPermitidos, true)) $__queryFiltro["status"] = $__fStatus;
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $__fInicio)) $__queryFiltro["data_inicio"] = $__fInicio;
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $__fFim)) $__queryFiltro["data_fim"] = $__fFim;
 
@@ -119,7 +120,12 @@
                         <select name="status" class="form-control">
                             <option value="">Todos</option>
                             <option value="aberto" <?= ($__fStatus === "aberto") ? "selected" : "" ?>>Aberto</option>
+                            <option value="em_andamento" <?= ($__fStatus === "em_andamento") ? "selected" : "" ?>>Em Andamento</option>
+                            <option value="aguardando_cliente" <?= ($__fStatus === "aguardando_cliente") ? "selected" : "" ?>>Aguardando retorno do cliente</option>
                             <option value="resolvido" <?= ($__fStatus === "resolvido") ? "selected" : "" ?>>Resolvido</option>
+                            <option value="cancelado" <?= ($__fStatus === "cancelado") ? "selected" : "" ?>>Cancelado</option>
+                            <option value="reaberto" <?= ($__fStatus === "reaberto") ? "selected" : "" ?>>Reaberto</option>
+                            <option value="encaminhado_ssi" <?= ($__fStatus === "encaminhado_ssi") ? "selected" : "" ?>>Encaminhado a SSI</option>
                         </select>
                     </div>
                     <div class="form-group" style="margin-right:10px;">
@@ -145,21 +151,29 @@
                             <th>Descrição</th>
                             <th style="width:100px;">Status</th>
                             <th style="width:150px;">Data</th>
+                            <th style="width:150px;">Fechado em</th>
                             <th style="width:180px;">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($__tickets)): ?>
-                            <tr><td colspan="8" class="text-center">Nenhum chamado encontrado.</td></tr>
+                            <tr><td colspan="9" class="text-center">Nenhum chamado encontrado.</td></tr>
                         <?php endif; ?>
                         <?php foreach ($__tickets as $__t): ?>
                             <?php
                                 $__desc = trim(strval($__t["descricao"] ?? ""));
                                 $__descCurta = mb_strlen($__desc, "UTF-8") > 80 ? mb_substr($__desc, 0, 80, "UTF-8") . "…" : $__desc;
-                                $__status = $__t["status"] ?? "aberto";
-                                $__badge = $__status === "resolvido"
-                                    ? '<span class="label label-success">Resolvido</span>'
-                                    : '<span class="label label-warning">Aberto</span>';
+                                $__status = strval($__t["status"] ?? "aberto");
+                                $__badgeMap = [
+                                    "aberto"             => '<span class="label label-warning">Aberto</span>',
+                                    "em_andamento"       => '<span class="label label-info">Em Andamento</span>',
+                                    "aguardando_cliente" => '<span class="label label-primary">Aguardando retorno</span>',
+                                    "resolvido"          => '<span class="label label-success">Resolvido</span>',
+                                    "cancelado"          => '<span class="label label-default">Cancelado</span>',
+                                    "reaberto"           => '<span class="label label-warning">Reaberto</span>',
+                                    "encaminhado_ssi"    => '<span class="label label-danger">Encaminhado a SSI</span>',
+                                ];
+                                $__badge = $__badgeMap[$__status] ?? '<span class="label label-default">' . htmlspecialchars($__status) . '</span>';
                             ?>
                             <tr>
                                 <td>#<?= (int) ($__t["id"] ?? 0) ?></td>
@@ -172,23 +186,9 @@
                                 <td><?= htmlspecialchars($__descCurta) ?></td>
                                 <td><?= $__badge ?></td>
                                 <td><?= htmlspecialchars(strval($__t["created_at"] ?? "")) ?></td>
+                                <td><?= htmlspecialchars(strval($__t["fechado_em"] ?? "") ?: "—") ?></td>
                                 <td>
                                     <a href="detalhe.php?id=<?= (int) ($__t["id"] ?? 0) ?>" class="btn btn-xs blue"><i class="fa fa-eye"></i> Ver</a>
-                                    <?php if ($__status === "aberto"): ?>
-                                        <form method="post" style="display:inline;">
-                                            <input type="hidden" name="sup_acao" value="status" />
-                                            <input type="hidden" name="id" value="<?= (int) ($__t["id"] ?? 0) ?>" />
-                                            <input type="hidden" name="status" value="resolvido" />
-                                            <button type="submit" class="btn btn-xs btn-success" onclick="return confirm('Marcar chamado #<?= (int) ($__t["id"] ?? 0) ?> como resolvido?');"><i class="fa fa-check"></i> Resolver</button>
-                                        </form>
-                                    <?php else: ?>
-                                        <form method="post" style="display:inline;">
-                                            <input type="hidden" name="sup_acao" value="status" />
-                                            <input type="hidden" name="id" value="<?= (int) ($__t["id"] ?? 0) ?>" />
-                                            <input type="hidden" name="status" value="aberto" />
-                                            <button type="submit" class="btn btn-xs btn-warning" onclick="return confirm('Reabrir chamado #<?= (int) ($__t["id"] ?? 0) ?>?');"><i class="fa fa-undo"></i> Reabrir</button>
-                                        </form>
-                                    <?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
