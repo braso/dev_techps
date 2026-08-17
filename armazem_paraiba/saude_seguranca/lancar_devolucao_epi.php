@@ -219,7 +219,7 @@ function layoutDevolucao() {
         while ($row = mysqli_fetch_assoc($sqlEpis)) {
             $allEpis[] = [
                 "id" => (int)$row["ss_e_nb_id"],
-                "nome" => $row["ss_e_tx_grupo"] . " / " . ($row["ss_e_tx_subgrupo"] ?? "") . " / " . ($row["ss_e_tx_item"] ?? "") . " (CA: " . ($row["ss_e_tx_ca"] ?? "N/A") . ")",
+                "nome" => ($row["ss_e_tx_subgrupo"] ?? "") . " / " . ($row["ss_e_tx_item"] ?? "") . " / " . $row["ss_e_tx_grupo"] . " (CA: " . ($row["ss_e_tx_ca"] ?? "N/A") . ")",
                 "variacoes" => $row["ss_e_tx_variacoes"] ?? ""
             ];
             $epiOptions[$row["ss_e_nb_id"]] = $allEpis[count($allEpis) - 1]["nome"];
@@ -696,7 +696,7 @@ function layoutDevolucao() {
                         }
                     }
                     tableHtml += '<tr>' +
-                        '<td>' + item.epi_nome + '</td>' +
+                        '<td>' + destacarItemEpi(item.epi_nome) + '</td>' +
                         '<td style=\"text-align: center; font-weight: bold;\">' + item.quantidade + '</td>' +
                         '<td style=\"text-align: center;\">' + variacaoCellHtml + '</td>' +
                         '<td style=\"text-align: center;\">' + tipoLabel + '</td>' +
@@ -811,6 +811,15 @@ function layoutDevolucao() {
         perguntarJustificativaStatus(tipoEvento, adicionarTodos, function() {
             alert('Operação cancelada: informe a justificativa para continuar.');
         });
+    }
+
+    function destacarItemEpi(nome) {
+        // Formato esperado: Item / Subgrupo / Grupo (CA: X)
+        var partes = nome.split(' / ');
+        if (partes.length > 1) {
+            return '<strong>' + partes[0] + '</strong> <small class=\"text-muted\">/ ' + partes.slice(1).join(' / ') + '</small>';
+        }
+        return '<strong>' + nome + '</strong>';
     }
 
     function adicionarItem(epiId, epiNome, quantidade, status, empresaId, variacao, justificativa, destino, variacoes, colabId, colabNome) {

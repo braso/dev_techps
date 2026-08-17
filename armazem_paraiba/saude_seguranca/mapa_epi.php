@@ -463,6 +463,11 @@ function index() {
 
     $jsAcoes = '
         var funcoesInternas = function(){
+            // Destaque do EPI (SUBGRUPO, índice 2 — Código, Grupo, Subgrupo, Item...)
+            $("#result tbody tr").each(function() {
+                $(this).find("td").eq(2).css({ "font-weight": "bold", "color": "#337ab7" });
+            });
+
             // Colora os valores de estoque
             $("#result tbody tr").each(function() {
                 var row = $(this);

@@ -867,8 +867,8 @@ function modificarEntrega() {
         $jsEmpresas = json_encode($empresasJsArr);
     }
 
-    // Custom SQL para carregar todos os EPIs ativos
-    $sqlAllEpis = query("SELECT ss_e_nb_id, CONCAT(ss_e_tx_grupo, ' / ', IFNULL(ss_e_tx_subgrupo, ''), ' / ', IFNULL(ss_e_tx_item, ''), ' (CA: ', IFNULL(ss_e_tx_ca, 'N/A'), ')') AS epi_nome 
+    // Custom SQL para carregar todos os EPIs ativos (EPI/subgrupo em destaque na ordem)
+    $sqlAllEpis = query("SELECT ss_e_nb_id, CONCAT(IFNULL(ss_e_tx_subgrupo, ''), ' / ', IFNULL(ss_e_tx_item, ''), ' / ', ss_e_tx_grupo, ' (CA: ', IFNULL(ss_e_tx_ca, 'N/A'), ')') AS epi_nome 
                          FROM ss_epi 
                          WHERE ss_e_tx_status = 'ativo' AND ss_e_tx_cadastro_tipo = 'estoque'
                          ORDER BY ss_e_tx_grupo ASC");
@@ -1531,7 +1531,7 @@ function modificarEntrega() {
                         fotoHtml = '<img src=\"' + resolved + '\" style=\"max-height: 60px; max-width: 60px; object-fit: cover; cursor: pointer;\" onclick=\"verImagemMaior(\'' + resolved + '\')\">';
                     }
                     const tdFoto = $('<td style=\"text-align: center;\">').append(fotoHtml);
-                    const tdEpi = $('<td>').text(item.grupo + ' / ' + item.subgrupo + ' / ' + item.item + ' (CA: ' + (item.ca || 'N/A') + ')');
+                    const tdEpi = $('<td>').text(item.subgrupo + ' / ' + item.item + ' / ' + item.grupo + ' (CA: ' + (item.ca || 'N/A') + ')');
                     const tdQtd = $('<td>').text(item.quantidade);
                     
                     let variacaoHtml = '<span class=\"text-muted\">-</span>';
@@ -1714,6 +1714,15 @@ function modificarEntrega() {
         }
     });
 
+    function destacarItemEpi(nome) {
+        // Formato esperado: Item / Subgrupo / Grupo (CA: X)
+        var partes = nome.split(' / ');
+        if (partes.length > 1) {
+            return '<strong>' + partes[0] + '</strong> <small class=\"text-muted\">/ ' + partes.slice(1).join(' / ') + '</small>';
+        }
+        return '<strong>' + nome + '</strong>';
+    }
+
     function adicionarItemALista() {
         var colabSelect = $('select[name=\"colaborador_id\"]');
         var colabId = colabSelect.val();
@@ -1782,6 +1791,11 @@ function modificarEntrega() {
             return;
         }
         
+        if (!colabId) {
+            alert('Por favor, selecione um Colaborador.');
+            return;
+        }
+        
         var kit = kitsData[kitId];
         if (!kit || !kit.itens || kit.itens.length === 0) {
             alert('Kit selecionado não contém itens.');
@@ -1791,12 +1805,30 @@ function modificarEntrega() {
         var empresaId = $('select[name=\"empresa_id\"]').length > 0 ? $('select[name=\"empresa_id\"]').val() : '0';
         if (empresaId === '') empresaId = '0';
         
-        kit.itens.forEach(function(item) {
-            var epiNome = item.grupo + ' / ' + item.subgrupo + ' / ' + item.item + ' (CA: ' + (item.ca || 'N/A') + ')';
-            addItemObj(colabId, colabNome, item.epi_id, epiNome, item.quantidade, 'ativo', empresaId, \"\", '', item.variacoes);
-        });
+        function adicionarItensKit(payload) {
+            kit.itens.forEach(function(item) {
+                var epiNome = item.subgrupo + ' / ' + item.item + ' / ' + item.grupo + ' (CA: ' + (item.ca || 'N/A') + ')';
+                addItemObj(colabId, colabNome, item.epi_id, epiNome, item.quantidade, 'ativo', empresaId, payload, '', item.variacoes);
+            });
+            $('#kit_id').val('').trigger('change');
+        }
+
+        // Foto do kit completo (campo #foto): aplicada a todos os itens do kit,
+        // permitindo o comparativo no grid entre as fotos individuais e a do kit entregue
+        var fotoInput = $('#foto')[0];
+        var files = (fotoInput && fotoInput.files) ? fotoInput.files : [];
         
-        $('#kit_id').val('').trigger('change');
+        if (files && files.length > 0) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                adicionarItensKit(e.target.result);
+                $('#foto').val('');
+                $('#new_photos_container').empty();
+            };
+            reader.readAsDataURL(files[0]);
+        } else {
+            adicionarItensKit(\"\");
+        }
     }
 
     function addItemObj(colabId, colabNome, epiId, epiNome, quantidade, status, empresaId, fotoPayload, variacao, variacoes) {
@@ -1972,7 +2004,7 @@ function modificarEntrega() {
                 
                 tableHtml += '<tr' + (semSaldo ? ' class=\"sem-saldo-lote\"' : '') + '>' +
                     '<td style=\"text-align: center; vertical-align: middle;\">' + fotoHtml + '</td>' +
-                    '<td style=\"vertical-align: middle;\">' + item.epi_nome + '</td>' +
+                    '<td style=\"vertical-align: middle;\">' + destacarItemEpi(item.epi_nome) + '</td>' +
                     '<td style=\"text-align: center; font-weight: bold; vertical-align: middle;\">' + item.quantidade + '</td>' +
                     '<td style=\"text-align: center; vertical-align: middle;\">' + variacaoCellHtml + '</td>' +
                     '<td style=\"vertical-align: middle;\">' + origNome + '</td>' +
@@ -2298,9 +2330,9 @@ function imprimirFicha() {
         $whereIds = " AND ent.ss_e_nb_id IN (" . implode(",", $delivery_ids) . ") ";
     }
 
-    // Query concatenando Grupo, Subgrupo e Item aliando como ss_e_tx_nome para compatibilidade
+    // Query concatenando EPI(Subgrupo), Item e Grupo aliando como ss_e_tx_nome para compatibilidade
     $sql = "SELECT ent.ss_e_nb_id, 
-                   CONCAT(epi.ss_e_tx_grupo, ' / ', IFNULL(epi.ss_e_tx_subgrupo, ''), ' / ', IFNULL(epi.ss_e_tx_item, ''), IFNULL(CONCAT(' (Var: ', ent.ss_e_tx_variacao, ')'), '')) AS ss_e_tx_nome, 
+                   CONCAT(IFNULL(epi.ss_e_tx_subgrupo, ''), ' / ', IFNULL(epi.ss_e_tx_item, ''), ' / ', epi.ss_e_tx_grupo, IFNULL(CONCAT(' (Var: ', ent.ss_e_tx_variacao, ')'), '')) AS ss_e_tx_nome, 
                    epi.ss_e_tx_ca, 
                    ent.ss_e_tx_data_entrega, 
                    ent.ss_e_nb_quantidade, 
@@ -2486,8 +2518,8 @@ function index() {
         $_POST["busca_status"] = "ativo";
     }
 
-    // Custom SQL para dropdown de EPIs
-    $sql = query("SELECT ss_e_nb_id, CONCAT(ss_e_tx_grupo, ' / ', IFNULL(ss_e_tx_subgrupo, ''), ' / ', IFNULL(ss_e_tx_item, '')) AS epi_nome 
+    // Custom SQL para dropdown de EPIs (EPI/subgrupo em destaque na ordem)
+    $sql = query("SELECT ss_e_nb_id, CONCAT(IFNULL(ss_e_tx_subgrupo, ''), ' / ', IFNULL(ss_e_tx_item, ''), ' / ', ss_e_tx_grupo) AS epi_nome 
                   FROM ss_epi 
                   WHERE ss_e_tx_status = 'ativo' AND ss_e_tx_cadastro_tipo = 'estoque'
                   ORDER BY ss_e_tx_grupo ASC");
@@ -2561,13 +2593,13 @@ function index() {
         "CÓDIGO"              => "ss_e_nb_id",
         "COLABORADOR"         => "ss_c_tx_nome",
         "FILIAL"              => "filial_nome",
-        "IMAGEM"              => "ss_grid_foto_render(ss_e_tx_foto_epi)",
+        "FOTO DO EPI"         => "ss_e_tx_foto_epi",
         "EPI"                 => "epi_nome",
         "DATA ENTREGA"        => "ss_e_tx_data_entrega_formatado",
         "QUANTIDADE"          => "ss_e_nb_quantidade",
         "VENCIMENTO ESTIMADO" => "ss_e_tx_vencimento_formatado",
         "IDENTIFICADOR"       => "ss_e_tx_identificador",
-        "EPI ENTREGUE"        => "ss_grid_foto_render(ss_e_tx_foto)",
+        "FOTO ENTREGUE/KIT"   => "ss_e_tx_foto",
         "OBSERVAÇÃO"          => "ss_e_tx_observacao"
     ];
 
@@ -2584,7 +2616,7 @@ function index() {
     }
 
     $queryBase = "SELECT * FROM (
-                    SELECT ent.ss_e_nb_id, col.enti_tx_nome AS ss_c_tx_nome, IFNULL(emp.empr_tx_nome, 'Matriz') AS filial_nome, epi.ss_e_tx_foto AS ss_e_tx_foto_epi, CONCAT(epi.ss_e_tx_grupo, ' / ', IFNULL(epi.ss_e_tx_subgrupo, ''), ' / ', IFNULL(epi.ss_e_tx_item, ''), IFNULL(CONCAT(' (Var: ', ent.ss_e_tx_variacao, ')'), '')) AS epi_nome, 
+                    SELECT ent.ss_e_nb_id, col.enti_tx_nome AS ss_c_tx_nome, IFNULL(emp.empr_tx_nome, 'Matriz') AS filial_nome, epi.ss_e_tx_foto AS ss_e_tx_foto_epi, CONCAT('<strong>', IFNULL(epi.ss_e_tx_subgrupo, ''), '</strong> <small class=\"text-muted\">/ ', IFNULL(epi.ss_e_tx_item, ''), ' / ', epi.ss_e_tx_grupo, '</small>', IFNULL(CONCAT(' <small>(Var: ', ent.ss_e_tx_variacao, ')</small>'), '')) AS epi_nome, 
                            IFNULL(DATE_FORMAT(ent.ss_e_tx_data_entrega, '%d/%m/%Y'), '-') AS ss_e_tx_data_entrega_formatado, 
                            ent.ss_e_nb_quantidade, 
                            IFNULL(DATE_FORMAT(ent.ss_e_tx_vencimento, '%d/%m/%Y'), '-') AS ss_e_tx_vencimento_formatado, 
@@ -2733,7 +2765,7 @@ function listarKits() {
                     ss_k_tx_status,
                     (SELECT COUNT(ki.ss_ki_nb_id) FROM ss_kit_item ki WHERE ki.ss_ki_nb_kit_id = ss_kit.ss_k_nb_id) AS qtd_tipos,
                     IFNULL((SELECT SUM(ki.ss_ki_nb_quantidade) FROM ss_kit_item ki WHERE ki.ss_ki_nb_kit_id = ss_kit.ss_k_nb_id), 0) AS qtd_total,
-                    IFNULL((SELECT GROUP_CONCAT(CONCAT('• <small>', IFNULL(e.ss_e_tx_grupo, ''), ' / ', IFNULL(e.ss_e_tx_subgrupo, ''), ' / ', IFNULL(e.ss_e_tx_item, ''), '</small> <b>(x', ki.ss_ki_nb_quantidade, ')</b>') SEPARATOR '<br>') FROM ss_kit_item ki JOIN ss_epi e ON ki.ss_ki_nb_epi_id = e.ss_e_nb_id WHERE ki.ss_ki_nb_kit_id = ss_kit.ss_k_nb_id), '<span class=\"text-muted\">Nenhum item</span>') AS itens_detalhes
+                    IFNULL((SELECT GROUP_CONCAT(CONCAT('<strong>', IFNULL(e.ss_e_tx_subgrupo, ''), '</strong> <small>', IFNULL(e.ss_e_tx_item, ''), ' / ', IFNULL(e.ss_e_tx_grupo, ''), '</small> <b>(x', ki.ss_ki_nb_quantidade, ')</b>') SEPARATOR '<br>') FROM ss_kit_item ki JOIN ss_epi e ON ki.ss_ki_nb_epi_id = e.ss_e_nb_id WHERE ki.ss_ki_nb_kit_id = ss_kit.ss_k_nb_id), '<span class=\"text-muted\">Nenhum item</span>') AS itens_detalhes
                   FROM ss_kit";
 
     $gridFields["actions"] = [
@@ -2868,7 +2900,7 @@ function modificarKit() {
         if ($sqlItens) {
             while ($row = mysqli_fetch_assoc($sqlItens)) {
                 $epi = carregar("ss_epi", $row["ss_ki_nb_epi_id"]);
-                $epiNome = $epi["ss_e_tx_grupo"] . " / " . $epi["ss_e_tx_subgrupo"] . " / " . $epi["ss_e_tx_item"] . " (CA: " . ($epi["ss_e_tx_ca"] ?: 'N/A') . ")";
+                $epiNome = ($epi["ss_e_tx_subgrupo"] ?? "") . " / " . ($epi["ss_e_tx_item"] ?? "") . " / " . ($epi["ss_e_tx_grupo"] ?? "") . " (CA: " . ($epi["ss_e_tx_ca"] ?: 'N/A') . ")";
                 $kitItens[] = [
                     "epi_id" => $row["ss_ki_nb_epi_id"],
                     "epi_nome" => $epiNome,
@@ -2881,8 +2913,8 @@ function modificarKit() {
         $kitItens = [];
     }
 
-    // Carregar EPIs de estoque para o kit
-    $sqlEpi = query("SELECT ss_e_nb_id, CONCAT(ss_e_tx_grupo, ' / ', IFNULL(ss_e_tx_subgrupo, ''), ' / ', IFNULL(ss_e_tx_item, ''), ' (CA: ', IFNULL(ss_e_tx_ca, 'N/A'), ')') AS epi_nome 
+    // Carregar EPIs de estoque para o kit (EPI/subgrupo em destaque na ordem)
+    $sqlEpi = query("SELECT ss_e_nb_id, CONCAT(IFNULL(ss_e_tx_subgrupo, ''), ' / ', IFNULL(ss_e_tx_item, ''), ' / ', ss_e_tx_grupo, ' (CA: ', IFNULL(ss_e_tx_ca, 'N/A'), ')') AS epi_nome 
                      FROM ss_epi 
                      WHERE ss_e_tx_status = 'ativo' AND ss_e_tx_cadastro_tipo = 'estoque'
                      ORDER BY ss_e_tx_grupo ASC");

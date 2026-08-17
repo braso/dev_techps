@@ -348,6 +348,31 @@ if ($checkFornecedor && mysqli_num_rows($checkFornecedor) == 0) {
     mysqli_query($conn, "ALTER TABLE ss_epi_estoque ADD COLUMN ss_e_tx_fornecedor VARCHAR(255) NULL AFTER ss_e_tx_chave_nf;");
 }
 
+// Tabela de fabricantes (cadastro rápido no campo Fabricante do cadastro de EPIs)
+$sqlFabricante = "CREATE TABLE IF NOT EXISTS ss_fabricante (
+    ss_fa_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+    ss_fa_tx_nome VARCHAR(100) NOT NULL,
+    ss_fa_tx_status ENUM('ativo', 'inativo') NOT NULL DEFAULT 'ativo',
+    ss_fa_nb_userCadastro INT NULL,
+    ss_fa_tx_dataCadastro VARCHAR(30) NULL,
+    UNIQUE KEY uk_fabricante_nome (ss_fa_tx_nome)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+mysqli_query($conn, $sqlFabricante);
+
+// Colunas complementares do fabricante (CNPJ, fantasia e telefone — mesmo padrão do fornecedor)
+$checkFaCnpj = mysqli_query($conn, "SHOW COLUMNS FROM ss_fabricante LIKE 'ss_fa_tx_cnpj'");
+if ($checkFaCnpj && mysqli_num_rows($checkFaCnpj) == 0) {
+    mysqli_query($conn, "ALTER TABLE ss_fabricante ADD COLUMN ss_fa_tx_cnpj VARCHAR(14) NULL AFTER ss_fa_tx_nome;");
+}
+$checkFaFantasia = mysqli_query($conn, "SHOW COLUMNS FROM ss_fabricante LIKE 'ss_fa_tx_nome_fantasia'");
+if ($checkFaFantasia && mysqli_num_rows($checkFaFantasia) == 0) {
+    mysqli_query($conn, "ALTER TABLE ss_fabricante ADD COLUMN ss_fa_tx_nome_fantasia VARCHAR(255) NULL AFTER ss_fa_tx_cnpj;");
+}
+$checkFaTelefone = mysqli_query($conn, "SHOW COLUMNS FROM ss_fabricante LIKE 'ss_fa_tx_telefone'");
+if ($checkFaTelefone && mysqli_num_rows($checkFaTelefone) == 0) {
+    mysqli_query($conn, "ALTER TABLE ss_fabricante ADD COLUMN ss_fa_tx_telefone VARCHAR(15) NULL AFTER ss_fa_tx_nome_fantasia;");
+}
+
 mysqli_query($conn, "ALTER TABLE ss_epi MODIFY COLUMN ss_e_tx_foto TEXT NULL;");
 mysqli_query($conn, "ALTER TABLE ss_epi_entrega MODIFY COLUMN ss_e_tx_foto TEXT NULL;");
 

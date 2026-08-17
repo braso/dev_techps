@@ -94,7 +94,7 @@ function detalhesFilialAjax() {
             echo '
                         <tr>
                             <td style="text-align: center; vertical-align: middle;">' . $fotoHtml . '</td>
-                            <td style="vertical-align: middle;"><strong>' . htmlspecialchars($row["ss_e_tx_grupo"]) . '</strong><br><span class="text-muted">' . htmlspecialchars($row["ss_e_tx_subgrupo"]) . '</span></td>
+                            <td style="vertical-align: middle;"><strong>' . htmlspecialchars($row["ss_e_tx_subgrupo"]) . '</strong><br><span class="text-muted">' . htmlspecialchars($row["ss_e_tx_item"] . ' / ' . $row["ss_e_tx_grupo"]) . '</span></td>
                             <td style="vertical-align: middle;">' . htmlspecialchars($row["ss_e_tx_item"]) . '</td>
                             <td style="vertical-align: middle;">' . htmlspecialchars($row["ss_e_tx_fabricante"] ?? "-") . '<br><small class="text-muted">' . htmlspecialchars($row["ss_e_tx_modelo"] ?? "-") . '</small></td>
                             <td style="text-align: center; vertical-align: middle;"><strong>' . htmlspecialchars($row["ss_e_tx_ca"] ?? "-") . '</strong></td>
@@ -142,7 +142,7 @@ function detalhesFilialAjax() {
                         <tr>
                             <td style="vertical-align: middle;">' . $dataFmt . '</td>
                             <td style="text-align: center; vertical-align: middle;">' . $badgeOperacao . '</td>
-                            <td style="vertical-align: middle;"><strong>' . htmlspecialchars($rowMov["ss_e_tx_grupo"]) . '</strong><br><span class="text-muted">' . htmlspecialchars($rowMov["ss_e_tx_subgrupo"] . ' / ' . $rowMov["ss_e_tx_item"]) . '</span>' . (!empty($rowMov["ss_e_tx_variacao"]) ? '<br><span class="label label-info">Var: ' . htmlspecialchars($rowMov["ss_e_tx_variacao"]) . '</span>' : '') . '</td>
+                            <td style="vertical-align: middle;"><strong>' . htmlspecialchars($rowMov["ss_e_tx_subgrupo"]) . '</strong><br><span class="text-muted">' . htmlspecialchars($rowMov["ss_e_tx_item"] . ' / ' . $rowMov["ss_e_tx_grupo"]) . '</span>' . (!empty($rowMov["ss_e_tx_variacao"]) ? '<br><span class="label label-info">Var: ' . htmlspecialchars($rowMov["ss_e_tx_variacao"]) . '</span>' : '') . '</td>
                             <td style="text-align: center; vertical-align: middle; font-weight: bold;">' . $rowMov["ss_e_nb_quantidade"] . '</td>
                             <td style="vertical-align: middle;">' . htmlspecialchars($rowMov["ss_e_tx_fornecedor"] ?? "-") . '</td>
                             <td style="vertical-align: middle;">NF: ' . htmlspecialchars($rowMov["chave_nf"]) . '<br><small class="text-muted">receb: ' . $rowMov["data_receb_fmt"] . '</small><br><small class="text-muted">validade: ' . $rowMov["validade_fmt"] . '</small></td>
@@ -329,8 +329,8 @@ function detalhesEpiAjax() {
     <div class="row" style="margin-bottom: 15px;">
         <div class="col-sm-2 text-center">' . ($fotoHtml ?: '<div style="width: 110px; height: 110px; border-radius: 8px; border: 1px dashed #ccc; display: inline-flex; align-items: center; justify-content: center; color: #aaa;"><i class="fa fa-hard-hat fa-3x"></i></div>') . '</div>
         <div class="col-sm-10">
-            <h4 style="margin: 0 0 4px 0; font-weight: bold;">' . htmlspecialchars($epi["ss_e_tx_item"] ?: "EPI") . '</h4>
-            <span class="text-muted">' . htmlspecialchars($epi["ss_e_tx_grupo"] ?? "") . (!empty($epi["ss_e_tx_subgrupo"]) ? ' > ' . htmlspecialchars($epi["ss_e_tx_subgrupo"]) : '') . '</span>
+            <h4 style="margin: 0 0 4px 0; font-weight: bold;">' . htmlspecialchars($epi["ss_e_tx_subgrupo"] ?: "EPI") . '</h4>
+            <span class="text-muted">' . htmlspecialchars($epi["ss_e_tx_item"] ?? "") . (!empty($epi["ss_e_tx_grupo"]) ? ' > ' . htmlspecialchars($epi["ss_e_tx_grupo"]) : '') . '</span>
             <br><br>
             <table class="table table-condensed" style="margin-bottom: 0;">
                 <tr>
@@ -748,12 +748,19 @@ function index() {
                         AND (est.ss_e_tx_motivo IS NULL OR LOWER(est.ss_e_tx_motivo) NOT LIKE '%colaborador id:%')
                       ) AS epi";
                       
-        echo gridDinamico("tabelaHistoricoMov", $gridFields, $camposBusca, $queryBase, "");
+        echo gridDinamico("tabelaHistoricoMov", $gridFields, $camposBusca, $queryBase, "
+            var funcoesInternas = function(){
+                // Destaque do EPI (coluna EPI, índice 5 — ID, Código, Empresa, Usuário, Grupo, EPI, Descrição...)
+                $('#result tbody tr').each(function() {
+                    $(this).find('td').eq(5).css({ 'font-weight': 'bold', 'color': '#337ab7' });
+                });
+            };
+        ");
     } else {
         // Exibição do saldo consolidado (Agrupado por EPI usando derived table/subquery para evitar erros de GROUP BY no gridDinamico)
         $gridFields = [
             "CÓDIGO"       => "ss_e_nb_id",
-            "FOTO"         => "ss_grid_foto_render(ss_e_tx_foto)",
+            "FOTO"         => "ss_e_tx_foto",
             "GRUPO"        => "ss_e_tx_grupo",
             "EPI"          => "ss_e_tx_subgrupo",
             "DESCRIÇÃO"    => "ss_e_tx_item",
@@ -809,6 +816,11 @@ function index() {
 
         $jsAcoes = '
             var funcoesInternas = function(){
+                // Destaque do EPI (coluna EPI, índice 3 — Código, Foto, Grupo, EPI, Descrição...)
+                $("#result tbody tr").each(function() {
+                    $(this).find("td").eq(3).css({ "font-weight": "bold", "color": "#337ab7" });
+                });
+
                 // O clique na linha apenas destaca (destaque global do grid);
                 // o modal de detalhes abre somente pelo ícone de olho abaixo.
 

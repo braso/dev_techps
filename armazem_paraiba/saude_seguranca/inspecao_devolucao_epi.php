@@ -181,7 +181,7 @@ function index() {
                     SELECT dev.ss_e_nb_id, col.enti_tx_nome AS colaborador_nome,
                            IFNULL(emp.empr_tx_nome, 'Matriz') AS filial_nome,
                            dev.ss_e_nb_empresa_id,
-                           CONCAT(epi.ss_e_tx_grupo, ' / ', IFNULL(epi.ss_e_tx_subgrupo, ''), ' / ', IFNULL(epi.ss_e_tx_item, '')) AS epi_nome,
+                           CONCAT('<strong>', IFNULL(epi.ss_e_tx_subgrupo, ''), '</strong> <small class=\"text-muted\">/ ', IFNULL(epi.ss_e_tx_item, ''), ' / ', epi.ss_e_tx_grupo, '</small>') AS epi_nome,
                            dev.ss_e_nb_quantidade,
                            IFNULL(dev.ss_e_tx_variacao, '-') AS ss_e_tx_variacao,
                            IFNULL(DATE_FORMAT(dev.ss_e_tx_data_devolucao, '%d/%m/%Y'), '-') AS data_devolucao_fmt,

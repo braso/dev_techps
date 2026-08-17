@@ -11,6 +11,17 @@ function redireciona(string $url): void {
 }
 
 /**
+ * Formata um CNPJ com máscara (00.000.000/0000-00).
+ */
+function formatarCnpj($cnpj) {
+    $digits = preg_replace('/[^0-9]/', '', $cnpj);
+    if (strlen($digits) !== 14) {
+        return $digits;
+    }
+    return substr($digits, 0, 2) . '.' . substr($digits, 2, 3) . '.' . substr($digits, 5, 3) . '/' . substr($digits, 8, 4) . '-' . substr($digits, 12, 2);
+}
+
+/**
  * Retorna o saldo líquido atual de um EPI em estoque.
  * Soma as entradas e subtrai as saídas.
  *
@@ -837,7 +848,7 @@ function ss_gerar_pdf_ficha_epi($colaborador_id, $delivery_ids = [], $recibo_uui
     }
 
     $sql = "SELECT ent.ss_e_nb_id, 
-                   CONCAT(epi.ss_e_tx_grupo, ' / ', IFNULL(epi.ss_e_tx_subgrupo, ''), ' / ', IFNULL(epi.ss_e_tx_item, ''), IFNULL(CONCAT(' - Var: ', ent.ss_e_tx_variacao), '')) AS ss_e_tx_nome, 
+                   CONCAT(IFNULL(epi.ss_e_tx_subgrupo, ''), ' / ', IFNULL(epi.ss_e_tx_item, ''), ' / ', epi.ss_e_tx_grupo, IFNULL(CONCAT(' - Var: ', ent.ss_e_tx_variacao), '')) AS ss_e_tx_nome, 
                    epi.ss_e_tx_ca, 
                    ent.ss_e_tx_data_entrega, 
                    ent.ss_e_nb_quantidade, 

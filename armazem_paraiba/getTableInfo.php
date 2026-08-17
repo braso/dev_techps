@@ -182,8 +182,26 @@ if (!empty($queryResult)) {
 
             if ($key === 'ss_e_tx_foto' || $key === 'ss_e_tx_foto_epi' || $key === 'poi_tx_imagem') {
                 if ($data !== null && $data !== '') {
-                    $resolvedSrc = $_ENV["APP_PATH"] . '/' . htmlspecialchars($data);
-                    $data = '<img src="' . $resolvedSrc . '" onclick="verImagemMaior(\'' . $resolvedSrc . '\')" style="max-height: 40px; max-width: 40px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; object-fit: cover;" title="Clique para ampliar">';
+                    $paths = array_filter(explode(",", $data));
+                    $imgs = [];
+                    foreach ($paths as $p) {
+                        $p = trim($p);
+                        if ($p === '') continue;
+                        // Resolve o caminho: arquivos do módulo podem estar em saude_seguranca/ ou na raiz
+                        $hasModulo = (strpos($p, "saude_seguranca/") !== false || strpos($p, "armazem_paraiba/") !== false);
+                        if (!$hasModulo) {
+                            $candidatoModulo = rtrim($_SERVER["DOCUMENT_ROOT"], '/\\') . $_ENV["APP_PATH"] . "/armazem_paraiba/saude_seguranca/" . ltrim($p, '/');
+                            if (file_exists($candidatoModulo)) {
+                                $src = $_ENV["APP_PATH"] . "/armazem_paraiba/saude_seguranca/" . ltrim($p, '/');
+                            } else {
+                                $src = $_ENV["APP_PATH"] . "/" . ltrim($p, '/');
+                            }
+                        } else {
+                            $src = $_ENV["APP_PATH"] . "/" . ltrim($p, '/');
+                        }
+                        $imgs[] = '<img src="' . $src . '" onclick="verImagemMaior(\'' . $src . '\')" style="max-height: 60px; max-width: 60px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; object-fit: cover; margin: 1px;" title="Clique para ampliar">';
+                    }
+                    $data = count($imgs) > 0 ? implode('', $imgs) : '<span class="text-muted">-</span>';
                 } else {
                     $data = '<span class="text-muted">-</span>';
                 }
