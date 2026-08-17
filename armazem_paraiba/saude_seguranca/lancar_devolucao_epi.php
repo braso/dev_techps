@@ -262,14 +262,13 @@ function layoutDevolucao() {
     }
 
     $fields = [];
-    if ($temFiliais) {
-        // Por padrão, filtra pela empresa em que o usuário está logado
-        $empresaPadrao = !empty($_SESSION["user_nb_empresa"]) ? (int)$_SESSION["user_nb_empresa"] : "";
-        if ($empresaPadrao !== "" && !isset($empresaOptions[$empresaPadrao])) {
-            $empresaPadrao = "";
-        }
-        $fields[] = combo("Empresa", "empresa_id", $_POST["empresa_id"] ?? $empresaPadrao, 6, $empresaOptions);
+    // Campo Empresa sempre visível (mesmo sem filiais): por padrão mostra a empresa em que
+    // o usuário está logado — e os colaboradores são carregados a partir dela
+    $empresaPadrao = !empty($_SESSION["user_nb_empresa"]) ? (int)$_SESSION["user_nb_empresa"] : "";
+    if ($empresaPadrao !== "" && !isset($empresaOptions[$empresaPadrao])) {
+        $empresaPadrao = "";
     }
+    $fields[] = combo("Empresa", "empresa_id", $_POST["empresa_id"] ?? $empresaPadrao, 6, $empresaOptions);
     $fields[] = campo_data("Data da Devolução*", "data_devolucao", date("Y-m-d"), 6);
     $campo_colaborador = "
         <div class='col-sm-12 margin-bottom-5 campo-fit-content' id='container_colaborador_lista' style='position: relative;'>
