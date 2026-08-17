@@ -1939,17 +1939,19 @@ function modificarEntrega() {
                             '<tbody>';
                             
             grupo.itens.forEach(function(item) {
-                var fotoHtml = '-';
-                if (item.foto_payload) {
-                    var resolvedSrc = ssResolveFotoUrl(item.foto_payload);
-                    fotoHtml = '<img src=\"' + resolvedSrc + '\" style=\"max-height: 45px; max-width: 45px; border-radius: 4px; object-fit: cover; cursor: pointer;\" onclick=\"verImagemMaior(\'' + resolvedSrc + '\')\">';
-                } else {
-                    var defaultFoto = epiFotosMap[item.epi_id];
-                    if (defaultFoto) {
-                        var resolvedSrc = ssResolveFotoUrl(defaultFoto);
-                        fotoHtml = '<img src=\"' + resolvedSrc + '\" style=\"max-height: 45px; max-width: 45px; border-radius: 4px; object-fit: cover; cursor: pointer;\" onclick=\"verImagemMaior(\'' + resolvedSrc + '\')\">';
-                    }
+                // Mostra a foto do kit entregue (quando houver) E a foto individual do EPI,
+                // permitindo o comparativo na própria sacola
+                var fotosHtml = [];
+                if (item.foto_payload && item.foto_payload.indexOf('data:image/') === 0) {
+                    var resolvedKit = ssResolveFotoUrl(item.foto_payload);
+                    fotosHtml.push('<img src=\"' + resolvedKit + '\" title=\"Foto do kit entregue\" style=\"max-height: 45px; max-width: 45px; border-radius: 4px; object-fit: cover; cursor: pointer;\" onclick=\"verImagemMaior(\'' + resolvedKit + '\')\">');
                 }
+                var defaultFoto = epiFotosMap[item.epi_id];
+                if (defaultFoto) {
+                    var resolvedSrc = ssResolveFotoUrl(defaultFoto);
+                    fotosHtml.push('<img src=\"' + resolvedSrc + '\" title=\"Foto do EPI\" style=\"max-height: 45px; max-width: 45px; border-radius: 4px; object-fit: cover; cursor: pointer;\" onclick=\"verImagemMaior(\'' + resolvedSrc + '\')\">');
+                }
+                var fotoHtml = fotosHtml.length > 0 ? fotosHtml.join(' ') : '-';
                 
                 var statusLabel = '<span class=\"label label-sm label-success\">Ativo</span>';
                 if (item.status === 'devolvido') statusLabel = '<span class=\"label label-sm label-info\">Devolvido</span>';
