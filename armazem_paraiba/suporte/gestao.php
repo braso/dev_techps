@@ -7,6 +7,7 @@
     include __DIR__ . "/../load_env.php";
     include_once __DIR__ . "/../conecta.php";
     include_once __DIR__ . "/../check_permission.php";
+    include_once __DIR__ . "/_timeline.php";
 
     $__empresaAtual = trim(strval($_ENV["CONTEX_PATH"] ?? ""), "/");
     // Gestão central: domínios TechPS (produção) e Demo (desenvolvimento).
@@ -51,23 +52,36 @@
         }
     }
 
-    // ── Ações (status / comentário) ────────────────────────────────────
+    // ── Ações (aceitar / tipo / status / comentário) ───────────────────
     // Campo "sup_acao" de propósito: o campo "acao" é interceptado pelo
     // dispatcher legado de contex20/funcoes.php (eval + exit).
     $__msg = "";
     if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $acao = $_POST["sup_acao"] ?? "";
-        if ($acao === "status") {
-            $id = (int) ($_POST["id"] ?? 0);
+        $id = (int) ($_POST["id"] ?? 0);
+        if ($acao === "aceitar" && $id > 0) {
+            $res = gestao_requisitar("POST", "/suporte/tickets/{$id}/aceitar", [], ["atendente" => $__gestorNome]);
+            $__msg = $res["ok"] ? "Chamado #{$id} aceito — em atendimento." : "Erro ao aceitar o chamado. " . ($res["dados"]["msg"] ?? "");
+        } elseif ($acao === "tipo" && $id > 0) {
+            $tipo = $_POST["tipo"] ?? "";
+            if (in_array($tipo, ["duvida", "sugestao", "bug"], true)) {
+                $res = gestao_requisitar("POST", "/suporte/tickets/{$id}/tipo", [], ["tipo" => $tipo]);
+                $__msg = $res["ok"] ? "Tipo do chamado #{$id} atualizado." : "Erro ao classificar. " . ($res["dados"]["msg"] ?? "");
+            }
+        } elseif ($acao === "status" && $id > 0) {
             $novoStatus = $_POST["status"] ?? "";
-            if ($id > 0 && ($novoStatus === "aberto" || $novoStatus === "resolvido")) {
-                $res = gestao_requisitar("POST", "/suporte/tickets/{$id}/status", [], ["status" => $novoStatus]);
+            $statusPermitidos = ["aberto", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi"];
+            if (in_array($novoStatus, $statusPermitidos, true)) {
+                $post = ["status" => $novoStatus];
+                if ($novoStatus === "encaminhado_ssi") {
+                    $post["ssi_prioridade"] = ($_POST["ssi_prioridade"] ?? "") === "urgente" ? "urgente" : "proxima_atualizacao";
+                }
+                $res = gestao_requisitar("POST", "/suporte/tickets/{$id}/status", [], $post);
                 $__msg = $res["ok"] ? "Status do chamado #{$id} atualizado." : "Erro ao atualizar o status. " . ($res["dados"]["msg"] ?? "");
             }
-        } elseif ($acao === "comentario") {
-            $id = (int) ($_POST["id"] ?? 0);
+        } elseif ($acao === "comentario" && $id > 0) {
             $texto = trim(strval($_POST["texto"] ?? ""));
-            if ($id > 0 && $texto !== "") {
+            if ($texto !== "") {
                 $res = gestao_requisitar("POST", "/suporte/tickets/{$id}/comentarios", [], [
                     "texto"       => $texto,
                     "autor"       => $__gestorNome,
@@ -114,27 +128,115 @@
     $__ticket = $__res["ok"] ? ($__res["dados"]["ticket"] ?? []) : [];
     $__arquivos = $__res["ok"] ? ($__res["dados"]["arquivos"] ?? []) : [];
     $__comentarios = $__res["ok"] ? ($__res["dados"]["comentarios"] ?? []) : [];
+    $__eventos = $__res["ok"] ? ($__res["dados"]["eventos"] ?? []) : [];
 
     if (empty($__ticket)): ?>
                 <div class="alert alert-danger">Chamado não encontrado ou falha na API de suporte.</div>
     <?php else: ?>
         <?php
-            $__status = $__ticket["status"] ?? "aberto";
-            $__badge = $__status === "resolvido"
-                ? '<span class="label label-success">Resolvido</span>'
-                : '<span class="label label-warning">Aberto</span>';
+            $__status = strval($__ticket["status"] ?? "aberto");
+            $__statusMap = [
+                "aberto"             => ['<span class="label label-warning">Aberto</span>'],
+                "em_andamento"       => ['<span class="label label-info">Em Andamento</span>'],
+                "aguardando_cliente" => ['<span class="label label-primary">Aguardando retorno do cliente</span>'],
+                "resolvido"          => ['<span class="label label-success">Resolvido</span>'],
+                "cancelado"          => ['<span class="label label-default">Cancelado</span>'],
+                "reaberto"           => ['<span class="label label-warning">Reaberto</span>'],
+                "encaminhado_ssi"    => ['<span class="label label-danger">Encaminhado a SSI</span>'],
+            ];
+            $__badge = $__statusMap[$__status][0] ?? '<span class="label label-default">' . htmlspecialchars($__status) . '</span>';
+            $__tipoMap = ["duvida" => "Dúvida operacional", "sugestao" => "Sugestão", "bug" => "Bug de sistema"];
+            $__tipo = strval($__ticket["tipo"] ?? "");
+            $__ssiCodigo = strval($__ticket["ssi_codigo"] ?? "");
+            $__ssiPrioridade = strval($__ticket["ssi_prioridade"] ?? "");
         ?>
         <table class="table table-striped table-bordered">
             <tr><th style="width:140px;">Empresa</th><td><?= htmlspecialchars(strval($__ticket["empresa_key"] ?? "")) ?> — <?= htmlspecialchars(strval($__ticket["empresa_nome"] ?? "")) ?></td></tr>
             <tr><th>Usuário</th><td><?= htmlspecialchars(strval($__ticket["user_nome"] ?? "")) ?> (<?= htmlspecialchars(strval($__ticket["user_login"] ?? "")) ?>)</td></tr>
+            <tr><th>E-mail</th><td><?= htmlspecialchars(strval($__ticket["user_email"] ?? "") ?: "—") ?></td></tr>
             <tr><th>Data de abertura</th><td><?= htmlspecialchars(strval($__ticket["created_at"] ?? "")) ?></td></tr>
             <tr><th>Status</th><td><?= $__badge ?></td></tr>
+            <tr><th>Tipo</th><td><?= isset($__tipoMap[$__tipo]) ? htmlspecialchars($__tipoMap[$__tipo]) : '<span class="text-muted">Não classificado</span>' ?></td></tr>
+            <tr><th>Atendente</th><td><?= htmlspecialchars(strval($__ticket["atendente_nome"] ?? "") ?: "—") ?></td></tr>
+            <?php if ($__ssiCodigo !== ""): ?>
+                <tr><th>SSI</th><td><span class="label label-danger"><?= htmlspecialchars($__ssiCodigo) ?></span> — <?= $__ssiPrioridade === "urgente" ? "Prioritária (urgente em produção)" : "Próxima atualização" ?></td></tr>
+            <?php endif; ?>
             <tr><th>Página</th><td style="word-break:break-all;"><?= htmlspecialchars(strval($__ticket["pagina_url"] ?? "")) ?></td></tr>
         </table>
 
         <div class="well">
             <h4 style="margin-top:0;">Descrição do problema</h4>
             <p style="white-space:pre-wrap;"><?= htmlspecialchars(strval($__ticket["descricao"] ?? "")) ?></p>
+        </div>
+
+        <!-- Fluxo de atendimento -->
+        <div style="border:1px solid #eee;border-radius:6px;padding:14px;margin-bottom:18px;background:#fcfcfc;">
+            <h4 style="margin-top:0;"><i class="fa fa-tasks"></i> Fluxo de atendimento</h4>
+
+            <?php if ($__status === "aberto" || $__status === "reaberto"): ?>
+                <form method="post" style="display:inline-block;margin-right:8px;margin-bottom:6px;">
+                    <input type="hidden" name="sup_acao" value="aceitar" />
+                    <input type="hidden" name="id" value="<?= $__verId ?>" />
+                    <button type="submit" class="btn blue"><i class="fa fa-handshake-o"></i> Aceitar chamado</button>
+                </form>
+            <?php endif; ?>
+
+            <form method="post" style="display:inline-block;margin-bottom:6px;">
+                <input type="hidden" name="sup_acao" value="tipo" />
+                <input type="hidden" name="id" value="<?= $__verId ?>" />
+                <select name="tipo" class="form-control input-sm" style="display:inline-block;width:auto;" required>
+                    <option value="">Classificar tipo...</option>
+                    <option value="duvida" <?= ($__tipo === "duvida") ? "selected" : "" ?>>Dúvida operacional</option>
+                    <option value="sugestao" <?= ($__tipo === "sugestao") ? "selected" : "" ?>>Sugestão</option>
+                    <option value="bug" <?= ($__tipo === "bug") ? "selected" : "" ?>>Bug de sistema</option>
+                </select>
+                <button type="submit" class="btn btn-default btn-sm"><i class="fa fa-tag"></i> Salvar tipo</button>
+            </form>
+
+            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+                <?php if ($__status !== "resolvido" && $__status !== "cancelado"): ?>
+                    <form method="post">
+                        <input type="hidden" name="sup_acao" value="status" />
+                        <input type="hidden" name="id" value="<?= $__verId ?>" />
+                        <input type="hidden" name="status" value="aguardando_cliente" />
+                        <button type="submit" class="btn btn-primary btn-sm"><i class="fa fa-hourglass-half"></i> Aguardar retorno do cliente</button>
+                    </form>
+                <?php endif; ?>
+                <?php if ($__status !== "resolvido" && $__status !== "cancelado"): ?>
+                    <form method="post">
+                        <input type="hidden" name="sup_acao" value="status" />
+                        <input type="hidden" name="id" value="<?= $__verId ?>" />
+                        <input type="hidden" name="status" value="resolvido" />
+                        <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Marcar como resolvido?');"><i class="fa fa-check"></i> Resolvido</button>
+                    </form>
+                <?php endif; ?>
+                <?php if ($__status !== "resolvido" && $__status !== "cancelado"): ?>
+                    <form method="post">
+                        <input type="hidden" name="sup_acao" value="status" />
+                        <input type="hidden" name="id" value="<?= $__verId ?>" />
+                        <input type="hidden" name="status" value="cancelado" />
+                        <button type="submit" class="btn btn-default btn-sm" onclick="return confirm('Cancelar o chamado?');"><i class="fa fa-times"></i> Cancelar</button>
+                    </form>
+                <?php endif; ?>
+                <?php if ($__status !== "aberto" && $__status !== "reaberto"): ?>
+                    <form method="post">
+                        <input type="hidden" name="sup_acao" value="status" />
+                        <input type="hidden" name="id" value="<?= $__verId ?>" />
+                        <input type="hidden" name="status" value="reaberto" />
+                        <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('Reabrir o chamado?');"><i class="fa fa-undo"></i> Reabrir</button>
+                    </form>
+                <?php endif; ?>
+                <?php if ($__tipo === "bug" && $__status !== "encaminhado_ssi" && $__status !== "resolvido" && $__status !== "cancelado"): ?>
+                    <form method="post" style="border-left:1px solid #ddd;padding-left:12px;">
+                        <input type="hidden" name="sup_acao" value="status" />
+                        <input type="hidden" name="id" value="<?= $__verId ?>" />
+                        <input type="hidden" name="status" value="encaminhado_ssi" />
+                        <label style="font-weight:400;margin-right:8px;"><input type="radio" name="ssi_prioridade" value="urgente" /> Urgente — produção</label>
+                        <label style="font-weight:400;margin-right:8px;"><input type="radio" name="ssi_prioridade" value="proxima_atualizacao" checked /> Próxima atualização</label>
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Encaminhar o chamado para a SSI?');"><i class="fa fa-bug"></i> Encaminhar a SSI</button>
+                    </form>
+                <?php endif; ?>
+            </div>
         </div>
 
         <?php if (!empty($__arquivos)): ?>
@@ -186,18 +288,9 @@
             </div>
         </form>
 
-        <!-- Troca de status -->
-        <form method="post" style="margin-top:10px;">
-            <input type="hidden" name="sup_acao" value="status" />
-            <input type="hidden" name="id" value="<?= $__verId ?>" />
-            <?php if ($__status === "aberto"): ?>
-                <input type="hidden" name="status" value="resolvido" />
-                <button type="submit" class="btn btn-success" onclick="return confirm('Marcar como resolvido?');"><i class="fa fa-check"></i> Marcar como resolvido</button>
-            <?php else: ?>
-                <input type="hidden" name="status" value="aberto" />
-                <button type="submit" class="btn btn-warning" onclick="return confirm('Reabrir chamado?');"><i class="fa fa-undo"></i> Reabrir chamado</button>
-            <?php endif; ?>
-        </form>
+        <!-- Timeline -->
+        <h4 style="margin-top:28px;"><i class="fa fa-history"></i> Linha do tempo</h4>
+        <?= suporte_render_timeline($__eventos) ?>
     <?php endif; ?>
 
 <?php else: ?>
@@ -272,21 +365,31 @@
                             <th>Descrição</th>
                             <th style="width:100px;">Status</th>
                             <th style="width:150px;">Data</th>
+                            <th style="width:150px;">Fechado em</th>
                             <th style="width:90px;">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($__tickets)): ?>
-                            <tr><td colspan="8" class="text-center">Nenhum chamado encontrado.</td></tr>
+                            <tr><td colspan="9" class="text-center">Nenhum chamado encontrado.</td></tr>
                         <?php endif; ?>
                         <?php foreach ($__tickets as $__t): ?>
                             <?php
                                 $__desc = trim(strval($__t["descricao"] ?? ""));
                                 $__descCurta = mb_strlen($__desc, "UTF-8") > 60 ? mb_substr($__desc, 0, 60, "UTF-8") . "…" : $__desc;
-                                $__statusT = $__t["status"] ?? "aberto";
-                                $__badgeT = $__statusT === "resolvido"
-                                    ? '<span class="label label-success">Resolvido</span>'
-                                    : '<span class="label label-warning">Aberto</span>';
+                                $__statusT = strval($__t["status"] ?? "aberto");
+                                $__badgeMap = [
+                                    "aberto"             => '<span class="label label-warning">Aberto</span>',
+                                    "em_andamento"       => '<span class="label label-info">Em Andamento</span>',
+                                    "aguardando_cliente" => '<span class="label label-primary">Aguardando retorno</span>',
+                                    "resolvido"          => '<span class="label label-success">Resolvido</span>',
+                                    "cancelado"          => '<span class="label label-default">Cancelado</span>',
+                                    "reaberto"           => '<span class="label label-warning">Reaberto</span>',
+                                    "encaminhado_ssi"    => '<span class="label label-danger">Encaminhado a SSI</span>',
+                                ];
+                                $__badgeT = $__badgeMap[$__statusT] ?? '<span class="label label-default">' . htmlspecialchars($__statusT) . '</span>';
+                                $__tipoLabel = ["duvida" => "Dúvida", "sugestao" => "Sugestão", "bug" => "Bug"][strval($__t["tipo"] ?? "")] ?? "";
+                                $__ssiT = strval($__t["ssi_codigo"] ?? "");
                             ?>
                             <tr>
                                 <td>#<?= (int) ($__t["id"] ?? 0) ?></td>
@@ -296,9 +399,14 @@
                                     <br><small class="text-muted"><?= htmlspecialchars(strval($__t["user_login"] ?? "")) ?></small>
                                 </td>
                                 <td style="max-width:200px;word-break:break-all;"><small><?= htmlspecialchars(strval($__t["pagina_url"] ?? "")) ?></small></td>
-                                <td><?= htmlspecialchars($__descCurta) ?></td>
+                                <td>
+                                    <?= htmlspecialchars($__descCurta) ?>
+                                    <?php if ($__tipoLabel !== ""): ?><br><small><i class="fa fa-tag"></i> <?= htmlspecialchars($__tipoLabel) ?></small><?php endif; ?>
+                                    <?php if ($__ssiT !== ""): ?><br><small class="label label-danger" style="font-size:10px;"><?= htmlspecialchars($__ssiT) ?></small><?php endif; ?>
+                                </td>
                                 <td><?= $__badgeT ?></td>
                                 <td><?= htmlspecialchars(strval($__t["created_at"] ?? "")) ?></td>
+                                <td><?= htmlspecialchars(strval($__t["fechado_em"] ?? "") ?: "—") ?></td>
                                 <td><a href="gestao.php?id=<?= (int) ($__t["id"] ?? 0) ?>" class="btn btn-xs blue"><i class="fa fa-cog"></i> Gerir</a></td>
                             </tr>
                         <?php endforeach; ?>
