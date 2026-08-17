@@ -204,6 +204,12 @@ let definirFuncoesInternas = function(){
             consultarRegistros();
         });
 
+        // Destaque da linha clicada em todos os grids do sistema (delegation no document
+        // para sobreviver a handlers de clique das páginas)
+        if (!$('#estilo_linha_destaque_global').length) {
+            $('<style id="estilo_linha_destaque_global">#result tbody tr.linha-selecionada{background-color:#ffd54f !important;box-shadow:inset 4px 0 0 #f0ad4e;}#result tbody tr.linha-selecionada td{background-color:transparent !important;color:#333 !important;font-weight:bold;}</style>').appendTo('head');
+        }
+
         if (typeof funcoesInternas === 'function') {
             try {
                 funcoesInternas();
@@ -483,6 +489,15 @@ const consultarRegistros = function(){
 
 $(document).ready(function(){
     try{ }catch(e){}
+
+    // Destaque da linha clicada em todos os grids do sistema.
+    // Usa delegation no document para sobreviver a handlers de clique das páginas
+    // (ex.: páginas que fazem $(...).off("click") sem namespace).
+    $(document).off('click.linha-destaque', '#result tbody tr').on('click.linha-destaque', '#result tbody tr', function() {
+        $('#result tbody tr').removeClass('linha-selecionada');
+        $(this).addClass('linha-selecionada');
+    });
+
     $('form[name="contex_form"]').on('change', consultarRegistros);
     $('input[name="limit"]').on('change', function(){
         $('input[name="limit"]').val($(this).val());

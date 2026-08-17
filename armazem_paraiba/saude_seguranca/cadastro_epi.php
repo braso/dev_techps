@@ -19,7 +19,6 @@ function gravarSubEpi() {
     $subgrupo = trim($_POST["subgrupo"]);
     $item = trim($_POST["item"]);
     $descricao = trim($_POST["descricao"] ?? "");
-    $variacoes = trim($_POST["variacoes"] ?? "");
     $status = $_POST["status"] ?? "ativo";
     $sub_id = !empty($_POST["sub_id"]) ? (int)$_POST["sub_id"] : 0;
     
@@ -51,10 +50,14 @@ function gravarSubEpi() {
         "ss_e_tx_subgrupo"      => $subgrupo,
         "ss_e_tx_item"          => $item,
         "ss_e_tx_descricao"     => $descricao,
-        "ss_e_tx_variacoes"     => $variacoes,
         "ss_e_tx_status"        => $status,
         "ss_e_tx_cadastro_tipo" => "universal"
     ];
+    
+    // Campo de variações foi removido deste cadastro; preserva variações existentes na edição
+    if (!empty($_POST["variacoes"])) {
+        $epiData["ss_e_tx_variacoes"] = trim($_POST["variacoes"]);
+    }
     
     if ($sub_id > 0) {
         atualizar("ss_epi", array_keys($epiData), array_values($epiData), $sub_id);
@@ -185,7 +188,7 @@ function modificarEpi() {
         $grupo_nome = $_POST["grupo"];
         $grupo_nome_escaped = mysqli_real_escape_string($conn, $grupo_nome);
         
-        $sqlEpis = query("SELECT ss_e_nb_id, ss_e_tx_subgrupo, ss_e_tx_item, ss_e_tx_descricao, ss_e_tx_variacoes, ss_e_tx_status 
+        $sqlEpis = query("SELECT ss_e_nb_id, ss_e_tx_subgrupo, ss_e_tx_item, ss_e_tx_descricao, ss_e_tx_status 
                           FROM ss_epi 
                           WHERE ss_e_tx_cadastro_tipo = 'universal' AND ss_e_tx_grupo = '{$grupo_nome_escaped}' AND ss_e_tx_subgrupo != '' AND ss_e_tx_subgrupo IS NOT NULL 
                           ORDER BY ss_e_tx_subgrupo ASC");
@@ -202,11 +205,10 @@ function modificarEpi() {
                 <table class="table table-striped table-bordered table-hover">
                     <thead>
                         <tr>
-                            <th style="width: 20%;">EPI</th>
-                            <th style="width: 28%;">Descrição</th>
-                            <th style="width: 22%;">Variações (Numeração/Tamanho)</th>
-                            <th style="width: 20%;">Observações</th>
-                            <th style="width: 10%; text-align: center;">Ações</th>
+                            <th style="width: 25%;">EPI</th>
+                            <th style="width: 35%;">Descrição</th>
+                            <th style="width: 25%;">Observações</th>
+                            <th style="width: 15%; text-align: center;">Ações</th>
                         </tr>
                     </thead>
                     <tbody>';
@@ -219,16 +221,14 @@ function modificarEpi() {
                 $sub_escaped = htmlspecialchars($row["ss_e_tx_subgrupo"] ?? "");
                 $item_escaped = htmlspecialchars($row["ss_e_tx_item"] ?? "");
                 $desc_escaped = htmlspecialchars($row["ss_e_tx_descricao"] ?? "");
-                $variacoes_escaped = htmlspecialchars($row["ss_e_tx_variacoes"] ?? "");
                 
                 echo '
                 <tr id="sub_row_' . $row_id . '">
                     <td>' . $sub_escaped . '</td>
                     <td>' . $item_escaped . '</td>
-                    <td>' . ($variacoes_escaped !== "" ? $variacoes_escaped : '<span class="text-muted">Sem variações</span>') . '</td>
                     <td>' . $desc_escaped . '</td>
                     <td style="text-align: center;">
-                        <button type="button" class="btn btn-xs btn-primary btn-edit-sub" data-id="' . $row_id . '" data-subgrupo="' . $sub_escaped . '" data-item="' . $item_escaped . '" data-desc="' . $desc_escaped . '" data-variacoes="' . $variacoes_escaped . '" title="Editar"><i class="fa fa-edit"></i></button>
+                        <button type="button" class="btn btn-xs btn-primary btn-edit-sub" data-id="' . $row_id . '" data-subgrupo="' . $sub_escaped . '" data-item="' . $item_escaped . '" data-desc="' . $desc_escaped . '" title="Editar"><i class="fa fa-edit"></i></button>
                         <button type="button" class="btn btn-xs btn-danger btn-delete-sub" data-id="' . $row_id . '" title="Remover"><i class="fa fa-trash"></i></button>
                     </td>
                 </tr>';
@@ -236,7 +236,7 @@ function modificarEpi() {
         }
         
         if (!$hasEpis) {
-            echo '<tr><td colspan="5" style="text-align: center; color: #999;">Nenhum EPI cadastrado neste grupo.</td></tr>';
+            echo '<tr><td colspan="4" style="text-align: center; color: #999;">Nenhum EPI cadastrado neste grupo.</td></tr>';
         }
         
         echo '
@@ -250,7 +250,6 @@ function modificarEpi() {
                         <input type="hidden" name="acao" value="gravarSubEpi">
                         <input type="hidden" name="grupo_id" value="' . $id . '">
                         <input type="hidden" name="sub_id" id="sub_id" value="">
-                        <input type="hidden" name="descricao" id="sub_desc" value="">
                         
                         <div class="row">
                             <div class="col-md-4">
@@ -267,9 +266,8 @@ function modificarEpi() {
                             </div>
                             <div class="col-md-4">
                                 <div class="form-group">
-                                    <label class="control-label">Variações (Numeração/Tamanho)</label>
-                                    <input type="text" name="variacoes" id="sub_variacoes" class="form-control input-sm" placeholder="Ex: 42, 44, 46" maxlength="255">
-                                    <span class="help-block" style="font-size: 11px; margin-top: 2px; margin-bottom: 0;">Separe por vírgula. Ex.: botas com variações 42, 44 e 46.</span>
+                                    <label class="control-label">Observações</label>
+                                    <input type="text" name="descricao" id="sub_desc2" class="form-control input-sm" placeholder="Observações adicionais" maxlength="255">
                                 </div>
                             </div>
                         </div>
@@ -317,13 +315,11 @@ function modificarEpi() {
                     var sub = $(this).attr("data-subgrupo");
                     var item = $(this).attr("data-item");
                     var desc = $(this).attr("data-desc");
-                    var variacoes = $(this).attr("data-variacoes");
                     
                     $("#sub_id").val(id);
                     $("#sub_subgrupo").val(sub);
                     $("#sub_item").val(item);
-                    $("#sub_desc").val(desc);
-                    $("#sub_variacoes").val(variacoes);
+                    $("#sub_desc2").val(desc);
                     
                     $("#sub_form_title").text("Editar EPI no Grupo").css("color", "#d9534f");
                     $("#btn_salvar_sub").text("Atualizar EPI").removeClass("btn-success").addClass("btn-danger");
@@ -338,8 +334,7 @@ function modificarEpi() {
                     $("#sub_id").val("");
                     $("#sub_subgrupo").val("");
                     $("#sub_item").val("");
-                    $("#sub_desc").val("");
-                    $("#sub_variacoes").val("");
+                    $("#sub_desc2").val("");
                     
                     $("#sub_form_title").text("Adicionar EPI ao Grupo").css("color", "#337ab7");
                     $("#btn_salvar_sub").text("Gravar EPI").removeClass("btn-danger").addClass("btn-success");
@@ -516,6 +511,11 @@ function index() {
 
     $jsFunctions = '
         var funcoesInternas = function(){
+            // Destaque na coluna EPI(S) (índice 2 — Código, Grupo, EPIs, Status)
+            $("#result tbody tr").each(function() {
+                $(this).find("td").eq(2).css({ "font-weight": "bold", "color": "#337ab7" });
+            });
+
             // Bind Alterar click
             $(".acao-editar-epi").off("click").on("click", function(event) {
                 var id = $(this).closest("tr").attr("data-row-id");
@@ -636,18 +636,17 @@ function baixarModeloCsv() {
     
     echo "# INSTRUÇÕES DE PREENCHIMENTO DO CSV:\r\n";
     echo "# - Campos OBRIGATÓRIOS: Grupo, EPI / Subgrupo, Descrição / Item.\r\n";
-    echo "# - Campos OPCIONAIS: Observações do Grupo, Observações, Variações.\r\n";
+    echo "# - Campos OPCIONAIS: Observações do Grupo, Observações.\r\n";
     echo "# - Formato padrão do Grupo: PROTEÇÃO DA CABEÇA, PROTEÇÃO AUDITIVA, etc.\r\n";
-    echo "# - Variações: separe por vírgula (ex: 42, 44, 46) para EPIs com numeração/tamanho.\r\n";
     echo "# - A primeira linha de dados abaixo é uma linha de EXEMPLO e serve como orientação.\r\n";
     echo "# --------------------------------------------------------------------------\r\n";
     
-    $headers = ["Grupo", "Observações do Grupo", "EPI / Subgrupo", "Descrição / Item", "Observações", "Variações"];
+    $headers = ["Grupo", "Observações do Grupo", "EPI / Subgrupo", "Descrição / Item", "Observações"];
     echo implode(';', $headers) . "\r\n";
     
     // Sample row
-    echo "PROTEÇÃO DA CABEÇA (EXEMPLO DE PREENCHIMENTO);Observações gerais do grupo cabeça (Opcional);Capacete de Segurança;Capacete de proteção classe B com jugular;Jugular de tecido resistente (Opcional);TAM ÚNICO\r\n";
-    echo "PROTEÇÃO DOS MEMBROS INFERIORES (EXEMPLO DE PREENCHIMENTO);;Bota Botina Bico PVC;Calçado para proteção contra impactos;;42, 44, 46\r\n";
+    echo "PROTEÇÃO DA CABEÇA (EXEMPLO DE PREENCHIMENTO);Observações gerais do grupo cabeça (Opcional);Capacete de Segurança;Capacete de proteção classe B com jugular;Jugular de tecido resistente (Opcional)\r\n";
+    echo "PROTEÇÃO DOS MEMBROS INFERIORES (EXEMPLO DE PREENCHIMENTO);;Bota Botina Bico PVC;Calçado para proteção contra impactos;\r\n";
     
     exit;
 }
@@ -716,7 +715,6 @@ function importarCsv() {
         $subgrupo      = trim($row[2] ?? "");
         $item          = trim($row[3] ?? "");
         $item_obs      = trim($row[4] ?? "");
-        $variacoes     = trim($row[5] ?? "");
         
         // Skip example row if user uploaded it back without editing
         if (strpos(mb_strtolower($grupo, 'UTF-8'), '(exemplo') !== false) {
@@ -779,7 +777,6 @@ function importarCsv() {
                 "ss_e_tx_subgrupo"      => $subgrupo,
                 "ss_e_tx_item"          => $item,
                 "ss_e_tx_descricao"     => $item_obs,
-                "ss_e_tx_variacoes"     => $variacoes,
                 "ss_e_tx_status"        => "ativo",
                 "ss_e_tx_cadastro_tipo" => "universal"
             ];

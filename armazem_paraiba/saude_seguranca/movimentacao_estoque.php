@@ -98,14 +98,6 @@ function lancarEstoqueLoteAjax() {
     exit;
 }
 
-function formatarCnpj($cnpj) {
-    $digits = preg_replace('/[^0-9]/', '', $cnpj);
-    if (strlen($digits) !== 14) {
-        return $digits;
-    }
-    return substr($digits, 0, 2) . '.' . substr($digits, 2, 3) . '.' . substr($digits, 5, 3) . '/' . substr($digits, 8, 4) . '-' . substr($digits, 12, 2);
-}
-
 function salvarFornecedorAjax() {
     global $conn;
 
@@ -790,6 +782,19 @@ function index() {
         $('#quantidade, #valor_unitario').on('keyup change input', calcularTotal);
     });
 
+    function destacarItemEpi(nome) {
+        // Formato esperado: Item - Sub - CA ou Item / Sub / Grupo (CA: X)
+        var partes = nome.split(' - ');
+        if (partes.length > 1) {
+            return '<strong>' + partes[0] + '</strong> <small class=\"text-muted\">- ' + partes.slice(1).join(' - ') + '</small>';
+        }
+        partes = nome.split(' / ');
+        if (partes.length > 1) {
+            return '<strong>' + partes[0] + '</strong> <small class=\"text-muted\">/ ' + partes.slice(1).join(' / ') + '</small>';
+        }
+        return '<strong>' + nome + '</strong>';
+    }
+
     function adicionarItemALista() {
         var epiSelect = $('select[name="epi_id"]');
         var epiId = epiSelect.val();
@@ -925,7 +930,7 @@ function index() {
                     : '<span class="label label-sm label-danger">Saída</span>';
                     
                 panelHtml += '<tr id="row_item_' + it.unique_id + '">' +
-                                '<td style="vertical-align: middle;">' + it.epi_nome + '</td>' +
+                                '<td style="vertical-align: middle;">' + destacarItemEpi(it.epi_nome) + '</td>' +
                                 '<td style="text-align: center; vertical-align: middle;">' + badgeTipo + '</td>' +
                                 '<td style="text-align: center; font-weight: bold; vertical-align: middle;">' + it.quantidade + '</td>' +
                                 '<td style="vertical-align: middle;">' + (it.variacao ? '<span class="label label-info">' + it.variacao + '</span>' : '<span class="text-muted">-</span>') + '</td>' +
@@ -1175,7 +1180,7 @@ function index() {
 
     $transfQuery = "SELECT * FROM (
                         SELECT t.ss_t_nb_id,
-                               CONCAT(IFNULL(epi.ss_e_tx_subgrupo, ''), ' / ', IFNULL(epi.ss_e_tx_item, '')) AS epi_nome,
+                               CONCAT('<strong>', IFNULL(epi.ss_e_tx_subgrupo, ''), '</strong> <small class=\"text-muted\">/ ', IFNULL(epi.ss_e_tx_item, ''), '</small>') AS epi_nome,
                                t.ss_t_nb_quantidade,
                                COALESCE(o.empr_tx_nome, 'Matriz') AS origem,
                                COALESCE(d.empr_tx_nome, 'Matriz') AS destino,

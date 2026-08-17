@@ -1,4 +1,5 @@
 <?php
+ob_start();
 include "conecta.php";
 
 function cadastrarEpiEstoque() {
@@ -138,6 +139,72 @@ function cadastrarEpiEstoque() {
     exit;
 }
 
+function salvarFabricanteAjax() {
+    global $conn;
+
+    $nome = trim($_POST["nome"] ?? "");
+    $cnpjDigits = preg_replace('/[^0-9]/', '', trim($_POST["cnpj"] ?? ""));
+    $fantasia = trim($_POST["nome_fantasia"] ?? "");
+    $telefone = trim($_POST["telefone"] ?? "");
+
+    if (empty($nome) || empty($cnpjDigits)) {
+        ob_clean();
+        echo json_encode(["status" => "error", "message" => "Nome do fabricante e CNPJ são obrigatórios."]);
+        exit;
+    }
+
+    if (strlen($cnpjDigits) !== 14) {
+        ob_clean();
+        echo json_encode(["status" => "error", "message" => "CNPJ inválido. Informe os 14 dígitos."]);
+        exit;
+    }
+
+    if (mb_strlen($nome) > 100) {
+        ob_clean();
+        echo json_encode(["status" => "error", "message" => "O nome do fabricante deve ter no máximo 100 caracteres."]);
+        exit;
+    }
+
+    $nome_e = mysqli_real_escape_string($conn, $nome);
+    $cnpj_e = mysqli_real_escape_string($conn, $cnpjDigits);
+    $fantasia_e = mysqli_real_escape_string($conn, $fantasia);
+    $telefone_e = mysqli_real_escape_string($conn, $telefone);
+    $user = (int)($_SESSION["user_nb_id"] ?? 0);
+
+    // Verifica duplicidade comparando apenas os dígitos (aceita formatos com/sem pontuação)
+    $existe = query("SELECT ss_fa_nb_id FROM ss_fabricante WHERE REPLACE(REPLACE(REPLACE(IFNULL(ss_fa_tx_cnpj, ''), '.', ''), '/', ''), '-', '') = '{$cnpj_e}' LIMIT 1");
+    if ($existe && mysqli_num_rows($existe) > 0) {
+        $id = (int)mysqli_fetch_assoc($existe)["ss_fa_nb_id"];
+        ob_clean();
+        echo json_encode(["status" => "error", "message" => "Já existe um fabricante cadastrado com este CNPJ.", "id" => $id]);
+        exit;
+    }
+
+    // Também evita duplicidade por nome (sem CNPJ) para registros legados
+    $existeNome = query("SELECT ss_fa_nb_id FROM ss_fabricante WHERE LOWER(ss_fa_tx_nome) = LOWER('{$nome_e}') LIMIT 1");
+    if ($existeNome && mysqli_num_rows($existeNome) > 0) {
+        $id = (int)mysqli_fetch_assoc($existeNome)["ss_fa_nb_id"];
+        ob_clean();
+        echo json_encode(["status" => "success", "message" => "Fabricante já cadastrado.", "id" => $id, "nome" => $nome, "duplicado" => true]);
+        exit;
+    }
+
+    $res = query(
+        "INSERT INTO ss_fabricante (ss_fa_tx_nome, ss_fa_tx_nome_fantasia, ss_fa_tx_cnpj, ss_fa_tx_telefone, ss_fa_tx_status, ss_fa_nb_userCadastro, ss_fa_tx_dataCadastro)
+         VALUES ('{$nome_e}', '{$fantasia_e}', '{$cnpj_e}', '{$telefone_e}', 'ativo', {$user}, NOW())"
+    );
+    if (!$res) {
+        ob_clean();
+        echo json_encode(["status" => "error", "message" => "Erro ao cadastrar fabricante: " . ($GLOBALS["last_sql_error"] ?? "erro desconhecido")]);
+        exit;
+    }
+
+    $id = mysqli_insert_id($conn);
+    ob_clean();
+    echo json_encode(["status" => "success", "message" => "Fabricante cadastrado com sucesso!", "id" => $id, "nome" => $nome, "cnpj" => formatarCnpj($cnpjDigits)]);
+    exit;
+}
+
 
 
 function index() {
@@ -199,7 +266,42 @@ function index() {
     $campo_subgrupo    = combo("EPI", "subgrupo", $_POST["subgrupo"] ?? "", 4, ["" => "Selecione o Grupo primeiro..."]);
     $campo_item        = combo("Descrição*", "item", $_POST["item"] ?? "", 4, ["" => "Selecione o Subgrupo primeiro..."]);
 
-    $campo_fabricante   = campo("Fabricante", "fabricante", $_POST["fabricante"] ?? "", 3, "", "maxlength='100'");
+    // Fabricantes (lista com busca e botão + para cadastro rápido — mesma regra do Fornecedor)
+    $sqlFabricantes = query("SELECT ss_fa_nb_id, ss_fa_tx_nome FROM ss_fabricante WHERE ss_fa_tx_status = 'ativo' ORDER BY ss_fa_tx_nome ASC");
+    $fabricanteOptionsHtml = '<option value="">Selecione o Fabricante</option>';
+    $fabricanteSelecionado = $_POST["fabricante"] ?? "";
+    $fabricanteNaLista = false;
+    if ($sqlFabricantes) {
+        while ($rowFa = mysqli_fetch_assoc($sqlFabricantes)) {
+            $nomeFa = htmlspecialchars($rowFa["ss_fa_tx_nome"]);
+            $selFa = ($nomeFa === $fabricanteSelecionado) ? " selected" : "";
+            if ($selFa !== "") {
+                $fabricanteNaLista = true;
+            }
+            $fabricanteOptionsHtml .= "<option value=\"{$nomeFa}\"{$selFa}>{$nomeFa}</option>";
+        }
+    }
+    // Garante o fabricante já gravado em registros anteriores (antes da tabela) no select
+    if (!empty($fabricanteSelecionado) && !$fabricanteNaLista) {
+        $fabricanteOptionsHtml = '<option value="' . htmlspecialchars($fabricanteSelecionado) . '" selected>' . htmlspecialchars($fabricanteSelecionado) . '</option>' . $fabricanteOptionsHtml;
+    }
+
+    $campo_fabricante = '
+        <style>
+            #fabricante + .select2-container { width: auto !important; flex: 1; min-width: 0; }
+            #fabricante + .select2-container .select2-selection--single { height: 30px; }
+            #fabricante + .select2-container .select2-selection__rendered { line-height: 28px; padding-left: 8px; }
+            #fabricante + .select2-container .select2-selection__arrow { height: 28px; }
+        </style>
+        <div class="col-sm-3 margin-bottom-5 campo-fit-content">
+            <label>Fabricante</label>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <select name="fabricante" id="fabricante" class="form-control input-sm">
+                    ' . $fabricanteOptionsHtml . '
+                </select>
+                <button type="button" class="btn btn-success btn-sm" id="btn_novo_fabricante" title="Cadastrar novo fabricante" style="white-space: nowrap; flex-shrink: 0;"><i class="fa fa-plus"></i> Novo</button>
+            </div>
+        </div>';
     $campo_modelo       = campo("Modelo", "modelo", $_POST["modelo"] ?? "", 3, "", "maxlength='100'");
     $campo_ca           = campo("MTE Certificado de Aprovacão (CA)", "ca", $_POST["ca"] ?? "", 3, "", "maxlength='50'");
     $campo_vida_util    = campo("Vida Útil (dias)", "vida_util", $_POST["vida_util"] ?? "0", 3, "MASCARA_NUMERO");
@@ -315,9 +417,122 @@ function index() {
         echo fecha_form($final_buttons);
     }
     ?>
+    <!-- Modal Novo Fabricante -->
+    <div class="modal fade" id="modal_novo_fabricante" tabindex="-1" role="dialog" aria-hidden="true" style="z-index: 11000;">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Fechar"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title"><i class="fa fa-industry"></i> Novo Fabricante</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="control-label">Nome / Razão Social*</label>
+                        <input type="text" class="form-control input-sm" id="nfa_nome" maxlength="100" placeholder="Ex: 3M do Brasil LTDA">
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label">Nome Fantasia</label>
+                        <input type="text" class="form-control input-sm" id="nfa_nome_fantasia" maxlength="255" placeholder="Ex: 3M">
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label">CNPJ*</label>
+                        <input type="text" class="form-control input-sm" id="nfa_cnpj" maxlength="18" placeholder="00.000.000/0000-00">
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label">Telefone</label>
+                        <input type="text" class="form-control input-sm" id="nfa_telefone" maxlength="15" placeholder="(00) 00000-0000">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success" id="btn_salvar_fabricante"><i class="fa fa-check"></i> Salvar Fabricante</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <script>
     $(document).ready(function() {
         const isEditMode = <?php echo $isEdit ? 'true' : 'false'; ?>;
+
+        // Fabricante: select2 com busca + cadastro rápido (mesma regra do Fornecedor)
+        if (typeof $.fn.select2 === 'function') {
+            $.fn.select2.defaults.set('theme', 'bootstrap');
+            $('select[name="fabricante"]').select2({
+                placeholder: 'Busque por nome...',
+                allowClear: true,
+                matcher: function(params, data) {
+                    if (!params.term || params.term.trim() === '') {
+                        return data;
+                    }
+                    var term = params.term.trim().toLowerCase();
+                    var text = (data.text || '').toLowerCase();
+                    if (text.indexOf(term) > -1) {
+                        return data;
+                    }
+                    return null;
+                }
+            });
+        }
+
+        $('#btn_novo_fabricante').on('click', function() {
+            $('#modal_novo_fabricante').modal('show');
+            $('#nfa_nome').focus();
+        });
+
+        if (typeof $.fn.inputmask === 'function') {
+            $('#nfa_cnpj').inputmask({ mask: ['99.999.999/9999-99'], placeholder: '00.000.000/000-00' });
+            $('#nfa_telefone').inputmask({ mask: ['(99) 9999-9999', '(99) 99999-9999'], placeholder: '' });
+        }
+
+        $('#btn_salvar_fabricante').on('click', function() {
+            var nome = $('#nfa_nome').val().trim();
+            var cnpj = $('#nfa_cnpj').val().trim();
+            if (!nome) {
+                alert('Informe o nome/razão social do fabricante.');
+                $('#nfa_nome').focus();
+                return;
+            }
+            if (!cnpj) {
+                alert('Informe o CNPJ.');
+                $('#nfa_cnpj').focus();
+                return;
+            }
+
+            var $btn = $(this).prop('disabled', true);
+
+            $.ajax({
+                url: 'cadastrar_epi_estoque.php?acao=salvarFabricanteAjax',
+                type: 'POST',
+                data: {
+                    nome: nome,
+                    nome_fantasia: $('#nfa_nome_fantasia').val().trim(),
+                    cnpj: cnpj,
+                    telefone: $('#nfa_telefone').val().trim()
+                },
+                dataType: 'json',
+                success: function(resp) {
+                    $btn.prop('disabled', false);
+                    if (resp.status === 'success') {
+                        var novoOption = new Option(resp.nome, resp.nome, false, true);
+                        $('#fabricante').append(novoOption).trigger('change');
+                        $('#nfa_nome').val('');
+                        $('#nfa_nome_fantasia').val('');
+                        $('#nfa_cnpj').val('');
+                        $('#nfa_telefone').val('');
+                        $('#modal_novo_fabricante').modal('hide');
+                        if (!resp.duplicado) {
+                            alert('Fabricante cadastrado com sucesso!');
+                        }
+                    } else {
+                        alert(resp.message || 'Erro ao cadastrar fabricante.');
+                    }
+                },
+                error: function() {
+                    $btn.prop('disabled', false);
+                    alert('Erro de comunicação com o servidor.');
+                }
+            });
+        });
         
         // Select2 & cascading dropdown logic
         const data = <?php echo json_encode($universalEpis); ?>;
@@ -615,7 +830,7 @@ function index() {
                 $('select[name="subgrupo"]').val(item.subgrupo).trigger('change');
                 $('select[name="item"]').val(item.item).trigger('change');
                 
-                $('input[name="fabricante"]').val(item.fabricante);
+                $('select[name="fabricante"]').val(item.fabricante).trigger('change');
                 $('input[name="modelo"]').val(item.modelo || '');
                 $('input[name="variacoes"]').val(item.variacoes || '');
                 $('input[name="ca"]').val(item.ca);
@@ -693,7 +908,7 @@ function index() {
             function limparForm() {
                 editIndex = null;
                 $('select[name="grupo"]').val('').trigger('change');
-                $('input[name="fabricante"]').val('');
+                $('select[name="fabricante"]').val('').trigger('change');
                 $('input[name="modelo"]').val('');
                 $('input[name="variacoes"]').val('');
                 $('input[name="ca"]').val('');
@@ -719,7 +934,7 @@ function index() {
                     grupo: grupo,
                     subgrupo: subgrupo,
                     item: itemVal,
-                    fabricante: $('input[name="fabricante"]').val(),
+                    fabricante: $('select[name="fabricante"]').val(),
                     modelo: $('input[name="modelo"]').val(),
                     variacoes: $('input[name="variacoes"]').val(),
                     ca: $('input[name="ca"]').val(),

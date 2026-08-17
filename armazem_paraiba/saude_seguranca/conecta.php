@@ -253,6 +253,65 @@ if ($checkJustificativa && mysqli_num_rows($checkJustificativa) == 0) {
     mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_tx_justificativa_exclusao VARCHAR(255) NULL AFTER ss_e_tx_observacao;");
 }
 
+// Migração: gestão de devoluções de EPIs (justificativa, estorno, data e vínculo com a entrega anterior)
+// Obs.: usa sufixo _tx_ para ENUMs/strings, pois o helper insertInto() tipa colunas _nb_ como numéricas.
+$checkJustDevolucao = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_entrega LIKE 'ss_e_tx_justificativa'");
+if ($checkJustDevolucao && mysqli_num_rows($checkJustDevolucao) == 0) {
+    mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_tx_justificativa VARCHAR(500) NULL AFTER ss_e_tx_justificativa_exclusao;");
+}
+
+$checkEstornado = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_entrega LIKE 'ss_e_tx_estornado'");
+if ($checkEstornado && mysqli_num_rows($checkEstornado) == 0) {
+    mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_tx_estornado ENUM('sim','nao') NOT NULL DEFAULT 'nao' AFTER ss_e_tx_justificativa;");
+}
+
+// Corrige nome legado da coluna de estorno (era _nb_ e deve ser _tx_)
+$checkEstornadoLegado = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_entrega LIKE 'ss_e_nb_estornado'");
+if ($checkEstornadoLegado && mysqli_num_rows($checkEstornadoLegado) > 0) {
+    $checkEstornadoNovo = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_entrega LIKE 'ss_e_tx_estornado'");
+    if ($checkEstornadoNovo && mysqli_num_rows($checkEstornadoNovo) == 0) {
+        mysqli_query($conn, "ALTER TABLE ss_epi_entrega CHANGE COLUMN ss_e_nb_estornado ss_e_tx_estornado ENUM('sim','nao') NOT NULL DEFAULT 'nao';");
+    } else {
+        mysqli_query($conn, "ALTER TABLE ss_epi_entrega DROP COLUMN ss_e_nb_estornado;");
+    }
+}
+
+$checkDataDevolucao = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_entrega LIKE 'ss_e_tx_data_devolucao'");
+if ($checkDataDevolucao && mysqli_num_rows($checkDataDevolucao) == 0) {
+    mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_tx_data_devolucao DATE NULL AFTER ss_e_tx_estornado;");
+}
+
+$checkEntregaAnterior = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_entrega LIKE 'ss_e_nb_entrega_anterior_id'");
+if ($checkEntregaAnterior && mysqli_num_rows($checkEntregaAnterior) == 0) {
+    mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_nb_entrega_anterior_id INT NULL AFTER ss_e_tx_data_devolucao;");
+}
+
+// Migração: destino da devolução (estoque imediato / pendência de inspeção) e controle de inspeção
+$checkDestino = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_entrega LIKE 'ss_e_tx_destino'");
+if ($checkDestino && mysqli_num_rows($checkDestino) == 0) {
+    mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_tx_destino ENUM('estoque','inspecao') NULL AFTER ss_e_nb_entrega_anterior_id;");
+}
+
+$checkStatusInspecao = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_entrega LIKE 'ss_e_tx_status_inspecao'");
+if ($checkStatusInspecao && mysqli_num_rows($checkStatusInspecao) == 0) {
+    mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_tx_status_inspecao ENUM('pendente','aprovado','descartado') NULL AFTER ss_e_tx_destino;");
+}
+
+$checkResponsavelInspecao = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_entrega LIKE 'ss_e_tx_responsavel_inspecao'");
+if ($checkResponsavelInspecao && mysqli_num_rows($checkResponsavelInspecao) == 0) {
+    mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_tx_responsavel_inspecao VARCHAR(255) NULL AFTER ss_e_tx_status_inspecao;");
+}
+
+$checkDataInspecao = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_entrega LIKE 'ss_e_tx_data_inspecao'");
+if ($checkDataInspecao && mysqli_num_rows($checkDataInspecao) == 0) {
+    mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_tx_data_inspecao DATE NULL AFTER ss_e_tx_responsavel_inspecao;");
+}
+
+$checkObsInspecao = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_entrega LIKE 'ss_e_tx_obs_inspecao'");
+if ($checkObsInspecao && mysqli_num_rows($checkObsInspecao) == 0) {
+    mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_tx_obs_inspecao VARCHAR(500) NULL AFTER ss_e_tx_data_inspecao;");
+}
+
 // 8. Modificações para controle por filial, data recebimento e chave NF
 $checkRecebimento = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_estoque LIKE 'ss_e_tx_data_recebimento'");
 if ($checkRecebimento && mysqli_num_rows($checkRecebimento) == 0) {
@@ -287,6 +346,31 @@ if ($checkVariacaoEntrega && mysqli_num_rows($checkVariacaoEntrega) == 0) {
 $checkFornecedor = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_estoque LIKE 'ss_e_tx_fornecedor'");
 if ($checkFornecedor && mysqli_num_rows($checkFornecedor) == 0) {
     mysqli_query($conn, "ALTER TABLE ss_epi_estoque ADD COLUMN ss_e_tx_fornecedor VARCHAR(255) NULL AFTER ss_e_tx_chave_nf;");
+}
+
+// Tabela de fabricantes (cadastro rápido no campo Fabricante do cadastro de EPIs)
+$sqlFabricante = "CREATE TABLE IF NOT EXISTS ss_fabricante (
+    ss_fa_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+    ss_fa_tx_nome VARCHAR(100) NOT NULL,
+    ss_fa_tx_status ENUM('ativo', 'inativo') NOT NULL DEFAULT 'ativo',
+    ss_fa_nb_userCadastro INT NULL,
+    ss_fa_tx_dataCadastro VARCHAR(30) NULL,
+    UNIQUE KEY uk_fabricante_nome (ss_fa_tx_nome)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+mysqli_query($conn, $sqlFabricante);
+
+// Colunas complementares do fabricante (CNPJ, fantasia e telefone — mesmo padrão do fornecedor)
+$checkFaCnpj = mysqli_query($conn, "SHOW COLUMNS FROM ss_fabricante LIKE 'ss_fa_tx_cnpj'");
+if ($checkFaCnpj && mysqli_num_rows($checkFaCnpj) == 0) {
+    mysqli_query($conn, "ALTER TABLE ss_fabricante ADD COLUMN ss_fa_tx_cnpj VARCHAR(14) NULL AFTER ss_fa_tx_nome;");
+}
+$checkFaFantasia = mysqli_query($conn, "SHOW COLUMNS FROM ss_fabricante LIKE 'ss_fa_tx_nome_fantasia'");
+if ($checkFaFantasia && mysqli_num_rows($checkFaFantasia) == 0) {
+    mysqli_query($conn, "ALTER TABLE ss_fabricante ADD COLUMN ss_fa_tx_nome_fantasia VARCHAR(255) NULL AFTER ss_fa_tx_cnpj;");
+}
+$checkFaTelefone = mysqli_query($conn, "SHOW COLUMNS FROM ss_fabricante LIKE 'ss_fa_tx_telefone'");
+if ($checkFaTelefone && mysqli_num_rows($checkFaTelefone) == 0) {
+    mysqli_query($conn, "ALTER TABLE ss_fabricante ADD COLUMN ss_fa_tx_telefone VARCHAR(15) NULL AFTER ss_fa_tx_nome_fantasia;");
 }
 
 mysqli_query($conn, "ALTER TABLE ss_epi MODIFY COLUMN ss_e_tx_foto TEXT NULL;");

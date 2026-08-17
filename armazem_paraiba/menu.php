@@ -372,13 +372,30 @@ if ($showComunicado) {
                 }
                 const appPath = " . json_encode($_ENV["APP_PATH"] ?? "/braso") . ";
                 const hasSaudeSeguranca = (p.indexOf('saude_seguranca/') !== -1 || p.indexOf('armazem_paraiba/') !== -1);
-                const isEpiStockPhoto = (p.indexOf('arquivos/') === 0 && p.indexOf('arquivos/entrega_epi/') !== 0);
-                
-                if (!hasSaudeSeguranca && isEpiStockPhoto) {
-                    return appPath + '/armazem_paraiba/saude_seguranca/' + p;
+                if (hasSaudeSeguranca) {
+                    return appPath + '/' + p;
                 }
                 return appPath + '/' + p;
             };
+            // Fallback automático de caminho de imagem: se o caminho da raiz falhar,
+            // tenta o mesmo arquivo em armazem_paraiba/saude_seguranca (e vice-versa).
+            document.addEventListener('error', function(e) {
+                var img = e.target;
+                if (!img || img.tagName !== 'IMG' || img.getAttribute('data-img-fallback') === 'done') return;
+                var src = img.getAttribute('src') || '';
+                if (src.indexOf('data:image/') === 0 || src.indexOf('http') === 0) return;
+                var appPath = " . json_encode($_ENV["APP_PATH"] ?? "/braso") . ";
+                var alternativo = null;
+                if (src.indexOf(appPath + '/armazem_paraiba/saude_seguranca/') !== -1) {
+                    alternativo = src.replace(appPath + '/armazem_paraiba/saude_seguranca/', appPath + '/');
+                } else if (src.indexOf(appPath + '/') === 0) {
+                    alternativo = src.replace(appPath + '/', appPath + '/armazem_paraiba/saude_seguranca/');
+                }
+                if (alternativo) {
+                    img.setAttribute('data-img-fallback', 'done');
+                    img.setAttribute('src', alternativo);
+                }
+            }, true);
             window.verImagemMaior = function(src) {
                 if (typeof Swal === 'undefined') {
                     window.open(src, '_blank');
