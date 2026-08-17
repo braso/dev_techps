@@ -22,16 +22,15 @@ function index() {
     }
 
     $empresaFiltro = "";
-    if ($temFiliais && !empty($_POST["busca_filial"])) {
+    if (!empty($_POST["busca_filial"])) {
         $empresaFiltro = " AND (ss_e_nb_empresa_id = " . (int)$_POST["busca_filial"] . " OR ss_e_nb_empresa_id IS NULL OR ss_e_nb_empresa_id = 0)";
-    } elseif (!$temFiliais && $user_empresa > 0) {
+    } elseif ($user_empresa > 0) {
         $empresaFiltro = " AND (ss_e_nb_empresa_id = {$user_empresa} OR ss_e_nb_empresa_id IS NULL OR ss_e_nb_empresa_id = 0)";
     }
 
     $fields = [];
-    if ($temFiliais) {
-        $fields[] = combo("Empresa", "busca_filial", $_POST["busca_filial"] ?? "", 3, $empresaOptions);
-    }
+    // Filtro de Empresa sempre visível (mesmo sem filiais)
+    $fields[] = combo("Empresa", "busca_filial", $_POST["busca_filial"] ?? "", 3, $empresaOptions);
     $fields[] = campo("Buscar EPI (nome ou CA)", "busca_epi_like", $_POST["busca_epi_like"] ?? "", 4);
     $fields[] = botao("Filtrar", "index");
 

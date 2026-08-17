@@ -857,7 +857,7 @@ function modificarEntrega() {
     $temFiliais = ss_tem_filiais_cadastradas();
 
     $jsEmpresas = '{"0":"Matriz"}';
-    if ($temFiliais && !empty($empresaOptions)) {
+    if (!empty($empresaOptions)) {
         $empresasJsArr = ["0" => "Matriz"];
         foreach ($empresaOptions as $eid => $ename) {
             if (empty($eid)) continue;
@@ -2547,9 +2547,8 @@ function index() {
         combo_bd("!Colaborador", "busca_colaborador", $_POST["busca_colaborador"] ?? "", 4, "entidade", "id='busca_colaborador'", " AND enti_tx_status = 'ativo' AND COALESCE((SELECT oper_tx_nome FROM operacao WHERE oper_nb_id = enti_tx_tipoOperacao), '') <> 'Diretor' ORDER BY enti_tx_nome ASC"),
         combo("EPI", "busca_epi", $_POST["busca_epi"] ?? "", 3, $epiOptions)
     ];
-    if ($temFiliais) {
-        $fields[] = combo("Filial", "busca_filial", $_POST["busca_filial"] ?? "", 3, $empresaOptions);
-    }
+    // Filtro de Filial sempre visível (mesmo sem filiais, permite filtrar pela empresa)
+    $fields[] = combo("Filial", "busca_filial", $_POST["busca_filial"] ?? "", 3, $empresaOptions);
     $fields[] = combo("Status", "busca_status", $_POST["busca_status"] ?? "", 2, ["" => "Todos", "ativo" => "Entregue", "substituido" => "Substituído", "devolvido" => "Devolvido", "perdido" => "Perdido/Extraviado"]);
 
     $buttons = [];

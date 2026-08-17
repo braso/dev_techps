@@ -675,9 +675,8 @@ function index() {
         campo("Modelo", "busca_modelo", $_POST["busca_modelo"] ?? "", 1),
         campo("CA", "busca_ca", $_POST["busca_ca"] ?? "", 1)
     ];
-    if ($temFiliais) {
-        $fields[] = combo("Empresa", "busca_filial", $_POST["busca_filial"] ?? "", 2, $empresaOptions);
-    }
+    // Filtro de Empresa sempre visível (mesmo sem filiais)
+    $fields[] = combo("Empresa", "busca_filial", $_POST["busca_filial"] ?? "", 2, $empresaOptions);
     $fields[] = combo("Status", "busca_status", $_POST["busca_status"] ?? "ativo", 1, ["" => "Todos", "ativo" => "Ativo", "inativo" => "Inativo"]);
     $fields[] = combo("Visualização", "busca_visao", $_POST["busca_visao"] ?? "saldo", 2, ["saldo" => "Saldo Atual por EPI", "mov" => "Histórico de Movimentações"]);
 
