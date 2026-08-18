@@ -344,6 +344,8 @@
 			"<script>
 				urlTableInfo = '{$_ENV["APP_PATH"]}{$_ENV["CONTEX_PATH"]}/getTableInfo.php';
 				urlGridConfig = '{$_ENV["APP_PATH"]}/contex20/grid_config_controller.php';
+				urlGridPdf = '{$_ENV["APP_PATH"]}{$_ENV["CONTEX_PATH"]}/impressao/grid.php';
+				userEmpresaId = '".(int)($_SESSION["user_nb_empresa"] ?? 0)."';
 			</script>
 			<script>
 				const searchFields = ".json_encode($camposBusca).";
@@ -355,7 +357,7 @@
 			<script>
 				{$jsFunctions}
 			</script>
-			<script src='{$_ENV["APP_PATH"]}/contex20/js/grid_dinamico.js?v=3'></script>
+			<script src='{$_ENV["APP_PATH"]}/contex20/js/grid_dinamico.js?v=4'></script>
 			
 			<!-- Modal Config Grid -->
 			<div id='modalConfigGrid' class='modal fade' role='dialog' style='z-index: 10052;'>

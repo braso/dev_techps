@@ -96,5 +96,8 @@ $htmlTabela = str_replace(';""', '', $htmlTabela); // Corrige atributos malforma
 $pdf->writeHTML($htmlTabela, true, false, true, false, '');
 
 // Gera o PDF
-$nomeArquivo = 'Lista de '.$_POST["paginaTitulo"].'.pdf';
+$tituloDocumento = trim((string)($_POST["paginaTitulo"] ?? ''));
+$tituloDocumento = preg_replace('/[\/\\\\:*?"<>|]+/', ' ', $tituloDocumento);
+$tituloDocumento = trim($tituloDocumento);
+$nomeArquivo = 'Lista de '.($tituloDocumento !== '' ? $tituloDocumento : 'Registro').'.pdf';
 $pdf->Output($nomeArquivo, 'I');

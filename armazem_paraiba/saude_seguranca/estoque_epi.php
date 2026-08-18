@@ -1028,6 +1028,8 @@ function index() {
                     <div class="text-center" style="padding: 30px;"><i class="fa fa-spinner fa-spin fa-2x"></i> Carregando detalhes do item...</div>
                 </div>
                 <div class="modal-footer" style="background-color: #f5f5f5; border-top: 1px solid #ddd; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px;">
+                    <button type="button" class="btn btn-success btn-sm" onclick="baixarCsvDetalhesEpi()" title="Baixar os dados dos detalhes em CSV"><i class="glyphicon glyphicon-download-alt"></i> Baixar CSV</button>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="baixarPdfDetalhesEpi()" title="Baixar os dados dos detalhes em PDF"><i class="glyphicon glyphicon-file"></i> Baixar PDF</button>
                     <button type="button" class="btn btn-default" data-dismiss="modal">Fechar</button>
                 </div>
             </div>
@@ -1050,6 +1052,185 @@ function index() {
                 $("#modalDetalhesEpiBody").html("<div class=\'alert alert-danger\'>Ocorreu um erro ao carregar os detalhes do item. Tente novamente.</div>");
             }
         });
+    }
+
+    function _ss_limparTextoExport(html) {
+        var div = document.createElement("div");
+        div.innerHTML = html || "";
+        return (div.textContent || div.innerText || "").trim();
+    }
+
+    function _ss_sanitizarNomeArquivo(nome) {
+        return String(nome || "epi").replace(/[^a-zA-Z0-9-_]+/g, "_").substring(0, 80);
+    }
+
+    function _ss_tabelaParaLinhas(tabela) {
+        var linhas = [];
+        var trs = tabela.querySelectorAll("tr");
+        for (var i = 0; i < trs.length; i++) {
+            var linha = [];
+            var celulas = trs[i].querySelectorAll("th, td");
+            for (var j = 0; j < celulas.length; j++) {
+                var clone = celulas[j].cloneNode(true);
+                var removiveis = clone.querySelectorAll("img, i, .glyphicon, .fa, button, a");
+                for (var k = 0; k < removiveis.length; k++) removiveis[k].remove();
+                linha.push(_ss_limparTextoExport(clone.innerHTML));
+            }
+            linhas.push(linha);
+        }
+        return linhas;
+    }
+
+    function baixarCsvDetalhesEpi() {
+        var body = document.getElementById("modalDetalhesEpiBody");
+        if (!body) return;
+
+        var h4 = body.querySelector("h4");
+        var tituloEpi = h4 ? _ss_limparTextoExport(h4.textContent) : "EPI";
+
+        var csv = "\uFEFFsep=;\r\n";
+        csv += "Detalhes do EPI;\"" + tituloEpi.replace(/"/g, "\"\"") + "\"\r\n\r\n";
+
+        var cards = body.querySelectorAll(".col-sm-3");
+        var resumo = [];
+        for (var i = 0; i < cards.length; i++) {
+            var divs = cards[i].querySelectorAll("div");
+            if (divs.length >= 2) {
+                resumo.push([
+                    _ss_limparTextoExport(divs[1].textContent),
+                    _ss_limparTextoExport(divs[0].textContent)
+                ]);
+            }
+        }
+        if (resumo.length > 0) {
+            csv += "Resumo\r\n";
+            for (var r = 0; r < resumo.length; r++) {
+                csv += "\"" + resumo[r][0].replace(/"/g, "\"\"") + "\";\"" + resumo[r][1].replace(/"/g, "\"\"") + "\"\r\n";
+            }
+            csv += "\r\n";
+        }
+
+        var tabela = body.querySelector("table.table-striped");
+        if (tabela) {
+            var linhas = _ss_tabelaParaLinhas(tabela);
+            if (linhas.length > 0) {
+                csv += "Saldo por Empresa (CNPJ)\r\n";
+                for (var l = 0; l < linhas.length; l++) {
+                    var cel = [];
+                    for (var c = 0; c < linhas[l].length; c++) {
+                        cel.push("\"" + linhas[l][c].replace(/"/g, "\"\"") + "\"");
+                    }
+                    csv += cel.join(";") + "\r\n";
+                }
+                csv += "\r\n";
+            }
+        }
+
+        var h5s = body.querySelectorAll("h5");
+        for (var h = 0; h < h5s.length; h++) {
+            if (h5s[h].textContent.indexOf("Varia") >= 0) {
+                var proximo = h5s[h].nextElementSibling;
+                if (proximo) {
+                    csv += "Variações\r\n";
+                    var spans = proximo.querySelectorAll(".label");
+                    for (var s = 0; s < spans.length; s++) {
+                        csv += "\"" + _ss_limparTextoExport(spans[s].textContent).replace(/"/g, "\"\"") + "\"\r\n";
+                    }
+                }
+            }
+        }
+
+        var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        var link = document.createElement("a");
+        var url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", "detalhes_epi_" + _ss_sanitizarNomeArquivo(tituloEpi) + ".csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    function baixarPdfDetalhesEpi() {
+        var body = document.getElementById("modalDetalhesEpiBody");
+        if (!body) return;
+
+        var h4 = body.querySelector("h4");
+        var tituloEpi = h4 ? _ss_limparTextoExport(h4.textContent) : "EPI";
+
+        var html = "<style>"
+            + "body { font-family: Arial, sans-serif; font-size: 8pt; }"
+            + "table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }"
+            + "th, td { border: 1px solid #000; padding: 3px; text-align: left; }"
+            + "th { font-weight: bold; background-color: #f2f2f2; font-size: 8pt; white-space: nowrap; }"
+            + "td { font-size: 7pt; }"
+            + "</style>";
+
+        var cards = body.querySelectorAll(".col-sm-3");
+        if (cards.length > 0) {
+            html += "<table><thead><tr>";
+            for (var i = 0; i < cards.length; i++) {
+                var divs = cards[i].querySelectorAll("div");
+                var rotulo = divs.length >= 2 ? _ss_limparTextoExport(divs[1].textContent) : "";
+                html += "<th>" + rotulo + "</th>";
+            }
+            html += "</tr></thead><tbody><tr>";
+            for (var j = 0; j < cards.length; j++) {
+                var dv = cards[j].querySelectorAll("div");
+                var valor = dv.length >= 2 ? _ss_limparTextoExport(dv[0].textContent) : "";
+                html += "<td>" + valor + "</td>";
+            }
+            html += "</tr></tbody></table><br>";
+        }
+
+        var tabela = body.querySelector("table.table-striped");
+        if (tabela) {
+            var clone = tabela.cloneNode(true);
+            var removiveis = clone.querySelectorAll("img, i, .glyphicon, .fa, button, a");
+            for (var m = 0; m < removiveis.length; m++) removiveis[m].remove();
+            html += clone.outerHTML + "<br>";
+        }
+
+        var h5s = body.querySelectorAll("h5");
+        for (var h = 0; h < h5s.length; h++) {
+            if (h5s[h].textContent.indexOf("Varia") >= 0) {
+                var proximo = h5s[h].nextElementSibling;
+                if (proximo) html += "<br><b>Variações</b><br>" + proximo.outerHTML;
+            }
+        }
+
+        var form = document.createElement("form");
+        form.method = "POST";
+        form.action = (typeof urlGridPdf !== "undefined" && urlGridPdf) ? urlGridPdf : "./impressao/grid.php";
+        form.target = "_blank";
+
+        var inputTabela = document.createElement("input");
+        inputTabela.type = "hidden";
+        inputTabela.name = "tabela_html";
+        inputTabela.value = html;
+        form.appendChild(inputTabela);
+
+        var selectIdEmpresa = document.getElementById("busca_filial")
+            || document.querySelector("select[name=\"busca_filial\"]")
+            || document.getElementById("empresa_id")
+            || document.querySelector("select[name=\"empresa_id\"]");
+        var id = selectIdEmpresa ? selectIdEmpresa.value : (typeof userEmpresaId !== "undefined" ? userEmpresaId : "");
+
+        var IdEmpresa = document.createElement("input");
+        IdEmpresa.type = "hidden";
+        IdEmpresa.name = "IdEmpresa";
+        IdEmpresa.value = id;
+        form.appendChild(IdEmpresa);
+
+        var paginaTitulo = document.createElement("input");
+        paginaTitulo.type = "hidden";
+        paginaTitulo.name = "paginaTitulo";
+        paginaTitulo.value = tituloEpi;
+        form.appendChild(paginaTitulo);
+
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
     }
     </script>
     ';

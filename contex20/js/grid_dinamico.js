@@ -615,7 +615,7 @@ function imprimirTabelaCompleta() {
             // Cria e submete o formulário para a página que gera o PDF
             var form = document.createElement('form');
             form.method = 'POST';
-            form.action = './impressao/grid.php'; 
+            form.action = (typeof urlGridPdf !== 'undefined' && urlGridPdf) ? urlGridPdf : './impressao/grid.php';
             form.target = '_blank';
 
             var inputTabela = document.createElement('input');
@@ -624,8 +624,13 @@ function imprimirTabelaCompleta() {
             inputTabela.value = tabelaCompleta;
             form.appendChild(inputTabela);
             
-            const selectIdEmpresa = document.getElementById('busca_empresa');
-            const id = selectIdEmpresa ? selectIdEmpresa.value : '';
+            var selectIdEmpresa = document.getElementById('busca_empresa')
+                || document.querySelector('select[name="busca_empresa"]')
+                || document.getElementById('busca_filial')
+                || document.querySelector('select[name="busca_filial"]')
+                || document.getElementById('empresa_id')
+                || document.querySelector('select[name="empresa_id"]');
+            const id = selectIdEmpresa ? selectIdEmpresa.value : (typeof userEmpresaId !== 'undefined' ? userEmpresaId : '');
 
             var IdEmpresa = document.createElement('input');
             IdEmpresa.type = 'hidden';
