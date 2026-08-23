@@ -79,11 +79,16 @@
     $__resumo = $__d["resumo"] ?? [];
     $__porStatus = $__d["por_status"] ?? [];
     $__porTipo = $__d["por_tipo"] ?? [];
+    $__porPrioridade = $__d["por_prioridade"] ?? [];
     $__porEmpresa = $__d["por_empresa"] ?? [];
     $__porPagina = $__d["por_pagina"] ?? [];
     $__porSetor = $__d["por_setor"] ?? [];
     $__tendencia = $__d["tendencia"] ?? [];
     $__maisAntigos = $__d["mais_antigos_abertos"] ?? [];
+    $__slaResumo = $__d["sla"] ?? [];
+    $__slaDentro = (int) ($__slaResumo["dentro_prazo"] ?? 0);
+    $__slaAtrasado = (int) ($__slaResumo["atrasado"] ?? 0);
+    $__slaSemConfig = (int) ($__slaResumo["sem_config"] ?? 0);
 
     $__statusLabel = [
         "aberto"             => "Aberto",
@@ -101,6 +106,12 @@
         "sugestao"         => "Sugestão",
         "bug"              => "Bug de sistema",
         "nao_classificado" => "Não classificado",
+    ];
+    $__prioridadeLabel = [
+        "baixa"   => "Baixa",
+        "media"   => "Média",
+        "alta"    => "Alta",
+        "urgente" => "Urgente",
     ];
 
     $__totalGeral = (int) ($__resumo["total"] ?? 0);
@@ -221,6 +232,19 @@
                             <div class="sup-kpi-value" style="font-size:20px;"><?= htmlspecialchars(suporte_fmt_horas($__tempoResolucao)) ?></div>
                         </div>
                     </div>
+                    <div class="col-md-2 col-sm-4 col-xs-6">
+                        <div class="sup-kpi">
+                            <div class="sup-kpi-label"><i class="fa fa-check"></i> SLA dentro do prazo</div>
+                            <div class="sup-kpi-value" style="color:#27ae60;"><?= number_format($__slaDentro, 0, ",", ".") ?></div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 col-sm-4 col-xs-6">
+                        <div class="sup-kpi">
+                            <div class="sup-kpi-label"><i class="fa fa-exclamation-triangle"></i> SLA atrasado</div>
+                            <div class="sup-kpi-value" style="color:#e74c3c;"><?= number_format($__slaAtrasado, 0, ",", ".") ?></div>
+                            <?php if ($__slaSemConfig > 0): ?><div style="font-size:11px;color:#999;margin-top:2px;"><?= $__slaSemConfig ?> sem SLA configurado</div><?php endif; ?>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Tendência (linha inteira) -->
@@ -249,19 +273,25 @@
                 </div>
 
                 <div class="row">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="sup-panel">
                             <h4><i class="fa fa-pie-chart"></i> Chamados por status</h4>
                             <div class="sup-chart-wrap"><canvas id="chartStatus"></canvas></div>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="sup-panel">
                             <h4><i class="fa fa-tag"></i> Chamados por tipo</h4>
                             <div class="sup-chart-wrap"><canvas id="chartTipo"></canvas></div>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
+                        <div class="sup-panel">
+                            <h4><i class="fa fa-flag"></i> Chamados por prioridade</h4>
+                            <div class="sup-chart-wrap"><canvas id="chartPrioridade"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
                         <div class="sup-panel">
                             <h4><i class="fa fa-sitemap"></i> Chamados por setor</h4>
                             <div class="sup-chart-wrap"><canvas id="chartSetor"></canvas></div>
@@ -329,9 +359,11 @@
     var POR_PAGINA = <?= json_encode($__porPagina, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
     var POR_STATUS = <?= json_encode($__porStatus, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
     var POR_TIPO = <?= json_encode($__porTipo, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+    var POR_PRIORIDADE = <?= json_encode($__porPrioridade, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
     var POR_SETOR = <?= json_encode($__porSetor, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
     var STATUS_LABEL = <?= json_encode($__statusLabel, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
     var TIPO_LABEL = <?= json_encode($__tipoLabel, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+    var PRIORIDADE_LABEL = <?= json_encode($__prioridadeLabel, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
 
     var PALETA = ["#4e73df", "#1cc88a", "#f6c23e", "#e74a3b", "#36b9cc", "#8e44ad", "#e67e22", "#7f8c8d", "#16a085", "#2c3e50"];
 
@@ -440,6 +472,22 @@
         });
     } else if (elTipo) {
         elTipo.parentElement.innerHTML = '<p class="text-muted">Sem dados no recorte selecionado.</p>';
+    }
+
+    // Prioridade (doughnut)
+    var elPrioridade = document.getElementById("chartPrioridade");
+    if (elPrioridade && POR_PRIORIDADE.length) {
+        var corPrioridade = { baixa: "#95a5a6", media: "#36b9cc", alta: "#f6c23e", urgente: "#e74a3b" };
+        new Chart(elPrioridade, {
+            type: "doughnut",
+            data: {
+                labels: POR_PRIORIDADE.map(function (p) { return PRIORIDADE_LABEL[p.prioridade] || p.prioridade; }),
+                datasets: [{ data: POR_PRIORIDADE.map(function (p) { return p.total; }), backgroundColor: POR_PRIORIDADE.map(function (p) { return corPrioridade[p.prioridade] || "#95a5a6"; }) }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } } }
+        });
+    } else if (elPrioridade) {
+        elPrioridade.parentElement.innerHTML = '<p class="text-muted">Sem dados no recorte selecionado.</p>';
     }
 
     // Setor (barra vertical)

@@ -54,6 +54,24 @@
         }
     }
 
+    // SLA do chamado, a partir da prioridade + config (sla_<prioridade>_horas). Sem SLA
+    // configurado para a prioridade, ou created_at inválido, cai em "Sem SLA".
+    if (!function_exists("suporte_sla_status")) {
+        function suporte_sla_status(string $prioridade, string $createdAt, string $fechadoEm, array $slaConfig): array {
+            $bruto = trim(strval($slaConfig["sla_" . $prioridade . "_horas"] ?? ""));
+            $criadoTs = $createdAt !== "" ? strtotime($createdAt) : false;
+            if ($bruto === "" || !ctype_digit($bruto) || $criadoTs === false) {
+                return ["label" => "Sem SLA", "classe" => "default", "horas" => null];
+            }
+            $slaHoras = (int) $bruto;
+            $referenciaTs = $fechadoEm !== "" ? (strtotime($fechadoEm) ?: time()) : time();
+            $horasDecorridas = ($referenciaTs - $criadoTs) / 3600;
+            return $horasDecorridas <= $slaHoras
+                ? ["label" => "Dentro do prazo", "classe" => "success", "horas" => $slaHoras]
+                : ["label" => "Atrasado", "classe" => "danger", "horas" => $slaHoras];
+        }
+    }
+
     // ── Ações (aceitar / tipo / status / comentário) ───────────────────
     // Campo "sup_acao" de propósito: o campo "acao" é interceptado pelo
     // dispatcher legado de contex20/funcoes.php (eval + exit).
@@ -69,6 +87,13 @@
             if (in_array($tipo, ["duvida", "sugestao", "bug"], true)) {
                 $res = gestao_requisitar("POST", "/suporte/tickets/{$id}/tipo", [], ["tipo" => $tipo]);
                 $__msg = $res["ok"] ? "Tipo do chamado #{$id} atualizado." : "Erro ao classificar. " . ($res["dados"]["msg"] ?? "");
+            }
+        } elseif ($acao === "prioridade" && $id > 0) {
+            // Independente do status/tipo — pode ser trocada a qualquer momento do fluxo.
+            $prioridade = $_POST["prioridade"] ?? "";
+            if (in_array($prioridade, ["baixa", "media", "alta", "urgente"], true)) {
+                $res = gestao_requisitar("POST", "/suporte/tickets/{$id}/prioridade", [], ["prioridade" => $prioridade]);
+                $__msg = $res["ok"] ? "Prioridade do chamado #{$id} atualizada." : "Erro ao alterar prioridade. " . ($res["dados"]["msg"] ?? "");
             }
         } elseif ($acao === "status" && $id > 0) {
             $novoStatus = $_POST["status"] ?? "";
@@ -93,10 +118,14 @@
             }
         } elseif ($acao === "config") {
             $emails = trim(strval($_POST["emails_notificacao"] ?? ""));
-            $res = gestao_requisitar("POST", "/suporte/config", [], [
+            $post = [
                 "emails_notificacao" => $emails,
                 "atualizado_por"     => $__gestorNome,
-            ]);
+            ];
+            foreach (["sla_baixa_horas", "sla_media_horas", "sla_alta_horas", "sla_urgente_horas"] as $__campoSla) {
+                $post[$__campoSla] = trim(strval($_POST[$__campoSla] ?? ""));
+            }
+            $res = gestao_requisitar("POST", "/suporte/config", [], $post);
             $__msg = $res["ok"] ? "Configurações de suporte atualizadas." : "Erro ao salvar configurações. " . ($res["dados"]["msg"] ?? "");
         }
         if ($__msg !== "") {
@@ -113,14 +142,23 @@
     $__resSetores = gestao_requisitar("GET", "/suporte/setores");
     $__setoresFiltro = $__resSetores["ok"] ? ($__resSetores["dados"]["setores"] ?? []) : [];
 
+    // ── Configurações (e-mails de aviso + SLA por prioridade) — usadas na listagem e no
+    // detalhe (badge de SLA), além da própria tela de configurações. Uma requisição só.
+    $__resConfig = gestao_requisitar("GET", "/suporte/config");
+    $__configAtual = $__resConfig["ok"] ? ($__resConfig["dados"]["config"] ?? []) : [];
+
     // ── Modo detalhe / configurações ────────────────────────────────────
     $__verId = (int) ($_GET["id"] ?? 0);
     $__verConfig = $__verId === 0 && isset($_GET["config"]);
 
     if ($__verConfig) {
-        $__resConfig = gestao_requisitar("GET", "/suporte/config");
-        $__configAtual = $__resConfig["ok"] ? ($__resConfig["dados"]["config"] ?? []) : [];
         $__emailsAtuais = strval($__configAtual["emails_notificacao"] ?? "");
+        $__slaAtual = [
+            "baixa"   => strval($__configAtual["sla_baixa_horas"] ?? ""),
+            "media"   => strval($__configAtual["sla_media_horas"] ?? ""),
+            "alta"    => strval($__configAtual["sla_alta_horas"] ?? ""),
+            "urgente" => strval($__configAtual["sla_urgente_horas"] ?? ""),
+        ];
     }
 
     cabecalho("Gestão de Suporte");
@@ -164,6 +202,53 @@
                                placeholder="suporte@techps.com.br, outro@techps.com.br" />
                         <span class="help-block">Separe vários e-mails por vírgula. Toda vez que um chamado novo chegar, um aviso é enviado automaticamente para esses endereços.</span>
                     </div>
+
+                    <hr style="margin:24px 0 18px;">
+                    <h4 style="margin-top:0;"><i class="fa fa-clock-o"></i> SLA por prioridade</h4>
+                    <p class="help-block" style="margin-top:-6px;">
+                        Prazo máximo, em horas corridas, contado da abertura até a conclusão do chamado, para cada nível de prioridade.
+                        Deixe em branco para não cobrar SLA nesse nível. O prazo é comparado com o momento em que o chamado foi
+                        <strong>Concluído</strong> — se ainda estiver em aberto, compara com agora, pra já sinalizar quem está estourando o prazo.
+                    </p>
+                    <div class="row">
+                        <div class="col-md-3 col-sm-6">
+                            <div class="form-group">
+                                <label><span class="label label-default">Baixa</span></label>
+                                <div class="input-group">
+                                    <input type="number" min="1" step="1" name="sla_baixa_horas" class="form-control" value="<?= htmlspecialchars($__slaAtual["baixa"]) ?>" placeholder="Ex.: 72" />
+                                    <span class="input-group-addon">horas</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <div class="form-group">
+                                <label><span class="label label-info">Média</span></label>
+                                <div class="input-group">
+                                    <input type="number" min="1" step="1" name="sla_media_horas" class="form-control" value="<?= htmlspecialchars($__slaAtual["media"]) ?>" placeholder="Ex.: 48" />
+                                    <span class="input-group-addon">horas</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <div class="form-group">
+                                <label><span class="label label-warning">Alta</span></label>
+                                <div class="input-group">
+                                    <input type="number" min="1" step="1" name="sla_alta_horas" class="form-control" value="<?= htmlspecialchars($__slaAtual["alta"]) ?>" placeholder="Ex.: 24" />
+                                    <span class="input-group-addon">horas</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <div class="form-group">
+                                <label><span class="label label-danger">Urgente</span></label>
+                                <div class="input-group">
+                                    <input type="number" min="1" step="1" name="sla_urgente_horas" class="form-control" value="<?= htmlspecialchars($__slaAtual["urgente"]) ?>" placeholder="Ex.: 4" />
+                                    <span class="input-group-addon">horas</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <button type="submit" class="btn blue"><i class="fa fa-save"></i> Salvar configurações</button>
                 </form>
 <?php else: ?>
@@ -197,6 +282,19 @@
             $__tipo = strval($__ticket["tipo"] ?? "");
             $__ssiCodigo = strval($__ticket["ssi_codigo"] ?? "");
             $__ssiPrioridade = strval($__ticket["ssi_prioridade"] ?? "");
+
+            $__prioridade = strval($__ticket["prioridade"] ?? "media");
+            $__prioridadeMap = [
+                "baixa"   => ["Baixa", "label-default"],
+                "media"   => ["Média", "label-info"],
+                "alta"    => ["Alta", "label-warning"],
+                "urgente" => ["Urgente", "label-danger"],
+            ];
+            [$__prioridadeLabel, $__prioridadeClasse] = $__prioridadeMap[$__prioridade] ?? ["Média", "label-info"];
+            $__prioridadeBadge = '<span class="label ' . $__prioridadeClasse . '">' . htmlspecialchars($__prioridadeLabel) . '</span>';
+
+            $__sla = suporte_sla_status($__prioridade, strval($__ticket["created_at"] ?? ""), strval($__ticket["fechado_em"] ?? ""), $__configAtual);
+            $__slaBadge = '<span class="label label-' . $__sla["classe"] . '">SLA: ' . htmlspecialchars($__sla["label"]) . ($__sla["horas"] !== null ? " ({$__sla['horas']}h)" : "") . '</span>';
         ?>
         <table class="table table-striped table-bordered">
             <tr><th style="width:140px;">Empresa</th><td><?= htmlspecialchars(strval($__ticket["empresa_key"] ?? "")) ?> — <?= htmlspecialchars(strval($__ticket["empresa_nome"] ?? "")) ?></td></tr>
@@ -205,6 +303,7 @@
             <tr><th>E-mail</th><td><?= htmlspecialchars(strval($__ticket["user_email"] ?? "") ?: "—") ?></td></tr>
             <tr><th>Data de abertura</th><td><?= htmlspecialchars(suporte_fmt_data(strval($__ticket["created_at"] ?? ""))) ?></td></tr>
             <tr><th>Status</th><td><?= $__badge ?></td></tr>
+            <tr><th>Prioridade</th><td><?= $__prioridadeBadge ?> <?= $__slaBadge ?></td></tr>
             <tr><th>Tipo</th><td><?= isset($__tipoMap[$__tipo]) ? htmlspecialchars($__tipoMap[$__tipo]) : '<span class="text-muted">Não classificado</span>' ?></td></tr>
             <tr><th>Atendente</th><td><?= htmlspecialchars(strval($__ticket["atendente_nome"] ?? "") ?: "—") ?></td></tr>
             <?php if ($__ssiCodigo !== ""): ?>
@@ -248,6 +347,19 @@
                     <option value="bug" <?= ($__tipo === "bug") ? "selected" : "" ?>>Bug de sistema</option>
                 </select>
                 <button type="submit" class="btn btn-default btn-sm"><i class="fa fa-tag"></i> Salvar tipo</button>
+            </form>
+
+            <!-- Prioridade: independente de status/tipo — pode ser trocada em qualquer ponto do fluxo. -->
+            <form method="post" style="display:inline-block;margin-bottom:6px;margin-left:8px;padding-left:8px;border-left:1px solid #ddd;">
+                <input type="hidden" name="sup_acao" value="prioridade" />
+                <input type="hidden" name="id" value="<?= $__verId ?>" />
+                <select name="prioridade" class="form-control input-sm" style="display:inline-block;width:auto;" required>
+                    <option value="baixa" <?= ($__prioridade === "baixa") ? "selected" : "" ?>>Prioridade: Baixa</option>
+                    <option value="media" <?= ($__prioridade === "media") ? "selected" : "" ?>>Prioridade: Média</option>
+                    <option value="alta" <?= ($__prioridade === "alta") ? "selected" : "" ?>>Prioridade: Alta</option>
+                    <option value="urgente" <?= ($__prioridade === "urgente") ? "selected" : "" ?>>Prioridade: Urgente</option>
+                </select>
+                <button type="submit" class="btn btn-default btn-sm"><i class="fa fa-flag"></i> Salvar prioridade</button>
             </form>
 
             <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
@@ -364,16 +476,19 @@
     $__fEmpresa = trim(strval($_GET["empresa"] ?? ""));
     $__fSetorId = (int) ($_GET["setor_id"] ?? 0);
     $__fStatus  = trim(strval($_GET["status"] ?? ""));
+    $__fPrioridade = trim(strval($_GET["prioridade"] ?? ""));
     $__fInicio  = trim(strval($_GET["data_inicio"] ?? ""));
     $__fFim     = trim(strval($_GET["data_fim"] ?? ""));
     $__fPagina  = max((int) ($_GET["pagina"] ?? 1), 1);
 
     $__statusListagem = ["aberto", "em_analise", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi", "teste_interno"];
+    $__prioridadeListagem = ["baixa", "media", "alta", "urgente"];
 
     $__queryFiltro = ["pagina" => $__fPagina, "limit" => 25];
     if ($__fEmpresa !== "") $__queryFiltro["empresa"] = $__fEmpresa;
     if ($__fSetorId > 0) $__queryFiltro["setor_id"] = $__fSetorId;
     if (in_array($__fStatus, $__statusListagem, true)) $__queryFiltro["status"] = $__fStatus;
+    if (in_array($__fPrioridade, $__prioridadeListagem, true)) $__queryFiltro["prioridade"] = $__fPrioridade;
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $__fInicio)) $__queryFiltro["data_inicio"] = $__fInicio;
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $__fFim)) $__queryFiltro["data_fim"] = $__fFim;
 
@@ -430,6 +545,16 @@
                         </select>
                     </div>
                     <div class="form-group" style="margin-right:10px;">
+                        <label style="margin-right:5px;">Prioridade</label>
+                        <select name="prioridade" class="form-control">
+                            <option value="">Todas</option>
+                            <option value="baixa" <?= ($__fPrioridade === "baixa") ? "selected" : "" ?>>Baixa</option>
+                            <option value="media" <?= ($__fPrioridade === "media") ? "selected" : "" ?>>Média</option>
+                            <option value="alta" <?= ($__fPrioridade === "alta") ? "selected" : "" ?>>Alta</option>
+                            <option value="urgente" <?= ($__fPrioridade === "urgente") ? "selected" : "" ?>>Urgente</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-right:10px;">
                         <label style="margin-right:5px;">De</label>
                         <input type="date" name="data_inicio" class="form-control" value="<?= htmlspecialchars($__fInicio) ?>" />
                     </div>
@@ -452,6 +577,7 @@
                             <th>Página</th>
                             <th>Descrição</th>
                             <th style="width:100px;">Status</th>
+                            <th style="width:90px;">Prioridade</th>
                             <th style="width:150px;">Data</th>
                             <th style="width:150px;">Fechado em</th>
                             <th style="width:90px;">Ações</th>
@@ -459,7 +585,7 @@
                     </thead>
                     <tbody>
                         <?php if (empty($__tickets)): ?>
-                            <tr><td colspan="10" class="text-center">Nenhum chamado encontrado.</td></tr>
+                            <tr><td colspan="11" class="text-center">Nenhum chamado encontrado.</td></tr>
                         <?php endif; ?>
                         <?php foreach ($__tickets as $__t): ?>
                             <?php
@@ -480,6 +606,16 @@
                                 $__badgeT = $__badgeMap[$__statusT] ?? '<span class="label label-default">' . htmlspecialchars($__statusT) . '</span>';
                                 $__tipoLabel = ["duvida" => "Dúvida", "sugestao" => "Sugestão", "bug" => "Bug"][strval($__t["tipo"] ?? "")] ?? "";
                                 $__ssiT = strval($__t["ssi_codigo"] ?? "");
+
+                                $__prioridadeT = strval($__t["prioridade"] ?? "media");
+                                $__prioridadeBadgeMap = [
+                                    "baixa"   => '<span class="label label-default">Baixa</span>',
+                                    "media"   => '<span class="label label-info">Média</span>',
+                                    "alta"    => '<span class="label label-warning">Alta</span>',
+                                    "urgente" => '<span class="label label-danger">Urgente</span>',
+                                ];
+                                $__prioridadeBadgeT = $__prioridadeBadgeMap[$__prioridadeT] ?? $__prioridadeBadgeMap["media"];
+                                $__slaT = suporte_sla_status($__prioridadeT, strval($__t["created_at"] ?? ""), strval($__t["fechado_em"] ?? ""), $__configAtual);
                             ?>
                             <tr>
                                 <td>#<?= (int) ($__t["id"] ?? 0) ?></td>
@@ -496,6 +632,10 @@
                                     <?php if ($__ssiT !== ""): ?><br><small class="label label-danger" style="font-size:10px;"><?= htmlspecialchars($__ssiT) ?></small><?php endif; ?>
                                 </td>
                                 <td><?= $__badgeT ?></td>
+                                <td>
+                                    <?= $__prioridadeBadgeT ?>
+                                    <?php if ($__slaT["classe"] === "danger"): ?><br><small class="label label-danger" style="font-size:10px;margin-top:3px;display:inline-block;">SLA estourado</small><?php endif; ?>
+                                </td>
                                 <td><?= htmlspecialchars(suporte_fmt_data(strval($__t["created_at"] ?? ""))) ?></td>
                                 <td><?= htmlspecialchars(suporte_fmt_data(strval($__t["fechado_em"] ?? "")) ?: "—") ?></td>
                                 <td><a href="gestao.php?id=<?= (int) ($__t["id"] ?? 0) ?>" class="btn btn-xs blue"><i class="fa fa-cog"></i> Gerir</a></td>
@@ -509,7 +649,7 @@
                         <ul class="pagination">
                             <?php for ($__p = 1; $__p <= $__paginas; $__p++): ?>
                                 <li class="<?= ($__p === $__fPagina) ? "active" : "" ?>">
-                                    <a href="<?= gestao_manter("empresa", $__fEmpresa, ["setor_id" => $__fSetorId ?: "", "status" => $__fStatus, "data_inicio" => $__fInicio, "data_fim" => $__fFim, "pagina" => $__p]) ?>"><?= $__p ?></a>
+                                    <a href="<?= gestao_manter("empresa", $__fEmpresa, ["setor_id" => $__fSetorId ?: "", "status" => $__fStatus, "prioridade" => $__fPrioridade, "data_inicio" => $__fInicio, "data_fim" => $__fFim, "pagina" => $__p]) ?>"><?= $__p ?></a>
                                 </li>
                             <?php endfor; ?>
                         </ul>

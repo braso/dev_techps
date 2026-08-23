@@ -881,6 +881,15 @@ const SUPORTE_TIPOS = {
     bug:      "Bug de sistema"
 };
 
+// Prioridade geral do chamado — independente do tipo e do status, vale o fluxo inteiro
+// (não confundir com ssi_prioridade, que só existe pra chamados encaminhados à SSI).
+const SUPORTE_PRIORIDADES = {
+    baixa:   "Baixa",
+    media:   "Média",
+    alta:    "Alta",
+    urgente: "Urgente"
+};
+
 // Envia e-mail transacional do chamado (Titan/outro SMTP). Nunca derruba a requisição.
 function enviarEmailSuporte(para, assunto, html) {
     return new Promise((resolve) => {
@@ -1072,6 +1081,7 @@ function criarTabelasSuporte() {
             descricao TEXT NOT NULL,
             status ENUM('aberto','em_analise','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi','teste_interno') NOT NULL DEFAULT 'aberto',
             tipo ENUM('duvida','sugestao','bug') DEFAULT NULL,
+            prioridade ENUM('baixa','media','alta','urgente') NOT NULL DEFAULT 'media',
             ssi_codigo VARCHAR(30) DEFAULT NULL,
             ssi_prioridade ENUM('urgente','proxima_atualizacao') DEFAULT NULL,
             atendente_nome VARCHAR(150) DEFAULT NULL,
@@ -1166,6 +1176,7 @@ function migrarTabelasSuporte() {
         "ALTER TABLE suporte_ticket MODIFY status ENUM('aberto','em_analise','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi','teste_interno') NOT NULL DEFAULT 'aberto'",
         "ALTER TABLE suporte_ticket ADD COLUMN setor_id BIGINT UNSIGNED DEFAULT NULL",
         "ALTER TABLE suporte_ticket ADD COLUMN setor_nome VARCHAR(150) DEFAULT NULL",
+        "ALTER TABLE suporte_ticket ADD COLUMN prioridade ENUM('baixa','media','alta','urgente') NOT NULL DEFAULT 'media'",
         "ALTER TABLE suporte_arquivo ADD COLUMN tipo ENUM('imagem','video','documento','audio') NOT NULL DEFAULT 'imagem'",
         "ALTER TABLE suporte_arquivo MODIFY tipo ENUM('imagem','video','documento','audio') NOT NULL DEFAULT 'imagem'"
     ];
@@ -1538,6 +1549,7 @@ app.get("/suporte/tickets", exigirAdminSuporte, async (req, res) => {
     try {
         const empresa = String(req.query.empresa || "").trim();
         const status = String(req.query.status || "").trim();
+        const prioridade = String(req.query.prioridade || "").trim();
         const dataInicio = String(req.query.data_inicio || "").trim();
         const dataFim = String(req.query.data_fim || "").trim();
         const limite = Math.min(parseInt(req.query.limit || "50", 10) || 50, 100);
@@ -1551,12 +1563,13 @@ app.get("/suporte/tickets", exigirAdminSuporte, async (req, res) => {
         if (empresa) { where.push("empresa_key = ?"); params.push(empresa); }
         if (setorIdFiltro && setorIdFiltro > 0) { where.push("setor_id = ?"); params.push(setorIdFiltro); }
         if (status && SUPORTE_STATUS[status]) { where.push("status = ?"); params.push(status); }
+        if (prioridade && SUPORTE_PRIORIDADES[prioridade]) { where.push("prioridade = ?"); params.push(prioridade); }
         if (dataInicio && /^\d{4}-\d{2}-\d{2}$/.test(dataInicio)) { where.push("created_at >= ?"); params.push(dataInicio + " 00:00:00"); }
         if (dataFim && /^\d{4}-\d{2}-\d{2}$/.test(dataFim)) { where.push("created_at <= ?"); params.push(dataFim + " 23:59:59"); }
         const filtro = where.length ? "WHERE " + where.join(" AND ") : "";
 
         const linhas = await suporteQuery(
-            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, pagina_url, descricao, status, tipo, ssi_codigo, ssi_prioridade, atendente_nome, aceito_em, fechado_em, created_at, setor_id, setor_nome FROM suporte_ticket " + filtro + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, pagina_url, descricao, status, tipo, prioridade, ssi_codigo, ssi_prioridade, atendente_nome, aceito_em, fechado_em, created_at, setor_id, setor_nome FROM suporte_ticket " + filtro + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
             params.concat([limite, offset])
         );
         const totalRows = await suporteQuery(
@@ -1578,7 +1591,7 @@ app.get("/suporte/tickets/:id", exigirAdminSuporte, async (req, res) => {
         if (!id || id < 1) return res.status(400).json({ ok: false, msg: "ID inválido." });
 
         const linhas = await suporteQuery(
-            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, pagina_url, descricao, status, tipo, ssi_codigo, ssi_prioridade, atendente_nome, aceito_em, fechado_em, created_at, setor_id, setor_nome FROM suporte_ticket WHERE id = ?",
+            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, pagina_url, descricao, status, tipo, prioridade, ssi_codigo, ssi_prioridade, atendente_nome, aceito_em, fechado_em, created_at, setor_id, setor_nome FROM suporte_ticket WHERE id = ?",
             [id]
         );
         if (!linhas.length) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
@@ -1640,10 +1653,16 @@ app.get("/suporte/dashboard", exigirAdminSuporte, async (req, res) => {
         const filtro = where.length ? "WHERE " + where.join(" AND ") : "";
 
         const linhas = await suporteQuery(
-            "SELECT id, empresa_key, empresa_nome, setor_nome, status, tipo, pagina_url, created_at, aceito_em, fechado_em " +
+            "SELECT id, empresa_key, empresa_nome, setor_nome, status, tipo, prioridade, pagina_url, created_at, aceito_em, fechado_em " +
             "FROM suporte_ticket " + filtro + " ORDER BY created_at ASC",
             params
         );
+
+        const slaHorasPorPrioridade = {};
+        for (const p of Object.keys(SUPORTE_PRIORIDADES)) {
+            const bruto = await obterConfigSuporte("sla_" + p + "_horas");
+            slaHorasPorPrioridade[p] = /^\d+$/.test(bruto) ? parseInt(bruto, 10) : null;
+        }
 
         const STATUS_ABERTOS = new Set(["aberto", "em_analise", "em_andamento", "aguardando_cliente", "reaberto", "encaminhado_ssi", "teste_interno"]);
 
@@ -1658,12 +1677,14 @@ app.get("/suporte/dashboard", exigirAdminSuporte, async (req, res) => {
 
         const contagemStatus = {};
         const contagemTipo = {};
+        const contagemPrioridade = {};
         const contagemEmpresa = {};
         const contagemPagina = {};
         const contagemSetor = {};
         const contagemDia = {};
         let somaResolucaoHoras = 0, qtdResolucao = 0;
         let somaAceiteHoras = 0, qtdAceite = 0;
+        let slaDentroPrazo = 0, slaAtrasado = 0, slaSemConfig = 0;
         const abertosDetalhe = [];
 
         for (const t of linhas) {
@@ -1671,6 +1692,9 @@ app.get("/suporte/dashboard", exigirAdminSuporte, async (req, res) => {
 
             const tipoKey = t.tipo || "nao_classificado";
             contagemTipo[tipoKey] = (contagemTipo[tipoKey] || 0) + 1;
+
+            const prioridadeKey = t.prioridade || "media";
+            contagemPrioridade[prioridadeKey] = (contagemPrioridade[prioridadeKey] || 0) + 1;
 
             const empresaKey = t.empresa_key;
             if (!contagemEmpresa[empresaKey]) {
@@ -1695,6 +1719,17 @@ app.get("/suporte/dashboard", exigirAdminSuporte, async (req, res) => {
             if (t.aceito_em) {
                 const horas = (new Date(t.aceito_em) - dataCriacao) / 3600000;
                 if (horas >= 0) { somaAceiteHoras += horas; qtdAceite++; }
+            }
+
+            // SLA: compara o prazo configurado pra essa prioridade contra o tempo até fechar
+            // (ou, se ainda aberto, contra agora — pra sinalizar quem já está estourando o prazo).
+            const slaHoras = slaHorasPorPrioridade[prioridadeKey];
+            if (slaHoras === null) {
+                slaSemConfig++;
+            } else {
+                const referencia = t.fechado_em ? new Date(t.fechado_em) : new Date();
+                const horasDecorridas = (referencia - dataCriacao) / 3600000;
+                if (horasDecorridas <= slaHoras) { slaDentroPrazo++; } else { slaAtrasado++; }
             }
 
             if (STATUS_ABERTOS.has(t.status)) {
@@ -1742,8 +1777,10 @@ app.get("/suporte/dashboard", exigirAdminSuporte, async (req, res) => {
                 tempo_medio_resolucao_horas: qtdResolucao ? +(somaResolucaoHoras / qtdResolucao).toFixed(1) : null,
                 tempo_medio_aceite_horas: qtdAceite ? +(somaAceiteHoras / qtdAceite).toFixed(1) : null
             },
+            sla: { dentro_prazo: slaDentroPrazo, atrasado: slaAtrasado, sem_config: slaSemConfig },
             por_status: Object.entries(contagemStatus).map(([status, tot]) => ({ status, total: tot })).sort((a, b) => b.total - a.total),
             por_tipo: Object.entries(contagemTipo).map(([tipo, tot]) => ({ tipo, total: tot })).sort((a, b) => b.total - a.total),
+            por_prioridade: Object.entries(contagemPrioridade).map(([prioridade, tot]) => ({ prioridade, total: tot })).sort((a, b) => b.total - a.total),
             por_empresa: Object.values(contagemEmpresa).sort((a, b) => b.total - a.total).slice(0, 15),
             por_pagina: topN(contagemPagina, 15, (pagina, tot) => ({ pagina, total: tot })),
             por_setor: topN(contagemSetor, 15, (setor, tot) => ({ setor, total: tot })),
@@ -1807,18 +1844,32 @@ app.get("/suporte/setores", async (req, res) => {
     }
 });
 
-// Lê as configurações gerais do suporte (e-mails de aviso de chamado novo).
+// Chaves de configuração do SLA — uma por nível de prioridade, valor em horas corridas.
+const SUPORTE_SLA_CAMPOS = ["sla_baixa_horas", "sla_media_horas", "sla_alta_horas", "sla_urgente_horas"];
+
+async function salvarConfigSuporte(chave, valor, atualizadoPor) {
+    await suporteQuery(
+        "INSERT INTO suporte_config (chave, valor, atualizado_por) VALUES (?, ?, ?) " +
+        "ON DUPLICATE KEY UPDATE valor = VALUES(valor), atualizado_por = VALUES(atualizado_por)",
+        [chave, valor, atualizadoPor]
+    );
+}
+
+// Lê as configurações gerais do suporte (e-mails de aviso de chamado novo + SLA por prioridade).
 app.get("/suporte/config", exigirAdminSuporte, async (req, res) => {
     try {
-        const emails = await obterConfigSuporte("emails_notificacao");
-        res.json({ ok: true, config: { emails_notificacao: emails } });
+        const config = { emails_notificacao: await obterConfigSuporte("emails_notificacao") };
+        for (const campo of SUPORTE_SLA_CAMPOS) {
+            config[campo] = await obterConfigSuporte(campo);
+        }
+        res.json({ ok: true, config });
     } catch (err) {
         console.error("[SUPORTE] Erro ao ler configurações:", err);
         res.status(500).json({ ok: false, msg: "Erro ao ler configurações." });
     }
 });
 
-// Atualiza as configurações gerais do suporte.
+// Atualiza as configurações gerais do suporte (e-mails de aviso + SLA por prioridade).
 app.post("/suporte/config", exigirAdminSuporte, async (req, res) => {
     try {
         let emails = String(req.body.emails_notificacao || "").trim();
@@ -1833,13 +1884,22 @@ app.post("/suporte/config", exigirAdminSuporte, async (req, res) => {
         }
         emails = lista.join(", ");
 
-        await suporteQuery(
-            "INSERT INTO suporte_config (chave, valor, atualizado_por) VALUES ('emails_notificacao', ?, ?) " +
-            "ON DUPLICATE KEY UPDATE valor = VALUES(valor), atualizado_por = VALUES(atualizado_por)",
-            [emails, atualizadoPor]
-        );
+        // SLA por prioridade: número inteiro de horas maior que zero, ou vazio (sem SLA definido pra essa prioridade).
+        const slaValores = {};
+        for (const campo of SUPORTE_SLA_CAMPOS) {
+            const bruto = String(req.body[campo] || "").trim();
+            if (bruto !== "" && (!/^\d+$/.test(bruto) || parseInt(bruto, 10) <= 0)) {
+                return res.status(400).json({ ok: false, msg: "SLA de \"" + campo + "\" deve ser um número inteiro de horas maior que zero." });
+            }
+            slaValores[campo] = bruto;
+        }
 
-        res.json({ ok: true, msg: "Configurações salvas.", config: { emails_notificacao: emails } });
+        await salvarConfigSuporte("emails_notificacao", emails, atualizadoPor);
+        for (const campo of SUPORTE_SLA_CAMPOS) {
+            await salvarConfigSuporte(campo, slaValores[campo], atualizadoPor);
+        }
+
+        res.json({ ok: true, msg: "Configurações salvas.", config: { emails_notificacao: emails, ...slaValores } });
     } catch (err) {
         console.error("[SUPORTE] Erro ao salvar configurações:", err);
         res.status(500).json({ ok: false, msg: "Erro ao salvar configurações." });
@@ -1996,6 +2056,29 @@ app.post("/suporte/tickets/:id/tipo", exigirAdminSuporte, async (req, res) => {
     } catch (err) {
         console.error("[SUPORTE] Erro ao classificar chamado:", err);
         res.status(500).json({ ok: false, msg: "Erro ao classificar chamado." });
+    }
+});
+
+// Altera a prioridade do chamado (baixa/média/alta/urgente) — disponível o fluxo inteiro,
+// independente do status ou do tipo atual (trocar o tipo não reseta a prioridade).
+app.post("/suporte/tickets/:id/prioridade", exigirAdminSuporte, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        const prioridade = String(req.body.prioridade || "").trim();
+        if (!id || id < 1) return res.status(400).json({ ok: false, msg: "ID inválido." });
+        if (!SUPORTE_PRIORIDADES[prioridade]) {
+            return res.status(400).json({ ok: false, msg: "Prioridade deve ser baixa, media, alta ou urgente." });
+        }
+        const upd = await suporteQuery("UPDATE suporte_ticket SET prioridade = ? WHERE id = ?", [prioridade, id]);
+        if (!upd.affectedRows) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
+
+        // Timeline: mudança de prioridade.
+        registrarEventoSuporte(id, "prioridade", "Prioridade alterada para " + SUPORTE_PRIORIDADES[prioridade], "Gestão TechPS");
+
+        res.json({ ok: true, msg: "Prioridade do chamado atualizada." });
+    } catch (err) {
+        console.error("[SUPORTE] Erro ao alterar prioridade:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao alterar prioridade." });
     }
 });
 

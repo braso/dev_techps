@@ -282,6 +282,87 @@ function torre_listar_perfis(int $usuarioId): array {
     ), MYSQLI_ASSOC) ?: [];
 }
 
+// ── Visibilidade do painel por PERFIL DE ACESSO (camada de administração — não é por usuário) ──
+// Diferente da visualização pessoal acima (torre_preferencia, que cada usuário monta pra si),
+// isso deixa o admin decidir, por perfil de acesso (mesmo cadastro de cadastro_perfil_acesso.php),
+// quais cartões/painéis da Torre de Comando aparecem pra QUALQUER usuário que tenha aquele perfil.
+
+function torre_ensure_perfil_painel_schema(): void {
+    $dbRow = torre_fetch_assoc(query("SELECT DATABASE() AS db"));
+    $db = strval($dbRow["db"] ?? "");
+    if ($db === "") return;
+
+    $exists = torre_fetch_assoc(query(
+        "SELECT 1 AS ok FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'torre_perfil_painel' LIMIT 1",
+        "s", [$db]
+    ));
+    if (empty($exists)) {
+        query(
+            "CREATE TABLE IF NOT EXISTS torre_perfil_painel (
+                tpp_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+                tpp_nb_perfilAcesso INT NOT NULL,
+                tpp_tx_permitidos TEXT NOT NULL,
+                tpp_tx_dataCadastro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                tpp_tx_dataAtualiza DATETIME NOT NULL,
+                UNIQUE KEY uniq_perfil_acesso (tpp_nb_perfilAcesso)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+        );
+    }
+}
+
+// Quem pode gerenciar a visibilidade do painel por perfil de acesso: mesma regra de admin
+// usada em check_permission.php, ou quem tiver permissão de ver o cadastro de perfis de acesso.
+function torre_pode_gerenciar_perfil_painel(): bool {
+    $nivel = trim(strval($_SESSION["user_tx_nivel"] ?? ""));
+    $isAdmin = preg_match('/administrador/i', $nivel) || preg_match('/super\s+admin/i', $nivel) || preg_match('/adminsitrador/i', $nivel);
+    if ($isAdmin) return true;
+    if (!function_exists("temPermissaoMenu")) {
+        include_once __DIR__ . "/check_permission.php";
+    }
+    return function_exists("temPermissaoMenu") ? temPermissaoMenu("/cadastro_perfil_acesso.php") : false;
+}
+
+// Perfis de acesso ativos (cadastro_perfil_acesso.php) — alimenta o select "quem vai poder ver".
+function torre_perfis_acesso_disponiveis(): array {
+    return torre_fetch_all(query(
+        "SELECT perfil_nb_id, perfil_tx_nome FROM perfil_acesso WHERE perfil_tx_status = 'ativo' ORDER BY perfil_tx_nome ASC"
+    ), MYSQLI_ASSOC) ?: [];
+}
+
+// Todas as chaves de item existentes no manifesto (universo completo de cartões/painéis/listas).
+function torre_todas_chaves_manifesto(array $manifesto): array {
+    $chaves = [];
+    foreach ($manifesto as $secao) {
+        foreach (array_keys($secao["itens"] ?? []) as $chave) {
+            $chaves[] = $chave;
+        }
+    }
+    return $chaves;
+}
+
+// Itens liberados para um perfil de acesso — null quando não há restrição configurada (vê tudo, padrão).
+function torre_carregar_permitidos_perfil_acesso(int $perfilAcessoId): ?array {
+    if ($perfilAcessoId <= 0) return null;
+    torre_ensure_perfil_painel_schema();
+    $row = torre_fetch_assoc(query(
+        "SELECT tpp_tx_permitidos FROM torre_perfil_painel WHERE tpp_nb_perfilAcesso = ?",
+        "i", [$perfilAcessoId]
+    ));
+    if (empty($row)) return null;
+    $lista = json_decode(strval($row["tpp_tx_permitidos"] ?? ""), true);
+    return is_array($lista) ? array_values(array_map("strval", $lista)) : null;
+}
+
+// Perfil de acesso ATIVO do usuário logado (mesma consulta usada em check_permission.php/menu.php).
+function torre_usuario_perfil_acesso_id(int $usuarioId): int {
+    if ($usuarioId <= 0) return 0;
+    $row = torre_fetch_assoc(query(
+        "SELECT perfil_nb_id FROM usuario_perfil WHERE ativo = 1 AND user_nb_id = ? LIMIT 1",
+        "i", [$usuarioId]
+    ));
+    return (int) ($row["perfil_nb_id"] ?? 0);
+}
+
 // ── Caches de saldo (paineis/saldo.php) ─────────────────────────────
 
 function torre_mes_mais_recente_saldo(array $idsAlvo): ?array {
@@ -676,6 +757,20 @@ $ocultos = $config["ocultos"];
 $ordemSecoes = $config["ordemSecoes"];
 $ordemItens = $config["ordemItens"];
 $manifesto = torre_manifesto();
+
+// ── Restrição por perfil de acesso (definida pelo admin em Personalizar painel) ──
+// Independente da visualização pessoal acima: reduz o que dá pra ver, não importa
+// qual visualização pessoal o usuário tenha escolhido.
+$perfilAcessoUsuarioId = torre_usuario_perfil_acesso_id($usuarioId);
+$permitidosPerfilAcesso = torre_carregar_permitidos_perfil_acesso($perfilAcessoUsuarioId);
+if ($permitidosPerfilAcesso !== null) {
+    $naoPermitidosPerfilAcesso = array_values(array_diff(torre_todas_chaves_manifesto($manifesto), $permitidosPerfilAcesso));
+    $ocultos = array_values(array_unique(array_merge($ocultos, $naoPermitidosPerfilAcesso)));
+}
+
+// ── Gestão da visibilidade por perfil de acesso (só quem administra perfis vê esta camada) ──
+$podeGerenciarPerfilPainel = torre_pode_gerenciar_perfil_painel();
+$perfisAcessoDisponiveis = $podeGerenciarPerfilPainel ? torre_perfis_acesso_disponiveis() : [];
 
 // Preferência de notificações do sino — o botão "Notificações" aqui no dashboard
 // abre o mesmo cadastro usado no sino do cabeçalho (mesma tabela, mesmo endpoint).
@@ -2094,6 +2189,32 @@ $notaGestao = torre_calcular_nota_gestao($empresaFiltro, $condEmpresa, $ativos, 
           </div>
         </div>
       <?php endforeach; ?>
+
+      <?php if ($podeGerenciarPerfilPainel): ?>
+      <div class="tc-modal-secao tc-modal-secao-perfilacesso" style="border-top:2px dashed #d7dce3;margin-top:22px;padding-top:18px;">
+        <h4><i data-lucide="shield-check" style="width:15px;height:15px;"></i> Visibilidade por perfil de acesso</h4>
+        <p class="tc-modal-hint" style="margin:-4px 0 10px;">
+          Escolha um perfil de acesso (o mesmo cadastro de <em>Perfil de Acesso</em>) e marque quais cartões/painéis
+          quem tiver esse perfil vai poder ver no dashboard. Isso vale pra todo mundo com esse perfil, além da
+          visualização pessoal de cada um — é uma restrição a mais, não substitui a personalização de cada usuário.
+        </p>
+        <div class="tc-modal-nome">
+          <label for="tcPerfilAcessoSelect">Perfil de acesso</label>
+          <select id="tcPerfilAcessoSelect">
+            <option value="">Selecione um perfil de acesso...</option>
+            <?php foreach ($perfisAcessoDisponiveis as $__pa): ?>
+              <option value="<?= (int) ($__pa["perfil_nb_id"] ?? 0) ?>"><?= htmlspecialchars(strval($__pa["perfil_tx_nome"] ?? "")) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <p id="tcPerfilAcessoStatus" class="tc-modal-hint" style="display:none;"></p>
+        <div id="tcPerfilAcessoItens" style="display:none;"></div>
+        <div id="tcPerfilAcessoFoot" style="display:none;margin-top:12px;gap:8px;justify-content:flex-end;">
+          <button type="button" id="tcPerfilAcessoRestaurar" class="tc-btn-secundario">Remover restrição (ver tudo)</button>
+          <button type="button" id="tcPerfilAcessoSalvar" class="tc-btn-primario">Salvar visibilidade deste perfil</button>
+        </div>
+      </div>
+      <?php endif; ?>
     </div>
     <div class="tc-modal-foot">
       <button type="button" id="tcModalCancelar" class="tc-btn-secundario">Cancelar</button>
@@ -2199,7 +2320,7 @@ $notaGestao = torre_calcular_nota_gestao($empresaFiltro, $condEmpresa, $ativos, 
         return;
       }
       var ocultos = [];
-      modalPersonalizar.querySelectorAll('input[type="checkbox"]').forEach(function(chk){
+      modalPersonalizar.querySelectorAll('[data-secao-manifesto] input[type="checkbox"]').forEach(function(chk){
         if (!chk.checked) ocultos.push(chk.value);
       });
       var ordemSecoes = [];
@@ -2240,6 +2361,135 @@ $notaGestao = torre_calcular_nota_gestao($empresaFiltro, $condEmpresa, $ativos, 
         btnSalvarModal.textContent = 'Salvar';
       });
     });
+  }
+
+  // ── Visibilidade por perfil de acesso (camada de admin, dentro do mesmo modal Personalizar) ──
+  var TC_MANIFESTO = <?= json_encode($podeGerenciarPerfilPainel ? $manifesto : [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+  var selectPerfilAcesso = document.getElementById('tcPerfilAcessoSelect');
+  if (selectPerfilAcesso) {
+    var boxStatus = document.getElementById('tcPerfilAcessoStatus');
+    var boxItens = document.getElementById('tcPerfilAcessoItens');
+    var boxFoot = document.getElementById('tcPerfilAcessoFoot');
+    var btnPerfilAcessoSalvar = document.getElementById('tcPerfilAcessoSalvar');
+    var btnPerfilAcessoRestaurar = document.getElementById('tcPerfilAcessoRestaurar');
+
+    function montarChecklistPerfilAcesso(permitidos){
+      // permitidos === null → nenhuma restrição salva ainda: começa com tudo marcado (vê tudo).
+      boxItens.innerHTML = '';
+      Object.keys(TC_MANIFESTO).forEach(function(chaveSecao){
+        var secao = TC_MANIFESTO[chaveSecao];
+        var bloco = document.createElement('div');
+        bloco.style.cssText = 'margin-bottom:14px;';
+        var titulo = document.createElement('div');
+        titulo.style.cssText = 'font-weight:700;font-size:12.5px;color:#333;margin-bottom:6px;';
+        titulo.textContent = secao.titulo;
+        bloco.appendChild(titulo);
+        var grade = document.createElement('div');
+        grade.className = 'tc-modal-itens';
+        Object.keys(secao.itens).forEach(function(chaveItem){
+          var marcado = permitidos === null || permitidos.indexOf(chaveItem) !== -1;
+          var linha = document.createElement('div');
+          linha.className = 'tc-modal-item';
+          var label = document.createElement('label');
+          label.className = 'tc-modal-item-label';
+          var input = document.createElement('input');
+          input.type = 'checkbox';
+          input.value = chaveItem;
+          input.checked = marcado;
+          input.className = 'tc-perfilacesso-check';
+          var span = document.createElement('span');
+          span.textContent = secao.itens[chaveItem];
+          label.appendChild(input);
+          label.appendChild(span);
+          linha.appendChild(label);
+          grade.appendChild(linha);
+        });
+        bloco.appendChild(grade);
+        boxItens.appendChild(bloco);
+      });
+    }
+
+    selectPerfilAcesso.addEventListener('change', function(){
+      var perfilId = selectPerfilAcesso.value;
+      boxItens.style.display = 'none';
+      boxFoot.style.display = 'none';
+      boxStatus.style.display = 'none';
+      if (!perfilId) return;
+
+      boxStatus.style.display = 'block';
+      boxStatus.textContent = 'Carregando...';
+      fetch('torre_perfil_acesso_carregar.php?perfil_acesso_id=' + encodeURIComponent(perfilId))
+        .then(function(r){ return r.json(); })
+        .then(function(json){
+          if (!json || !json.ok) {
+            boxStatus.textContent = (json && json.msg) ? json.msg : 'Não foi possível carregar.';
+            return;
+          }
+          boxStatus.textContent = (json.permitidos === null)
+            ? 'Sem restrição configurada — este perfil vê tudo por padrão. Desmarque o que ele não deve ver e salve.'
+            : 'Restrição configurada — mostrando o que este perfil pode ver hoje.';
+          montarChecklistPerfilAcesso(json.permitidos);
+          boxItens.style.display = 'block';
+          boxFoot.style.display = 'flex';
+        })
+        .catch(function(){
+          boxStatus.textContent = 'Sem comunicação com o servidor.';
+        });
+    });
+
+    if (btnPerfilAcessoSalvar) {
+      btnPerfilAcessoSalvar.addEventListener('click', function(){
+        var perfilId = selectPerfilAcesso.value;
+        if (!perfilId) return;
+        var permitidos = [];
+        boxItens.querySelectorAll('.tc-perfilacesso-check').forEach(function(chk){
+          if (chk.checked) permitidos.push(chk.value);
+        });
+        btnPerfilAcessoSalvar.disabled = true;
+        btnPerfilAcessoSalvar.textContent = 'Salvando...';
+        fetch('torre_perfil_acesso_salvar.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ perfil_acesso_id: perfilId, permitidos: permitidos })
+        }).then(function(r){ return r.json(); }).then(function(json){
+          if (json && json.ok) {
+            boxStatus.textContent = 'Visibilidade salva para este perfil de acesso.';
+          } else {
+            alert((json && json.msg) ? json.msg : 'Não foi possível salvar. Tente novamente.');
+          }
+        }).catch(function(){
+          alert('Sem comunicação com o servidor.');
+        }).finally(function(){
+          btnPerfilAcessoSalvar.disabled = false;
+          btnPerfilAcessoSalvar.textContent = 'Salvar visibilidade deste perfil';
+        });
+      });
+    }
+
+    if (btnPerfilAcessoRestaurar) {
+      btnPerfilAcessoRestaurar.addEventListener('click', function(){
+        var perfilId = selectPerfilAcesso.value;
+        if (!perfilId) return;
+        if (!confirm('Remover a restrição deste perfil de acesso? Todo mundo com esse perfil volta a ver tudo.')) return;
+        btnPerfilAcessoRestaurar.disabled = true;
+        fetch('torre_perfil_acesso_salvar.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ perfil_acesso_id: perfilId, remover: true })
+        }).then(function(r){ return r.json(); }).then(function(json){
+          if (json && json.ok) {
+            montarChecklistPerfilAcesso(null);
+            boxStatus.textContent = 'Restrição removida — este perfil volta a ver tudo por padrão.';
+          } else {
+            alert((json && json.msg) ? json.msg : 'Não foi possível remover. Tente novamente.');
+          }
+        }).catch(function(){
+          alert('Sem comunicação com o servidor.');
+        }).finally(function(){
+          btnPerfilAcessoRestaurar.disabled = false;
+        });
+      });
+    }
   }
 
   // ── Modal Notificações (mesma tabela/endpoint do sino no cabeçalho) ──

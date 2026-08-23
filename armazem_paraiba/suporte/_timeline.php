@@ -13,6 +13,7 @@
                 "aberto"             => ["#27ae60", "fa fa-folder-open", "Chamado aberto"],
                 "aceito"             => ["#337ab7", "fa fa-handshake-o", "Atendimento iniciado"],
                 "tipo"               => ["#8e44ad", "fa fa-tag", "Classificação"],
+                "prioridade"         => ["#c0392b", "fa fa-flag", "Prioridade alterada"],
                 "status"             => ["#e67e22", "fa fa-exchange", "Status alterado"],
                 "comentario_gestor"  => ["#16a085", "fa fa-comment", "Resposta do suporte"],
                 "comentario_empresa" => ["#2c3e50", "fa fa-reply", "Resposta do cliente"],
