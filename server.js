@@ -865,9 +865,10 @@ const nodemailer = require("nodemailer");
 // Status permitidos do chamado (fluxo de atendimento).
 const SUPORTE_STATUS = {
     aberto:               "Aberto",
+    em_analise:           "Em Análise",
     em_andamento:         "Em Andamento",
     aguardando_cliente:   "Aguardando retorno do cliente",
-    resolvido:            "Resolvido",
+    resolvido:            "Concluído",
     cancelado:            "Cancelado",
     reaberto:             "Reaberto",
     encaminhado_ssi:      "Encaminhado a SSI"
@@ -945,6 +946,38 @@ function htmlEmailSuporte(ticket, titulo, avisos) {
         "<p style='color:#aaa;font-size:12px;margin-top:20px;'>Tech PS — Sistema de Suporte</p>" +
         "</div>"
     );
+}
+
+// E-mail interno (equipe TechPS) avisando que um chamado novo chegou.
+function htmlEmailNotificacaoInterna(ticket) {
+    return (
+        "<div style='font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;'>" +
+        "<h2 style='color:#e67e22;margin-bottom:4px;'>Novo chamado de suporte</h2>" +
+        "<p style='color:#888;margin-top:0;font-size:13px;'>Chamado #" + escH(ticket.id) + " — recém aberto, aguardando análise</p>" +
+        "<table style='border-collapse:collapse;width:100%;font-size:14px;'>" +
+        "<tr><td style='padding:6px 0;color:#555;width:130px;'><strong>Empresa:</strong></td><td>" + escH(ticket.empresa_nome || ticket.empresa_key || "") + " (" + escH(ticket.empresa_key || "") + ")</td></tr>" +
+        (ticket.setor_nome ? "<tr><td style='padding:6px 0;color:#555;'><strong>Setor:</strong></td><td>" + escH(ticket.setor_nome) + "</td></tr>" : "") +
+        "<tr><td style='padding:6px 0;color:#555;'><strong>Usuário:</strong></td><td>" + escH(ticket.user_nome || ticket.user_login || "") + "</td></tr>" +
+        "</table>" +
+        "<div style='background:#f7f7f7;border:1px solid #eee;border-radius:6px;padding:12px;margin-top:12px;'>" +
+        "<strong style='color:#555;'>Descrição do problema:</strong><br>" +
+        "<span style='white-space:pre-wrap;color:#333;'>" + escH(ticket.descricao || "") + "</span>" +
+        "</div>" +
+        "<p style='color:#555;font-size:14px;margin-top:14px;'>Acesse a Gestão de Suporte no sistema para analisar e responder o chamado #" + escH(ticket.id) + ".</p>" +
+        "<p style='color:#aaa;font-size:12px;margin-top:20px;'>Tech PS — Sistema de Suporte</p>" +
+        "</div>"
+    );
+}
+
+// Lê uma chave de configuração do suporte (tabela suporte_config). Retorna "" se ausente/erro.
+async function obterConfigSuporte(chave) {
+    try {
+        const linhas = await suporteQuery("SELECT valor FROM suporte_config WHERE chave = ?", [chave]);
+        return linhas.length ? String(linhas[0].valor || "") : "";
+    } catch (err) {
+        console.error("[SUPORTE] Erro ao ler config '" + chave + "':", err.message);
+        return "";
+    }
 }
 
 const SUPORTE = {
@@ -1027,7 +1060,7 @@ function criarTabelasSuporte() {
             user_email VARCHAR(190) NOT NULL DEFAULT '',
             pagina_url VARCHAR(500) NOT NULL DEFAULT '',
             descricao TEXT NOT NULL,
-            status ENUM('aberto','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi') NOT NULL DEFAULT 'aberto',
+            status ENUM('aberto','em_analise','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi') NOT NULL DEFAULT 'aberto',
             tipo ENUM('duvida','sugestao','bug') DEFAULT NULL,
             ssi_codigo VARCHAR(30) DEFAULT NULL,
             ssi_prioridade ENUM('urgente','proxima_atualizacao') DEFAULT NULL,
@@ -1094,6 +1127,13 @@ function criarTabelasSuporte() {
             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             UNIQUE KEY uniq_origem_setor (origem_setor_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+        `CREATE TABLE IF NOT EXISTS suporte_config (
+            chave VARCHAR(100) NOT NULL,
+            valor TEXT,
+            atualizado_por VARCHAR(150) DEFAULT NULL,
+            atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (chave)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     ];
     sqls.forEach((sql) => {
@@ -1113,7 +1153,7 @@ function migrarTabelasSuporte() {
         "ALTER TABLE suporte_ticket ADD COLUMN atendente_nome VARCHAR(150) DEFAULT NULL",
         "ALTER TABLE suporte_ticket ADD COLUMN aceito_em DATETIME DEFAULT NULL",
         "ALTER TABLE suporte_ticket ADD COLUMN fechado_em DATETIME DEFAULT NULL",
-        "ALTER TABLE suporte_ticket MODIFY status ENUM('aberto','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi') NOT NULL DEFAULT 'aberto'",
+        "ALTER TABLE suporte_ticket MODIFY status ENUM('aberto','em_analise','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi') NOT NULL DEFAULT 'aberto'",
         "ALTER TABLE suporte_ticket ADD COLUMN setor_id BIGINT UNSIGNED DEFAULT NULL",
         "ALTER TABLE suporte_ticket ADD COLUMN setor_nome VARCHAR(150) DEFAULT NULL",
         "ALTER TABLE suporte_arquivo ADD COLUMN tipo ENUM('imagem','video','documento') NOT NULL DEFAULT 'imagem'"
@@ -1422,6 +1462,24 @@ app.post("/suporte/tickets", uploadSuporte.array("anexos", SUPORTE.maxArquivos),
             );
         }
 
+        // Aviso interno: e-mail(s) cadastrados em Gestão de Suporte → Configurações.
+        const emailsNotificacao = await obterConfigSuporte("emails_notificacao");
+        if (emailsNotificacao) {
+            enviarEmailSuporte(
+                emailsNotificacao,
+                "Novo chamado #" + ticketId + " — " + empresaNome,
+                htmlEmailNotificacaoInterna({
+                    id: ticketId,
+                    empresa_key: empresa,
+                    empresa_nome: empresaNome,
+                    setor_nome: setorNome,
+                    user_nome: unome,
+                    user_login: ulogin,
+                    descricao: descricao
+                })
+            );
+        }
+
         res.status(201).json({ ok: true, ticket_id: ticketId, msg: "Chamado aberto com sucesso." });
     } catch (err) {
         console.error("[SUPORTE] Erro ao abrir chamado:", err);
@@ -1446,7 +1504,7 @@ app.get("/suporte/tickets", exigirAdminSuporte, async (req, res) => {
         let params = [];
         if (empresa) { where.push("empresa_key = ?"); params.push(empresa); }
         if (setorIdFiltro && setorIdFiltro > 0) { where.push("setor_id = ?"); params.push(setorIdFiltro); }
-        if (status === "aberto" || status === "resolvido") { where.push("status = ?"); params.push(status); }
+        if (status && SUPORTE_STATUS[status]) { where.push("status = ?"); params.push(status); }
         if (dataInicio && /^\d{4}-\d{2}-\d{2}$/.test(dataInicio)) { where.push("created_at >= ?"); params.push(dataInicio + " 00:00:00"); }
         if (dataFim && /^\d{4}-\d{2}-\d{2}$/.test(dataFim)) { where.push("created_at <= ?"); params.push(dataFim + " 23:59:59"); }
         const filtro = where.length ? "WHERE " + where.join(" AND ") : "";
@@ -1563,6 +1621,45 @@ app.get("/suporte/setores", async (req, res) => {
     } catch (err) {
         console.error("[SUPORTE] Erro ao listar setores:", err);
         res.status(500).json({ ok: false, msg: "Erro ao listar setores." });
+    }
+});
+
+// Lê as configurações gerais do suporte (e-mails de aviso de chamado novo).
+app.get("/suporte/config", exigirAdminSuporte, async (req, res) => {
+    try {
+        const emails = await obterConfigSuporte("emails_notificacao");
+        res.json({ ok: true, config: { emails_notificacao: emails } });
+    } catch (err) {
+        console.error("[SUPORTE] Erro ao ler configurações:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao ler configurações." });
+    }
+});
+
+// Atualiza as configurações gerais do suporte.
+app.post("/suporte/config", exigirAdminSuporte, async (req, res) => {
+    try {
+        let emails = String(req.body.emails_notificacao || "").trim();
+        const atualizadoPor = String(req.body.atualizado_por || "").slice(0, 150);
+
+        // Valida cada e-mail informado (separados por vírgula).
+        const lista = emails.split(",").map((e) => e.trim()).filter((e) => e !== "");
+        for (const e of lista) {
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) {
+                return res.status(400).json({ ok: false, msg: "E-mail inválido: \"" + e + "\"." });
+            }
+        }
+        emails = lista.join(", ");
+
+        await suporteQuery(
+            "INSERT INTO suporte_config (chave, valor, atualizado_por) VALUES ('emails_notificacao', ?, ?) " +
+            "ON DUPLICATE KEY UPDATE valor = VALUES(valor), atualizado_por = VALUES(atualizado_por)",
+            [emails, atualizadoPor]
+        );
+
+        res.json({ ok: true, msg: "Configurações salvas.", config: { emails_notificacao: emails } });
+    } catch (err) {
+        console.error("[SUPORTE] Erro ao salvar configurações:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao salvar configurações." });
     }
 });
 
@@ -1775,6 +1872,8 @@ app.post("/suporte/tickets/:id/status", exigirAdminSuporte, async (req, res) => 
                 avisos = "O chamado foi reaberto e voltou para análise da equipe.";
             } else if (status === "aguardando_cliente") {
                 avisos = "Estamos aguardando o seu retorno para dar continuidade ao atendimento.";
+            } else if (status === "em_analise") {
+                avisos = "Nossa equipe já começou a analisar o seu chamado.";
             } else if (status === "encaminhado_ssi") {
                 avisos = "O chamado foi encaminhado ao setor de suporte interno (SSI " + novoTicket.ssi_codigo + "). " + (novoTicket.ssi_prioridade === "urgente" ? "Tratamento prioritário — solução urgente em produção." : "Será resolvido na próxima atualização do sistema.");
             }

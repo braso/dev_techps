@@ -1251,7 +1251,7 @@ $notaGestao = torre_calcular_nota_gestao($empresaFiltro, $condEmpresa, $ativos, 
     <div class="tc-panel-row tc-map-row">
       <?php if (torre_visivel("painel_disponibilidade", $ocultos)): ?>
       <div class="tc-panel">
-        <h3><i data-lucide="truck" style="width:15px;height:15px;"></i> Disponibilidade de frota<?= torre_info("Motoristas classificados pelo tempo de descanso desde o fim da última jornada registrada no ponto: 11h ou mais = disponível, entre 8h e 11h = parcial, menos de 8h = indisponível. Quem está com jornada em aberto entra em 'Em jornada'. Não considera acordos especiais de descanso.") ?></h3>
+        <h3><i data-lucide="truck" style="width:15px;height:15px;"></i> Disponibilidade de funcionários<?= torre_info("Funcionários e ou Terceirizados classificados pelo tempo de descanso desde o fim da última jornada registrada no ponto: 11h ou mais = disponível, entre 8h e 11h = parcial, menos de 8h = indisponível. Quem está com jornada em aberto entra em 'Em jornada'. Não considera acordos especiais de descanso.") ?></h3>
         <?php if ($totalMotoristas > 0): ?>
           <div class="tc-chart-wrap"><canvas id="chartDisponibilidade"></canvas></div>
         <?php else: ?>

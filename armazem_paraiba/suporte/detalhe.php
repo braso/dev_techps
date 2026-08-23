@@ -92,9 +92,10 @@
     $__status = $__ticket["status"] ?? "";
     $__statusMap = [
         "aberto"             => '<span class="label label-warning">Aberto</span>',
+        "em_analise"         => '<span class="label label-default" style="background:#8e44ad;">Em Análise</span>',
         "em_andamento"       => '<span class="label label-info">Em Andamento</span>',
         "aguardando_cliente" => '<span class="label label-primary">Aguardando retorno do cliente</span>',
-        "resolvido"          => '<span class="label label-success">Resolvido</span>',
+        "resolvido"          => '<span class="label label-success">Concluído</span>',
         "cancelado"          => '<span class="label label-default">Cancelado</span>',
         "reaberto"           => '<span class="label label-warning">Reaberto</span>',
         "encaminhado_ssi"    => '<span class="label label-danger">Encaminhado a SSI</span>',

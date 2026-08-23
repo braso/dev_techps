@@ -67,7 +67,7 @@
     $__fPagina  = max((int) ($_GET["pagina"] ?? 1), 1);
 
     $__queryFiltro = ["empresa" => $__fEmpresa, "pagina" => $__fPagina, "limit" => 25];
-    $__statusPermitidos = ["aberto", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi"];
+    $__statusPermitidos = ["aberto", "em_analise", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi"];
     if (in_array($__fStatus, $__statusPermitidos, true)) $__queryFiltro["status"] = $__fStatus;
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $__fInicio)) $__queryFiltro["data_inicio"] = $__fInicio;
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $__fFim)) $__queryFiltro["data_fim"] = $__fFim;
@@ -120,9 +120,10 @@
                         <select name="status" class="form-control">
                             <option value="">Todos</option>
                             <option value="aberto" <?= ($__fStatus === "aberto") ? "selected" : "" ?>>Aberto</option>
+                            <option value="em_analise" <?= ($__fStatus === "em_analise") ? "selected" : "" ?>>Em Análise</option>
                             <option value="em_andamento" <?= ($__fStatus === "em_andamento") ? "selected" : "" ?>>Em Andamento</option>
                             <option value="aguardando_cliente" <?= ($__fStatus === "aguardando_cliente") ? "selected" : "" ?>>Aguardando retorno do cliente</option>
-                            <option value="resolvido" <?= ($__fStatus === "resolvido") ? "selected" : "" ?>>Resolvido</option>
+                            <option value="resolvido" <?= ($__fStatus === "resolvido") ? "selected" : "" ?>>Concluído</option>
                             <option value="cancelado" <?= ($__fStatus === "cancelado") ? "selected" : "" ?>>Cancelado</option>
                             <option value="reaberto" <?= ($__fStatus === "reaberto") ? "selected" : "" ?>>Reaberto</option>
                             <option value="encaminhado_ssi" <?= ($__fStatus === "encaminhado_ssi") ? "selected" : "" ?>>Encaminhado a SSI</option>
@@ -167,9 +168,10 @@
                                 $__status = strval($__t["status"] ?? "aberto");
                                 $__badgeMap = [
                                     "aberto"             => '<span class="label label-warning">Aberto</span>',
+                                    "em_analise"         => '<span class="label label-default" style="background:#8e44ad;">Em Análise</span>',
                                     "em_andamento"       => '<span class="label label-info">Em Andamento</span>',
                                     "aguardando_cliente" => '<span class="label label-primary">Aguardando retorno</span>',
-                                    "resolvido"          => '<span class="label label-success">Resolvido</span>',
+                                    "resolvido"          => '<span class="label label-success">Concluído</span>',
                                     "cancelado"          => '<span class="label label-default">Cancelado</span>',
                                     "reaberto"           => '<span class="label label-warning">Reaberto</span>',
                                     "encaminhado_ssi"    => '<span class="label label-danger">Encaminhado a SSI</span>',

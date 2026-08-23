@@ -71,7 +71,7 @@
             }
         } elseif ($acao === "status" && $id > 0) {
             $novoStatus = $_POST["status"] ?? "";
-            $statusPermitidos = ["aberto", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi"];
+            $statusPermitidos = ["aberto", "em_analise", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi"];
             if (in_array($novoStatus, $statusPermitidos, true)) {
                 $post = ["status" => $novoStatus];
                 if ($novoStatus === "encaminhado_ssi") {
@@ -90,6 +90,13 @@
                 ]);
                 $__msg = $res["ok"] ? "Comentário adicionado ao chamado #{$id}." : "Erro ao adicionar comentário. " . ($res["dados"]["msg"] ?? "");
             }
+        } elseif ($acao === "config") {
+            $emails = trim(strval($_POST["emails_notificacao"] ?? ""));
+            $res = gestao_requisitar("POST", "/suporte/config", [], [
+                "emails_notificacao" => $emails,
+                "atualizado_por"     => $__gestorNome,
+            ]);
+            $__msg = $res["ok"] ? "Configurações de suporte atualizadas." : "Erro ao salvar configurações. " . ($res["dados"]["msg"] ?? "");
         }
         if ($__msg !== "") {
             $__url = $_SERVER["REQUEST_URI"] ?? "";
@@ -105,8 +112,15 @@
     $__resSetores = gestao_requisitar("GET", "/suporte/setores");
     $__setoresFiltro = $__resSetores["ok"] ? ($__resSetores["dados"]["setores"] ?? []) : [];
 
-    // ── Modo detalhe ────────────────────────────────────────────────────
+    // ── Modo detalhe / configurações ────────────────────────────────────
     $__verId = (int) ($_GET["id"] ?? 0);
+    $__verConfig = $__verId === 0 && isset($_GET["config"]);
+
+    if ($__verConfig) {
+        $__resConfig = gestao_requisitar("GET", "/suporte/config");
+        $__configAtual = $__resConfig["ok"] ? ($__resConfig["dados"]["config"] ?? []) : [];
+        $__emailsAtuais = strval($__configAtual["emails_notificacao"] ?? "");
+    }
 
     cabecalho("Gestão de Suporte");
 ?>
@@ -117,14 +131,37 @@
             <div class="portlet-title">
                 <div class="caption">
                     <i class="fa fa-life-ring font-blue"></i>
-                    <span class="caption-subject bold uppercase"><?= $__verId > 0 ? "Chamado #" . $__verId : "Gestão de Suporte" ?></span>
-                    <span class="caption-helper"><?= $__verId > 0 ? "Domínio TechPS" : "Chamados de todas as empresas" ?></span>
+                    <span class="caption-subject bold uppercase"><?= $__verId > 0 ? "Chamado #" . $__verId : ($__verConfig ? "Configurações do Suporte" : "Gestão de Suporte") ?></span>
+                    <span class="caption-helper"><?= $__verId > 0 ? "Domínio TechPS" : ($__verConfig ? "Regras e aviso de chamado novo" : "Chamados de todas as empresas") ?></span>
                 </div>
-                <?php if ($__verId > 0): ?>
-                    <div class="actions"><a href="gestao.php" class="btn btn-default btn-sm"><i class="fa fa-arrow-left"></i> Voltar</a></div>
-                <?php endif; ?>
+                <div class="actions">
+                    <?php if ($__verId > 0 || $__verConfig): ?>
+                        <a href="gestao.php" class="btn btn-default btn-sm"><i class="fa fa-arrow-left"></i> Voltar</a>
+                    <?php else: ?>
+                        <a href="gestao.php?config=1" class="btn btn-default btn-sm"><i class="fa fa-cog"></i> Configurações</a>
+                    <?php endif; ?>
+                </div>
             </div>
             <div class="portlet-body">
+
+<?php if ($__verConfig): ?>
+                <div class="alert alert-info">
+                    <i class="fa fa-info-circle"></i> Todo chamado novo chega automaticamente com status <strong>Aberto</strong>. A partir daí o fluxo recomendado é
+                    <strong>Aberto → Em Análise → Em Andamento → Concluído</strong> (os status especiais — Aguardando cliente, Reaberto, Cancelado e Encaminhado a SSI — continuam disponíveis para os casos que precisarem).
+                </div>
+
+                <form method="post">
+                    <input type="hidden" name="sup_acao" value="config" />
+                    <div class="form-group">
+                        <label><i class="fa fa-envelope"></i> E-mail(s) de aviso de chamado novo</label>
+                        <input type="text" name="emails_notificacao" class="form-control" style="max-width:520px;"
+                               value="<?= htmlspecialchars($__emailsAtuais) ?>"
+                               placeholder="suporte@techps.com.br, outro@techps.com.br" />
+                        <span class="help-block">Separe vários e-mails por vírgula. Toda vez que um chamado novo chegar, um aviso é enviado automaticamente para esses endereços.</span>
+                    </div>
+                    <button type="submit" class="btn blue"><i class="fa fa-save"></i> Salvar configurações</button>
+                </form>
+<?php else: ?>
 
 <?php if ($__verId > 0): ?>
 <?php
@@ -141,9 +178,10 @@
             $__status = strval($__ticket["status"] ?? "aberto");
             $__statusMap = [
                 "aberto"             => ['<span class="label label-warning">Aberto</span>'],
+                "em_analise"         => ['<span class="label label-default" style="background:#8e44ad;">Em Análise</span>'],
                 "em_andamento"       => ['<span class="label label-info">Em Andamento</span>'],
                 "aguardando_cliente" => ['<span class="label label-primary">Aguardando retorno do cliente</span>'],
-                "resolvido"          => ['<span class="label label-success">Resolvido</span>'],
+                "resolvido"          => ['<span class="label label-success">Concluído</span>'],
                 "cancelado"          => ['<span class="label label-default">Cancelado</span>'],
                 "reaberto"           => ['<span class="label label-warning">Reaberto</span>'],
                 "encaminhado_ssi"    => ['<span class="label label-danger">Encaminhado a SSI</span>'],
@@ -180,9 +218,17 @@
 
             <?php if ($__status === "aberto" || $__status === "reaberto"): ?>
                 <form method="post" style="display:inline-block;margin-right:8px;margin-bottom:6px;">
+                    <input type="hidden" name="sup_acao" value="status" />
+                    <input type="hidden" name="id" value="<?= $__verId ?>" />
+                    <input type="hidden" name="status" value="em_analise" />
+                    <button type="submit" class="btn btn-default btn-sm" style="border-color:#8e44ad;color:#8e44ad;"><i class="fa fa-search"></i> Iniciar análise</button>
+                </form>
+            <?php endif; ?>
+            <?php if ($__status === "aberto" || $__status === "reaberto" || $__status === "em_analise"): ?>
+                <form method="post" style="display:inline-block;margin-right:8px;margin-bottom:6px;">
                     <input type="hidden" name="sup_acao" value="aceitar" />
                     <input type="hidden" name="id" value="<?= $__verId ?>" />
-                    <button type="submit" class="btn blue"><i class="fa fa-handshake-o"></i> Aceitar chamado</button>
+                    <button type="submit" class="btn blue"><i class="fa fa-handshake-o"></i> Iniciar atendimento</button>
                 </form>
             <?php endif; ?>
 
@@ -212,7 +258,7 @@
                         <input type="hidden" name="sup_acao" value="status" />
                         <input type="hidden" name="id" value="<?= $__verId ?>" />
                         <input type="hidden" name="status" value="resolvido" />
-                        <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Marcar como resolvido?');"><i class="fa fa-check"></i> Resolvido</button>
+                        <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Marcar como concluído?');"><i class="fa fa-check"></i> Concluído</button>
                     </form>
                 <?php endif; ?>
                 <?php if ($__status !== "resolvido" && $__status !== "cancelado"): ?>
@@ -292,10 +338,12 @@
     $__fFim     = trim(strval($_GET["data_fim"] ?? ""));
     $__fPagina  = max((int) ($_GET["pagina"] ?? 1), 1);
 
+    $__statusListagem = ["aberto", "em_analise", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi"];
+
     $__queryFiltro = ["pagina" => $__fPagina, "limit" => 25];
     if ($__fEmpresa !== "") $__queryFiltro["empresa"] = $__fEmpresa;
     if ($__fSetorId > 0) $__queryFiltro["setor_id"] = $__fSetorId;
-    if ($__fStatus === "aberto" || $__fStatus === "resolvido") $__queryFiltro["status"] = $__fStatus;
+    if (in_array($__fStatus, $__statusListagem, true)) $__queryFiltro["status"] = $__fStatus;
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $__fInicio)) $__queryFiltro["data_inicio"] = $__fInicio;
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $__fFim)) $__queryFiltro["data_fim"] = $__fFim;
 
@@ -341,7 +389,13 @@
                         <select name="status" class="form-control">
                             <option value="">Todos</option>
                             <option value="aberto" <?= ($__fStatus === "aberto") ? "selected" : "" ?>>Aberto</option>
-                            <option value="resolvido" <?= ($__fStatus === "resolvido") ? "selected" : "" ?>>Resolvido</option>
+                            <option value="em_analise" <?= ($__fStatus === "em_analise") ? "selected" : "" ?>>Em Análise</option>
+                            <option value="em_andamento" <?= ($__fStatus === "em_andamento") ? "selected" : "" ?>>Em Andamento</option>
+                            <option value="aguardando_cliente" <?= ($__fStatus === "aguardando_cliente") ? "selected" : "" ?>>Aguardando retorno do cliente</option>
+                            <option value="resolvido" <?= ($__fStatus === "resolvido") ? "selected" : "" ?>>Concluído</option>
+                            <option value="cancelado" <?= ($__fStatus === "cancelado") ? "selected" : "" ?>>Cancelado</option>
+                            <option value="reaberto" <?= ($__fStatus === "reaberto") ? "selected" : "" ?>>Reaberto</option>
+                            <option value="encaminhado_ssi" <?= ($__fStatus === "encaminhado_ssi") ? "selected" : "" ?>>Encaminhado a SSI</option>
                         </select>
                     </div>
                     <div class="form-group" style="margin-right:10px;">
@@ -383,9 +437,10 @@
                                 $__statusT = strval($__t["status"] ?? "aberto");
                                 $__badgeMap = [
                                     "aberto"             => '<span class="label label-warning">Aberto</span>',
+                                    "em_analise"         => '<span class="label label-default" style="background:#8e44ad;">Em Análise</span>',
                                     "em_andamento"       => '<span class="label label-info">Em Andamento</span>',
                                     "aguardando_cliente" => '<span class="label label-primary">Aguardando retorno</span>',
-                                    "resolvido"          => '<span class="label label-success">Resolvido</span>',
+                                    "resolvido"          => '<span class="label label-success">Concluído</span>',
                                     "cancelado"          => '<span class="label label-default">Cancelado</span>',
                                     "reaberto"           => '<span class="label label-warning">Reaberto</span>',
                                     "encaminhado_ssi"    => '<span class="label label-danger">Encaminhado a SSI</span>',
@@ -428,6 +483,7 @@
                         </ul>
                     </div>
                 <?php endif; ?>
+<?php endif; ?>
 <?php endif; ?>
 
             </div>
