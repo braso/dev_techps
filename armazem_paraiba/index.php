@@ -41,6 +41,21 @@
 	function showWelcome($usuario, $turnoAtual, $horaEntrada) {
 		global $turnoAtual;
 
+		// Só quem é Administrador/Super Administrador, ou tem permissão explícita de
+		// telas de gestão (empresa ou funcionário), enxerga a Torre de Comando. Todo o
+		// resto (motorista, ajudante, funcionário operacional etc.) cai direto na
+		// batida de ponto, que passa a ser a tela inicial dele.
+		include_once __DIR__."/check_permission.php";
+		$nivel = $_SESSION["user_tx_nivel"] ?? "";
+		$isAdmin = (bool) preg_match('/administrador/i', $nivel);
+		$temPermissaoGestao = function_exists('temPermissaoMenu')
+			&& (temPermissaoMenu('/cadastro_empresa.php') || temPermissaoMenu('/cadastro_funcionario.php'));
+
+		if (!$isAdmin && !$temPermissaoGestao) {
+			echo "<meta http-equiv='refresh' content='0; url=./batida_ponto.php'/>";
+			exit;
+		}
+
 		// Torre de Comando embutida direto na tela de boas-vindas — sem
 		// precisar navegar/clicar em nada para ver o dashboard.
 		include_once "torre_comando.php";
