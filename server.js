@@ -951,8 +951,10 @@ const SUPORTE = {
     apiKey: process.env.SUPORTE_API_KEY || "",
     adminKey: process.env.SUPORTE_ADMIN_KEY || "",
     db: null,
-    maxImagens: 5,
-    maxBytes: 5 * 1024 * 1024,
+    maxArquivos: 6,
+    maxVideos: 1,
+    maxBytesPadrao: 5 * 1024 * 1024,
+    maxBytesVideo: 25 * 1024 * 1024,
     minDescricao: 5,
     maxDescricao: 2000,
     maxUrl: 500,
@@ -962,8 +964,23 @@ const SUPORTE = {
         "image/jpeg": "jpg",
         "image/png": "png",
         "image/webp": "webp",
-        "image/gif": "gif"
+        "image/gif": "gif",
+        "video/mp4": "mp4",
+        "video/quicktime": "mov",
+        "video/webm": "webm",
+        "application/pdf": "pdf",
+        "application/msword": "doc",
+        "application/vnd.ms-excel": "xls",
+        "application/vnd.ms-powerpoint": "ppt",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
+        "text/plain": "txt",
+        "text/csv": "csv"
     },
+    extImagem: ["jpg", "jpeg", "png", "webp", "gif"],
+    extVideo: ["mp4", "mov", "webm"],
+    extDocumento: ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "csv"],
     uploadDir: process.env.SUPORTE_UPLOAD_DIR || path.join(__dirname, "uploads", "suporte")
 };
 
@@ -1067,6 +1084,16 @@ function criarTabelasSuporte() {
             KEY idx_evento_ticket (ticket_id),
             CONSTRAINT fk_evento_ticket FOREIGN KEY (ticket_id)
                 REFERENCES suporte_ticket (id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+        `CREATE TABLE IF NOT EXISTS suporte_setor (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            origem_setor_id INT NOT NULL,
+            nome VARCHAR(150) NOT NULL,
+            status ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo',
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uniq_origem_setor (origem_setor_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     ];
     sqls.forEach((sql) => {
@@ -1086,7 +1113,10 @@ function migrarTabelasSuporte() {
         "ALTER TABLE suporte_ticket ADD COLUMN atendente_nome VARCHAR(150) DEFAULT NULL",
         "ALTER TABLE suporte_ticket ADD COLUMN aceito_em DATETIME DEFAULT NULL",
         "ALTER TABLE suporte_ticket ADD COLUMN fechado_em DATETIME DEFAULT NULL",
-        "ALTER TABLE suporte_ticket MODIFY status ENUM('aberto','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi') NOT NULL DEFAULT 'aberto'"
+        "ALTER TABLE suporte_ticket MODIFY status ENUM('aberto','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi') NOT NULL DEFAULT 'aberto'",
+        "ALTER TABLE suporte_ticket ADD COLUMN setor_id BIGINT UNSIGNED DEFAULT NULL",
+        "ALTER TABLE suporte_ticket ADD COLUMN setor_nome VARCHAR(150) DEFAULT NULL",
+        "ALTER TABLE suporte_arquivo ADD COLUMN tipo ENUM('imagem','video','documento') NOT NULL DEFAULT 'imagem'"
     ];
     const roda = (sql) => {
         suporteQuery(sql, [])
@@ -1167,6 +1197,85 @@ function mimeReal(buffer) {
     return null;
 }
 
+// Assinatura real de vídeo (magic bytes) — mp4/mov usam a mesma box "ftyp".
+function assinaturaVideo(buffer) {
+    if (!buffer || buffer.length < 12) return null;
+    if (buffer.toString("ascii", 4, 8) === "ftyp") return "video"; // mp4 / mov (qtff)
+    if (buffer[0] === 0x1A && buffer[1] === 0x45 && buffer[2] === 0xDF && buffer[3] === 0xA3) return "video"; // webm (EBML)
+    return null;
+}
+
+// Assinatura real de documento (magic bytes).
+function assinaturaDocumento(buffer) {
+    if (!buffer || buffer.length < 8) return null;
+    if (buffer.toString("ascii", 0, 4) === "%PDF") return "pdf";
+    if (buffer[0] === 0xD0 && buffer[1] === 0xCF && buffer[2] === 0x11 && buffer[3] === 0xE0 &&
+        buffer[4] === 0xA1 && buffer[5] === 0xB1 && buffer[6] === 0x1A && buffer[7] === 0xE1) return "ole"; // doc/xls/ppt legado
+    if (buffer[0] === 0x50 && buffer[1] === 0x4B && buffer[2] === 0x03 && buffer[3] === 0x04) return "zip"; // docx/xlsx/pptx
+    return null;
+}
+
+// Texto simples (txt/csv) sem assinatura mágica confiável: heurística — sem bytes nulos/controle nos primeiros KB.
+function pareceTexto(buffer) {
+    if (!buffer || !buffer.length) return false;
+    const amostra = buffer.subarray(0, Math.min(buffer.length, 2048));
+    for (let i = 0; i < amostra.length; i++) {
+        const b = amostra[i];
+        if (b === 0x00 || (b < 0x09) || (b > 0x0D && b < 0x20)) return false;
+    }
+    return true;
+}
+
+// Classifica um arquivo recebido (extensão do nome original + assinatura real do conteúdo).
+// Retorna { categoria: 'imagem'|'video'|'documento', mime, ext } ou null se não bater com nada permitido.
+function categorizarArquivo(nomeOriginal, buffer) {
+    const nome = String(nomeOriginal || "").toLowerCase();
+    const pontoIdx = nome.lastIndexOf(".");
+    const ext = pontoIdx >= 0 ? nome.slice(pontoIdx + 1) : "";
+
+    if (SUPORTE.extImagem.includes(ext)) {
+        const mime = mimeReal(buffer);
+        if (mime && SUPORTE.mimeExt[mime]) {
+            return { categoria: "imagem", mime, ext: SUPORTE.mimeExt[mime] };
+        }
+        return null;
+    }
+
+    if (SUPORTE.extVideo.includes(ext)) {
+        if (!assinaturaVideo(buffer)) return null;
+        const mime = ext === "webm" ? "video/webm" : (ext === "mov" ? "video/quicktime" : "video/mp4");
+        return { categoria: "video", mime, ext };
+    }
+
+    if (SUPORTE.extDocumento.includes(ext)) {
+        if (ext === "txt" || ext === "csv") {
+            if (!pareceTexto(buffer)) return null;
+            return { categoria: "documento", mime: ext === "csv" ? "text/csv" : "text/plain", ext };
+        }
+        const assinatura = assinaturaDocumento(buffer);
+        if (ext === "pdf") {
+            if (assinatura !== "pdf") return null;
+            return { categoria: "documento", mime: "application/pdf", ext };
+        }
+        if (["doc", "xls", "ppt"].includes(ext)) {
+            if (assinatura !== "ole") return null;
+        } else if (["docx", "xlsx", "pptx"].includes(ext)) {
+            if (assinatura !== "zip") return null;
+        }
+        const mimePorExt = {
+            doc: "application/msword",
+            xls: "application/vnd.ms-excel",
+            ppt: "application/vnd.ms-powerpoint",
+            docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        };
+        return { categoria: "documento", mime: mimePorExt[ext], ext };
+    }
+
+    return null;
+}
+
 function exigirAdminSuporte(req, res, next) {
     const chave = req.headers["x-api-key"] || "";
     if (!SUPORTE.adminKey || chave !== SUPORTE.adminKey) {
@@ -1177,11 +1286,11 @@ function exigirAdminSuporte(req, res, next) {
 
 const uploadSuporte = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: SUPORTE.maxBytes, files: SUPORTE.maxImagens }
+    limits: { fileSize: SUPORTE.maxBytesVideo, files: SUPORTE.maxArquivos }
 });
 
 // Cria chamado (widget → token Bearer)
-app.post("/suporte/tickets", uploadSuporte.array("imagens", SUPORTE.maxImagens), async (req, res) => {
+app.post("/suporte/tickets", uploadSuporte.array("anexos", SUPORTE.maxArquivos), async (req, res) => {
     try {
         const payload = validarTokenSuporte(req.headers.authorization);
         if (!payload) {
@@ -1208,18 +1317,52 @@ app.post("/suporte/tickets", uploadSuporte.array("imagens", SUPORTE.maxImagens),
             return res.status(400).json({ ok: false, msg: "URL da página muito longa." });
         }
 
-        // Valida imagens (máx. 5, 5MB, conteúdo real).
+        // Setor do chamado (opcional apenas se não houver nenhum setor ativo cadastrado).
+        let setorId = null;
+        let setorNome = null;
+        const setorIdInformado = parseInt(req.body.setor_id, 10);
+        if (setorIdInformado && setorIdInformado > 0) {
+            const setorRows = await suporteQuery(
+                "SELECT id, nome FROM suporte_setor WHERE id = ? AND status = 'ativo'",
+                [setorIdInformado]
+            );
+            if (!setorRows.length) {
+                return res.status(400).json({ ok: false, msg: "Setor selecionado é inválido ou não está mais disponível." });
+            }
+            setorId = setorRows[0].id;
+            setorNome = setorRows[0].nome;
+        } else {
+            const totalSetoresAtivos = await suporteQuery("SELECT COUNT(*) AS total FROM suporte_setor WHERE status = 'ativo'", []);
+            if (parseInt(totalSetoresAtivos[0].total, 10) > 0) {
+                return res.status(400).json({ ok: false, msg: "Selecione o setor de destino do chamado." });
+            }
+        }
+
+        // Valida anexos: imagem/documento até 5MB, vídeo até 25MB (máx. 1 vídeo), conteúdo real conferido por assinatura.
         const arquivos = [];
+        let totalVideos = 0;
         if (req.files && req.files.length) {
             for (const file of req.files) {
-                const mime = mimeReal(file.buffer);
-                if (!mime || !SUPORTE.mimeExt[mime]) {
-                    return res.status(400).json({ ok: false, msg: "Tipo de imagem não permitido (JPG, PNG, WEBP ou GIF)." });
+                const nomeOriginal = String(file.originalname || "").slice(0, 200);
+                const categorizado = categorizarArquivo(nomeOriginal, file.buffer);
+                if (!categorizado) {
+                    return res.status(400).json({ ok: false, msg: "Arquivo \"" + nomeOriginal + "\" não é um tipo permitido (imagem, vídeo ou documento)." });
+                }
+                const tetoBytes = categorizado.categoria === "video" ? SUPORTE.maxBytesVideo : SUPORTE.maxBytesPadrao;
+                if (file.size > tetoBytes) {
+                    return res.status(400).json({ ok: false, msg: "Arquivo \"" + nomeOriginal + "\" excede " + (tetoBytes / (1024 * 1024)) + "MB." });
+                }
+                if (categorizado.categoria === "video") {
+                    totalVideos++;
+                    if (totalVideos > SUPORTE.maxVideos) {
+                        return res.status(400).json({ ok: false, msg: "Permitido no máximo " + SUPORTE.maxVideos + " vídeo por chamado." });
+                    }
                 }
                 arquivos.push({
-                    nomeOriginal: String(file.originalname || "").slice(0, 200),
-                    mime: mime,
-                    ext: SUPORTE.mimeExt[mime],
+                    nomeOriginal: nomeOriginal,
+                    mime: categorizado.mime,
+                    ext: categorizado.ext,
+                    categoria: categorizado.categoria,
                     tamanho: file.size,
                     buffer: file.buffer
                 });
@@ -1236,8 +1379,8 @@ app.post("/suporte/tickets", uploadSuporte.array("imagens", SUPORTE.maxImagens),
         }
 
         const ins = await suporteQuery(
-            "INSERT INTO suporte_ticket (empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, pagina_url, descricao) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            [empresa, empresaNome, uid, ulogin, unome, uemailValido, paginaUrl, descricao]
+            "INSERT INTO suporte_ticket (empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, pagina_url, descricao, setor_id, setor_nome) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [empresa, empresaNome, uid, ulogin, unome, uemailValido, paginaUrl, descricao, setorId, setorNome]
         );
         const ticketId = ins.insertId;
 
@@ -1251,8 +1394,8 @@ app.post("/suporte/tickets", uploadSuporte.array("imagens", SUPORTE.maxImagens),
                 const caminhoAbsoluto = path.join(dirTicket, nomeGerado);
                 fs.writeFileSync(caminhoAbsoluto, a.buffer);
                 await suporteQuery(
-                    "INSERT INTO suporte_arquivo (ticket_id, nome_original, nome_gerado, mime, tamanho_bytes, caminho) VALUES (?, ?, ?, ?, ?, ?)",
-                    [ticketId, a.nomeOriginal, nomeGerado, a.mime, a.tamanho, path.join(empresa, String(ticketId), nomeGerado)]
+                    "INSERT INTO suporte_arquivo (ticket_id, nome_original, nome_gerado, mime, tamanho_bytes, caminho, tipo) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    [ticketId, a.nomeOriginal, nomeGerado, a.mime, a.tamanho, path.join(empresa, String(ticketId), nomeGerado), a.categoria]
                 );
                 salvos++;
             }
@@ -1297,16 +1440,19 @@ app.get("/suporte/tickets", exigirAdminSuporte, async (req, res) => {
         const pagina = Math.max(parseInt(req.query.pagina || "1", 10) || 1, 1);
         const offset = (pagina - 1) * limite;
 
+        const setorIdFiltro = parseInt(req.query.setor_id, 10);
+
         let where = [];
         let params = [];
         if (empresa) { where.push("empresa_key = ?"); params.push(empresa); }
+        if (setorIdFiltro && setorIdFiltro > 0) { where.push("setor_id = ?"); params.push(setorIdFiltro); }
         if (status === "aberto" || status === "resolvido") { where.push("status = ?"); params.push(status); }
         if (dataInicio && /^\d{4}-\d{2}-\d{2}$/.test(dataInicio)) { where.push("created_at >= ?"); params.push(dataInicio + " 00:00:00"); }
         if (dataFim && /^\d{4}-\d{2}-\d{2}$/.test(dataFim)) { where.push("created_at <= ?"); params.push(dataFim + " 23:59:59"); }
         const filtro = where.length ? "WHERE " + where.join(" AND ") : "";
 
         const linhas = await suporteQuery(
-            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, pagina_url, descricao, status, tipo, ssi_codigo, ssi_prioridade, atendente_nome, aceito_em, fechado_em, created_at FROM suporte_ticket " + filtro + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, pagina_url, descricao, status, tipo, ssi_codigo, ssi_prioridade, atendente_nome, aceito_em, fechado_em, created_at, setor_id, setor_nome FROM suporte_ticket " + filtro + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
             params.concat([limite, offset])
         );
         const totalRows = await suporteQuery(
@@ -1328,13 +1474,13 @@ app.get("/suporte/tickets/:id", exigirAdminSuporte, async (req, res) => {
         if (!id || id < 1) return res.status(400).json({ ok: false, msg: "ID inválido." });
 
         const linhas = await suporteQuery(
-            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, pagina_url, descricao, status, tipo, ssi_codigo, ssi_prioridade, atendente_nome, aceito_em, fechado_em, created_at FROM suporte_ticket WHERE id = ?",
+            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, pagina_url, descricao, status, tipo, ssi_codigo, ssi_prioridade, atendente_nome, aceito_em, fechado_em, created_at, setor_id, setor_nome FROM suporte_ticket WHERE id = ?",
             [id]
         );
         if (!linhas.length) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
 
         const arquivos = await suporteQuery(
-            "SELECT id, nome_original, nome_gerado, mime, tamanho_bytes, created_at FROM suporte_arquivo WHERE ticket_id = ?",
+            "SELECT id, nome_original, nome_gerado, mime, tamanho_bytes, tipo, created_at FROM suporte_arquivo WHERE ticket_id = ?",
             [id]
         );
 
@@ -1366,6 +1512,57 @@ app.get("/suporte/empresas", exigirAdminSuporte, async (req, res) => {
     } catch (err) {
         console.error("[SUPORTE] Erro ao listar empresas:", err);
         res.status(500).json({ ok: false, msg: "Erro ao listar empresas." });
+    }
+});
+
+// Cria/atualiza um setor de suporte (chamado por cadastro_setor.php quando marcado em /demo).
+app.post("/suporte/setores", exigirAdminSuporte, async (req, res) => {
+    try {
+        const origemSetorId = parseInt(req.body.origem_setor_id, 10);
+        const nome = String(req.body.nome || "").trim().slice(0, 150);
+        const status = String(req.body.status || "").trim();
+        if (!origemSetorId || origemSetorId < 1) {
+            return res.status(400).json({ ok: false, msg: "origem_setor_id inválido." });
+        }
+        if (!nome) {
+            return res.status(400).json({ ok: false, msg: "Nome do setor é obrigatório." });
+        }
+        if (!["ativo", "inativo"].includes(status)) {
+            return res.status(400).json({ ok: false, msg: "Status deve ser ativo ou inativo." });
+        }
+
+        await suporteQuery(
+            "INSERT INTO suporte_setor (origem_setor_id, nome, status) VALUES (?, ?, ?) " +
+            "ON DUPLICATE KEY UPDATE nome = VALUES(nome), status = VALUES(status), updated_at = NOW()",
+            [origemSetorId, nome, status]
+        );
+
+        res.json({ ok: true, msg: "Setor sincronizado." });
+    } catch (err) {
+        console.error("[SUPORTE] Erro ao sincronizar setor:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao sincronizar setor." });
+    }
+});
+
+// Lista setores de suporte ativos (combo do widget e filtro da gestão).
+// Aceita x-api-key (telas PHP server-side) OU Bearer token assinado do widget.
+app.get("/suporte/setores", async (req, res) => {
+    try {
+        const chaveAdmin = req.headers["x-api-key"] || "";
+        const autorizadoAdmin = SUPORTE.adminKey && chaveAdmin === SUPORTE.adminKey;
+        const autorizadoToken = !autorizadoAdmin && !!validarTokenSuporte(req.headers.authorization);
+        if (!autorizadoAdmin && !autorizadoToken) {
+            return res.status(401).json({ ok: false, msg: "Acesso não autorizado." });
+        }
+
+        const linhas = await suporteQuery(
+            "SELECT id, nome FROM suporte_setor WHERE status = 'ativo' ORDER BY nome ASC",
+            []
+        );
+        res.json({ ok: true, setores: linhas });
+    } catch (err) {
+        console.error("[SUPORTE] Erro ao listar setores:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao listar setores." });
     }
 });
 
@@ -1600,10 +1797,10 @@ app.get("/suporte/health", (req, res) => {
 app.use((err, req, res, next) => {
     if (err instanceof multer.MulterError) {
         const msg = err.code === "LIMIT_FILE_SIZE"
-            ? "Imagem excede o tamanho máximo de 5MB."
+            ? "Arquivo excede o tamanho máximo permitido (5MB para imagem/documento, 25MB para vídeo)."
             : err.code === "LIMIT_UNEXPECTED_FILE"
                 ? "Arquivo enviado em campo inválido."
-                : "Limite de imagens excedido (máx. 5).";
+                : "Limite de anexos excedido (máx. " + SUPORTE.maxArquivos + ").";
         return res.status(400).json({ ok: false, msg });
     }
     console.error(err);

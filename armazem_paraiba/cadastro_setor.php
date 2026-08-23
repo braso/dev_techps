@@ -6,6 +6,70 @@
 
 	include "conecta.php";
 
+	// Só o domínio /demo mantém a lista mestra de setores usados no módulo de suporte.
+	function suporteSetorDominioEhDemo(): bool {
+		$empresaAtual = trim(strval($_ENV["CONTEX_PATH"] ?? ""), "/");
+		return strpos($empresaAtual, "demo") !== false;
+	}
+
+	function ensureColunaDisponivelSuporte(){
+		$dbRow = mysqli_fetch_assoc(query("SELECT DATABASE() AS db"));
+		$db = strval($dbRow["db"] ?? "");
+		if($db === ""){
+			return;
+		}
+
+		$cols = mysqli_fetch_all(query(
+			"SELECT COLUMN_NAME
+			FROM information_schema.COLUMNS
+			WHERE TABLE_SCHEMA = ?
+				AND TABLE_NAME = 'grupos_documentos'",
+			"s",
+			[$db]
+		), MYSQLI_ASSOC);
+		$colNames = array_map(fn($r) => strval($r["COLUMN_NAME"] ?? ""), $cols ?: []);
+		$has = array_flip($colNames);
+
+		if(!isset($has["grup_tx_disponivel_suporte"])){
+			query("ALTER TABLE grupos_documentos ADD COLUMN grup_tx_disponivel_suporte ENUM('sim','nao') NOT NULL DEFAULT 'nao'");
+		}
+	}
+
+	// Sincroniza o setor com o banco central do módulo de suporte (server.js).
+	// Só é chamado quando o domínio atual é /demo (única fonte da lista de setores de suporte).
+	function suporte_sincronizar_setor(int $setorId, string $nome, string $ativoSimNao): void {
+		if($setorId <= 0){
+			return;
+		}
+		$apiUrl = rtrim(strval($_ENV["SUPORTE_API_URL"] ?? ""), "/");
+		$adminKey = strval($_ENV["SUPORTE_ADMIN_KEY"] ?? "");
+		if($apiUrl === "" || $adminKey === ""){
+			error_log("suporte_sincronizar_setor: SUPORTE_API_URL/SUPORTE_ADMIN_KEY não configurados no .env.");
+			return;
+		}
+
+		$status = ($ativoSimNao === "sim") ? "ativo" : "inativo";
+
+		$ch = curl_init($apiUrl . "/suporte/setores");
+		curl_setopt_array($ch, [
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_TIMEOUT        => 20,
+			CURLOPT_SSL_VERIFYPEER => true,
+			CURLOPT_POST           => true,
+			CURLOPT_HTTPHEADER     => ["x-api-key: " . $adminKey],
+			CURLOPT_POSTFIELDS     => http_build_query([
+				"origem_setor_id" => $setorId,
+				"nome"            => $nome,
+				"status"          => $status,
+			]),
+		]);
+		curl_exec($ch);
+		if(curl_errno($ch)){
+			error_log("suporte_sincronizar_setor erro curl: " . curl_error($ch));
+		}
+		curl_close($ch);
+	}
+
 	function ensureSetorResponsavelSchema(){
 		$dbRow = mysqli_fetch_assoc(query("SELECT DATABASE() AS db"));
 		$db = strval($dbRow["db"] ?? "");
@@ -237,6 +301,14 @@
 		ensureSetorResponsavelSchema();
 		if(!empty($_POST["id"])){
 			query("DELETE FROM setor_responsavel WHERE sres_nb_setor_id = ?", "i", [intval($_POST["id"])]);
+
+			if(suporteSetorDominioEhDemo()){
+				ensureColunaDisponivelSuporte();
+				$setorExcluido = carregar("grupos_documentos", $_POST["id"]);
+				if(!empty($setorExcluido) && (strval($setorExcluido["grup_tx_disponivel_suporte"] ?? "nao") === "sim")){
+					suporte_sincronizar_setor(intval($_POST["id"]), strval($setorExcluido["grup_tx_nome"] ?? ""), "nao");
+				}
+			}
 		}
 		remover("grupos_documentos",$_POST["id"]);
 		index();
@@ -244,7 +316,9 @@
 	}
 
     function modificarSetor(){
+		ensureColunaDisponivelSuporte();
 		$a_mod = carregar("grupos_documentos", $_POST["id"]);
+		$_POST["disponivel_suporte"] = strval($a_mod["grup_tx_disponivel_suporte"] ?? "nao");
         $subSetor = mysqli_fetch_all(query(
             "SELECT sbgr_nb_id, sbgr_tx_nome
             FROM `sbgrupos_documentos`
@@ -282,10 +356,18 @@
             exit;
         }
 
+        $__isDemo = suporteSetorDominioEhDemo();
+        if($__isDemo){
+            ensureColunaDisponivelSuporte();
+        }
+
         $novoSetor = [
             "grup_tx_nome" => $_POST["nome"],
             "grup_tx_status" => "ativo"
         ];
+        if($__isDemo){
+            $novoSetor["grup_tx_disponivel_suporte"] = (strval($_POST["disponivel_suporte"] ?? "nao") === "sim") ? "sim" : "nao";
+        }
         error_log("cadastro_setor novoSetor: ".json_encode($novoSetor));
 
 		$setorId = 0;
@@ -398,6 +480,10 @@
 		$ordens = is_array($ordens) ? $ordens : [];
 		if(!empty($setorId)){
 			salvarResponsaveisSetor($setorId, $responsaveis, $assinaFlags, $ordens);
+		}
+
+		if($__isDemo && !empty($setorId)){
+			suporte_sincronizar_setor($setorId, $_POST["nome"], $novoSetor["grup_tx_disponivel_suporte"] ?? "nao");
 		}
 
 		index();
@@ -530,6 +616,11 @@ function campoSubSetor($nome, $variavel, $valores = [], $tamanho = 2) {
 
 		ensureSetorResponsavelSchema();
 
+		$__isDemo = suporteSetorDominioEhDemo();
+		if($__isDemo){
+			ensureColunaDisponivelSuporte();
+		}
+
         $campoStatus = "";
         if (!empty($_POST["id"])) {
             $campoStatus = combo("Status", "busca_banco", $_POST["busca_banco"]?? "", 2, [ "ativo" => "Ativo", "inativo" => "Inativo"]);
@@ -544,9 +635,26 @@ function campoSubSetor($nome, $variavel, $valores = [], $tamanho = 2) {
 		$nomeWidth = $hasStatus ? 3 : 4;
 		$subsetorWidth = $hasStatus ? 7 : 8;
 
+		$campoDisponivelSuporte = "";
+		if($__isDemo){
+			$subsetorWidth -= 3;
+			$__marcadoSuporte = (strval($_POST["disponivel_suporte"] ?? "nao") === "sim") ? "checked" : "";
+			$campoDisponivelSuporte =
+				"<div class='col-sm-3 margin-bottom-5 campo-fit-content'>
+					<label class='control-label'>&nbsp;</label>
+					<div class='checkbox' style='margin-top:6px;'>
+						<label>
+							<input type='checkbox' name='disponivel_suporte' value='sim' {$__marcadoSuporte}>
+							Disponibilizar no módulo de suporte
+						</label>
+					</div>
+				</div>";
+		}
+
 		$camposTopo = [
 			campo("Nome*", "nome", $_POST["nome"], $nomeWidth),
 			$campoStatus,
+			$campoDisponivelSuporte,
 			"<div class='col-sm-{$subsetorWidth} margin-bottom-5 campo-fit-content'>"
 				.campoSubSetor('Subsetores', 'subsetores', $_POST["subsetores"] ?? [])
 			."</div>"

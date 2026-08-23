@@ -92,6 +92,7 @@
                 "/diarias/parametros_diarias.php" => "Parâmetros de Diárias"
             ],
 			"painel" => [
+				"/dashboard.php"				=> "Torre de Comando",
 				"/paineis/ajustes.php"			=> "Ajustes",
 				"/paineis/disponibilidade.php"	=> "Disponibilidade",
 				"/paineis/endosso.php"			=> "Endosso",
@@ -220,6 +221,7 @@ if ($showComunicado) {
             "Integrações de Ponto" => "fa fa-exchange-alt",
             "Não Cadastrados" => "fa fa-user-slash",
             "Não Conformidades" => "fa fa-exclamation-triangle",
+            "Torre de Comando" => "fa fa-tachometer",
             "Ajustes" => "fa fa-wrench",
             "Disponibilidade" => "fa fa-calendar-check",
             "Jornada Aberta" => "fa fa-road",

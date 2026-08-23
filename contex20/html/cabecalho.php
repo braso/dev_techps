@@ -410,11 +410,70 @@
 									}
 								}
 							}
+
+							// ── Sino de notificações de gestão (não conformidade, jornada crítica, CNH, férias) ──
+							// Só para quem não é operacional (mesmo público da Torre de Comando) e só se o
+							// tenant atual tiver o motor de notificações (armazem_paraiba/notificacoes.php).
+							$__notifItens = [];
+							$__notifPref = ["categorias" => [], "email_ativo" => false, "email" => ""];
+							$__notifCategorias = [];
+							$__nivelAtual = strval($_SESSION["user_tx_nivel"] ?? "");
+							$__ehOperacional = in_array($__nivelAtual, ["Motorista", "Ajudante", "Funcionário", "Terceirizado"], true);
+							$__caminhoNotificacoes = $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/notificacoes.php";
+							if(!$__ehOperacional && $connLocal && file_exists($__caminhoNotificacoes)){
+								include_once $__caminhoNotificacoes;
+								if(function_exists("notificacao_carregar_preferencia")){
+									$__usuarioIdSessao = intval($_SESSION["user_nb_id"] ?? 0);
+									$__notifPref = notificacao_carregar_preferencia($__usuarioIdSessao);
+									$__notifCategorias = notificacao_categorias_disponiveis();
+									$__notifItens = notificacao_calcular($__notifPref["categorias"]);
+								}
+							}
+							$__notifTotal = $assinPendCount + count($__notifItens);
 						?>
 						<ul class="nav navbar-nav pull-right">
 							<li class="droddown dropdown-separator">
-								
+
 							</li>
+							<?php if(!$__ehOperacional && !empty($__notifCategorias)): ?>
+							<!-- INICIO SINO DE NOTIFICAÇÕES (gestão) -->
+							<li class="dropdown dropdown-separator">
+								<a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true" style="text-decoration: none; margin: 0px 5px; display: flex; align-items: center; justify-content: center; position: relative;" title="Notificações">
+									<i class="fa fa-bell" style="font-size: 18px; color: <?=($__notifTotal > 0 ? "#F3C200" : "#9aa3ad")?>;"></i>
+									<?php if($__notifTotal > 0): ?>
+										<span class="badge badge-danger" style="position:absolute; top:-2px; right:-4px; font-size:10px; padding:2px 5px; border-radius:10px;"><?=intval($__notifTotal)?></span>
+									<?php endif; ?>
+								</a>
+								<ul class="dropdown-menu dropdown-menu-default" style="width:320px; max-height:420px; overflow-y:auto; padding:0;">
+									<li style="padding:10px 14px; border-bottom:1px solid #eee; font-weight:600; color:#333;">Notificações</li>
+									<?php if($assinPendCount > 0): ?>
+										<li>
+											<a href="<?=$CONTEX["path"]?>/assinatura/pendentes.php" style="display:block; padding:10px 14px; border-bottom:1px solid #f2f2f2;">
+												<div style="font-weight:600; color:#333; font-size:13px;"><i class="fa fa-file-text-o" style="color:#F3C200; margin-right:6px;"></i><?=$assinPendCount?> documento(s) pendente(s)</div>
+												<div style="font-size:12px; color:#888; margin-top:2px;">Aguardando sua assinatura</div>
+											</a>
+										</li>
+									<?php endif; ?>
+									<?php foreach($__notifItens as $__item): ?>
+										<li>
+											<a href="<?=$CONTEX["path"]?>/<?=htmlspecialchars($__item["link"])?>" style="display:block; padding:10px 14px; border-bottom:1px solid #f2f2f2;">
+												<div style="font-weight:600; color:#333; font-size:13px;"><i class="fa <?=htmlspecialchars($__item["icone"])?>" style="color:<?=htmlspecialchars($__item["cor"])?>; margin-right:6px;"></i><?=htmlspecialchars($__item["titulo"])?></div>
+												<div style="font-size:12px; color:#888; margin-top:2px;"><?=htmlspecialchars($__item["texto"])?></div>
+											</a>
+										</li>
+									<?php endforeach; ?>
+									<?php if($__notifTotal == 0): ?>
+										<li style="padding:16px 14px; text-align:center; color:#999; font-size:12.5px;">Nenhuma notificação no momento.</li>
+									<?php endif; ?>
+									<li style="padding:8px 14px; text-align:center; border-top:1px solid #eee;">
+										<a href="javascript:;" id="btnConfigurarNotificacoes" style="font-size:12.5px; font-weight:600; color:#2f6fa3;">
+											<i class="fa fa-cog"></i> Configurar notificações
+										</a>
+									</li>
+								</ul>
+							</li>
+							<!-- FIM SINO DE NOTIFICAÇÕES (gestão) -->
+							<?php else: ?>
 							<li class="dropdown dropdown-separator ">
 								<a href="<?=$CONTEX["path"]?>/assinatura/pendentes.php" style="text-decoration: none; margin: 0px 5px; display: flex; align-items: center; justify-content: center; position: relative;" title="Documentos pendentes de assinatura">
 									<i class="fa fa-bell" style="font-size: 18px; color: <?=($assinPendCount > 0 ? "#F3C200" : "#9aa3ad")?>;"></i>
@@ -423,8 +482,9 @@
 									<?php endif; ?>
 								</a>
 							</li>
-							
-							
+							<?php endif; ?>
+
+
 							<!-- INICIO USER LOGIN DROPDOWN -->
 							<li class="dropdown dropdown-user dropdown-dark">
 								<a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true">
@@ -456,6 +516,86 @@
 											</li> -->
 							<!-- FIM QUICK SIDEBAR TOGGLER -->
 						</ul>
+
+						<?php if(!$__ehOperacional && !empty($__notifCategorias)): ?>
+						<!-- INICIO MODAL: CONFIGURAR NOTIFICAÇÕES -->
+						<div class="modal fade" id="modalConfigurarNotificacoes" tabindex="-1" role="dialog">
+							<div class="modal-dialog">
+								<div class="modal-content">
+									<div class="modal-header">
+										<button type="button" class="close" data-dismiss="modal">&times;</button>
+										<h4 class="modal-title"><i class="fa fa-bell"></i> Configurar notificações</h4>
+									</div>
+									<div class="modal-body">
+										<p style="color:#777; font-size:12.5px;">Escolha o que deve aparecer no sino.</p>
+										<?php foreach($__notifCategorias as $__chave => $__rotulo): ?>
+											<div class="checkbox-list" style="margin-bottom:8px;">
+												<label style="font-weight:normal;">
+													<input type="checkbox" class="notif-categoria" value="<?=htmlspecialchars($__chave)?>" <?=in_array($__chave, $__notifPref["categorias"], true) ? "checked" : ""?>>
+													<?=htmlspecialchars($__rotulo)?>
+												</label>
+											</div>
+										<?php endforeach; ?>
+										<hr>
+										<div class="checkbox-list" style="margin-bottom:8px;">
+											<label style="font-weight:normal;">
+												<input type="checkbox" id="notifEmailAtivo" <?=$__notifPref["email_ativo"] ? "checked" : ""?>>
+												Também quero receber por e-mail
+											</label>
+										</div>
+										<div class="form-group">
+											<label>E-mail para receber as notificações</label>
+											<input type="email" class="form-control" id="notifEmailEndereco" placeholder="seuemail@empresa.com.br" value="<?=htmlspecialchars($__notifPref["email"])?>">
+										</div>
+									</div>
+									<div class="modal-footer">
+										<button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+										<button type="button" class="btn blue" id="btnSalvarNotificacoes">Salvar</button>
+									</div>
+								</div>
+							</div>
+						</div>
+						<!-- FIM MODAL: CONFIGURAR NOTIFICAÇÕES -->
+						<script>
+						(function(){
+							if(!window.jQuery) return;
+							jQuery(function($){
+								$("#btnConfigurarNotificacoes").on("click", function(){
+									$("#modalConfigurarNotificacoes").modal("show");
+								});
+								$("#btnSalvarNotificacoes").on("click", function(){
+									var categorias = [];
+									$(".notif-categoria:checked").each(function(){ categorias.push($(this).val()); });
+									var emailAtivo = $("#notifEmailAtivo").is(":checked");
+									var email = $("#notifEmailEndereco").val();
+									if(emailAtivo && !email){
+										alert("Informe um e-mail para ativar o envio por e-mail.");
+										return;
+									}
+									var $btn = $(this);
+									$btn.prop("disabled", true).text("Salvando...");
+									$.ajax({
+										url: "<?=$CONTEX["path"]?>/notificacao_preferencia_salvar.php",
+										method: "POST",
+										contentType: "application/json",
+										data: JSON.stringify({ categorias: categorias, email_ativo: emailAtivo, email: email }),
+										dataType: "json"
+									}).done(function(json){
+										if(json && json.ok){
+											window.location.reload();
+										}else{
+											alert((json && json.msg) ? json.msg : "Não foi possível salvar. Tente novamente.");
+											$btn.prop("disabled", false).text("Salvar");
+										}
+									}).fail(function(){
+										alert("Sem comunicação com o servidor.");
+										$btn.prop("disabled", false).text("Salvar");
+									});
+								});
+							});
+						})();
+						</script>
+						<?php endif; ?>
 					</div>
 					<!-- INICIO RESPONSIVE MENU TOGGLER -->
 					<a href="javascript:;" class="menu-toggler"></a>
