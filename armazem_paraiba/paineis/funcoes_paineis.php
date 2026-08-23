@@ -991,7 +991,7 @@ function relatorio_nao_conformidade_juridica(int $idEmpresa) {
 		$filtroOcupacao = "AND enti_tx_ocupacao IN ('{$_POST["busca_ocupacao"]}')";
 	}
 
-	$motoristas = mysqli_fetch_all(query(
+	$resMotoristas = query(
 		"SELECT * FROM entidade
 			LEFT JOIN empresa ON entidade.enti_nb_empresa = empresa.empr_nb_id
 			LEFT JOIN cidade ON empresa.empr_nb_cidade = cidade.cida_nb_id
@@ -1027,7 +1027,13 @@ function relatorio_nao_conformidade_juridica(int $idEmpresa) {
 					)
 				)
 			ORDER BY enti_tx_nome ASC;"
-	), MYSQLI_ASSOC);
+	);
+	if ($resMotoristas === false) {
+		error_log("relatorio_nao_conformidade_juridica: falha na query de motoristas - ".($GLOBALS["last_sql_error"] ?? ""));
+		$motoristas = [];
+	} else {
+		$motoristas = mysqli_fetch_all($resMotoristas, MYSQLI_ASSOC);
+	}
 
 	$row = [];
 
