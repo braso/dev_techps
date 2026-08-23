@@ -83,14 +83,28 @@ function torre_manifesto(): array {
                 "tile_cnh"             => "Cartão: CNH vencendo",
                 "tile_advertencias"    => "Cartão: advertências candidatas",
                 "tile_nc_alta"         => "Cartão: não conformidade alta",
+                "tile_faltas_pendentes"=> "Cartão: jornadas não trabalhadas pendentes de tratativa",
                 "lista_ferias_hoje"    => "Lista: quem está de férias hoje",
                 "lista_ferias_proximas"=> "Lista: quem entra de férias",
                 "lista_cnh"            => "Lista: CNH vencendo",
                 "painel_nc"            => "Gráfico: não conformidade por gravidade",
                 "painel_abonos"        => "Gráfico: abonos por motivo",
+                "painel_faltas_tratativa" => "Gráfico: jornada prevista não trabalhada — tratativa",
                 "painel_ranking_nc"    => "Ranking: quem mais precisa de atenção",
                 "painel_tendencia_nc"  => "Gráfico: tendência de não conformidade",
                 "painel_tendencia_abonos" => "Gráfico: tendência de abonos",
+            ],
+        ],
+        "turnover" => [
+            "titulo" => "Turnover & quadro de pessoal",
+            "itens" => [
+                "tile_admissoes_total"         => "Cartão: admissões (histórico)",
+                "tile_desligamentos_total"     => "Cartão: desligamentos (histórico)",
+                "tile_idade_media_contratados" => "Cartão: idade média dos contratados",
+                "tile_quadro_especial"         => "Cartão: quadro especial (PCD, estagiário, aprendiz, COR)",
+                "painel_turnover_tendencia"    => "Gráfico: admissões x desligamentos (histórico completo)",
+                "painel_sexo_contratados"      => "Gráfico: sexo dos contratados (histórico)",
+                "painel_cargo_setor"           => "Gráfico: composição de cargo especial por setor",
             ],
         ],
         "custo" => [
@@ -165,7 +179,7 @@ function torre_link(string $href, string $texto = "Ver tela completa"): string {
 
 // Ordem padrão das seções (usada quando o usuário nunca reordenou nada).
 function torre_ordem_secoes_padrao(): array {
-    return ["operacao", "frota", "pessoas", "custo", "cadastros"];
+    return ["operacao", "frota", "pessoas", "turnover", "custo", "cadastros"];
 }
 
 // Decodifica o JSON salvo em torr_tx_ocultos — aceita tanto o formato antigo (lista simples de
@@ -388,6 +402,32 @@ function torre_nc_totais(array $empresasAlvo, string $mes): array {
             if (!is_array($d)) continue;
             foreach ($campos as $c) {
                 if (isset($d[$c])) $out[$c] += floatval($d[$c]);
+            }
+        }
+    }
+    return $out;
+}
+
+// Jornada prevista e não trabalhada (falta) — mesma fonte de dados da apuração de conformidade
+// (paineis/nc_juridica.php), mas mantendo nao_endossado (pendente de tratativa) separado de
+// endossado (já tratado), em vez de somar tudo como torre_nc_totais() faz.
+function torre_faltas_tratativa(array $empresasAlvo, string $mes): array {
+    $out = ["pendente" => 0.0, "tratada" => 0.0, "justificada" => 0.0];
+    foreach ($empresasAlvo as $id) {
+        $arqPendente = __DIR__ . "/paineis/arquivos/nao_conformidade_juridica/{$mes}/{$id}/nao_endossado/empresa_{$id}.json";
+        $arqTratada  = __DIR__ . "/paineis/arquivos/nao_conformidade_juridica/{$mes}/{$id}/endossado/empresa_{$id}.json";
+        if (file_exists($arqPendente)) {
+            $d = json_decode(file_get_contents($arqPendente), true);
+            if (is_array($d)) {
+                $out["pendente"] += floatval($d["falta"] ?? 0);
+                $out["justificada"] += floatval($d["faltaJustificada"] ?? 0);
+            }
+        }
+        if (file_exists($arqTratada)) {
+            $d = json_decode(file_get_contents($arqTratada), true);
+            if (is_array($d)) {
+                $out["tratada"] += floatval($d["falta"] ?? 0);
+                $out["justificada"] += floatval($d["faltaJustificada"] ?? 0);
             }
         }
     }
@@ -663,6 +703,124 @@ $ativos = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM entidade e W
 $inativos = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM entidade e WHERE e.enti_tx_status = 'inativo' {$condEmpresa}"))["c"] ?? 0);
 $totalFiliais = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM empresa WHERE empr_tx_Ehmatriz != 'sim' AND empr_tx_status='ativo'"))["c"] ?? 0);
 
+// ── Turnover (histórico completo — estatística da empresa não é "do mês", é o registro todo) ─
+
+$admissoesTotal = (int) (torre_fetch_assoc(query(
+    "SELECT COUNT(*) AS c FROM entidade e WHERE e.enti_tx_admissao IS NOT NULL {$condEmpresa}"
+))["c"] ?? 0);
+
+$desligamentosTotal = (int) (torre_fetch_assoc(query(
+    "SELECT COUNT(*) AS c FROM entidade e
+     WHERE e.enti_tx_desligamento IS NOT NULL AND e.enti_tx_desligamento NOT IN ('', '0000-00-00') {$condEmpresa}"
+))["c"] ?? 0);
+
+$turnoverRate = $ativos > 0 ? round(($desligamentosTotal / $ativos) * 100, 1) : 0.0;
+
+// Idade e sexo de TODAS as pessoas já admitidas (histórico completo, não só quem entrou este mês).
+// Quem foi desligado continua contando aqui — desligamento só tira a pessoa das estatísticas de
+// QUADRO ATUAL (quadro especial por setor, mais abaixo), não do histórico de admissões.
+$contratadosRows = torre_fetch_all(query(
+    "SELECT e.enti_tx_sexo AS sexo, e.enti_tx_nascimento AS nascimento, e.enti_tx_admissao AS admissao
+     FROM entidade e WHERE e.enti_tx_admissao IS NOT NULL {$condEmpresa}"
+), MYSQLI_ASSOC) ?: [];
+
+$somaIdadeContratados = 0.0;
+$qtdIdadeContratados = 0;
+$sexoContratados = [];
+foreach ($contratadosRows as $c) {
+    $nascimento = strval($c["nascimento"] ?? "");
+    $admissao = strval($c["admissao"] ?? "");
+    if ($nascimento !== "" && $nascimento !== "0000-00-00" && $admissao !== "") {
+        $idade = (strtotime($admissao) - strtotime($nascimento)) / (365.25 * 86400);
+        if ($idade > 0 && $idade < 100) { $somaIdadeContratados += $idade; $qtdIdadeContratados++; }
+    }
+    $sexo = trim(strval($c["sexo"] ?? "")) ?: "Não informado";
+    $sexoContratados[$sexo] = ($sexoContratados[$sexo] ?? 0) + 1;
+}
+$idadeMediaContratados = $qtdIdadeContratados > 0 ? round($somaIdadeContratados / $qtdIdadeContratados, 1) : null;
+
+// Tendência de admissões x desligamentos mês a mês, desde o registro mais antigo (histórico completo,
+// limitado a no máximo 10 anos pra trás só como proteção contra data de cadastro mal digitada).
+function torre_turnover_tendencia(string $condEmpresa): array {
+    $limite = torre_fetch_assoc(query(
+        "SELECT LEAST(
+            COALESCE(MIN(e.enti_tx_admissao), CURDATE()),
+            COALESCE(MIN(NULLIF(e.enti_tx_desligamento, '0000-00-00')), CURDATE())
+         ) AS inicio
+         FROM entidade e WHERE 1=1 {$condEmpresa}"
+    ));
+    $inicio = strval($limite["inicio"] ?? date("Y-m-d")) ?: date("Y-m-d");
+
+    $dtInicio = new DateTime(substr($inicio, 0, 7) . "-01");
+    $dtMinimo = new DateTime(date("Y-m-01", strtotime("-120 months")));
+    if ($dtInicio < $dtMinimo) { $dtInicio = $dtMinimo; }
+    $dtFim = new DateTime(date("Y-m-01"));
+
+    $admRows = torre_fetch_all(query(
+        "SELECT DATE_FORMAT(e.enti_tx_admissao, '%Y-%m') AS ym, COUNT(*) AS total
+         FROM entidade e WHERE e.enti_tx_admissao IS NOT NULL {$condEmpresa} GROUP BY ym"
+    ), MYSQLI_ASSOC) ?: [];
+    $desRows = torre_fetch_all(query(
+        "SELECT DATE_FORMAT(e.enti_tx_desligamento, '%Y-%m') AS ym, COUNT(*) AS total
+         FROM entidade e
+         WHERE e.enti_tx_desligamento IS NOT NULL AND e.enti_tx_desligamento NOT IN ('', '0000-00-00')
+           {$condEmpresa} GROUP BY ym"
+    ), MYSQLI_ASSOC) ?: [];
+
+    $meses = [];
+    for ($cursor = clone $dtInicio; $cursor <= $dtFim; $cursor->modify("+1 month")) {
+        $meses[] = $cursor->format("Y-m");
+    }
+    $admPorMes = array_fill_keys($meses, 0);
+    $desPorMes = array_fill_keys($meses, 0);
+    foreach ($admRows as $r) { if (isset($admPorMes[$r["ym"]])) $admPorMes[$r["ym"]] = (int) $r["total"]; }
+    foreach ($desRows as $r) { if (isset($desPorMes[$r["ym"]])) $desPorMes[$r["ym"]] = (int) $r["total"]; }
+    return ["meses" => $meses, "admissoes" => array_values($admPorMes), "desligamentos" => array_values($desPorMes)];
+}
+$turnoverTendencia = torre_turnover_tendencia($condEmpresa);
+
+// ── Quadro especial por setor (PCD, Estagiário, Aprendiz, COR — período de experiência) ─
+// Cargo é texto livre cadastrado em Cadastro de Cargos (tabela `operacao`), então a categoria
+// é reconhecida por padrão de texto. Ajuste os padrões abaixo se os nomes cadastrados divergirem.
+function torre_cargo_especial(string $nomeCargo): ?string {
+    $n = mb_strtoupper(trim($nomeCargo), "UTF-8");
+    if ($n === "") return null;
+    if (strpos($n, "PCD") !== false || strpos($n, "DEFICIEN") !== false) return "PCD";
+    if (strpos($n, "ESTAGI") !== false) return "Estagiário";
+    if (strpos($n, "APRENDIZ") !== false) return "Aprendiz";
+    if ($n === "COR" || strpos($n, "EXPERIEN") !== false) return "COR (experiência)";
+    return null;
+}
+
+$cargoSetorRows = torre_fetch_all(query(
+    "SELECT g.grup_tx_nome AS setor, o.oper_tx_nome AS cargo, COUNT(*) AS total
+     FROM entidade e
+     LEFT JOIN operacao o ON o.oper_nb_id = e.enti_tx_tipoOperacao
+     LEFT JOIN grupos_documentos g ON g.grup_nb_id = e.enti_setor_id
+     WHERE e.enti_tx_status = 'ativo' {$condEmpresa}
+     GROUP BY g.grup_tx_nome, o.oper_tx_nome"
+), MYSQLI_ASSOC) ?: [];
+
+$categoriasEspeciais = ["PCD", "Estagiário", "Aprendiz", "COR (experiência)"];
+$setoresComposicao = [];
+foreach ($cargoSetorRows as $row) {
+    $setor = trim(strval($row["setor"] ?? "")) ?: "Sem setor";
+    $qtd = (int) $row["total"];
+    if (!isset($setoresComposicao[$setor])) {
+        $setoresComposicao[$setor] = array_fill_keys(array_merge($categoriasEspeciais, ["Outros", "total"]), 0);
+    }
+    $setoresComposicao[$setor]["total"] += $qtd;
+    $categoria = torre_cargo_especial(strval($row["cargo"] ?? ""));
+    $setoresComposicao[$setor][$categoria ?? "Outros"] += $qtd;
+}
+uasort($setoresComposicao, fn($a, $b) => $b["total"] <=> $a["total"]);
+
+$totalQuadroEspecial = 0;
+foreach ($setoresComposicao as $s) {
+    foreach ($categoriasEspeciais as $cat) { $totalQuadroEspecial += $s[$cat]; }
+}
+$pctQuadroEspecial = $ativos > 0 ? round(($totalQuadroEspecial / $ativos) * 100, 1) : 0.0;
+
 // ── Totais por ocupação (base para o comparativo de status por ocupação) ─
 
 $ocupacaoRows = torre_fetch_all(query(
@@ -859,6 +1017,10 @@ if ($ncTotais) {
 $tendenciaNC = torre_tendencia_nc($empresasAlvo);
 $rankingNC = $ncRef ? torre_ranking_nc($ncRef["empresas"], $ncRef["mes"]) : [];
 $tendenciaAbonos = torre_tendencia_abonos($empresaFiltro);
+
+// ── Jornada prevista e não trabalhada (falta) — pendente x já tratada ──
+$faltasTratativa = $ncRef ? torre_faltas_tratativa($ncRef["empresas"], $ncRef["mes"]) : ["pendente" => 0.0, "tratada" => 0.0, "justificada" => 0.0];
+$faltasTotal = $faltasTratativa["pendente"] + $faltasTratativa["tratada"];
 
 // ── Custo da jornada (cache mais recente de saldo.php) ────────────────
 
@@ -1334,6 +1496,14 @@ $notaGestao = torre_calcular_nota_gestao($empresaFiltro, $condEmpresa, $ativos, 
         <?= torre_link("paineis/nc_juridica.php") ?>
       </div>
       <?php endif; ?>
+      <?php if (torre_visivel("tile_faltas_pendentes", $ocultos)): ?>
+      <div class="tc-card tc-tile"<?= torre_estilo_ordem($ordemItens["pessoas"] ?? [], "tile_faltas_pendentes", 6) ?>>
+        <div class="tc-tile-top"><span class="tc-tile-label">Jornadas não trabalhadas — pendentes<?= torre_info("Dias de escala em que a pessoa não bateu ponto (falta), identificados na última apuração de conformidade, que ainda não foram endossados/tratados pelo gestor. Um dos pontos mais críticos na gestão de jornada.") ?></span><div class="tc-tile-icon bad"><i data-lucide="calendar-x" style="width:16px;height:16px;"></i></div></div>
+        <span class="tc-tile-value bad"><?= number_format($faltasTratativa["pendente"], 0, ",", ".") ?></span>
+        <span class="tc-tile-foot">de <?= number_format($faltasTotal, 0, ",", ".") ?> faltas <?= $ncRef ? "· ".torre_mes_label($ncRef["mes"]) : "" ?></span>
+        <?= torre_link("paineis/nc_juridica.php") ?>
+      </div>
+      <?php endif; ?>
     </div>
 
     <?php if (torre_visivel("lista_ferias_hoje", $ocultos) || torre_visivel("lista_ferias_proximas", $ocultos) || torre_visivel("lista_cnh", $ocultos)): ?>
@@ -1431,6 +1601,30 @@ $notaGestao = torre_calcular_nota_gestao($empresaFiltro, $condEmpresa, $ativos, 
     </div>
     <?php endif; ?>
 
+    <?php if (torre_visivel("painel_faltas_tratativa", $ocultos)): ?>
+    <div class="tc-panel-row" style="grid-template-columns:1fr; margin-top:14px;">
+      <div class="tc-panel">
+        <h3><i data-lucide="calendar-x" style="width:15px;height:15px;"></i> Jornada prevista e não trabalhada — tratativa<?= torre_info("Dias de escala sem batida de ponto (falta), separados entre já endossados/tratados pelo gestor e ainda pendentes de tratativa. Mesma fonte da apuração de conformidade trabalhista.") ?>
+          <?php if ($ncRef): ?><span class="tc-ref">· <?= torre_mes_label($ncRef["mes"]) ?></span><?php endif; ?>
+        </h3>
+        <?php if ($faltasTotal > 0): ?>
+          <div class="tc-chart-wrap"><canvas id="chartFaltasTratativa"></canvas></div>
+          <div class="tc-legend">
+            <div class="tc-legend-item"><span class="tc-swatch" style="background:#dc2626;"></span>Pendente de tratativa</div>
+            <div class="tc-legend-item"><span class="tc-swatch" style="background:#16a34a;"></span>Já tratada (endossada)</div>
+          </div>
+          <?= torre_link("paineis/nc_juridica.php") ?>
+        <?php else: ?>
+          <div class="tc-empty-state">
+            <i data-lucide="calendar-x" style="width:26px;height:26px;"></i>
+            Nenhuma falta identificada na última apuração de conformidade para este recorte.
+            <?= torre_link("paineis/nc_juridica.php", "Gerar apuração agora") ?>
+          </div>
+        <?php endif; ?>
+      </div>
+    </div>
+    <?php endif; ?>
+
     <?php if (torre_visivel("painel_ranking_nc", $ocultos)): ?>
     <div class="tc-panel-row" style="grid-template-columns:1fr; margin-top:14px;">
       <div class="tc-panel">
@@ -1489,6 +1683,109 @@ $notaGestao = torre_calcular_nota_gestao($empresaFiltro, $condEmpresa, $ativos, 
     </div>
     <?php endif; ?>
   </div>
+
+  <!-- ══ TURNOVER & QUADRO DE PESSOAL ════════════════════════════ -->
+  <?php
+    $mostrarSecaoTurnover =
+        torre_visivel("tile_admissoes_total", $ocultos) || torre_visivel("tile_desligamentos_total", $ocultos) ||
+        torre_visivel("tile_idade_media_contratados", $ocultos) || torre_visivel("tile_quadro_especial", $ocultos) ||
+        torre_visivel("painel_turnover_tendencia", $ocultos) || torre_visivel("painel_sexo_contratados", $ocultos) ||
+        torre_visivel("painel_cargo_setor", $ocultos);
+  ?>
+  <?php if ($mostrarSecaoTurnover): ?>
+  <div class="tc-section"<?= torre_estilo_ordem($ordemSecoes, "turnover", 3) ?>>
+    <div class="tc-section-head"><span class="tc-dot"></span><h2>Turnover &amp; quadro de pessoal</h2></div>
+
+    <div class="tc-grid" style="margin-bottom:14px;">
+      <?php if (torre_visivel("tile_admissoes_total", $ocultos)): ?>
+      <div class="tc-card tc-tile"<?= torre_estilo_ordem($ordemItens["turnover"] ?? [], "tile_admissoes_total", 0) ?>>
+        <div class="tc-tile-top"><span class="tc-tile-label">Admissões (histórico)<?= torre_info("Total de pessoas com data de admissão cadastrada em todo o histórico, no recorte de empresa selecionado.") ?></span><div class="tc-tile-icon good"><i data-lucide="user-plus" style="width:16px;height:16px;"></i></div></div>
+        <span class="tc-tile-value good"><?= $admissoesTotal ?></span>
+        <span class="tc-tile-foot">todo o período registrado</span>
+        <?= torre_link("cadastro_funcionario.php") ?>
+      </div>
+      <?php endif; ?>
+      <?php if (torre_visivel("tile_desligamentos_total", $ocultos)): ?>
+      <div class="tc-card tc-tile"<?= torre_estilo_ordem($ordemItens["turnover"] ?? [], "tile_desligamentos_total", 1) ?>>
+        <div class="tc-tile-top"><span class="tc-tile-label">Desligamentos (histórico)<?= torre_info("Total de pessoas com data de desligamento registrada em todo o histórico, no recorte de empresa selecionado.") ?></span><div class="tc-tile-icon bad"><i data-lucide="user-minus" style="width:16px;height:16px;"></i></div></div>
+        <span class="tc-tile-value bad"><?= $desligamentosTotal ?></span>
+        <span class="tc-tile-foot"><?= number_format($turnoverRate, 1, ",", ".") ?>% do quadro ativo atual</span>
+        <?= torre_link("cadastro_funcionario.php") ?>
+      </div>
+      <?php endif; ?>
+      <?php if (torre_visivel("tile_idade_media_contratados", $ocultos)): ?>
+      <div class="tc-card tc-tile"<?= torre_estilo_ordem($ordemItens["turnover"] ?? [], "tile_idade_media_contratados", 2) ?>>
+        <div class="tc-tile-top"><span class="tc-tile-label">Idade média dos contratados<?= torre_info("Idade média (na data de admissão) de todas as pessoas já admitidas, em todo o histórico.") ?></span><div class="tc-tile-icon acc"><i data-lucide="cake" style="width:16px;height:16px;"></i></div></div>
+        <span class="tc-tile-value"><?= $idadeMediaContratados !== null ? number_format($idadeMediaContratados, 0, ",", ".")." anos" : "—" ?></span>
+        <span class="tc-tile-foot">entre os <?= $admissoesTotal ?> admitidos no histórico</span>
+        <?= torre_link("cadastro_funcionario.php") ?>
+      </div>
+      <?php endif; ?>
+      <?php if (torre_visivel("tile_quadro_especial", $ocultos)): ?>
+      <div class="tc-card tc-tile"<?= torre_estilo_ordem($ordemItens["turnover"] ?? [], "tile_quadro_especial", 3) ?>>
+        <div class="tc-tile-top"><span class="tc-tile-label">Quadro especial<?= torre_info("Total de pessoas ATIVAS classificadas como PCD, Estagiário, Aprendiz ou COR (período de experiência), com base no cargo cadastrado. Quem é desligado sai automaticamente desta contagem.") ?></span><div class="tc-tile-icon acc"><i data-lucide="users-round" style="width:16px;height:16px;"></i></div></div>
+        <span class="tc-tile-value"><?= $totalQuadroEspecial ?></span>
+        <span class="tc-tile-foot"><?= number_format($pctQuadroEspecial, 1, ",", ".") ?>% do quadro ativo</span>
+        <?= torre_link("cadastro_funcionario.php") ?>
+      </div>
+      <?php endif; ?>
+    </div>
+
+    <?php if (torre_visivel("painel_turnover_tendencia", $ocultos) || torre_visivel("painel_sexo_contratados", $ocultos)): ?>
+    <div class="tc-panel-row">
+      <?php if (torre_visivel("painel_turnover_tendencia", $ocultos)): ?>
+      <div class="tc-panel">
+        <h3><i data-lucide="trending-up" style="width:15px;height:15px;"></i> Admissões x desligamentos<?= torre_info("Comparativo mensal de admissões e desligamentos desde o registro mais antigo encontrado, no recorte de empresa selecionado — histórico completo, não só o mês corrente.") ?></h3>
+        <div class="tc-chart-wrap" style="height:220px;"><canvas id="chartTurnover"></canvas></div>
+        <div class="tc-legend">
+          <div class="tc-legend-item"><span class="tc-swatch" style="background:#16a34a;"></span>Admissões</div>
+          <div class="tc-legend-item"><span class="tc-swatch" style="background:#dc2626;"></span>Desligamentos</div>
+        </div>
+        <?= torre_link("cadastro_funcionario.php") ?>
+      </div>
+      <?php endif; ?>
+      <?php if (torre_visivel("painel_sexo_contratados", $ocultos)): ?>
+      <div class="tc-panel">
+        <h3><i data-lucide="pie-chart" style="width:15px;height:15px;"></i> Sexo dos contratados<?= torre_info("Distribuição por sexo de todas as pessoas já admitidas, em todo o histórico.") ?></h3>
+        <?php if (!empty($sexoContratados)): ?>
+          <div class="tc-chart-wrap"><canvas id="chartSexoContratados"></canvas></div>
+          <?= torre_link("cadastro_funcionario.php") ?>
+        <?php else: ?>
+          <div class="tc-empty-state">
+            <i data-lucide="pie-chart" style="width:26px;height:26px;"></i>
+            Nenhuma admissão registrada para este recorte.
+          </div>
+        <?php endif; ?>
+      </div>
+      <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
+    <?php if (torre_visivel("painel_cargo_setor", $ocultos)): ?>
+    <div class="tc-panel-row" style="grid-template-columns:1fr; margin-top:14px;">
+      <div class="tc-panel">
+        <h3><i data-lucide="building-2" style="width:15px;height:15px;"></i> Quadro especial por setor<?= torre_info("Quantidade de PCD, Estagiário, Aprendiz e COR (período de experiência) por setor, entre as pessoas ativas. Passe o mouse sobre a barra para ver o percentual em relação ao total do setor.") ?></h3>
+        <?php if (!empty($setoresComposicao)): ?>
+          <div class="tc-chart-wrap" style="height:<?= max(220, count($setoresComposicao) * 42) ?>px;"><canvas id="chartCargoSetor"></canvas></div>
+          <div class="tc-legend">
+            <div class="tc-legend-item"><span class="tc-swatch" style="background:#2563eb;"></span>PCD</div>
+            <div class="tc-legend-item"><span class="tc-swatch" style="background:#f59e0b;"></span>Estagiário</div>
+            <div class="tc-legend-item"><span class="tc-swatch" style="background:#9333ea;"></span>Aprendiz</div>
+            <div class="tc-legend-item"><span class="tc-swatch" style="background:#0ea5e9;"></span>COR (experiência)</div>
+            <div class="tc-legend-item"><span class="tc-swatch" style="background:#94a3b8;"></span>Demais cargos</div>
+          </div>
+          <?= torre_link("cadastro_setor.php") ?>
+        <?php else: ?>
+          <div class="tc-empty-state">
+            <i data-lucide="building-2" style="width:26px;height:26px;"></i>
+            Nenhum setor com pessoas ativas para este recorte.
+          </div>
+        <?php endif; ?>
+      </div>
+    </div>
+    <?php endif; ?>
+  </div>
+  <?php endif; ?>
 
   <!-- ══ CUSTO DA JORNADA ═════════════════════════════════════════ -->
   <?php
@@ -2079,6 +2376,91 @@ $notaGestao = torre_calcular_nota_gestao($empresaFiltro, $condEmpresa, $ativos, 
       },
       options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
         scales:{ x:{ grid:{ color:'#eef1f5' }, ticks:{ precision:0 } }, y:{ grid:{ display:false } } } }
+    });
+  }
+  <?php endif; ?>
+
+  <?php if ($faltasTotal > 0): ?>
+  var ctxFaltas = document.getElementById('chartFaltasTratativa');
+  if (ctxFaltas) {
+    new Chart(ctxFaltas, {
+      type: 'doughnut',
+      data: {
+        labels: ['Pendente de tratativa', 'Já tratada (endossada)'],
+        datasets: [{ data: [<?= (int)$faltasTratativa["pendente"] ?>, <?= (int)$faltasTratativa["tratada"] ?>],
+          backgroundColor: ['#dc2626', '#16a34a'], borderColor:'#fff', borderWidth:2 }]
+      },
+      options: { responsive:true, maintainAspectRatio:false, cutout:'62%',
+        plugins:{ legend:{ display:true, position:'bottom', labels:{ boxWidth:10, boxHeight:10, padding:12, font:{size:11} } } } }
+    });
+  }
+  <?php endif; ?>
+
+  var turnoverTend = <?= json_encode($turnoverTendencia, JSON_UNESCAPED_UNICODE) ?>;
+  var ctxTurnover = document.getElementById('chartTurnover');
+  if (ctxTurnover) {
+    var turnoverLabels = turnoverTend.meses.map(mesLabel);
+    new Chart(ctxTurnover, {
+      type: 'line',
+      data: {
+        labels: turnoverLabels,
+        datasets: [
+          { label: 'Admissões', data: turnoverTend.admissoes, borderColor:'#16a34a', backgroundColor:'#16a34a1a',
+            fill:false, tension:0.3, pointRadius: turnoverLabels.length > 24 ? 0 : 3, borderWidth:2.5 },
+          { label: 'Desligamentos', data: turnoverTend.desligamentos, borderColor:'#dc2626', backgroundColor:'#dc26261a',
+            fill:false, tension:0.3, pointRadius: turnoverLabels.length > 24 ? 0 : 3, borderWidth:2.5 }
+        ]
+      },
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales:{ y:{ beginAtZero:true, grid:{ color:'#eef1f5' }, ticks:{ precision:0 } },
+          x:{ grid:{ display:false }, ticks:{ maxRotation:0, autoSkip:true, maxTicksLimit:12 } } } }
+    });
+  }
+
+  <?php if (!empty($sexoContratados)): ?>
+  var sexoContrat = <?= json_encode($sexoContratados, JSON_UNESCAPED_UNICODE) ?>;
+  var ctxSexo = document.getElementById('chartSexoContratados');
+  if (ctxSexo) {
+    var sexoCores = { 'Masculino':'#2563eb', 'Feminino':'#ec4899', 'Não informado':'#94a3b8' };
+    var sexoLabels = Object.keys(sexoContrat);
+    new Chart(ctxSexo, {
+      type: 'doughnut',
+      data: {
+        labels: sexoLabels,
+        datasets: [{ data: sexoLabels.map(function(k){ return sexoContrat[k]; }),
+          backgroundColor: sexoLabels.map(function(k){ return sexoCores[k] || '#94a3b8'; }), borderColor:'#fff', borderWidth:2 }]
+      },
+      options: { responsive:true, maintainAspectRatio:false, cutout:'62%',
+        plugins:{ legend:{ display:true, position:'bottom', labels:{ boxWidth:10, boxHeight:10, padding:12, font:{size:11} } } } }
+    });
+  }
+  <?php endif; ?>
+
+  <?php if (!empty($setoresComposicao)): ?>
+  var setoresComp = <?= json_encode(array_map(fn($s, $nome) => array_merge(["setor" => $nome], $s), $setoresComposicao, array_keys($setoresComposicao)), JSON_UNESCAPED_UNICODE) ?>;
+  var ctxCargoSetor = document.getElementById('chartCargoSetor');
+  if (ctxCargoSetor) {
+    new Chart(ctxCargoSetor, {
+      type: 'bar',
+      data: {
+        labels: setoresComp.map(function(s){ return s.setor; }),
+        datasets: [
+          { label: 'PCD', data: setoresComp.map(function(s){ return s['PCD']; }), backgroundColor: '#2563eb', maxBarThickness:26 },
+          { label: 'Estagiário', data: setoresComp.map(function(s){ return s['Estagiário']; }), backgroundColor: '#f59e0b', maxBarThickness:26 },
+          { label: 'Aprendiz', data: setoresComp.map(function(s){ return s['Aprendiz']; }), backgroundColor: '#9333ea', maxBarThickness:26 },
+          { label: 'COR (experiência)', data: setoresComp.map(function(s){ return s['COR (experiência)']; }), backgroundColor: '#0ea5e9', maxBarThickness:26 },
+          { label: 'Demais cargos', data: setoresComp.map(function(s){ return s['Outros']; }), backgroundColor: '#94a3b8', maxBarThickness:26 }
+        ]
+      },
+      options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false },
+          tooltip:{ callbacks:{ label:function(ctx){
+            var setor = setoresComp[ctx.dataIndex];
+            var pct = setor.total > 0 ? ((ctx.parsed.x / setor.total) * 100).toFixed(1) : '0.0';
+            return ctx.dataset.label + ': ' + ctx.parsed.x + ' (' + pct + '% do setor)';
+          } } } },
+        scales:{ x:{ stacked:true, grid:{ color:'#eef1f5' }, ticks:{ precision:0 } }, y:{ stacked:true, grid:{ display:false } } } }
     });
   }
   <?php endif; ?>

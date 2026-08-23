@@ -871,7 +871,8 @@ const SUPORTE_STATUS = {
     resolvido:            "Concluído",
     cancelado:            "Cancelado",
     reaberto:             "Reaberto",
-    encaminhado_ssi:      "Encaminhado a SSI"
+    encaminhado_ssi:      "Encaminhado a SSI",
+    teste_interno:        "Teste Interno"
 };
 
 const SUPORTE_TIPOS = {
@@ -1060,7 +1061,7 @@ function criarTabelasSuporte() {
             user_email VARCHAR(190) NOT NULL DEFAULT '',
             pagina_url VARCHAR(500) NOT NULL DEFAULT '',
             descricao TEXT NOT NULL,
-            status ENUM('aberto','em_analise','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi') NOT NULL DEFAULT 'aberto',
+            status ENUM('aberto','em_analise','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi','teste_interno') NOT NULL DEFAULT 'aberto',
             tipo ENUM('duvida','sugestao','bug') DEFAULT NULL,
             ssi_codigo VARCHAR(30) DEFAULT NULL,
             ssi_prioridade ENUM('urgente','proxima_atualizacao') DEFAULT NULL,
@@ -1153,7 +1154,7 @@ function migrarTabelasSuporte() {
         "ALTER TABLE suporte_ticket ADD COLUMN atendente_nome VARCHAR(150) DEFAULT NULL",
         "ALTER TABLE suporte_ticket ADD COLUMN aceito_em DATETIME DEFAULT NULL",
         "ALTER TABLE suporte_ticket ADD COLUMN fechado_em DATETIME DEFAULT NULL",
-        "ALTER TABLE suporte_ticket MODIFY status ENUM('aberto','em_analise','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi') NOT NULL DEFAULT 'aberto'",
+        "ALTER TABLE suporte_ticket MODIFY status ENUM('aberto','em_analise','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi','teste_interno') NOT NULL DEFAULT 'aberto'",
         "ALTER TABLE suporte_ticket ADD COLUMN setor_id BIGINT UNSIGNED DEFAULT NULL",
         "ALTER TABLE suporte_ticket ADD COLUMN setor_nome VARCHAR(150) DEFAULT NULL",
         "ALTER TABLE suporte_arquivo ADD COLUMN tipo ENUM('imagem','video','documento') NOT NULL DEFAULT 'imagem'"
@@ -1876,6 +1877,8 @@ app.post("/suporte/tickets/:id/status", exigirAdminSuporte, async (req, res) => 
                 avisos = "Nossa equipe já começou a analisar o seu chamado.";
             } else if (status === "encaminhado_ssi") {
                 avisos = "O chamado foi encaminhado ao setor de suporte interno (SSI " + novoTicket.ssi_codigo + "). " + (novoTicket.ssi_prioridade === "urgente" ? "Tratamento prioritário — solução urgente em produção." : "Será resolvido na próxima atualização do sistema.");
+            } else if (status === "teste_interno") {
+                avisos = "A correção já foi desenvolvida e está em teste interno pela nossa equipe antes de ser liberada.";
             }
             enviarEmailSuporte(chk[0].user_email, titulo, htmlEmailSuporte(novoTicket, titulo, avisos));
         }

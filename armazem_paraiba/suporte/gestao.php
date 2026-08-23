@@ -71,7 +71,7 @@
             }
         } elseif ($acao === "status" && $id > 0) {
             $novoStatus = $_POST["status"] ?? "";
-            $statusPermitidos = ["aberto", "em_analise", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi"];
+            $statusPermitidos = ["aberto", "em_analise", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi", "teste_interno"];
             if (in_array($novoStatus, $statusPermitidos, true)) {
                 $post = ["status" => $novoStatus];
                 if ($novoStatus === "encaminhado_ssi") {
@@ -147,7 +147,10 @@
 <?php if ($__verConfig): ?>
                 <div class="alert alert-info">
                     <i class="fa fa-info-circle"></i> Todo chamado novo chega automaticamente com status <strong>Aberto</strong>. A partir daí o fluxo recomendado é
-                    <strong>Aberto → Em Análise → Em Andamento → Concluído</strong> (os status especiais — Aguardando cliente, Reaberto, Cancelado e Encaminhado a SSI — continuam disponíveis para os casos que precisarem).
+                    <strong>Aberto → Em Análise → Em Andamento → Concluído</strong> (os status especiais — Aguardando cliente, Reaberto e Cancelado — continuam disponíveis para os casos que precisarem).
+                    <br><br>
+                    Chamados classificados como <strong>Bug de sistema</strong> e encaminhados à SSI seguem um fluxo próprio:
+                    <strong>Encaminhado a SSI → Em Andamento → Teste Interno → Concluído</strong>. Não existe uma "SSI" separada para fechar — o código SSI é só uma etiqueta gravada no próprio chamado, então concluir o chamado já encerra a SSI junto.
                 </div>
 
                 <form method="post">
@@ -185,6 +188,7 @@
                 "cancelado"          => ['<span class="label label-default">Cancelado</span>'],
                 "reaberto"           => ['<span class="label label-warning">Reaberto</span>'],
                 "encaminhado_ssi"    => ['<span class="label label-danger">Encaminhado a SSI</span>'],
+                "teste_interno"      => ['<span class="label label-default" style="background:#16a085;">Teste Interno</span>'],
             ];
             $__badge = $__statusMap[$__status][0] ?? '<span class="label label-default">' . htmlspecialchars($__status) . '</span>';
             $__tipoMap = ["duvida" => "Dúvida operacional", "sugestao" => "Sugestão", "bug" => "Bug de sistema"];
@@ -277,7 +281,7 @@
                         <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('Reabrir o chamado?');"><i class="fa fa-undo"></i> Reabrir</button>
                     </form>
                 <?php endif; ?>
-                <?php if ($__tipo === "bug" && $__status !== "encaminhado_ssi" && $__status !== "resolvido" && $__status !== "cancelado"): ?>
+                <?php if ($__tipo === "bug" && $__status !== "encaminhado_ssi" && $__status !== "em_andamento" && $__status !== "teste_interno" && $__status !== "resolvido" && $__status !== "cancelado"): ?>
                     <form method="post" style="border-left:1px solid #ddd;padding-left:12px;">
                         <input type="hidden" name="sup_acao" value="status" />
                         <input type="hidden" name="id" value="<?= $__verId ?>" />
@@ -285,6 +289,30 @@
                         <label style="font-weight:400;margin-right:8px;"><input type="radio" name="ssi_prioridade" value="urgente" /> Urgente — produção</label>
                         <label style="font-weight:400;margin-right:8px;"><input type="radio" name="ssi_prioridade" value="proxima_atualizacao" checked /> Próxima atualização</label>
                         <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Encaminhar o chamado para a SSI?');"><i class="fa fa-bug"></i> Encaminhar a SSI</button>
+                    </form>
+                <?php endif; ?>
+                <?php if ($__status === "encaminhado_ssi"): ?>
+                    <form method="post" style="border-left:1px solid #ddd;padding-left:12px;">
+                        <input type="hidden" name="sup_acao" value="status" />
+                        <input type="hidden" name="id" value="<?= $__verId ?>" />
+                        <input type="hidden" name="status" value="em_andamento" />
+                        <button type="submit" class="btn btn-info btn-sm"><i class="fa fa-code"></i> Iniciar desenvolvimento (SSI)</button>
+                    </form>
+                <?php endif; ?>
+                <?php if ($__status === "em_andamento" && $__ssiCodigo !== ""): ?>
+                    <form method="post" style="border-left:1px solid #ddd;padding-left:12px;">
+                        <input type="hidden" name="sup_acao" value="status" />
+                        <input type="hidden" name="id" value="<?= $__verId ?>" />
+                        <input type="hidden" name="status" value="teste_interno" />
+                        <button type="submit" class="btn btn-default btn-sm" style="border-color:#16a085;color:#16a085;"><i class="fa fa-flask"></i> Enviar para teste interno</button>
+                    </form>
+                <?php endif; ?>
+                <?php if ($__status === "teste_interno"): ?>
+                    <form method="post" style="border-left:1px solid #ddd;padding-left:12px;">
+                        <input type="hidden" name="sup_acao" value="status" />
+                        <input type="hidden" name="id" value="<?= $__verId ?>" />
+                        <input type="hidden" name="status" value="em_andamento" />
+                        <button type="submit" class="btn btn-default btn-sm" onclick="return confirm('Reprovado no teste interno — voltar para Em Andamento?');"><i class="fa fa-undo"></i> Reprovado no teste, voltar</button>
                     </form>
                 <?php endif; ?>
             </div>
@@ -338,7 +366,7 @@
     $__fFim     = trim(strval($_GET["data_fim"] ?? ""));
     $__fPagina  = max((int) ($_GET["pagina"] ?? 1), 1);
 
-    $__statusListagem = ["aberto", "em_analise", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi"];
+    $__statusListagem = ["aberto", "em_analise", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi", "teste_interno"];
 
     $__queryFiltro = ["pagina" => $__fPagina, "limit" => 25];
     if ($__fEmpresa !== "") $__queryFiltro["empresa"] = $__fEmpresa;
@@ -396,6 +424,7 @@
                             <option value="cancelado" <?= ($__fStatus === "cancelado") ? "selected" : "" ?>>Cancelado</option>
                             <option value="reaberto" <?= ($__fStatus === "reaberto") ? "selected" : "" ?>>Reaberto</option>
                             <option value="encaminhado_ssi" <?= ($__fStatus === "encaminhado_ssi") ? "selected" : "" ?>>Encaminhado a SSI</option>
+                            <option value="teste_interno" <?= ($__fStatus === "teste_interno") ? "selected" : "" ?>>Teste Interno</option>
                         </select>
                     </div>
                     <div class="form-group" style="margin-right:10px;">
@@ -444,6 +473,7 @@
                                     "cancelado"          => '<span class="label label-default">Cancelado</span>',
                                     "reaberto"           => '<span class="label label-warning">Reaberto</span>',
                                     "encaminhado_ssi"    => '<span class="label label-danger">Encaminhado a SSI</span>',
+                                    "teste_interno"      => '<span class="label label-default" style="background:#16a085;">Teste Interno</span>',
                                 ];
                                 $__badgeT = $__badgeMap[$__statusT] ?? '<span class="label label-default">' . htmlspecialchars($__statusT) . '</span>';
                                 $__tipoLabel = ["duvida" => "Dúvida", "sugestao" => "Sugestão", "bug" => "Bug"][strval($__t["tipo"] ?? "")] ?? "";
