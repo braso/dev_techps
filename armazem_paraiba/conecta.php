@@ -159,6 +159,22 @@
         }
     }
 
+    // Migração da tabela entidade: colunas de responsável (usadas por assinatura/governança
+    // e pelo e-mail/acompanhamento de chamados de suporte pelo responsável do funcionário).
+    foreach ([
+        "enti_respSetor_id"      => "INT NULL",
+        "enti_respCargo_id"      => "INT NULL",
+        "enti_respSetor_ids"     => "TEXT NULL",
+        "enti_respCargo_ids"     => "TEXT NULL",
+        "enti_respFuncionario_id"  => "INT NULL",
+        "enti_respFuncionario_ids" => "TEXT NULL",
+    ] as $__respCol => $__respTipo) {
+        $__checkRespCol = mysqli_query($conn, "SHOW COLUMNS FROM entidade LIKE '{$__respCol}'");
+        if ($__checkRespCol && mysqli_num_rows($__checkRespCol) === 0) {
+            mysqli_query($conn, "ALTER TABLE entidade ADD COLUMN {$__respCol} {$__respTipo}");
+        }
+    }
+
     // Criação da tabela feriado_funcionario se não existir
     mysqli_query($conn, "CREATE TABLE IF NOT EXISTS feriado_funcionario (
         fefi_nb_id INT AUTO_INCREMENT PRIMARY KEY,

@@ -928,6 +928,16 @@ function enviarEmailSuporte(para, assunto, html) {
     });
 }
 
+// Notifica quem abriu o chamado e, se houver, o responsável vinculado ao
+// funcionário no cadastro (mesmo e-mail/conteúdo para ambos). Nunca duplica
+// envio quando o responsável é o próprio usuário.
+function notificarChamado(ticket, assunto, html) {
+    const destinos = new Set();
+    if (ticket.user_email) destinos.add(ticket.user_email);
+    if (ticket.responsavel_email) destinos.add(ticket.responsavel_email);
+    destinos.forEach((email) => enviarEmailSuporte(email, assunto, html));
+}
+
 // Escape de conteúdo do usuário em HTML de e-mail (anti-XSS).
 function escH(s) {
     return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -1077,6 +1087,8 @@ function criarTabelasSuporte() {
             user_login VARCHAR(100) NOT NULL DEFAULT '',
             user_nome VARCHAR(150) NOT NULL DEFAULT '',
             user_email VARCHAR(190) NOT NULL DEFAULT '',
+            responsavel_nome VARCHAR(150) NOT NULL DEFAULT '',
+            responsavel_email VARCHAR(190) NOT NULL DEFAULT '',
             pagina_url VARCHAR(500) NOT NULL DEFAULT '',
             descricao TEXT NOT NULL,
             status ENUM('aberto','em_analise','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi','teste_interno') NOT NULL DEFAULT 'aberto',
@@ -1167,6 +1179,8 @@ function criarTabelasSuporte() {
 function migrarTabelasSuporte() {
     const migracoes = [
         "ALTER TABLE suporte_ticket ADD COLUMN user_email VARCHAR(190) NOT NULL DEFAULT ''",
+        "ALTER TABLE suporte_ticket ADD COLUMN responsavel_nome VARCHAR(150) NOT NULL DEFAULT ''",
+        "ALTER TABLE suporte_ticket ADD COLUMN responsavel_email VARCHAR(190) NOT NULL DEFAULT ''",
         "ALTER TABLE suporte_ticket ADD COLUMN tipo ENUM('duvida','sugestao','bug') DEFAULT NULL",
         "ALTER TABLE suporte_ticket ADD COLUMN ssi_codigo VARCHAR(30) DEFAULT NULL",
         "ALTER TABLE suporte_ticket ADD COLUMN ssi_prioridade ENUM('urgente','proxima_atualizacao') DEFAULT NULL",
@@ -1392,6 +1406,9 @@ app.post("/suporte/tickets", uploadSuporte.array("anexos", SUPORTE.maxArquivos),
         const unome = String(payload.unome || "").slice(0, 150);
         const uemail = String(payload.user_email || "").slice(0, 190);
         const uemailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(uemail) ? uemail : "";
+        const respNome = String(payload.responsavel_nome || "").slice(0, 150);
+        const respEmail = String(payload.responsavel_email || "").slice(0, 190);
+        const respEmailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(respEmail) ? respEmail : "";
 
         let descricao = String(req.body.descricao || "").trim();
         let paginaUrl = String(req.body.pagina_url || "").trim();
@@ -1476,8 +1493,8 @@ app.post("/suporte/tickets", uploadSuporte.array("anexos", SUPORTE.maxArquivos),
         }
 
         const ins = await suporteQuery(
-            "INSERT INTO suporte_ticket (empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, pagina_url, descricao, setor_id, setor_nome) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [empresa, empresaNome, uid, ulogin, unome, uemailValido, paginaUrl, descricao, setorId, setorNome]
+            "INSERT INTO suporte_ticket (empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, responsavel_nome, responsavel_email, pagina_url, descricao, setor_id, setor_nome) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [empresa, empresaNome, uid, ulogin, unome, uemailValido, respNome, respEmailValido, paginaUrl, descricao, setorId, setorNome]
         );
         const ticketId = ins.insertId;
 
@@ -1503,10 +1520,10 @@ app.post("/suporte/tickets", uploadSuporte.array("anexos", SUPORTE.maxArquivos),
         // Timeline: abertura do chamado.
         registrarEventoSuporte(ticketId, "aberto", "Chamado aberto pelo cliente", unome || ulogin);
 
-        // E-mail de abertura do chamado.
-        if (uemailValido) {
-            enviarEmailSuporte(
-                uemailValido,
+        // E-mail de abertura do chamado — para quem abriu e, se houver, o responsável vinculado ao funcionário.
+        if (uemailValido || respEmailValido) {
+            notificarChamado(
+                { user_email: uemailValido, responsavel_email: respEmailValido },
                 "Chamado #" + ticketId + " aberto com sucesso — TechPS",
                 htmlEmailSuporte({
                     id: ticketId,
@@ -1557,6 +1574,7 @@ app.get("/suporte/tickets", exigirAdminSuporte, async (req, res) => {
         const offset = (pagina - 1) * limite;
 
         const setorIdFiltro = parseInt(req.query.setor_id, 10);
+        const userIds = String(req.query.user_ids || "").split(",").map((v) => v.trim()).filter(Boolean).slice(0, 500);
 
         let where = [];
         let params = [];
@@ -1566,10 +1584,11 @@ app.get("/suporte/tickets", exigirAdminSuporte, async (req, res) => {
         if (prioridade && SUPORTE_PRIORIDADES[prioridade]) { where.push("prioridade = ?"); params.push(prioridade); }
         if (dataInicio && /^\d{4}-\d{2}-\d{2}$/.test(dataInicio)) { where.push("created_at >= ?"); params.push(dataInicio + " 00:00:00"); }
         if (dataFim && /^\d{4}-\d{2}-\d{2}$/.test(dataFim)) { where.push("created_at <= ?"); params.push(dataFim + " 23:59:59"); }
+        if (userIds.length) { where.push("user_id IN (" + userIds.map(() => "?").join(",") + ")"); params.push(...userIds); }
         const filtro = where.length ? "WHERE " + where.join(" AND ") : "";
 
         const linhas = await suporteQuery(
-            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, pagina_url, descricao, status, tipo, prioridade, ssi_codigo, ssi_prioridade, atendente_nome, aceito_em, fechado_em, created_at, setor_id, setor_nome FROM suporte_ticket " + filtro + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, responsavel_nome, responsavel_email, pagina_url, descricao, status, tipo, prioridade, ssi_codigo, ssi_prioridade, atendente_nome, aceito_em, fechado_em, created_at, setor_id, setor_nome FROM suporte_ticket " + filtro + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
             params.concat([limite, offset])
         );
         const totalRows = await suporteQuery(
@@ -1591,7 +1610,7 @@ app.get("/suporte/tickets/:id", exigirAdminSuporte, async (req, res) => {
         if (!id || id < 1) return res.status(400).json({ ok: false, msg: "ID inválido." });
 
         const linhas = await suporteQuery(
-            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, pagina_url, descricao, status, tipo, prioridade, ssi_codigo, ssi_prioridade, atendente_nome, aceito_em, fechado_em, created_at, setor_id, setor_nome FROM suporte_ticket WHERE id = ?",
+            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, responsavel_nome, responsavel_email, pagina_url, descricao, status, tipo, prioridade, ssi_codigo, ssi_prioridade, atendente_nome, aceito_em, fechado_em, created_at, setor_id, setor_nome FROM suporte_ticket WHERE id = ?",
             [id]
         );
         if (!linhas.length) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
@@ -1953,9 +1972,9 @@ app.post("/suporte/tickets/:id/comentarios", async (req, res) => {
         // E-mail ao cliente quando o suporte (gestor) responde.
         if (autorTipo === "gestor") {
             const chkMail = await suporteQuery("SELECT * FROM suporte_ticket WHERE id = ?", [id]);
-            if (chkMail.length && chkMail[0].user_email) {
-                enviarEmailSuporte(
-                    chkMail[0].user_email,
+            if (chkMail.length) {
+                notificarChamado(
+                    chkMail[0],
                     "Nova resposta no chamado #" + id + " — TechPS",
                     htmlEmailSuporte(chkMail[0], "Nova resposta da equipe TechPS", "Resposta de " + escH(autor) + ":<br><div style='background:#f7f7f7;border:1px solid #eee;border-radius:6px;padding:10px;white-space:pre-wrap;'>" + escH(texto) + "</div>")
                 );
@@ -2022,13 +2041,11 @@ app.post("/suporte/tickets/:id/aceitar", exigirAdminSuporte, async (req, res) =>
         // Timeline: aceite do chamado.
         registrarEventoSuporte(id, "aceito", "Atendimento iniciado pelo suporte (" + atendente + ")", atendente);
 
-        if (chk[0].user_email) {
-            enviarEmailSuporte(
-                chk[0].user_email,
-                "Chamado #" + id + " em atendimento — TechPS",
-                htmlEmailSuporte({ ...chk[0], status: "em_andamento", atendente_nome: atendente }, "Seu chamado entrou em atendimento!", "O atendente " + escH(atendente) + " iniciou o atendimento do seu chamado.")
-            );
-        }
+        notificarChamado(
+            chk[0],
+            "Chamado #" + id + " em atendimento — TechPS",
+            htmlEmailSuporte({ ...chk[0], status: "em_andamento", atendente_nome: atendente }, "Seu chamado entrou em atendimento!", "O atendente " + escH(atendente) + " iniciou o atendimento do seu chamado.")
+        );
 
         res.json({ ok: true, msg: "Chamado aceito e em atendimento." });
     } catch (err) {
@@ -2126,7 +2143,7 @@ app.post("/suporte/tickets/:id/status", exigirAdminSuporte, async (req, res) => 
         const novoTicket = { ...chk[0], status, ssi_codigo: ssiCodigo || chk[0].ssi_codigo, ssi_prioridade: ssiPrioridade || chk[0].ssi_prioridade };
 
         // E-mails de status / encerramento.
-        if (chk[0].user_email) {
+        {
             const ehEncerramento = (status === "resolvido" || status === "cancelado");
             const ehReaberto = (status === "reaberto");
             let titulo = "Chamado #" + id + " atualizado — TechPS";
@@ -2145,7 +2162,7 @@ app.post("/suporte/tickets/:id/status", exigirAdminSuporte, async (req, res) => 
             } else if (status === "teste_interno") {
                 avisos = "A correção já foi desenvolvida e está em teste interno pela nossa equipe antes de ser liberada.";
             }
-            enviarEmailSuporte(chk[0].user_email, titulo, htmlEmailSuporte(novoTicket, titulo, avisos));
+            notificarChamado(novoTicket, titulo, htmlEmailSuporte(novoTicket, titulo, avisos));
         }
 
         res.json({ ok: true, msg: "Status atualizado." });

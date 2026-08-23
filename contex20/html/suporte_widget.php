@@ -26,16 +26,44 @@
         $__supEmail = "";
     }
 
+    // Responsável vinculado ao funcionário do usuário (cadastro_funcionario) — também
+    // recebe e-mail e acompanha o chamado. Ausência das colunas/vínculo é normal
+    // (nem todo funcionário tem responsável cadastrado) e não deve travar o widget.
+    $__supRespNome  = "";
+    $__supRespEmail = "";
+    if (!empty($__supUid) && function_exists("query")) {
+        $__respResult = query(
+            "SELECT r.enti_tx_nome AS resp_nome, r.enti_tx_email AS resp_email
+             FROM user u
+             JOIN entidade e ON e.enti_nb_id = u.user_nb_entidade
+             JOIN entidade r ON r.enti_nb_id = e.enti_respFuncionario_id
+             WHERE u.user_nb_id = ?
+             LIMIT 1",
+            "i",
+            [(int) $__supUid]
+        );
+        $__respRow = $__respResult ? mysqli_fetch_assoc($__respResult) : null;
+        if ($__respRow) {
+            $__supRespNome  = trim(strval($__respRow["resp_nome"] ?? ""));
+            $__supRespEmail = trim(strval($__respRow["resp_email"] ?? ""));
+            if (!filter_var($__supRespEmail, FILTER_VALIDATE_EMAIL)) {
+                $__supRespEmail = "";
+            }
+        }
+    }
+
     // Token de curta duração (5 min) — assinado com chave derivada por empresa.
     $__supExp    = time() + 300;
     $__supJson   = json_encode([
-        "empresa"      => $__supEmpresa,
-        "empresa_nome" => $__supEmpNome,
-        "uid"          => $__supUid,
-        "ulogin"       => $__supLogin,
-        "unome"        => $__supNome,
-        "user_email"   => $__supEmail,
-        "exp"          => $__supExp,
+        "empresa"           => $__supEmpresa,
+        "empresa_nome"      => $__supEmpNome,
+        "uid"               => $__supUid,
+        "ulogin"            => $__supLogin,
+        "unome"             => $__supNome,
+        "user_email"        => $__supEmail,
+        "responsavel_nome"  => $__supRespNome,
+        "responsavel_email" => $__supRespEmail,
+        "exp"               => $__supExp,
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     $__supPayload = rtrim(strtr(base64_encode($__supJson), "+/", "-_"), "=");
     $__supKeyD    = hash_hmac("sha256", "techps_suporte|" . $__supEmpresa, $__supKey, true);
@@ -55,7 +83,10 @@
         <button type="button" id="suporte-widget-fechar" style="position:absolute;top:10px;right:14px;background:none;border:none;font-size:20px;cursor:pointer;color:#888;" title="Fechar">&times;</button>
 
         <h4 style="margin:0 0 4px;color:#333;"><i class="fa fa-life-ring" style="color:#337ab7;"></i> Suporte Técnico</h4>
-        <p style="margin:0 0 16px;font-size:12px;color:#888;">Descreva o problema para a equipe TechPS. Empresa e usuário são preenchidos automaticamente.</p>
+        <p style="margin:0 0 8px;font-size:12px;color:#888;">Descreva o problema para a equipe TechPS. Empresa e usuário são preenchidos automaticamente.</p>
+        <p style="margin:0 0 16px;font-size:12px;">
+            <a href="<?= htmlspecialchars(rtrim(strval($_ENV["CONTEX_PATH"] ?? ""), "/")) ?>/suporte/meus_chamados.php"><i class="fa fa-list"></i> Ver meus chamados</a>
+        </p>
 
         <div style="margin-bottom:10px;">
             <label style="display:block;font-size:12px;font-weight:700;color:#555;margin-bottom:3px;">Empresa</label>
