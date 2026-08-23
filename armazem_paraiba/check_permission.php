@@ -14,7 +14,8 @@ function verificaPermissao($pathMenu)
                         AND user_nb_id = ? 
                       LIMIT 1";
 
-        $rowPerfil = mysqli_fetch_assoc(query($sqlPerfil, "i", [$_SESSION["user_nb_id"]]));
+        $rsPerfil = query($sqlPerfil, "i", [$_SESSION["user_nb_id"]]);
+        $rowPerfil = $rsPerfil ? mysqli_fetch_assoc($rsPerfil) : null;
 
         if (!empty($rowPerfil["perfil_nb_id"])) {
             $perfilId = (int)$rowPerfil["perfil_nb_id"];
@@ -23,16 +24,17 @@ function verificaPermissao($pathMenu)
 
     // 2. Verifica permissão no menu
     if ($perfilId > 0) {
-        $sqlPerm = "SELECT 1 
-                    FROM perfil_menu_item p 
-                      JOIN menu_item m ON m.menu_nb_id = p.menu_nb_id 
-                    WHERE p.perfil_nb_id = ? 
-                      AND p.perm_ver = 1 
-                      AND m.menu_tx_ativo = 1 
-                      AND m.menu_tx_path = ? 
+        $sqlPerm = "SELECT 1
+                    FROM perfil_menu_item p
+                      JOIN menu_item m ON m.menu_nb_id = p.menu_nb_id
+                    WHERE p.perfil_nb_id = ?
+                      AND p.perm_ver = 1
+                      AND m.menu_tx_ativo = 1
+                      AND m.menu_tx_path = ?
                     LIMIT 1";
 
-        $rowPerm = mysqli_fetch_assoc(query($sqlPerm, "is", [$perfilId, $pathMenu]));
+        $rsPerm = query($sqlPerm, "is", [$perfilId, $pathMenu]);
+        $rowPerm = $rsPerm ? mysqli_fetch_assoc($rsPerm) : null;
 
         $permitido = !empty($rowPerm);
     }
@@ -70,19 +72,21 @@ function temPermissaoMenu($pathMenu)
     global $conn;
     $perfilId = 0;
     if (!empty($_SESSION["user_nb_id"])) {
-        $rowPerfil = mysqli_fetch_assoc(query(
+        $rsPerfil = query(
             "SELECT perfil_nb_id FROM usuario_perfil WHERE ativo = 1 AND user_nb_id = ? LIMIT 1",
             "i",
             [$_SESSION["user_nb_id"]]
-        ));
+        );
+        $rowPerfil = $rsPerfil ? mysqli_fetch_assoc($rsPerfil) : null;
         if (!empty($rowPerfil["perfil_nb_id"])) { $perfilId = (int)$rowPerfil["perfil_nb_id"]; }
     }
     if ($perfilId <= 0) { return false; }
-    $rowPerm = mysqli_fetch_assoc(query(
+    $rsPerm = query(
         "SELECT 1 FROM perfil_menu_item p JOIN menu_item m ON m.menu_nb_id = p.menu_nb_id WHERE p.perfil_nb_id = ? AND p.perm_ver = 1 AND m.menu_tx_ativo = 1 AND m.menu_tx_path = ? LIMIT 1",
         "is",
         [$perfilId, $pathMenu]
-    ));
+    );
+    $rowPerm = $rsPerm ? mysqli_fetch_assoc($rsPerm) : null;
     return !empty($rowPerm);
 }
 
@@ -92,11 +96,12 @@ function camposOcultosPerfil($pathMenu)
     global $conn;
     $perfilId = 0;
     if (!empty($_SESSION["user_nb_id"])) {
-        $rowPerfil = mysqli_fetch_assoc(query(
+        $rsPerfil = query(
             "SELECT perfil_nb_id FROM usuario_perfil WHERE ativo = 1 AND user_nb_id = ? LIMIT 1",
             "i",
             [$_SESSION["user_nb_id"]]
-        ));
+        );
+        $rowPerfil = $rsPerfil ? mysqli_fetch_assoc($rsPerfil) : null;
         if (!empty($rowPerfil["perfil_nb_id"])) { $perfilId = (int)$rowPerfil["perfil_nb_id"]; }
     }
     if ($perfilId <= 0) { return []; }
