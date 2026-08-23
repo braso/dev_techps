@@ -151,7 +151,8 @@ if ($showComunicado) {
         // Perfil vinculado ao usuário (se existir)
         $perfilId = 0;
         if(!empty($_SESSION["user_nb_id"])){
-            $rowPerfil = mysqli_fetch_assoc(query("SELECT perfil_nb_id FROM usuario_perfil WHERE ativo = 1 AND user_nb_id = ? LIMIT 1", "i", [$_SESSION["user_nb_id"]]));
+            $rsPerfil = query("SELECT perfil_nb_id FROM usuario_perfil WHERE ativo = 1 AND user_nb_id = ? LIMIT 1", "i", [$_SESSION["user_nb_id"]]);
+            $rowPerfil = $rsPerfil ? mysqli_fetch_assoc($rsPerfil) : null;
             if(!empty($rowPerfil["perfil_nb_id"])) $perfilId = (int)$rowPerfil["perfil_nb_id"];
         }
 
