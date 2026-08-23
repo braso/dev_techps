@@ -8,6 +8,7 @@
     include_once __DIR__ . "/../conecta.php";
     include_once __DIR__ . "/../check_permission.php";
     include_once __DIR__ . "/_timeline.php";
+    include_once __DIR__ . "/_anexos.php";
 
     $__empresaAtual = trim(strval($_ENV["CONTEX_PATH"] ?? ""), "/");
     // Gestão central: domínios TechPS (produção) e Demo (desenvolvimento).
@@ -97,9 +98,12 @@
         }
     }
 
-    // ── Empresas para o filtro (via API) ───────────────────────────────
+    // ── Empresas e setores para o filtro (via API) ─────────────────────
     $__resEmpresas = gestao_requisitar("GET", "/suporte/empresas");
     $__empresas = $__resEmpresas["ok"] ? ($__resEmpresas["dados"]["empresas"] ?? []) : [];
+
+    $__resSetores = gestao_requisitar("GET", "/suporte/setores");
+    $__setoresFiltro = $__resSetores["ok"] ? ($__resSetores["dados"]["setores"] ?? []) : [];
 
     // ── Modo detalhe ────────────────────────────────────────────────────
     $__verId = (int) ($_GET["id"] ?? 0);
@@ -152,6 +156,7 @@
         ?>
         <table class="table table-striped table-bordered">
             <tr><th style="width:140px;">Empresa</th><td><?= htmlspecialchars(strval($__ticket["empresa_key"] ?? "")) ?> — <?= htmlspecialchars(strval($__ticket["empresa_nome"] ?? "")) ?></td></tr>
+            <tr><th>Setor</th><td><?= htmlspecialchars(strval($__ticket["setor_nome"] ?? "") ?: "—") ?></td></tr>
             <tr><th>Usuário</th><td><?= htmlspecialchars(strval($__ticket["user_nome"] ?? "")) ?> (<?= htmlspecialchars(strval($__ticket["user_login"] ?? "")) ?>)</td></tr>
             <tr><th>E-mail</th><td><?= htmlspecialchars(strval($__ticket["user_email"] ?? "") ?: "—") ?></td></tr>
             <tr><th>Data de abertura</th><td><?= htmlspecialchars(strval($__ticket["created_at"] ?? "")) ?></td></tr>
@@ -239,24 +244,8 @@
             </div>
         </div>
 
-        <?php if (!empty($__arquivos)): ?>
-            <h4><i class="fa fa-image"></i> Imagens anexadas (<?= count($__arquivos) ?>)</h4>
-            <div style="display:flex;flex-wrap:wrap;gap:10px;">
-                <?php foreach ($__arquivos as $__a): ?>
-                    <a href="imagem_gestao.php?id=<?= $__verId ?>&arquivo=<?= (int) ($__a["id"] ?? 0) ?>" target="_blank">
-                        <div style="border:1px solid #ddd;border-radius:6px;overflow:hidden;width:150px;text-align:center;">
-                            <img src="imagem_gestao.php?id=<?= $__verId ?>&arquivo=<?= (int) ($__a["id"] ?? 0) ?>"
-                                 style="width:150px;height:110px;object-fit:cover;display:block;"
-                                 onerror="this.parentElement.innerHTML='<div style=\'padding:30px 8px;color:#999;\'>Sem prévia<br><small><?= htmlspecialchars(strval($__a["nome_original"] ?? ""), ENT_QUOTES) ?></small></div>';" />
-                            <div style="padding:4px;font-size:11px;color:#555;word-break:break-all;">
-                                <?= htmlspecialchars(strval($__a["nome_original"] ?? "")) ?><br>
-                                <small><?= number_format((int) ($__a["tamanho_bytes"] ?? 0) / 1024, 1, ",", ".") ?> KB</small>
-                            </div>
-                        </div>
-                    </a>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
+        <h4><i class="fa fa-paperclip"></i> Anexos (<?= count($__arquivos) ?>)</h4>
+        <?= suporte_render_anexos($__arquivos, $__verId, "imagem_gestao.php") ?>
 
         <!-- Comentários -->
         <h4 style="margin-top:25px;"><i class="fa fa-comments"></i> Comentários (<?= count($__comentarios) ?>)</h4>
@@ -297,6 +286,7 @@
 <?php
     // ── Listagem (todas as empresas) ────────────────────────────────
     $__fEmpresa = trim(strval($_GET["empresa"] ?? ""));
+    $__fSetorId = (int) ($_GET["setor_id"] ?? 0);
     $__fStatus  = trim(strval($_GET["status"] ?? ""));
     $__fInicio  = trim(strval($_GET["data_inicio"] ?? ""));
     $__fFim     = trim(strval($_GET["data_fim"] ?? ""));
@@ -304,6 +294,7 @@
 
     $__queryFiltro = ["pagina" => $__fPagina, "limit" => 25];
     if ($__fEmpresa !== "") $__queryFiltro["empresa"] = $__fEmpresa;
+    if ($__fSetorId > 0) $__queryFiltro["setor_id"] = $__fSetorId;
     if ($__fStatus === "aberto" || $__fStatus === "resolvido") $__queryFiltro["status"] = $__fStatus;
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $__fInicio)) $__queryFiltro["data_inicio"] = $__fInicio;
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $__fFim)) $__queryFiltro["data_fim"] = $__fFim;
@@ -335,6 +326,17 @@
                         </select>
                     </div>
                     <div class="form-group" style="margin-right:10px;">
+                        <label style="margin-right:5px;">Setor</label>
+                        <select name="setor_id" class="form-control">
+                            <option value="">Todos</option>
+                            <?php foreach ($__setoresFiltro as $__s): ?>
+                                <option value="<?= (int) ($__s["id"] ?? 0) ?>" <?= ($__fSetorId === (int) ($__s["id"] ?? 0)) ? "selected" : "" ?>>
+                                    <?= htmlspecialchars(strval($__s["nome"] ?? "")) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-right:10px;">
                         <label style="margin-right:5px;">Status</label>
                         <select name="status" class="form-control">
                             <option value="">Todos</option>
@@ -360,6 +362,7 @@
                         <tr>
                             <th style="width:70px;">Nº</th>
                             <th>Empresa</th>
+                            <th>Setor</th>
                             <th>Usuário</th>
                             <th>Página</th>
                             <th>Descrição</th>
@@ -371,7 +374,7 @@
                     </thead>
                     <tbody>
                         <?php if (empty($__tickets)): ?>
-                            <tr><td colspan="9" class="text-center">Nenhum chamado encontrado.</td></tr>
+                            <tr><td colspan="10" class="text-center">Nenhum chamado encontrado.</td></tr>
                         <?php endif; ?>
                         <?php foreach ($__tickets as $__t): ?>
                             <?php
@@ -394,6 +397,7 @@
                             <tr>
                                 <td>#<?= (int) ($__t["id"] ?? 0) ?></td>
                                 <td><?= htmlspecialchars(strval($__t["empresa_key"] ?? "")) ?></td>
+                                <td><?= htmlspecialchars(strval($__t["setor_nome"] ?? "") ?: "—") ?></td>
                                 <td>
                                     <?= htmlspecialchars(strval($__t["user_nome"] ?? "")) ?>
                                     <br><small class="text-muted"><?= htmlspecialchars(strval($__t["user_login"] ?? "")) ?></small>
@@ -418,7 +422,7 @@
                         <ul class="pagination">
                             <?php for ($__p = 1; $__p <= $__paginas; $__p++): ?>
                                 <li class="<?= ($__p === $__fPagina) ? "active" : "" ?>">
-                                    <a href="<?= gestao_manter("empresa", $__fEmpresa, ["status" => $__fStatus, "data_inicio" => $__fInicio, "data_fim" => $__fFim, "pagina" => $__p]) ?>"><?= $__p ?></a>
+                                    <a href="<?= gestao_manter("empresa", $__fEmpresa, ["setor_id" => $__fSetorId ?: "", "status" => $__fStatus, "data_inicio" => $__fInicio, "data_fim" => $__fFim, "pagina" => $__p]) ?>"><?= $__p ?></a>
                                 </li>
                             <?php endfor; ?>
                         </ul>

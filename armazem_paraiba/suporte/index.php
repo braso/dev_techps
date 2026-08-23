@@ -146,6 +146,7 @@
                         <tr>
                             <th style="width:70px;">Nº</th>
                             <th>Empresa</th>
+                            <th>Setor</th>
                             <th>Usuário</th>
                             <th>Página</th>
                             <th>Descrição</th>
@@ -157,7 +158,7 @@
                     </thead>
                     <tbody>
                         <?php if (empty($__tickets)): ?>
-                            <tr><td colspan="9" class="text-center">Nenhum chamado encontrado.</td></tr>
+                            <tr><td colspan="10" class="text-center">Nenhum chamado encontrado.</td></tr>
                         <?php endif; ?>
                         <?php foreach ($__tickets as $__t): ?>
                             <?php
@@ -178,6 +179,7 @@
                             <tr>
                                 <td>#<?= (int) ($__t["id"] ?? 0) ?></td>
                                 <td><?= htmlspecialchars(strval($__t["empresa_key"] ?? "")) ?></td>
+                                <td><?= htmlspecialchars(strval($__t["setor_nome"] ?? "") ?: "—") ?></td>
                                 <td>
                                     <?= htmlspecialchars(strval($__t["user_nome"] ?? "")) ?>
                                     <br><small class="text-muted"><?= htmlspecialchars(strval($__t["user_login"] ?? "")) ?></small>
