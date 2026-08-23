@@ -133,6 +133,26 @@ function torre_visivel(string $chave, array $ocultos): bool {
     return !in_array($chave, $ocultos, true);
 }
 
+// Substituto seguro do padrão "buscar uma linha do resultado de uma consulta" — se a tabela/coluna não existir
+// nesse ambiente (banco divergente entre servidores), a consulta falha e query() retorna
+// false; sem essa proteção, mysqli_fetch_assoc(false) derruba a página inteira com um
+// TypeError fatal. Aqui, nesse caso, devolve um array vazio e o card mostra 0 em vez de
+// quebrar o painel inteiro para todo mundo.
+if (!function_exists("torre_fetch_assoc")) {
+    function torre_fetch_assoc($resultado): array {
+        if ($resultado === false || $resultado === null) return [];
+        return mysqli_fetch_assoc($resultado) ?: [];
+    }
+}
+
+// Mesma proteção acima, para consultas que retornam várias linhas.
+if (!function_exists("torre_fetch_all")) {
+    function torre_fetch_all($resultado, int $modo = MYSQLI_ASSOC): array {
+        if ($resultado === false || $resultado === null) return [];
+        return mysqli_fetch_all($resultado, $modo) ?: [];
+    }
+}
+
 // Legenda explicativa — sempre visível (não é tooltip/hover), usada em todo cartão e painel.
 function torre_info(string $texto): string {
     return '<span class="tc-info-tip">'.htmlspecialchars($texto).'</span>';
@@ -185,11 +205,11 @@ function torre_estilo_ordem(array $lista, string $chave, int $posicaoNatural): s
 
 // Cria a tabela (ou migra uma versão antiga, sem nome de perfil, para o formato atual).
 function torre_ensure_preferencia_schema(): void {
-    $dbRow = mysqli_fetch_assoc(query("SELECT DATABASE() AS db"));
+    $dbRow = torre_fetch_assoc(query("SELECT DATABASE() AS db"));
     $db = strval($dbRow["db"] ?? "");
     if ($db === "") return;
 
-    $exists = mysqli_fetch_assoc(query(
+    $exists = torre_fetch_assoc(query(
         "SELECT 1 AS ok FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'torre_preferencia' LIMIT 1",
         "s", [$db]
     ));
@@ -209,7 +229,7 @@ function torre_ensure_preferencia_schema(): void {
     }
 
     // Migração idempotente: bancos que já tinham a versão antiga (1 preferência por usuário, sem nome).
-    $cols = mysqli_fetch_all(query(
+    $cols = torre_fetch_all(query(
         "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'torre_preferencia'",
         "s", [$db]
     ), MYSQLI_ASSOC) ?: [];
@@ -223,7 +243,7 @@ function torre_ensure_preferencia_schema(): void {
         query("ALTER TABLE torre_preferencia ADD COLUMN torr_tx_dataCadastro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
     }
 
-    $idx = mysqli_fetch_all(query(
+    $idx = torre_fetch_all(query(
         "SELECT INDEX_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'torre_preferencia'",
         "s", [$db]
     ), MYSQLI_ASSOC) ?: [];
@@ -242,7 +262,7 @@ function torre_ensure_preferencia_schema(): void {
 function torre_listar_perfis(int $usuarioId): array {
     if ($usuarioId <= 0) return [];
     torre_ensure_preferencia_schema();
-    return mysqli_fetch_all(query(
+    return torre_fetch_all(query(
         "SELECT torr_tx_nome AS nome, torr_tx_ocultos AS ocultos FROM torre_preferencia WHERE torr_nb_usuario = ? ORDER BY torr_tx_nome ASC",
         "i", [$usuarioId]
     ), MYSQLI_ASSOC) ?: [];
@@ -301,7 +321,7 @@ function torre_custo_he(array $empresasAlvo, string $mes): array {
             $h50 = torre_hhmm_para_horas(strval($dados["HESemanal"] ?? "00:00"));
             $h100 = torre_hhmm_para_horas(strval($dados["HESabado"] ?? "00:00"));
             if ($idMotorista <= 0 || ($h50 <= 0 && $h100 <= 0)) continue;
-            $salRow = mysqli_fetch_assoc(query("SELECT enti_nb_salario FROM entidade WHERE enti_nb_id = ?", "i", [$idMotorista]));
+            $salRow = torre_fetch_assoc(query("SELECT enti_nb_salario FROM entidade WHERE enti_nb_id = ?", "i", [$idMotorista]));
             $salario = floatval($salRow["enti_nb_salario"] ?? 0);
             if ($salario > 0) {
                 $valorHora = $salario / 220;
@@ -433,7 +453,7 @@ function torre_ranking_nc(array $empresasAlvo, string $mes, int $limite = 6): ar
         $ids = array_column($top, "id");
         $placeholders = implode(",", array_fill(0, count($ids), "?"));
         $tipos = str_repeat("i", count($ids));
-        $nomes = mysqli_fetch_all(query("SELECT enti_nb_id, enti_tx_nome FROM entidade WHERE enti_nb_id IN ({$placeholders})", $tipos, $ids), MYSQLI_ASSOC) ?: [];
+        $nomes = torre_fetch_all(query("SELECT enti_nb_id, enti_tx_nome FROM entidade WHERE enti_nb_id IN ({$placeholders})", $tipos, $ids), MYSQLI_ASSOC) ?: [];
         $mapaNomes = [];
         foreach ($nomes as $n) { $mapaNomes[intval($n["enti_nb_id"])] = strval($n["enti_tx_nome"]); }
         foreach ($top as &$t) { $t["nome"] = $mapaNomes[$t["id"]] ?? ("Matrícula interna ".$t["id"]); }
@@ -445,7 +465,7 @@ function torre_ranking_nc(array $empresasAlvo, string $mes, int $limite = 6): ar
 // Tendência de abonos (contagem por mês) — consulta direta, não depende de cache.
 function torre_tendencia_abonos(int $empresaFiltro): array {
     $condEmpresa = $empresaFiltro > 0 ? " AND e.enti_nb_empresa = {$empresaFiltro} " : "";
-    $rows = mysqli_fetch_all(query(
+    $rows = torre_fetch_all(query(
         "SELECT DATE_FORMAT(a.abon_tx_data, '%Y-%m') AS mes, COUNT(*) AS total
          FROM abono a
          JOIN entidade e ON e.enti_tx_matricula = a.abon_tx_matricula
@@ -469,7 +489,7 @@ function torre_calcular_nota_gestao(int $empresaFiltro, string $condEmpresa, int
     $itens = [];
 
     // 1) Cadastro completo (foto, salário, endereço, telefone, e-mail)
-    $cad = mysqli_fetch_assoc(query(
+    $cad = torre_fetch_assoc(query(
         "SELECT COUNT(*) AS total,
             SUM(enti_tx_foto IS NOT NULL AND enti_tx_foto <> '') AS tem_foto,
             SUM(enti_nb_salario IS NOT NULL AND enti_nb_salario > 0) AS tem_salario,
@@ -490,7 +510,7 @@ function torre_calcular_nota_gestao(int $empresaFiltro, string $condEmpresa, int
     ];
 
     // 2) Participação no ponto (30 dias)
-    $part = mysqli_fetch_assoc(query(
+    $part = torre_fetch_assoc(query(
         "SELECT COUNT(DISTINCT e.enti_nb_id) AS total_ativos, COUNT(DISTINCT p.pont_tx_matricula) AS com_ponto
          FROM entidade e
          LEFT JOIN ponto p ON p.pont_tx_matricula = e.enti_tx_matricula AND p.pont_tx_status = 'ativo' AND p.pont_tx_data >= (CURDATE() - INTERVAL 30 DAY)
@@ -505,7 +525,7 @@ function torre_calcular_nota_gestao(int $empresaFiltro, string $condEmpresa, int
     ];
 
     // 3) Ajustes de ponto pedidos perto da data do evento (até 5 dias, últimos 90 dias)
-    $aju = mysqli_fetch_assoc(query(
+    $aju = torre_fetch_assoc(query(
         "SELECT COUNT(*) AS total, SUM(DATEDIFF(sa.data_solicitacao, sa.data_ajuste) <= 5) AS em_dia
          FROM solicitacoes_ajuste sa JOIN entidade e ON e.enti_nb_id = sa.id_motorista
          WHERE e.enti_tx_status = 'ativo' {$condEmpresa} AND sa.data_solicitacao >= (CURDATE() - INTERVAL 90 DAY)"
@@ -519,7 +539,7 @@ function torre_calcular_nota_gestao(int $empresaFiltro, string $condEmpresa, int
     ];
 
     // 4) Abonos lançados perto da data do evento (até 5 dias, últimos 90 dias)
-    $abo = mysqli_fetch_assoc(query(
+    $abo = torre_fetch_assoc(query(
         "SELECT COUNT(*) AS total, SUM(DATEDIFF(a.abon_tx_dataCadastro, a.abon_tx_data) <= 5) AS em_dia
          FROM abono a JOIN entidade e ON e.enti_tx_matricula = a.abon_tx_matricula
          WHERE a.abon_tx_status = 'ativo' AND e.enti_tx_status = 'ativo' {$condEmpresa}
@@ -534,7 +554,7 @@ function torre_calcular_nota_gestao(int $empresaFiltro, string $condEmpresa, int
     ];
 
     // 5) Endosso de banco de horas em dia (motoristas, tolerância de 45 dias — fechamento do mês anterior)
-    $endoRows = mysqli_fetch_all(query(
+    $endoRows = torre_fetch_all(query(
         "SELECT DATEDIFF(CURDATE(), MAX(en.endo_tx_ate)) AS dias_sem_cobertura
          FROM entidade e
          LEFT JOIN endosso en ON en.endo_nb_entidade = e.enti_nb_id AND en.endo_tx_status = 'ativo'
@@ -625,7 +645,7 @@ $notifPref = notificacao_carregar_preferencia($usuarioId);
 
 // ── Filtro de empresa (filial) ───────────────────────────────────────
 
-$empresas = mysqli_fetch_all(query(
+$empresas = torre_fetch_all(query(
     "SELECT empr_nb_id, empr_tx_nome, empr_tx_Ehmatriz FROM empresa WHERE empr_tx_status = 'ativo' ORDER BY (empr_tx_Ehmatriz = 'sim') DESC, empr_tx_nome ASC"
 ), MYSQLI_ASSOC) ?: [];
 $idsEmpresas = array_map("intval", array_column($empresas, "empr_nb_id"));
@@ -639,13 +659,13 @@ $condEmpresa = $empresaFiltro > 0 ? " AND e.enti_nb_empresa = {$empresaFiltro} "
 
 // ── Ativos / inativos / filiais ──────────────────────────────────────
 
-$ativos = (int) (mysqli_fetch_assoc(query("SELECT COUNT(*) AS c FROM entidade e WHERE e.enti_tx_status = 'ativo' {$condEmpresa}"))["c"] ?? 0);
-$inativos = (int) (mysqli_fetch_assoc(query("SELECT COUNT(*) AS c FROM entidade e WHERE e.enti_tx_status = 'inativo' {$condEmpresa}"))["c"] ?? 0);
-$totalFiliais = (int) (mysqli_fetch_assoc(query("SELECT COUNT(*) AS c FROM empresa WHERE empr_tx_Ehmatriz != 'sim' AND empr_tx_status='ativo'"))["c"] ?? 0);
+$ativos = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM entidade e WHERE e.enti_tx_status = 'ativo' {$condEmpresa}"))["c"] ?? 0);
+$inativos = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM entidade e WHERE e.enti_tx_status = 'inativo' {$condEmpresa}"))["c"] ?? 0);
+$totalFiliais = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM empresa WHERE empr_tx_Ehmatriz != 'sim' AND empr_tx_status='ativo'"))["c"] ?? 0);
 
 // ── Totais por ocupação (base para o comparativo de status por ocupação) ─
 
-$ocupacaoRows = mysqli_fetch_all(query(
+$ocupacaoRows = torre_fetch_all(query(
     "SELECT e.enti_tx_ocupacao AS ocupacao, COUNT(*) AS total FROM entidade e
      WHERE e.enti_tx_status = 'ativo' {$condEmpresa}
      GROUP BY e.enti_tx_ocupacao ORDER BY total DESC"
@@ -653,7 +673,7 @@ $ocupacaoRows = mysqli_fetch_all(query(
 
 // ── Status ao vivo (última batida ativa por matrícula, últimos 7 dias) ─
 
-$statusRows = mysqli_fetch_all(query(
+$statusRows = torre_fetch_all(query(
     "SELECT p.pont_tx_tipo AS tipo, p.pont_tx_data AS ultima_data, e.enti_tx_ocupacao AS ocupacao
      FROM ponto p
      INNER JOIN (
@@ -702,7 +722,7 @@ foreach ($ocupacaoRows as $row) {
 
 // ── Disponibilidade de frota (motoristas, simplificado — sem regra ADI 5322) ─
 
-$motoristasRows = mysqli_fetch_all(query(
+$motoristasRows = torre_fetch_all(query(
     "SELECT e.enti_tx_matricula AS matricula,
         (SELECT MAX(p2.pont_tx_data) FROM ponto p2 WHERE p2.pont_tx_matricula = e.enti_tx_matricula AND p2.pont_tx_tipo = 2 AND p2.pont_tx_status='ativo') AS ultimo_fim,
         (SELECT MAX(p3.pont_tx_data) FROM ponto p3 WHERE p3.pont_tx_matricula = e.enti_tx_matricula AND p3.pont_tx_status='ativo') AS ultima_batida
@@ -725,7 +745,7 @@ $totalMotoristas = array_sum($disponibilidade);
 
 // ── Mapa ao vivo (última posição conhecida, últimos 2 dias) ─────────
 
-$mapaRows = mysqli_fetch_all(query(
+$mapaRows = torre_fetch_all(query(
     "SELECT e.enti_tx_nome AS nome, e.enti_tx_ocupacao AS ocupacao,
             p.pont_tx_latitude AS lat, p.pont_tx_longitude AS lng,
             p.pont_tx_data AS quando, p.pont_tx_tipo AS tipo
@@ -764,7 +784,7 @@ foreach ($mapaRows as $r) {
 
 // ── Férias hoje / próximos 7 dias ────────────────────────────────────
 
-$feriasHoje = mysqli_fetch_all(query(
+$feriasHoje = torre_fetch_all(query(
     "SELECT e.enti_tx_nome AS nome, f.feri_tx_dataInicio AS inicio, f.feri_tx_dataFim AS fim
      FROM ferias f JOIN entidade e ON e.enti_nb_id = f.feri_nb_entidade
      WHERE f.feri_tx_status = 'ativo' AND e.enti_tx_status = 'ativo' {$condEmpresa}
@@ -772,7 +792,7 @@ $feriasHoje = mysqli_fetch_all(query(
      ORDER BY f.feri_tx_dataFim ASC"
 ), MYSQLI_ASSOC) ?: [];
 
-$feriasProximas = mysqli_fetch_all(query(
+$feriasProximas = torre_fetch_all(query(
     "SELECT e.enti_tx_nome AS nome, f.feri_tx_dataInicio AS inicio
      FROM ferias f JOIN entidade e ON e.enti_nb_id = f.feri_nb_entidade
      WHERE f.feri_tx_status = 'ativo' AND e.enti_tx_status = 'ativo' {$condEmpresa}
@@ -782,7 +802,7 @@ $feriasProximas = mysqli_fetch_all(query(
 
 // ── Afastamentos ativos hoje ──────────────────────────────────────────
 
-$afastamentosHoje = (int) (mysqli_fetch_assoc(query(
+$afastamentosHoje = (int) (torre_fetch_assoc(query(
     "SELECT COUNT(*) AS c FROM abono a
      JOIN motivo m ON m.moti_nb_id = a.abon_nb_motivo
      JOIN entidade e ON e.enti_tx_matricula = a.abon_tx_matricula
@@ -792,7 +812,7 @@ $afastamentosHoje = (int) (mysqli_fetch_assoc(query(
 
 // ── Abonos do mês, por motivo ─────────────────────────────────────────
 
-$abonosPorMotivo = mysqli_fetch_all(query(
+$abonosPorMotivo = torre_fetch_all(query(
     "SELECT m.moti_tx_nome AS motivo, COUNT(*) AS total
      FROM abono a
      JOIN motivo m ON m.moti_nb_id = a.abon_nb_motivo
@@ -805,7 +825,7 @@ $totalAbonosMes = array_sum(array_column($abonosPorMotivo, "total"));
 
 // ── Advertências candidatas (abono cujo motivo é passível de advertência) ─
 
-$advertencias = (int) (mysqli_fetch_assoc(query(
+$advertencias = (int) (torre_fetch_assoc(query(
     "SELECT COUNT(*) AS c FROM abono a
      JOIN motivo m ON m.moti_nb_id = a.abon_nb_motivo
      JOIN entidade e ON e.enti_tx_matricula = a.abon_tx_matricula
@@ -815,7 +835,7 @@ $advertencias = (int) (mysqli_fetch_assoc(query(
 
 // ── CNH vencendo em 30 dias ────────────────────────────────────────────
 
-$cnhVencendo = mysqli_fetch_all(query(
+$cnhVencendo = torre_fetch_all(query(
     "SELECT e.enti_tx_nome AS nome, e.enti_tx_cnhValidade AS validade
      FROM entidade e
      WHERE e.enti_tx_status = 'ativo' AND e.enti_tx_ocupacao = 'Motorista' {$condEmpresa}
@@ -861,22 +881,22 @@ $condEmpresaUser = $empresaFiltro > 0 ? " AND user_nb_empresa = {$empresaFiltro}
 $condEmpresaEpiEntrega = $empresaFiltro > 0 ? " AND ss_e_nb_empresa_id = {$empresaFiltro} " : "";
 $condEmpresaAssinatura = $empresaFiltro > 0 ? " AND empresa_id = {$empresaFiltro} " : "";
 
-$qtdPlacas = (int) (mysqli_fetch_assoc(query("SELECT COUNT(*) AS c FROM placa WHERE 1=1 {$condEmpresaPlaca}"))["c"] ?? 0);
-$qtdSetores = (int) (mysqli_fetch_assoc(query("SELECT COUNT(*) AS c FROM grupos_documentos WHERE grup_tx_status = 'ativo'"))["c"] ?? 0);
-$qtdSubsetores = (int) (mysqli_fetch_assoc(query("SELECT COUNT(*) AS c FROM sbgrupos_documentos WHERE sbgr_tx_status = 'ativo'"))["c"] ?? 0);
-$qtdFacial = (int) (mysqli_fetch_assoc(query("SELECT COUNT(*) AS c FROM user WHERE user_tx_status = 'ativo' AND user_tx_face_descriptor IS NOT NULL AND user_tx_face_descriptor != '' {$condEmpresaUser}"))["c"] ?? 0);
-$qtdFeriadosMes = (int) (mysqli_fetch_assoc(query("SELECT COUNT(*) AS c FROM feriado WHERE feri_tx_status = 'ativo' AND MONTH(feri_tx_data) = MONTH(CURDATE()) AND YEAR(feri_tx_data) = YEAR(CURDATE())"))["c"] ?? 0);
-$qtdPerfilAcesso = (int) (mysqli_fetch_assoc(query("SELECT COUNT(*) AS c FROM perfil_acesso WHERE perfil_tx_status = 'ativo'"))["c"] ?? 0);
-$qtdTipoDocumento = (int) (mysqli_fetch_assoc(query("SELECT COUNT(*) AS c FROM tipos_documentos WHERE tipo_tx_status = 'ativo'"))["c"] ?? 0);
-$qtdMotivos = (int) (mysqli_fetch_assoc(query("SELECT COUNT(*) AS c FROM motivo WHERE moti_tx_status = 'ativo'"))["c"] ?? 0);
-$qtdEpiCatalogo = (int) (mysqli_fetch_assoc(query("SELECT COUNT(*) AS c FROM ss_epi WHERE ss_e_tx_status = 'ativo'"))["c"] ?? 0);
-$qtdEpiEntregues = (int) (mysqli_fetch_assoc(query("SELECT COUNT(*) AS c FROM ss_epi_entrega WHERE ss_e_tx_status = 'ativo' {$condEmpresaEpiEntrega}"))["c"] ?? 0);
-$qtdAjustes = (int) (mysqli_fetch_assoc(query("SELECT COUNT(*) AS c FROM solicitacoes_ajuste sa JOIN entidade e ON e.enti_nb_id = sa.id_motorista WHERE e.enti_tx_status = 'ativo' {$condEmpresa}"))["c"] ?? 0);
-$qtdEscalas = (int) (mysqli_fetch_assoc(query("SELECT COUNT(*) AS c FROM escala"))["c"] ?? 0);
-$qtdDiarias = (int) (mysqli_fetch_assoc(query("SELECT COUNT(*) AS c FROM diaria_deposito dd JOIN entidade e ON e.enti_nb_id = dd.depr_nb_entidade WHERE e.enti_tx_status = 'ativo' {$condEmpresa}"))["c"] ?? 0);
-$qtdAssinEnviadas = (int) (mysqli_fetch_assoc(query("SELECT COUNT(*) AS c FROM solicitacoes_assinatura WHERE 1=1 {$condEmpresaAssinatura}"))["c"] ?? 0);
-$qtdAssinPendentes = (int) (mysqli_fetch_assoc(query("SELECT COUNT(*) AS c FROM solicitacoes_assinatura WHERE status IN ('pendente','em_progresso') {$condEmpresaAssinatura}"))["c"] ?? 0);
-$qtdAssinConcluidas = (int) (mysqli_fetch_assoc(query("SELECT COUNT(*) AS c FROM solicitacoes_assinatura WHERE status IN ('concluido','assinado') {$condEmpresaAssinatura}"))["c"] ?? 0);
+$qtdPlacas = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM placa WHERE 1=1 {$condEmpresaPlaca}"))["c"] ?? 0);
+$qtdSetores = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM grupos_documentos WHERE grup_tx_status = 'ativo'"))["c"] ?? 0);
+$qtdSubsetores = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM sbgrupos_documentos WHERE sbgr_tx_status = 'ativo'"))["c"] ?? 0);
+$qtdFacial = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM user WHERE user_tx_status = 'ativo' AND user_tx_face_descriptor IS NOT NULL AND user_tx_face_descriptor != '' {$condEmpresaUser}"))["c"] ?? 0);
+$qtdFeriadosMes = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM feriado WHERE feri_tx_status = 'ativo' AND MONTH(feri_tx_data) = MONTH(CURDATE()) AND YEAR(feri_tx_data) = YEAR(CURDATE())"))["c"] ?? 0);
+$qtdPerfilAcesso = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM perfil_acesso WHERE perfil_tx_status = 'ativo'"))["c"] ?? 0);
+$qtdTipoDocumento = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM tipos_documentos WHERE tipo_tx_status = 'ativo'"))["c"] ?? 0);
+$qtdMotivos = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM motivo WHERE moti_tx_status = 'ativo'"))["c"] ?? 0);
+$qtdEpiCatalogo = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM ss_epi WHERE ss_e_tx_status = 'ativo'"))["c"] ?? 0);
+$qtdEpiEntregues = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM ss_epi_entrega WHERE ss_e_tx_status = 'ativo' {$condEmpresaEpiEntrega}"))["c"] ?? 0);
+$qtdAjustes = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM solicitacoes_ajuste sa JOIN entidade e ON e.enti_nb_id = sa.id_motorista WHERE e.enti_tx_status = 'ativo' {$condEmpresa}"))["c"] ?? 0);
+$qtdEscalas = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM escala"))["c"] ?? 0);
+$qtdDiarias = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM diaria_deposito dd JOIN entidade e ON e.enti_nb_id = dd.depr_nb_entidade WHERE e.enti_tx_status = 'ativo' {$condEmpresa}"))["c"] ?? 0);
+$qtdAssinEnviadas = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM solicitacoes_assinatura WHERE 1=1 {$condEmpresaAssinatura}"))["c"] ?? 0);
+$qtdAssinPendentes = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM solicitacoes_assinatura WHERE status IN ('pendente','em_progresso') {$condEmpresaAssinatura}"))["c"] ?? 0);
+$qtdAssinConcluidas = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM solicitacoes_assinatura WHERE status IN ('concluido','assinado') {$condEmpresaAssinatura}"))["c"] ?? 0);
 
 // ── Nota de qualidade de gestão ────────────────────────────────────────
 $notaGestao = torre_calcular_nota_gestao($empresaFiltro, $condEmpresa, $ativos, $jornadasCriticas, $emAtividade, $emPausa, floatval($gravAlta), floatval($gravMedia), floatval($gravBaixa));

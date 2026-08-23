@@ -70,7 +70,7 @@ function notificacao_email_enviar_um(string $destino, string $nomeUsuario, array
 
 notificacao_ensure_schema();
 
-$usuarios = mysqli_fetch_all(query(
+$usuarios = torre_fetch_all(query(
     "SELECT np.noti_nb_usuario AS usuario_id, np.noti_tx_categorias AS categorias, np.noti_tx_email AS email, u.user_tx_nome AS nome
      FROM notificacao_preferencia np
      JOIN user u ON u.user_nb_id = np.noti_nb_usuario

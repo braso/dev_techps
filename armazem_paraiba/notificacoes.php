@@ -8,12 +8,27 @@
    Pressupõe que quem inclui este arquivo já rodou conecta.php.
    ============================================================ */
 
+// Mesma proteção usada em torre_comando.php: se query() falhar (tabela/coluna que não
+// existe nesse ambiente), evita o TypeError fatal de passar `false` para o mysqli_fetch_*.
+if (!function_exists("torre_fetch_assoc")) {
+    function torre_fetch_assoc($resultado): array {
+        if ($resultado === false || $resultado === null) return [];
+        return mysqli_fetch_assoc($resultado) ?: [];
+    }
+}
+if (!function_exists("torre_fetch_all")) {
+    function torre_fetch_all($resultado, int $modo = MYSQLI_ASSOC): array {
+        if ($resultado === false || $resultado === null) return [];
+        return mysqli_fetch_all($resultado, $modo) ?: [];
+    }
+}
+
 function notificacao_ensure_schema(): void {
-    $dbRow = mysqli_fetch_assoc(query("SELECT DATABASE() AS db"));
+    $dbRow = torre_fetch_assoc(query("SELECT DATABASE() AS db"));
     $db = strval($dbRow["db"] ?? "");
     if ($db === "") return;
 
-    $exists = mysqli_fetch_assoc(query(
+    $exists = torre_fetch_assoc(query(
         "SELECT 1 AS ok FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'notificacao_preferencia' LIMIT 1",
         "s", [$db]
     ));
@@ -51,7 +66,7 @@ function notificacao_carregar_preferencia(int $usuarioId): array {
     $padrao = ["categorias" => ["nc_alta", "jornada_critica", "cnh_vencendo"], "email_ativo" => false, "email" => ""];
     if ($usuarioId <= 0) return $padrao;
     notificacao_ensure_schema();
-    $row = mysqli_fetch_assoc(query("SELECT * FROM notificacao_preferencia WHERE noti_nb_usuario = ?", "i", [$usuarioId]));
+    $row = torre_fetch_assoc(query("SELECT * FROM notificacao_preferencia WHERE noti_nb_usuario = ?", "i", [$usuarioId]));
     if (empty($row)) return $padrao;
     $categorias = json_decode(strval($row["noti_tx_categorias"] ?? ""), true);
     return [
@@ -68,7 +83,7 @@ function notificacao_calcular(array $categoriasAtivas): array {
     if (empty($categoriasAtivas)) return $itens;
 
     if (in_array("jornada_critica", $categoriasAtivas, true)) {
-        $rows = mysqli_fetch_all(query(
+        $rows = torre_fetch_all(query(
             "SELECT p.pont_tx_tipo AS tipo, p.pont_tx_data AS ultima_data
              FROM ponto p
              INNER JOIN (
@@ -98,7 +113,7 @@ function notificacao_calcular(array $categoriasAtivas): array {
     }
 
     if (in_array("cnh_vencendo", $categoriasAtivas, true)) {
-        $total = intval((mysqli_fetch_assoc(query(
+        $total = intval((torre_fetch_assoc(query(
             "SELECT COUNT(*) AS c FROM entidade
              WHERE enti_tx_status = 'ativo' AND enti_tx_ocupacao = 'Motorista'
                AND enti_tx_cnhValidade IS NOT NULL AND enti_tx_cnhValidade NOT IN ('', '0000-00-00')
@@ -115,7 +130,7 @@ function notificacao_calcular(array $categoriasAtivas): array {
     }
 
     if (in_array("ferias_proximas", $categoriasAtivas, true)) {
-        $total = intval((mysqli_fetch_assoc(query(
+        $total = intval((torre_fetch_assoc(query(
             "SELECT COUNT(*) AS c FROM ferias f JOIN entidade e ON e.enti_nb_id = f.feri_nb_entidade
              WHERE f.feri_tx_status = 'ativo' AND e.enti_tx_status = 'ativo'
                AND f.feri_tx_dataInicio BETWEEN (CURDATE() + INTERVAL 1 DAY) AND (CURDATE() + INTERVAL 7 DAY)"
@@ -132,7 +147,7 @@ function notificacao_calcular(array $categoriasAtivas): array {
 
     if (in_array("nc_alta", $categoriasAtivas, true)) {
         include_once __DIR__ . "/torre_comando.php";
-        $empresas = mysqli_fetch_all(query("SELECT empr_nb_id FROM empresa WHERE empr_tx_status = 'ativo'"), MYSQLI_ASSOC) ?: [];
+        $empresas = torre_fetch_all(query("SELECT empr_nb_id FROM empresa WHERE empr_tx_status = 'ativo'"), MYSQLI_ASSOC) ?: [];
         $idsEmpresas = array_map("intval", array_column($empresas, "empr_nb_id"));
         $ncRef = torre_mes_mais_recente_nc($idsEmpresas);
         if ($ncRef) {
@@ -150,7 +165,7 @@ function notificacao_calcular(array $categoriasAtivas): array {
     }
 
     if (in_array("afastamentos_hoje", $categoriasAtivas, true)) {
-        $total = intval((mysqli_fetch_assoc(query(
+        $total = intval((torre_fetch_assoc(query(
             "SELECT COUNT(*) AS c FROM abono a
              JOIN motivo m ON m.moti_nb_id = a.abon_nb_motivo
              JOIN entidade e ON e.enti_tx_matricula = a.abon_tx_matricula
@@ -168,7 +183,7 @@ function notificacao_calcular(array $categoriasAtivas): array {
     }
 
     if (in_array("advertencias", $categoriasAtivas, true)) {
-        $total = intval((mysqli_fetch_assoc(query(
+        $total = intval((torre_fetch_assoc(query(
             "SELECT COUNT(*) AS c FROM abono a
              JOIN motivo m ON m.moti_nb_id = a.abon_nb_motivo
              JOIN entidade e ON e.enti_tx_matricula = a.abon_tx_matricula
@@ -186,7 +201,7 @@ function notificacao_calcular(array $categoriasAtivas): array {
     }
 
     if (in_array("abonos_mes", $categoriasAtivas, true)) {
-        $total = intval((mysqli_fetch_assoc(query(
+        $total = intval((torre_fetch_assoc(query(
             "SELECT COUNT(*) AS c FROM abono a
              JOIN entidade e ON e.enti_tx_matricula = a.abon_tx_matricula
              WHERE a.abon_tx_status = 'ativo' AND e.enti_tx_status = 'ativo'
@@ -203,7 +218,7 @@ function notificacao_calcular(array $categoriasAtivas): array {
     }
 
     if (in_array("frota_indisponivel", $categoriasAtivas, true)) {
-        $rows = mysqli_fetch_all(query(
+        $rows = torre_fetch_all(query(
             "SELECT e.enti_tx_matricula AS matricula,
                 (SELECT MAX(p2.pont_tx_data) FROM ponto p2 WHERE p2.pont_tx_matricula = e.enti_tx_matricula AND p2.pont_tx_tipo = 2 AND p2.pont_tx_status='ativo') AS ultimo_fim,
                 (SELECT MAX(p3.pont_tx_data) FROM ponto p3 WHERE p3.pont_tx_matricula = e.enti_tx_matricula AND p3.pont_tx_status='ativo') AS ultima_batida
@@ -228,7 +243,7 @@ function notificacao_calcular(array $categoriasAtivas): array {
 
     if (in_array("saldo_negativo", $categoriasAtivas, true)) {
         include_once __DIR__ . "/torre_comando.php";
-        $empresas = mysqli_fetch_all(query("SELECT empr_nb_id FROM empresa WHERE empr_tx_status = 'ativo'"), MYSQLI_ASSOC) ?: [];
+        $empresas = torre_fetch_all(query("SELECT empr_nb_id FROM empresa WHERE empr_tx_status = 'ativo'"), MYSQLI_ASSOC) ?: [];
         $idsEmpresas = array_map("intval", array_column($empresas, "empr_nb_id"));
         $saldoRef = torre_mes_mais_recente_saldo($idsEmpresas);
         if ($saldoRef) {
