@@ -96,12 +96,15 @@
 			include_once "comunicado_popup.php";
 			include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
 			
-			$usuario = mysqli_fetch_assoc(query(
+			$resUsuario = query(
 				"SELECT * FROM user"
 					." WHERE user_tx_status = 'ativo'"
-						." AND user_tx_login = '".$_POST["user"]."'"
-						." AND user_tx_senha = '".$_POST["password"]."';"
-			));
+						." AND user_tx_login = ?"
+						." AND user_tx_senha = ?;",
+				"ss",
+				[$_POST["user"], $_POST["password"]]
+			);
+			$usuario = $resUsuario ? mysqli_fetch_assoc($resUsuario) : null;
 			
 			if(!empty($usuario)){ //Se encontrou um usuário
 
