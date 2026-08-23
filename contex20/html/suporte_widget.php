@@ -85,7 +85,7 @@
         <h4 style="margin:0 0 4px;color:#333;"><i class="fa fa-life-ring" style="color:#337ab7;"></i> Suporte Técnico</h4>
         <p style="margin:0 0 8px;font-size:12px;color:#888;">Descreva o problema para a equipe TechPS. Empresa e usuário são preenchidos automaticamente.</p>
         <p style="margin:0 0 16px;font-size:12px;">
-            <a href="<?= htmlspecialchars(rtrim(strval($_ENV["CONTEX_PATH"] ?? ""), "/")) ?>/suporte/meus_chamados.php"><i class="fa fa-list"></i> Ver meus chamados</a>
+            <a href="<?= htmlspecialchars(rtrim(strval($_ENV["APP_PATH"] ?? "") . strval($_ENV["CONTEX_PATH"] ?? ""), "/")) ?>/suporte/meus_chamados.php"><i class="fa fa-list"></i> Ver meus chamados</a>
         </p>
 
         <div style="margin-bottom:10px;">
