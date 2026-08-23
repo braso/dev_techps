@@ -987,8 +987,10 @@ const SUPORTE = {
     db: null,
     maxArquivos: 6,
     maxVideos: 1,
+    maxAudios: 2,
     maxBytesPadrao: 5 * 1024 * 1024,
     maxBytesVideo: 25 * 1024 * 1024,
+    maxBytesAudio: 8 * 1024 * 1024,
     minDescricao: 5,
     maxDescricao: 2000,
     maxUrl: 500,
@@ -1010,11 +1012,18 @@ const SUPORTE = {
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
         "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
         "text/plain": "txt",
-        "text/csv": "csv"
+        "text/csv": "csv",
+        "audio/mpeg": "mp3",
+        "audio/wav": "wav",
+        "audio/ogg": "oga",
+        "audio/mp4": "m4a",
+        "audio/webm": "weba"
     },
     extImagem: ["jpg", "jpeg", "png", "webp", "gif"],
     extVideo: ["mp4", "mov", "webm"],
     extDocumento: ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "csv"],
+    // Extensões próprias (não colidem com extVideo) — cobre upload de arquivo e gravação pelo microfone.
+    extAudio: ["mp3", "wav", "oga", "ogg", "m4a", "weba"],
     uploadDir: process.env.SUPORTE_UPLOAD_DIR || path.join(__dirname, "uploads", "suporte")
 };
 
@@ -1157,7 +1166,8 @@ function migrarTabelasSuporte() {
         "ALTER TABLE suporte_ticket MODIFY status ENUM('aberto','em_analise','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi','teste_interno') NOT NULL DEFAULT 'aberto'",
         "ALTER TABLE suporte_ticket ADD COLUMN setor_id BIGINT UNSIGNED DEFAULT NULL",
         "ALTER TABLE suporte_ticket ADD COLUMN setor_nome VARCHAR(150) DEFAULT NULL",
-        "ALTER TABLE suporte_arquivo ADD COLUMN tipo ENUM('imagem','video','documento') NOT NULL DEFAULT 'imagem'"
+        "ALTER TABLE suporte_arquivo ADD COLUMN tipo ENUM('imagem','video','documento','audio') NOT NULL DEFAULT 'imagem'",
+        "ALTER TABLE suporte_arquivo MODIFY tipo ENUM('imagem','video','documento','audio') NOT NULL DEFAULT 'imagem'"
     ];
     const roda = (sql) => {
         suporteQuery(sql, [])
@@ -1246,6 +1256,26 @@ function assinaturaVideo(buffer) {
     return null;
 }
 
+// Assinatura real de áudio (magic bytes). weba/m4a reaproveitam a checagem de vídeo
+// porque compartilham o mesmo container (EBML/WebM e MP4 "ftyp"), só o conteúdo muda.
+function assinaturaAudio(buffer, ext) {
+    if (!buffer || buffer.length < 4) return false;
+    if (ext === "mp3") {
+        if (buffer.toString("ascii", 0, 3) === "ID3") return true;
+        return buffer[0] === 0xFF && (buffer[1] & 0xE0) === 0xE0; // frame sync sem tag ID3
+    }
+    if (ext === "wav") {
+        return buffer.length >= 12 && buffer.toString("ascii", 0, 4) === "RIFF" && buffer.toString("ascii", 8, 12) === "WAVE";
+    }
+    if (ext === "oga" || ext === "ogg") {
+        return buffer.toString("ascii", 0, 4) === "OggS";
+    }
+    if (ext === "weba" || ext === "m4a") {
+        return !!assinaturaVideo(buffer); // EBML (0x1A45DFA3) ou box "ftyp"
+    }
+    return false;
+}
+
 // Assinatura real de documento (magic bytes).
 function assinaturaDocumento(buffer) {
     if (!buffer || buffer.length < 8) return null;
@@ -1286,6 +1316,12 @@ function categorizarArquivo(nomeOriginal, buffer) {
         if (!assinaturaVideo(buffer)) return null;
         const mime = ext === "webm" ? "video/webm" : (ext === "mov" ? "video/quicktime" : "video/mp4");
         return { categoria: "video", mime, ext };
+    }
+
+    if (SUPORTE.extAudio.includes(ext)) {
+        if (!assinaturaAudio(buffer, ext)) return null;
+        const mimePorExt = { mp3: "audio/mpeg", wav: "audio/wav", oga: "audio/ogg", ogg: "audio/ogg", m4a: "audio/mp4", weba: "audio/webm" };
+        return { categoria: "audio", mime: mimePorExt[ext], ext };
     }
 
     if (SUPORTE.extDocumento.includes(ext)) {
@@ -1379,17 +1415,20 @@ app.post("/suporte/tickets", uploadSuporte.array("anexos", SUPORTE.maxArquivos),
             }
         }
 
-        // Valida anexos: imagem/documento até 5MB, vídeo até 25MB (máx. 1 vídeo), conteúdo real conferido por assinatura.
+        // Valida anexos: imagem/documento até 5MB, vídeo até 25MB (máx. 1 vídeo), áudio até 8MB (máx. 2), conteúdo real conferido por assinatura.
         const arquivos = [];
         let totalVideos = 0;
+        let totalAudios = 0;
         if (req.files && req.files.length) {
             for (const file of req.files) {
                 const nomeOriginal = String(file.originalname || "").slice(0, 200);
                 const categorizado = categorizarArquivo(nomeOriginal, file.buffer);
                 if (!categorizado) {
-                    return res.status(400).json({ ok: false, msg: "Arquivo \"" + nomeOriginal + "\" não é um tipo permitido (imagem, vídeo ou documento)." });
+                    return res.status(400).json({ ok: false, msg: "Arquivo \"" + nomeOriginal + "\" não é um tipo permitido (imagem, vídeo, áudio ou documento)." });
                 }
-                const tetoBytes = categorizado.categoria === "video" ? SUPORTE.maxBytesVideo : SUPORTE.maxBytesPadrao;
+                const tetoBytes = categorizado.categoria === "video" ? SUPORTE.maxBytesVideo
+                    : categorizado.categoria === "audio" ? SUPORTE.maxBytesAudio
+                    : SUPORTE.maxBytesPadrao;
                 if (file.size > tetoBytes) {
                     return res.status(400).json({ ok: false, msg: "Arquivo \"" + nomeOriginal + "\" excede " + (tetoBytes / (1024 * 1024)) + "MB." });
                 }
@@ -1397,6 +1436,12 @@ app.post("/suporte/tickets", uploadSuporte.array("anexos", SUPORTE.maxArquivos),
                     totalVideos++;
                     if (totalVideos > SUPORTE.maxVideos) {
                         return res.status(400).json({ ok: false, msg: "Permitido no máximo " + SUPORTE.maxVideos + " vídeo por chamado." });
+                    }
+                }
+                if (categorizado.categoria === "audio") {
+                    totalAudios++;
+                    if (totalAudios > SUPORTE.maxAudios) {
+                        return res.status(400).json({ ok: false, msg: "Permitido no máximo " + SUPORTE.maxAudios + " áudio(s) por chamado." });
                     }
                 }
                 arquivos.push({
@@ -1571,6 +1616,143 @@ app.get("/suporte/empresas", exigirAdminSuporte, async (req, res) => {
     } catch (err) {
         console.error("[SUPORTE] Erro ao listar empresas:", err);
         res.status(500).json({ ok: false, msg: "Erro ao listar empresas." });
+    }
+});
+
+// Indicadores agregados do suporte (painel de gestão — dashboard).
+// Aceita os mesmos filtros da listagem de chamados; agrega tudo em memória
+// (volume de chamados é pequeno o bastante para não precisar de SQL agregado).
+app.get("/suporte/dashboard", exigirAdminSuporte, async (req, res) => {
+    try {
+        const empresa = String(req.query.empresa || "").trim();
+        const status = String(req.query.status || "").trim();
+        const dataInicio = String(req.query.data_inicio || "").trim();
+        const dataFim = String(req.query.data_fim || "").trim();
+        const setorIdFiltro = parseInt(req.query.setor_id, 10);
+
+        let where = [];
+        let params = [];
+        if (empresa) { where.push("empresa_key = ?"); params.push(empresa); }
+        if (setorIdFiltro && setorIdFiltro > 0) { where.push("setor_id = ?"); params.push(setorIdFiltro); }
+        if (status && SUPORTE_STATUS[status]) { where.push("status = ?"); params.push(status); }
+        if (dataInicio && /^\d{4}-\d{2}-\d{2}$/.test(dataInicio)) { where.push("created_at >= ?"); params.push(dataInicio + " 00:00:00"); }
+        if (dataFim && /^\d{4}-\d{2}-\d{2}$/.test(dataFim)) { where.push("created_at <= ?"); params.push(dataFim + " 23:59:59"); }
+        const filtro = where.length ? "WHERE " + where.join(" AND ") : "";
+
+        const linhas = await suporteQuery(
+            "SELECT id, empresa_key, empresa_nome, setor_nome, status, tipo, pagina_url, created_at, aceito_em, fechado_em " +
+            "FROM suporte_ticket " + filtro + " ORDER BY created_at ASC",
+            params
+        );
+
+        const STATUS_ABERTOS = new Set(["aberto", "em_analise", "em_andamento", "aguardando_cliente", "reaberto", "encaminhado_ssi", "teste_interno"]);
+
+        const normalizarPagina = (url) => {
+            let s = String(url || "").trim();
+            if (!s) return "(sem página)";
+            s = s.split("#")[0].split("?")[0];
+            s = s.replace(/^https?:\/\/[^/]+/i, "");
+            if (!s.startsWith("/")) s = "/" + s;
+            return s.length > 80 ? s.slice(0, 77) + "..." : s;
+        };
+
+        const contagemStatus = {};
+        const contagemTipo = {};
+        const contagemEmpresa = {};
+        const contagemPagina = {};
+        const contagemSetor = {};
+        const contagemDia = {};
+        let somaResolucaoHoras = 0, qtdResolucao = 0;
+        let somaAceiteHoras = 0, qtdAceite = 0;
+        const abertosDetalhe = [];
+
+        for (const t of linhas) {
+            contagemStatus[t.status] = (contagemStatus[t.status] || 0) + 1;
+
+            const tipoKey = t.tipo || "nao_classificado";
+            contagemTipo[tipoKey] = (contagemTipo[tipoKey] || 0) + 1;
+
+            const empresaKey = t.empresa_key;
+            if (!contagemEmpresa[empresaKey]) {
+                contagemEmpresa[empresaKey] = { empresa_key: empresaKey, empresa_nome: t.empresa_nome || empresaKey, total: 0 };
+            }
+            contagemEmpresa[empresaKey].total++;
+
+            const pagina = normalizarPagina(t.pagina_url);
+            contagemPagina[pagina] = (contagemPagina[pagina] || 0) + 1;
+
+            const setor = t.setor_nome || "Sem setor";
+            contagemSetor[setor] = (contagemSetor[setor] || 0) + 1;
+
+            const dataCriacao = new Date(t.created_at);
+            const diaKey = dataCriacao.toISOString().slice(0, 10);
+            contagemDia[diaKey] = (contagemDia[diaKey] || 0) + 1;
+
+            if (t.fechado_em) {
+                const horas = (new Date(t.fechado_em) - dataCriacao) / 3600000;
+                if (horas >= 0) { somaResolucaoHoras += horas; qtdResolucao++; }
+            }
+            if (t.aceito_em) {
+                const horas = (new Date(t.aceito_em) - dataCriacao) / 3600000;
+                if (horas >= 0) { somaAceiteHoras += horas; qtdAceite++; }
+            }
+
+            if (STATUS_ABERTOS.has(t.status)) {
+                abertosDetalhe.push({
+                    id: t.id,
+                    empresa_key: t.empresa_key,
+                    empresa_nome: t.empresa_nome,
+                    status: t.status,
+                    created_at: t.created_at,
+                    dias_aberto: Math.floor((Date.now() - dataCriacao.getTime()) / 86400000)
+                });
+            }
+        }
+
+        abertosDetalhe.sort((a, b) => b.dias_aberto - a.dias_aberto);
+
+        const topN = (obj, n, mapFn) => Object.entries(obj)
+            .map(([chave, valor]) => mapFn(chave, valor))
+            .sort((a, b) => b.total - a.total)
+            .slice(0, n);
+
+        // Tendência diária; se o período cobrir muitos dias, agrupa por mês para não poluir o gráfico.
+        const dias = Object.keys(contagemDia).sort();
+        let tendencia;
+        if (dias.length > 60) {
+            const contagemMes = {};
+            for (const [dia, qtd] of Object.entries(contagemDia)) {
+                const mes = dia.slice(0, 7);
+                contagemMes[mes] = (contagemMes[mes] || 0) + qtd;
+            }
+            tendencia = Object.entries(contagemMes)
+                .sort((a, b) => a[0].localeCompare(b[0]))
+                .map(([mes, qtd]) => ({ periodo: mes, total: qtd }));
+        } else {
+            tendencia = dias.map((dia) => ({ periodo: dia, total: contagemDia[dia] }));
+        }
+
+        res.json({
+            ok: true,
+            resumo: {
+                total: linhas.length,
+                abertos_agora: abertosDetalhe.length,
+                resolvidos: contagemStatus["resolvido"] || 0,
+                cancelados: contagemStatus["cancelado"] || 0,
+                tempo_medio_resolucao_horas: qtdResolucao ? +(somaResolucaoHoras / qtdResolucao).toFixed(1) : null,
+                tempo_medio_aceite_horas: qtdAceite ? +(somaAceiteHoras / qtdAceite).toFixed(1) : null
+            },
+            por_status: Object.entries(contagemStatus).map(([status, tot]) => ({ status, total: tot })).sort((a, b) => b.total - a.total),
+            por_tipo: Object.entries(contagemTipo).map(([tipo, tot]) => ({ tipo, total: tot })).sort((a, b) => b.total - a.total),
+            por_empresa: Object.values(contagemEmpresa).sort((a, b) => b.total - a.total).slice(0, 15),
+            por_pagina: topN(contagemPagina, 15, (pagina, tot) => ({ pagina, total: tot })),
+            por_setor: topN(contagemSetor, 15, (setor, tot) => ({ setor, total: tot })),
+            tendencia,
+            mais_antigos_abertos: abertosDetalhe.slice(0, 10)
+        });
+    } catch (err) {
+        console.error("[SUPORTE] Erro ao gerar dashboard:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao gerar o dashboard." });
     }
 });
 

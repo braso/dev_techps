@@ -132,6 +132,7 @@ $showComunicado = (strpos($path, "/techps") !== false);
 // Gestão de Suporte: visível nos domínios TechPS (produção) e Demo (desenvolvimento).
 if (strpos($path, "/techps") !== false || strpos($path, "/demo") !== false) {
     $paginas["suporte"]["/suporte/gestao.php"] = "Gestão de Suporte";
+    $paginas["suporte"]["/suporte/dashboard.php"] = "Dashboard de Suporte";
 }
 
 if ($showComunicado) {
@@ -238,7 +239,8 @@ if ($showComunicado) {
             "Gestão de Diárias" => "fa fa-hand-holding-usd",
             "Parâmetros de Diárias" => "fa fa-sliders-h",
             "Chamados de Suporte" => "fa fa-life-ring",
-            "Gestão de Suporte" => "fa fa-tasks"
+            "Gestão de Suporte" => "fa fa-tasks",
+            "Dashboard de Suporte" => "fa fa-bar-chart"
         ];
 
         // Verifica se existe pelo menos uma placa cadastrada para mostrar o menu Logística.

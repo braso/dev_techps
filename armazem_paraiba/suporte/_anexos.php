@@ -39,6 +39,9 @@
                         . 'onerror="this.parentElement.innerHTML=\'<div style=\\\'padding:30px 8px;color:#999;\\\'>Sem prévia<br><small>' . htmlspecialchars($nome, ENT_QUOTES) . '</small></div>\';" />';
                 } elseif ($tipo === "video") {
                     $html .= '<video controls style="width:150px;height:110px;background:#000;display:block;"><source src="' . $url . '"></video>';
+                } elseif ($tipo === "audio") {
+                    $html .= '<div style="padding:20px 8px 8px;color:#555;" onclick="event.preventDefault();"><i class="fa fa-microphone" style="font-size:28px;"></i>'
+                        . '<audio controls preload="none" style="width:100%;height:30px;margin-top:6px;"><source src="' . $url . '">Seu navegador não suporta áudio.</audio></div>';
                 } else {
                     $pontoIdx = strrpos($nome, ".");
                     $ext = $pontoIdx !== false ? strtolower(substr($nome, $pontoIdx + 1)) : "";

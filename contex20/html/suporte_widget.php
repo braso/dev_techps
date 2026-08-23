@@ -87,14 +87,17 @@
         </div>
 
         <div style="margin-bottom:14px;">
-            <label style="display:block;font-size:12px;font-weight:700;color:#555;margin-bottom:3px;">Anexos (opcional, até 6 — imagem/documento até 5MB, no máx. 1 vídeo até 25MB)</label>
-            <input type="file" id="suporte-campo-imagens" accept="image/*,video/mp4,video/quicktime,video/webm,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv" multiple style="display:none;" />
+            <label style="display:block;font-size:12px;font-weight:700;color:#555;margin-bottom:3px;">Anexos (opcional, até 6 — imagem/documento até 5MB, no máx. 1 vídeo até 25MB, no máx. 2 áudios até 8MB)</label>
+            <input type="file" id="suporte-campo-imagens" accept="image/*,video/mp4,video/quicktime,video/webm,audio/*,.mp3,.wav,.ogg,.oga,.m4a,.weba,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv" multiple style="display:none;" />
             <div style="display:flex;gap:8px;">
                 <button type="button" id="suporte-botao-anexar" style="flex:1;border:1px dashed #aaa;background:#fafafa;color:#555;border-radius:4px;padding:10px;cursor:pointer;font-size:13px;">
                     <i class="fa fa-paperclip"></i> Anexar arquivo
                 </button>
                 <button type="button" id="suporte-botao-print" style="flex:1;border:1px dashed #aaa;background:#fafafa;color:#555;border-radius:4px;padding:10px;cursor:pointer;font-size:13px;">
                     <i class="fa fa-desktop"></i> Tirar print da tela
+                </button>
+                <button type="button" id="suporte-botao-audio" style="flex:1;border:1px dashed #aaa;background:#fafafa;color:#555;border-radius:4px;padding:10px;cursor:pointer;font-size:13px;">
+                    <i class="fa fa-microphone"></i> Gravar áudio
                 </button>
             </div>
             <div id="suporte-lista-imagens" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
@@ -121,16 +124,21 @@
 
     var MAX_ARQUIVOS      = 6;
     var MAX_VIDEOS        = 1;
+    var MAX_AUDIOS        = 2;
     var MAX_BYTES_PADRAO  = 5 * 1024 * 1024;
     var MAX_BYTES_VIDEO   = 25 * 1024 * 1024;
+    var MAX_BYTES_AUDIO   = 8 * 1024 * 1024;
+    var MAX_SEGUNDOS_GRAVACAO = 180; // 3 minutos — evita estourar o limite de 8MB do áudio
     var EXT_IMAGEM    = ['jpg','jpeg','png','webp','gif'];
     var EXT_VIDEO     = ['mp4','mov','webm'];
+    var EXT_AUDIO     = ['mp3','wav','oga','ogg','m4a','weba'];
     var EXT_DOCUMENTO = ['pdf','doc','docx','xls','xlsx','ppt','pptx','txt','csv'];
 
     var arquivos     = [];
     var urlPagina    = "";
     var enviando     = false;
     var setorObrigatorio = false;
+    var pararGravacaoEmAndamento = function(){}; // sobrescrita pelo bloco de gravação de áudio, se suportado
 
     var btnAbrir     = document.getElementById('suporte-widget-btn');
     var modal        = document.getElementById('suporte-widget-modal');
@@ -139,6 +147,7 @@
     var btnEnviar    = document.getElementById('suporte-botao-enviar');
     var btnAnexar    = document.getElementById('suporte-botao-anexar');
     var btnPrint     = document.getElementById('suporte-botao-print');
+    var btnAudio     = document.getElementById('suporte-botao-audio');
     var campoImg     = document.getElementById('suporte-campo-imagens');
     var txtDesc      = document.getElementById('suporte-campo-descricao');
     var contador     = document.getElementById('suporte-descricao-contador');
@@ -153,12 +162,17 @@
         var ext = nome.indexOf('.') >= 0 ? nome.split('.').pop() : '';
         if (EXT_IMAGEM.indexOf(ext) !== -1) return 'imagem';
         if (EXT_VIDEO.indexOf(ext) !== -1) return 'video';
+        if (EXT_AUDIO.indexOf(ext) !== -1) return 'audio';
         if (EXT_DOCUMENTO.indexOf(ext) !== -1) return 'documento';
         return null;
     }
 
     function totalVideosAtual(){
         return arquivos.filter(function(a){ return categoriaDoArquivo(a) === 'video'; }).length;
+    }
+
+    function totalAudiosAtual(){
+        return arquivos.filter(function(a){ return categoriaDoArquivo(a) === 'audio'; }).length;
     }
 
     function tentarAdicionarArquivo(arquivo){
@@ -168,6 +182,9 @@
         if (categoria === 'video') {
             if (totalVideosAtual() >= MAX_VIDEOS) { alert('Permitido no máximo ' + MAX_VIDEOS + ' vídeo por chamado.'); return false; }
             if (arquivo.size > MAX_BYTES_VIDEO) { alert('"' + arquivo.name + '" excede 25MB.'); return false; }
+        } else if (categoria === 'audio') {
+            if (totalAudiosAtual() >= MAX_AUDIOS) { alert('Permitido no máximo ' + MAX_AUDIOS + ' áudio(s) por chamado.'); return false; }
+            if (arquivo.size > MAX_BYTES_AUDIO) { alert('"' + arquivo.name + '" excede 8MB.'); return false; }
         } else {
             if (arquivo.size > MAX_BYTES_PADRAO) { alert('"' + arquivo.name + '" excede 5MB.'); return false; }
         }
@@ -208,6 +225,7 @@
     });
 
     function fechar(){
+        pararGravacaoEmAndamento();
         modal.style.display = 'none';
     }
     btnFechar.addEventListener('click', fechar);
@@ -452,6 +470,109 @@
         });
     }
 
+    // ── Gravação de áudio pelo microfone ──
+    if (btnAudio) {
+        if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder)) {
+            btnAudio.style.display = 'none';
+        } else {
+            (function(){
+                var gravando = false;
+                var mediaRecorder = null;
+                var streamAtual = null;
+                var chunksGravacao = [];
+                var timerGravacao = null;
+                var inicioGravacao = 0;
+                var textoOriginalBtnAudio = btnAudio.innerHTML;
+
+                function formatarTempo(segundos){
+                    var m = Math.floor(segundos / 60);
+                    var s = segundos % 60;
+                    return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+                }
+
+                function pararStream(){
+                    if (streamAtual) {
+                        streamAtual.getTracks().forEach(function(t){ t.stop(); });
+                        streamAtual = null;
+                    }
+                }
+
+                function extensaoPorMime(mime){
+                    if (!mime) return 'weba';
+                    if (mime.indexOf('ogg') !== -1) return 'oga';
+                    if (mime.indexOf('mp4') !== -1) return 'm4a';
+                    if (mime.indexOf('mpeg') !== -1) return 'mp3';
+                    if (mime.indexOf('wav') !== -1) return 'wav';
+                    return 'weba'; // audio/webm
+                }
+
+                function restaurarBotao(){
+                    btnAudio.style.background = '#fafafa';
+                    btnAudio.style.borderColor = '#aaa';
+                    btnAudio.style.color = '#555';
+                    btnAudio.innerHTML = textoOriginalBtnAudio;
+                }
+
+                function pararGravacao(){
+                    if (!gravando || !mediaRecorder) return;
+                    gravando = false;
+                    if (timerGravacao) { clearInterval(timerGravacao); timerGravacao = null; }
+                    try { mediaRecorder.stop(); } catch (e) { /* já parado */ }
+                }
+                pararGravacaoEmAndamento = pararGravacao;
+
+                function iniciarGravacao(){
+                    navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream){
+                        streamAtual = stream;
+                        chunksGravacao = [];
+                        var opcoes = {};
+                        if (window.MediaRecorder.isTypeSupported && window.MediaRecorder.isTypeSupported('audio/webm')) {
+                            opcoes.mimeType = 'audio/webm';
+                        } else if (window.MediaRecorder.isTypeSupported && window.MediaRecorder.isTypeSupported('audio/mp4')) {
+                            opcoes.mimeType = 'audio/mp4';
+                        }
+                        try {
+                            mediaRecorder = new MediaRecorder(stream, opcoes);
+                        } catch (e) {
+                            mediaRecorder = new MediaRecorder(stream);
+                        }
+                        mediaRecorder.addEventListener('dataavailable', function(e){
+                            if (e.data && e.data.size > 0) chunksGravacao.push(e.data);
+                        });
+                        mediaRecorder.addEventListener('stop', function(){
+                            pararStream();
+                            var mimeFinal = mediaRecorder.mimeType || 'audio/webm';
+                            var blob = new Blob(chunksGravacao, { type: mimeFinal });
+                            chunksGravacao = [];
+                            restaurarBotao();
+                            if (!blob.size) return;
+                            var arquivo = new File([blob], 'gravacao-' + Date.now() + '.' + extensaoPorMime(mimeFinal), { type: mimeFinal });
+                            if (tentarAdicionarArquivo(arquivo)) { renderizarImagens(); }
+                        });
+                        mediaRecorder.start();
+                        gravando = true;
+                        inicioGravacao = Date.now();
+                        btnAudio.style.background = '#e74c3c';
+                        btnAudio.style.borderColor = '#e74c3c';
+                        btnAudio.style.color = '#fff';
+                        timerGravacao = setInterval(function(){
+                            var decorridos = Math.floor((Date.now() - inicioGravacao) / 1000);
+                            btnAudio.innerHTML = '<i class="fa fa-stop"></i> Parar (' + formatarTempo(decorridos) + ')';
+                            if (decorridos >= MAX_SEGUNDOS_GRAVACAO) { pararGravacao(); }
+                        }, 500);
+                    }).catch(function(){
+                        alert('Não foi possível acessar o microfone. Verifique as permissões do navegador.');
+                    });
+                }
+
+                btnAudio.addEventListener('click', function(){
+                    if (arquivos.length >= MAX_ARQUIVOS && !gravando) { alert('Máximo de ' + MAX_ARQUIVOS + ' anexos por chamado.'); return; }
+                    if (gravando) { pararGravacao(); } else { iniciarGravacao(); }
+                });
+            })();
+        }
+    }
+
     function renderizarImagens(){
         listaImg.innerHTML = '';
         arquivos.forEach(function(arquivo, indice){
@@ -465,9 +586,10 @@
                 img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
                 item.appendChild(img);
             } else {
+                var iconePorCategoria = { video: 'fa-file-video-o', audio: 'fa-file-audio-o' };
                 var icone = document.createElement('div');
                 icone.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4px;box-sizing:border-box;color:#555;';
-                icone.innerHTML = '<i class="fa ' + (categoria === 'video' ? 'fa-file-video-o' : 'fa-file-o') + '" style="font-size:22px;"></i>' +
+                icone.innerHTML = '<i class="fa ' + (iconePorCategoria[categoria] || 'fa-file-o') + '" style="font-size:22px;"></i>' +
                     '<span style="font-size:9px;word-break:break-all;margin-top:4px;">' + arquivo.name + '</span>';
                 item.appendChild(icone);
             }

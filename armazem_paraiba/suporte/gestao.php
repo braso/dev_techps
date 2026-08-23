@@ -139,6 +139,7 @@
                     <?php if ($__verId > 0 || $__verConfig): ?>
                         <a href="gestao.php" class="btn btn-default btn-sm"><i class="fa fa-arrow-left"></i> Voltar</a>
                     <?php else: ?>
+                        <a href="dashboard.php" class="btn btn-default btn-sm"><i class="fa fa-bar-chart"></i> Dashboard</a>
                         <a href="gestao.php?config=1" class="btn btn-default btn-sm"><i class="fa fa-cog"></i> Configurações</a>
                     <?php endif; ?>
                 </div>
