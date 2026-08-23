@@ -5,6 +5,8 @@
        Uso: suporte_render_timeline($eventos)
        ============================================================ */
 
+    include_once __DIR__ . "/_datas.php";
+
     if (!function_exists("suporte_render_timeline")) {
         function suporte_render_timeline(array $eventos): string {
             $icones = [
@@ -29,7 +31,7 @@
                 $titulo = $def[2];
                 $descricao = trim(strval($e["descricao"] ?? ""));
                 $autor = trim(strval($e["autor"] ?? ""));
-                $data = strval($e["created_at"] ?? "");
+                $data = suporte_fmt_data(strval($e["created_at"] ?? ""));
 
                 $html .= '<div style="position:relative;margin-bottom:16px;">';
                 $html .= '<span style="position:absolute;left:-43px;top:0;width:22px;height:22px;border-radius:50%;background:' . $cor . ';color:#fff;text-align:center;line-height:22px;font-size:10px;"><i class="' . $icone . '" aria-hidden="true"></i></span>';

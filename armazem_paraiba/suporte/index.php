@@ -7,6 +7,7 @@
     include __DIR__ . "/../load_env.php";
     include_once __DIR__ . "/../conecta.php";
     include_once __DIR__ . "/../check_permission.php";
+    include_once __DIR__ . "/_datas.php";
 
     $__apiUrl   = rtrim(strval($_ENV["SUPORTE_API_URL"] ?? ""), "/");
     $__adminKey = strval($_ENV["SUPORTE_ADMIN_KEY"] ?? "");
@@ -191,8 +192,8 @@
                                 <td style="max-width:220px;word-break:break-all;"><small><?= htmlspecialchars(strval($__t["pagina_url"] ?? "")) ?></small></td>
                                 <td><?= htmlspecialchars($__descCurta) ?></td>
                                 <td><?= $__badge ?></td>
-                                <td><?= htmlspecialchars(strval($__t["created_at"] ?? "")) ?></td>
-                                <td><?= htmlspecialchars(strval($__t["fechado_em"] ?? "") ?: "—") ?></td>
+                                <td><?= htmlspecialchars(suporte_fmt_data(strval($__t["created_at"] ?? ""))) ?></td>
+                                <td><?= htmlspecialchars(suporte_fmt_data(strval($__t["fechado_em"] ?? "")) ?: "—") ?></td>
                                 <td>
                                     <a href="detalhe.php?id=<?= (int) ($__t["id"] ?? 0) ?>" class="btn btn-xs blue"><i class="fa fa-eye"></i> Ver</a>
                                 </td>

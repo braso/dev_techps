@@ -7,6 +7,7 @@
     include_once __DIR__ . "/../check_permission.php";
     include_once __DIR__ . "/_timeline.php";
     include_once __DIR__ . "/_anexos.php";
+    include_once __DIR__ . "/_datas.php";
 
     $__id = (int) ($_GET["id"] ?? 0);
     if ($__id < 1) {
@@ -136,7 +137,7 @@
                             <tr><th style="width:140px;">Empresa</th><td><?= htmlspecialchars(strval($__ticket["empresa_key"] ?? "")) ?> — <?= htmlspecialchars(strval($__ticket["empresa_nome"] ?? "")) ?></td></tr>
                             <tr><th>Setor</th><td><?= htmlspecialchars(strval($__ticket["setor_nome"] ?? "") ?: "—") ?></td></tr>
                             <tr><th>Usuário</th><td><?= htmlspecialchars(strval($__ticket["user_nome"] ?? "")) ?> (<?= htmlspecialchars(strval($__ticket["user_login"] ?? "")) ?>)</td></tr>
-                            <tr><th>Data de abertura</th><td><?= htmlspecialchars(strval($__ticket["created_at"] ?? "")) ?></td></tr>
+                            <tr><th>Data de abertura</th><td><?= htmlspecialchars(suporte_fmt_data(strval($__ticket["created_at"] ?? ""))) ?></td></tr>
                             <tr><th>Status</th><td><?= $__badge ?></td></tr>
                             <tr><th>Tipo</th><td><?= isset($__tipoMap[$__tipo]) ? htmlspecialchars($__tipoMap[$__tipo]) : '<span class="text-muted">Em análise</span>' ?></td></tr>
                             <?php if ($__ssiCodigo !== ""): ?>
@@ -173,7 +174,7 @@
                         <div style="font-size:12px;color:#888;margin-bottom:4px;">
                             <i class="fa fa-user-circle"></i> <strong><?= htmlspecialchars(strval($__c["autor"] ?? "")) ?></strong>
                             <?= $__label ?>
-                            <span style="margin-left:8px;"><?= htmlspecialchars(strval($__c["created_at"] ?? "")) ?></span>
+                            <span style="margin-left:8px;"><?= htmlspecialchars(suporte_fmt_data(strval($__c["created_at"] ?? ""))) ?></span>
                         </div>
                         <div style="white-space:pre-wrap;"><?= htmlspecialchars(strval($__c["texto"] ?? "")) ?></div>
                     </div>

@@ -9,6 +9,7 @@
     include_once __DIR__ . "/../check_permission.php";
     include_once __DIR__ . "/_timeline.php";
     include_once __DIR__ . "/_anexos.php";
+    include_once __DIR__ . "/_datas.php";
 
     $__empresaAtual = trim(strval($_ENV["CONTEX_PATH"] ?? ""), "/");
     // Gestão central: domínios TechPS (produção) e Demo (desenvolvimento).
@@ -201,7 +202,7 @@
             <tr><th>Setor</th><td><?= htmlspecialchars(strval($__ticket["setor_nome"] ?? "") ?: "—") ?></td></tr>
             <tr><th>Usuário</th><td><?= htmlspecialchars(strval($__ticket["user_nome"] ?? "")) ?> (<?= htmlspecialchars(strval($__ticket["user_login"] ?? "")) ?>)</td></tr>
             <tr><th>E-mail</th><td><?= htmlspecialchars(strval($__ticket["user_email"] ?? "") ?: "—") ?></td></tr>
-            <tr><th>Data de abertura</th><td><?= htmlspecialchars(strval($__ticket["created_at"] ?? "")) ?></td></tr>
+            <tr><th>Data de abertura</th><td><?= htmlspecialchars(suporte_fmt_data(strval($__ticket["created_at"] ?? ""))) ?></td></tr>
             <tr><th>Status</th><td><?= $__badge ?></td></tr>
             <tr><th>Tipo</th><td><?= isset($__tipoMap[$__tipo]) ? htmlspecialchars($__tipoMap[$__tipo]) : '<span class="text-muted">Não classificado</span>' ?></td></tr>
             <tr><th>Atendente</th><td><?= htmlspecialchars(strval($__ticket["atendente_nome"] ?? "") ?: "—") ?></td></tr>
@@ -335,7 +336,7 @@
                 <div style="font-size:12px;color:#888;margin-bottom:4px;">
                     <i class="fa fa-user-circle"></i> <strong><?= htmlspecialchars(strval($__c["autor"] ?? "")) ?></strong>
                     <span class="label label-info" style="margin-left:6px;"><?= htmlspecialchars(strval($__c["autor_tipo"] ?? "")) ?></span>
-                    <span style="margin-left:8px;"><?= htmlspecialchars(strval($__c["created_at"] ?? "")) ?></span>
+                    <span style="margin-left:8px;"><?= htmlspecialchars(suporte_fmt_data(strval($__c["created_at"] ?? ""))) ?></span>
                 </div>
                 <div style="white-space:pre-wrap;"><?= htmlspecialchars(strval($__c["texto"] ?? "")) ?></div>
             </div>
@@ -494,8 +495,8 @@
                                     <?php if ($__ssiT !== ""): ?><br><small class="label label-danger" style="font-size:10px;"><?= htmlspecialchars($__ssiT) ?></small><?php endif; ?>
                                 </td>
                                 <td><?= $__badgeT ?></td>
-                                <td><?= htmlspecialchars(strval($__t["created_at"] ?? "")) ?></td>
-                                <td><?= htmlspecialchars(strval($__t["fechado_em"] ?? "") ?: "—") ?></td>
+                                <td><?= htmlspecialchars(suporte_fmt_data(strval($__t["created_at"] ?? ""))) ?></td>
+                                <td><?= htmlspecialchars(suporte_fmt_data(strval($__t["fechado_em"] ?? "")) ?: "—") ?></td>
                                 <td><a href="gestao.php?id=<?= (int) ($__t["id"] ?? 0) ?>" class="btn btn-xs blue"><i class="fa fa-cog"></i> Gerir</a></td>
                             </tr>
                         <?php endforeach; ?>
