@@ -46,6 +46,7 @@ function cadastrar(){
         "perfil_tx_nome" => $_POST["titulo"],
         "perfil_tx_descricao" => $_POST["descricao"],
         "perfil_tx_status" => $status,
+        "perfil_tx_esconderSalario" => (!empty($_POST["esconder_salario"]) ? "sim" : "nao"),
         "perfil_tx_dataAtualiza" => date("Y-m-d H:i:s")
     ];
 
@@ -131,7 +132,7 @@ function formPerfil(){
     $menuPath = __DIR__."/menu.php";
     if(file_exists($menuPath)){
         $txt = file_get_contents($menuPath);
-        $secs = ["cadastros","ponto","painel","epi","relatórios","assinatura"];
+        $secs = ["cadastros","ponto","diárias","painel","logística","epi","relatórios","assinatura","suporte"];
         foreach($secs as $sec){
             if(preg_match('/"'.preg_quote($sec,'/').'"\s*=>\s*\[(.*?)\]/s', $txt, $m)){
                 if(preg_match_all('/"([^"]+)"\s*=>\s*"([^"]+)"/', $m[1], $mm, PREG_SET_ORDER)){
@@ -140,6 +141,11 @@ function formPerfil(){
             }
         }
         if(strpos($txt, '/cadastro_comunicado.php') !== false){ $menuPairs[] = ["cadastros","Comunicado","/cadastro_comunicado.php"]; }
+        // Itens de suporte só aparecem no menu.php condicionados ao domínio (TechPS/Demo),
+        // então não caem no regex acima (que só lê o array literal da seção). Adiciona
+        // manualmente pra também poderem ser liberados/restringidos por perfil.
+        if(strpos($txt, '/suporte/gestao.php') !== false){ $menuPairs[] = ["suporte","Gestão de Suporte","/suporte/gestao.php"]; }
+        if(strpos($txt, '/suporte/dashboard.php') !== false){ $menuPairs[] = ["suporte","Dashboard de Suporte","/suporte/dashboard.php"]; }
     }
     $filtered = [];
     foreach($menuPairs as $pair){
@@ -202,8 +208,10 @@ function formPerfil(){
     $grupo = [];
     foreach($items as $it){ $grupo[$it["menu_tx_secao"]][] = $it; }
 
+    $esconderSalarioChecked = (!empty($perfil["perfil_tx_esconderSalario"]) && $perfil["perfil_tx_esconderSalario"] === "sim");
+
     $checksSection = "<div class='row' style='margin-top:10px'>"
-        
+
         ."</div>";
     foreach($grupo as $secao => $lista){
         $secSlug = strtolower(preg_replace('/[^a-z0-9_]+/i','_', $secao));
@@ -214,6 +222,7 @@ function formPerfil(){
             ."</div>"
             ."<div class='col-sm-12' style='display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:10px'>";
 
+        $temFuncionario = false;
         foreach($lista as $it){
             $mid = (int)$it["menu_nb_id"];
             $isChecked = isset($selecionados[$mid]);
@@ -222,8 +231,21 @@ function formPerfil(){
             $checksSection .= "<input type='checkbox' name='routes_ver[]' value='".$mid."' ".($isChecked?"checked":"").">";
             $checksSection .= "<span style='font-weight:600'>".$it["menu_tx_label"]."</span>";
             $checksSection .= "</label>";
+            if($it["menu_tx_label"] === "Funcionário"){ $temFuncionario = true; }
         }
-        $checksSection .= "</div></div>";
+        $checksSection .= "</div>";
+
+        if($temFuncionario){
+            $checksSection .= "<div class='col-sm-12' style='margin-top:8px;'>"
+                ."<label style='display:block; box-sizing:border-box; width:100%; border-radius:10px; padding:10px 14px; border:1px dashed #f0ad4e; background:#fff8ec;'>"
+                ."<input type='checkbox' name='esconder_salario' value='1' style='vertical-align:top; margin-top:3px;' ".($esconderSalarioChecked?"checked":"").">"
+                ." <strong>Esconder campo de salário</strong>"
+                ."<div style='margin:4px 0 0 22px; color:#8a6d3b; font-size:12px; line-height:1.4;'>Quem estiver nesse perfil não verá o campo de salário na página do Funcionário.</div>"
+                ."</label>"
+                ."</div>";
+        }
+
+        $checksSection .= "</div>";
     }
     $checksSection .= "</div>";
     $checksSection .= "<script>(function(){var sync=function(){document.querySelectorAll('.menu-check-item input[type=checkbox]').forEach(function(c){var l=c.closest('.menu-check-item');if(l){if(c.checked){l.style.background='#eaffea';l.style.borderColor='#b7e1b7';}else{l.style.background='#f9fafb';l.style.borderColor='#e5e7eb';}}})};sync();document.addEventListener('change',function(e){var c=e.target;if(c && c.matches('.menu-check-item input[type=checkbox]')){var l=c.closest('.menu-check-item');if(l){if(c.checked){l.style.background='#eaffea';l.style.borderColor='#b7e1b7';}else{l.style.background='#f9fafb';l.style.borderColor='#e5e7eb';}}}});document.addEventListener('click',function(e){var btn=e.target.closest('button');if(btn){var label=btn.textContent.trim();if(label==='Marcar todos'||label==='Desmarcar todos'){e.preventDefault();var sec=btn.getAttribute('data-sec');var scope;if(sec==='__global'){scope=document}else{scope=btn.closest('[data-sec]')||document} Array.prototype.forEach.call(scope.querySelectorAll('.menu-check-item input[type=checkbox]'),function(c){if(label==='Marcar todos' && !c.checked){c.click();} if(label==='Desmarcar todos' && c.checked){c.click();}});}}});})();</script>";

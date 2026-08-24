@@ -528,6 +528,26 @@
 		}
 	}
 
+	// Perfil de acesso ativo do usuário logado marcou "Esconder campo de salário"
+	// (cadastro_perfil_acesso.php)? Usado pra tirar o campo/coluna de salário da
+	// visão de quem estiver nesse perfil.
+	function funcionarioEsconderSalario(): bool {
+		if(empty($_SESSION["user_nb_id"])){
+			return false;
+		}
+		$result = query(
+			"SELECT pa.perfil_tx_esconderSalario
+			FROM usuario_perfil up
+			JOIN perfil_acesso pa ON pa.perfil_nb_id = up.perfil_nb_id
+			WHERE up.user_nb_id = ? AND up.ativo = 1
+			LIMIT 1",
+			"i",
+			[(int) $_SESSION["user_nb_id"]]
+		);
+		$row = $result ? mysqli_fetch_assoc($result) : null;
+		return !empty($row) && ($row["perfil_tx_esconderSalario"] ?? "") === "sim";
+	}
+
 	function cadastrarMotorista(){
 		global $a_mod;
 
@@ -706,6 +726,12 @@
 			}
 			if($_POST["status"] == "inativo"){
 				$camposObrig["desligamento"] = "Desligamento";
+			}
+
+			// Perfil com "Esconder campo de salário" ativo: o campo nem aparece no
+			// formulário, então não pode ser exigido no salvamento.
+			if(funcionarioEsconderSalario()){
+				unset($camposObrig["salario"]);
 			}
 
 			if(!empty($_POST["parametro"])){
@@ -1615,7 +1641,7 @@
 		
 		
 		$a_mod["enti_nb_salario"] = str_replace(".", ",", (!empty($a_mod["enti_nb_salario"])? $a_mod["enti_nb_salario"] : ""));
-		$campoSalario = campo("Salário*", "salario", $a_mod["enti_nb_salario"], 1, "MASCARA_DINHEIRO", "tabindex=".sprintf("%02d", $tabIndex+2));
+		$campoSalario = funcionarioEsconderSalario() ? "" : campo("Salário*", "salario", $a_mod["enti_nb_salario"], 1, "MASCARA_DINHEIRO", "tabindex=".sprintf("%02d", $tabIndex+2));
 
         $condSubSetor = " ORDER BY sbgr_tx_nome ASC";
         if (!empty($a_mod["enti_setor_id"]) || !empty($_POST["setor"])) {
@@ -3032,9 +3058,13 @@ function index(){
                 "CNH ATIV. REMUNERADA"  => "enti_tx_cnhAtividadeRemunerada",
                 "CNH OBS"               => "enti_tx_cnhObs",
                 "ABONO FERIADO ESCALA"  => "IF(para_tx_tipo = 'escala', IF(para_tx_abonarFeriadoEscala = 'sim', 'Sim', 'Não'), '—') AS para_tx_abonarFeriadoEscala"
-				
+
 			];
-	
+
+			if(funcionarioEsconderSalario()){
+				unset($allGridFields["SALÁRIO"]);
+			}
+
 			$camposBusca = [
 				"busca_codigo" 			=> "enti_nb_id",
 				"busca_nome_like" 		=> "enti_tx_nome",

@@ -116,6 +116,9 @@ function torre_manifesto(): array {
                 "tile_espera"     => "Cartão: espera indenizada",
                 "tile_custo"      => "Cartão: custo estimado",
                 "tile_saldo"      => "Cartão: saldo final",
+                "tile_diarias_acumulado"    => "Cartão: diárias — total acumulado",
+                "tile_diarias_30dias"       => "Cartão: diárias — últimos 30 dias",
+                "tile_diarias_estimado_mes" => "Cartão: diárias — estimado do mês",
                 "painel_tendencia"=> "Gráfico: tendência de horas extras",
             ],
         ],
@@ -429,6 +432,42 @@ function torre_custo_he(array $empresasAlvo, string $mes): array {
         }
     }
     return ["custo" => $custo, "comSalario" => $comSalario, "semSalario" => $semSalario, "horasForaDaConta" => $horasForaDaConta];
+}
+
+// Diárias consumidas (módulo diarias/): total acumulado (histórico completo),
+// últimos 30 dias, e uma estimativa simples do mês corrente (regra de três a
+// partir da média diária já consumida no mês, projetada pros dias restantes).
+function torre_diarias_totais(array $empresasAlvo): array {
+    $vazio = ["acumulado" => 0.0, "ultimos30" => 0.0, "mesAtual" => 0.0, "estimadoMes" => 0.0];
+    if (empty($empresasAlvo)) return $vazio;
+
+    include_once __DIR__ . "/diarias/helpers_diarias.php";
+    diar_ensureSchema();
+
+    $placeholders = implode(",", array_fill(0, count($empresasAlvo), "?"));
+    $tipos = str_repeat("i", count($empresasAlvo));
+    $row = diar_fetch_assoc_safe(diar_query(
+        "SELECT
+            COALESCE(SUM(dc.dcon_tx_valor), 0) AS acumulado,
+            COALESCE(SUM(CASE WHEN dc.dcon_tx_data >= (CURDATE() - INTERVAL 29 DAY) THEN dc.dcon_tx_valor ELSE 0 END), 0) AS ultimos30,
+            COALESCE(SUM(CASE WHEN dc.dcon_tx_data >= DATE_FORMAT(CURDATE(), '%Y-%m-01') THEN dc.dcon_tx_valor ELSE 0 END), 0) AS mesAtual
+        FROM diaria_consumo dc
+        JOIN entidade e ON e.enti_nb_id = dc.dcon_nb_entidade
+        WHERE e.enti_nb_empresa IN ({$placeholders})",
+        $tipos,
+        array_values($empresasAlvo)
+    ));
+    if (empty($row)) return $vazio;
+
+    $acumulado = floatval($row["acumulado"] ?? 0);
+    $ultimos30 = floatval($row["ultimos30"] ?? 0);
+    $mesAtual = floatval($row["mesAtual"] ?? 0);
+
+    $diasPassados = intval(date("j")); // dia do mês corrente (1..31)
+    $diasNoMes = intval(date("t"));
+    $estimadoMes = $diasPassados > 0 ? ($mesAtual / $diasPassados) * $diasNoMes : 0.0;
+
+    return ["acumulado" => $acumulado, "ultimos30" => $ultimos30, "mesAtual" => $mesAtual, "estimadoMes" => $estimadoMes];
 }
 
 function torre_tendencia_he(array $empresasAlvo): array {
@@ -1123,6 +1162,7 @@ $saldoRef = torre_mes_mais_recente_saldo($empresasAlvo);
 $saldoTotais = $saldoRef ? torre_saldo_totais($saldoRef["empresas"], $saldoRef["mes"]) : null;
 $custoRef = $saldoRef ? torre_custo_he($saldoRef["empresas"], $saldoRef["mes"]) : null;
 $tendenciaHE = torre_tendencia_he($empresasAlvo);
+$diariasTotais = torre_diarias_totais($empresasAlvo);
 $temMovimentoNoPeriodo = $saldoTotais && (
     $saldoTotais["HESemanal"] > 0 || $saldoTotais["HESabado"] > 0 ||
     $saldoTotais["adicionalNoturno"] > 0 || $saldoTotais["esperaIndenizada"] > 0
@@ -1888,7 +1928,12 @@ $notaGestao = torre_calcular_nota_gestao($empresaFiltro, $condEmpresa, $ativos, 
         torre_visivel("tile_he50", $ocultos) || torre_visivel("tile_he100", $ocultos) ||
         torre_visivel("tile_noturno", $ocultos) || torre_visivel("tile_espera", $ocultos) ||
         torre_visivel("tile_custo", $ocultos) || torre_visivel("tile_saldo", $ocultos) ||
+        torre_visivel("tile_diarias_acumulado", $ocultos) || torre_visivel("tile_diarias_30dias", $ocultos) ||
+        torre_visivel("tile_diarias_estimado_mes", $ocultos) ||
         torre_visivel("painel_tendencia", $ocultos);
+    $mostrarTilesDiarias =
+        torre_visivel("tile_diarias_acumulado", $ocultos) || torre_visivel("tile_diarias_30dias", $ocultos) ||
+        torre_visivel("tile_diarias_estimado_mes", $ocultos);
   ?>
   <?php if ($mostrarSecaoCusto): ?>
   <div class="tc-section"<?= torre_estilo_ordem($ordemSecoes, "custo", 3) ?>>
@@ -1898,6 +1943,35 @@ $notaGestao = torre_calcular_nota_gestao($empresaFiltro, $condEmpresa, $ativos, 
         <span class="tc-section-periodo">Período apurado: <?= torre_data_fmt($saldoTotais["_periodoInicio"]) ?> a <?= torre_data_fmt($saldoTotais["_periodoFim"]) ?><?= $saldoTotais["_qtdMotoristas"] > 0 ? " · ".$saldoTotais["_qtdMotoristas"]." pessoas apuradas" : "" ?></span>
       <?php endif; ?>
     </div>
+
+    <?php if ($mostrarTilesDiarias): ?>
+      <div class="tc-grid" style="margin-bottom:14px;">
+        <?php if (torre_visivel("tile_diarias_acumulado", $ocultos)): ?>
+        <div class="tc-card tc-tile"<?= torre_estilo_ordem($ordemItens["custo"] ?? [], "tile_diarias_acumulado", 6) ?>>
+          <div class="tc-tile-top"><span class="tc-tile-label">Diárias — total acumulado<?= torre_info("Soma de todas as diárias consumidas já lançadas no módulo de Diárias, desde o início do histórico.") ?></span><div class="tc-tile-icon"><i data-lucide="wallet" style="width:16px;height:16px;color:var(--tc-ink-mute);"></i></div></div>
+          <span class="tc-tile-value"><?= torre_moeda_fmt($diariasTotais["acumulado"]) ?></span>
+          <span class="tc-tile-foot">histórico completo</span>
+          <?= torre_link("diarias/gestao_diarias.php") ?>
+        </div>
+        <?php endif; ?>
+        <?php if (torre_visivel("tile_diarias_30dias", $ocultos)): ?>
+        <div class="tc-card tc-tile"<?= torre_estilo_ordem($ordemItens["custo"] ?? [], "tile_diarias_30dias", 7) ?>>
+          <div class="tc-tile-top"><span class="tc-tile-label">Diárias — últimos 30 dias<?= torre_info("Soma das diárias consumidas nos últimos 30 dias corridos, incluindo hoje.") ?></span><div class="tc-tile-icon acc"><i data-lucide="calendar-range" style="width:16px;height:16px;"></i></div></div>
+          <span class="tc-tile-value"><?= torre_moeda_fmt($diariasTotais["ultimos30"]) ?></span>
+          <span class="tc-tile-foot">últimos 30 dias corridos</span>
+          <?= torre_link("diarias/gestao_diarias.php") ?>
+        </div>
+        <?php endif; ?>
+        <?php if (torre_visivel("tile_diarias_estimado_mes", $ocultos)): ?>
+        <div class="tc-card tc-tile"<?= torre_estilo_ordem($ordemItens["custo"] ?? [], "tile_diarias_estimado_mes", 8) ?>>
+          <div class="tc-tile-top"><span class="tc-tile-label">Diárias — estimado do mês<?= torre_info("Projeção simples: consumo do mês corrente até hoje, dividido pelos dias já passados e multiplicado pelo total de dias do mês.") ?></span><div class="tc-tile-icon warn"><i data-lucide="trending-up" style="width:16px;height:16px;"></i></div></div>
+          <span class="tc-tile-value warn"><?= torre_moeda_fmt($diariasTotais["estimadoMes"]) ?></span>
+          <span class="tc-tile-foot"><?= torre_moeda_fmt($diariasTotais["mesAtual"]) ?> já consumido este mês</span>
+          <?= torre_link("diarias/gestao_diarias.php") ?>
+        </div>
+        <?php endif; ?>
+      </div>
+    <?php endif; ?>
 
     <?php if ($saldoTotais): ?>
       <?php if (!$temMovimentoNoPeriodo): ?>
@@ -1981,7 +2055,7 @@ $notaGestao = torre_calcular_nota_gestao($empresaFiltro, $condEmpresa, $ativos, 
         </div>
       </div>
       <?php endif; ?>
-    <?php else: ?>
+    <?php elseif (!$mostrarTilesDiarias): ?>
       <div class="tc-panel">
         <div class="tc-empty-state">
           <i data-lucide="banknote" style="width:26px;height:26px;"></i>

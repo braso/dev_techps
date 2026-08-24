@@ -175,6 +175,13 @@
         }
     }
 
+    // Migração da tabela perfil_acesso: coluna pra esconder o campo de salário do
+    // funcionário para quem estiver incluído em perfis marcados com essa opção.
+    $checkEsconderSalario = mysqli_query($conn, "SHOW COLUMNS FROM perfil_acesso LIKE 'perfil_tx_esconderSalario'");
+    if ($checkEsconderSalario && mysqli_num_rows($checkEsconderSalario) === 0) {
+        mysqli_query($conn, "ALTER TABLE perfil_acesso ADD COLUMN perfil_tx_esconderSalario ENUM('sim','nao') NOT NULL DEFAULT 'nao'");
+    };
+
     // Criação da tabela feriado_funcionario se não existir
     mysqli_query($conn, "CREATE TABLE IF NOT EXISTS feriado_funcionario (
         fefi_nb_id INT AUTO_INCREMENT PRIMARY KEY,
