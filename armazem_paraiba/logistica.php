@@ -552,7 +552,7 @@
                 <td>".htmlspecialchars($ponto["pont_tx_placa"])."</td>
                 <td>".htmlspecialchars($ponto["pont_tx_legenda"])."</td>
                 <td>".((!empty($ponto["pont_tx_latitude"]) && !empty($ponto["pont_tx_longitude"]))? 
-                    "<a href='https://www.google.com/maps?q={$ponto["pont_tx_latitude"]},{$ponto["pont_tx_longitude"]} target='_blank' title='Ver no Google Maps'>
+                    "<a href='https://www.google.com/maps?q={$ponto["pont_tx_latitude"]},{$ponto["pont_tx_longitude"]}' target='_blank' title='Ver no Google Maps'>
                         <i class='fa fa-map' style='color: #183153; font-size: 1.5em;'></i>
                     </a>": 
                     "<span>Sem localização</span>"

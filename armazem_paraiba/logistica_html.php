@@ -38,6 +38,22 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('date_start').value = dateStart;
         document.getElementById('date_end').value = dateEnd;
     }
+
+    var placa = getParameter('placa');
+    if (placa) {
+        var plateSelect = document.getElementById('plate');
+        if (plateSelect) {
+            for (var i = 0; i < plateSelect.options.length; i++) {
+                if (plateSelect.options[i].value.toUpperCase() === placa.toUpperCase()) {
+                    plateSelect.selectedIndex = i;
+                    break;
+                }
+            }
+            if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
+                jQuery('#plate').trigger('change');
+            }
+        }
+    }
 });
 </script>
 

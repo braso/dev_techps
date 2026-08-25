@@ -20,6 +20,17 @@ function dp_getFlash() {
     return array($mensagem, $erro);
 }
 
+// Classifica o tipo de campo de cada chave para renderizacao e validacao.
+function dp_tipoCampo($chave) {
+    $tipos = array(
+        'limite_km_almoco' => 'inteiro',
+        'distancia_pernoite_metros' => 'inteiro',
+        'autogerar_consumo' => 'simnao',
+        'limite_dias_autogeracao' => 'inteiro'
+    );
+    return isset($tipos[$chave]) ? $tipos[$chave] : 'moeda';
+}
+
 // Persiste os valores informados na tela de parametros.
 function dp_salvarParametros() {
     if (!diar_isSuperAdmin()) {
@@ -34,12 +45,18 @@ function dp_salvarParametros() {
             continue;
         }
         $valor = trim(strval($_POST[$chave]));
-        $valor = ($valor === '') ? '0' : $valor;
+        $tipo = dp_tipoCampo($chave);
 
-        if ($chave === 'limite_km_almoco') {
-            $valor = strval(max(0, intval($valor)));
-        } else {
-            $valor = strval(max(0, diar_parseValorMonetario($valor)));
+        switch ($tipo) {
+            case 'inteiro':
+                $valor = strval(max(0, intval($valor)));
+                break;
+            case 'simnao':
+                $valor = ($valor === 'sim') ? 'sim' : 'nao';
+                break;
+            default:
+                $valor = ($valor === '') ? '0' : strval(max(0, diar_parseValorMonetario($valor)));
+                break;
         }
 
         if (diar_salvarParametro($chave, $valor)) {
@@ -57,10 +74,6 @@ function salvarParametros() {
     dp_setFlash($mensagem, $erro);
     header('Location: parametros_diarias.php');
     exit;
-}
-
-if (dp($_POST, 'acao', '') === 'salvarParametros') {
-    salvarParametros();
 }
 
 include_once "../conecta.php";
@@ -111,18 +124,39 @@ cabecalho("Parametros de Diarias");
                         <?php foreach (diar_parametrosPadrao() as $chave => $dados): ?>
                             <?php
                                 $valorAtual = strval(dp($parametros, $chave, $dados[0]));
-                                $ehValor = ($chave !== 'limite_km_almoco');
+                                $tipoCampo = dp_tipoCampo($chave);
                             ?>
                             <tr>
                                 <td><code><?php echo htmlspecialchars($chave); ?></code></td>
                                 <td><?php echo htmlspecialchars($dados[1]); ?></td>
                                 <td>
-                                    <?php if ($chave === 'limite_km_almoco'): ?>
-                                        <input type="number" class="form-control input-sm" name="<?php echo htmlspecialchars($chave); ?>"
-                                               value="<?php echo htmlspecialchars($valorAtual); ?>" min="0" step="1">
-                                    <?php else: ?>
+                                    <?php if ($tipoCampo === 'moeda'): ?>
                                         <input type="text" class="form-control input-sm" name="<?php echo htmlspecialchars($chave); ?>"
                                                value="<?php echo htmlspecialchars(diar_formatarValor($valorAtual)); ?>" data-mask-money>
+                                    <?php elseif ($tipoCampo === 'inteiro'): ?>
+                                        <input type="number" class="form-control input-sm" name="<?php echo htmlspecialchars($chave); ?>"
+                                               value="<?php echo htmlspecialchars($valorAtual); ?>" min="0" step="1">
+                                    <?php elseif ($tipoCampo === 'hora'): ?>
+                                        <input type="time" class="form-control input-sm" name="<?php echo htmlspecialchars($chave); ?>"
+                                               value="<?php echo htmlspecialchars($valorAtual); ?>">
+                                    <?php elseif ($tipoCampo === 'texto'): ?>
+                                        <input type="text" class="form-control input-sm" name="<?php echo htmlspecialchars($chave); ?>"
+                                               value="<?php echo htmlspecialchars($valorAtual); ?>" placeholder="http://servidor:porta">
+                                    <?php else: ?>
+                                        <?php
+                                            $opcoes = array();
+                                            if ($tipoCampo === 'simnao') {
+                                                $opcoes = array('sim' => 'Sim', 'nao' => 'Nao');
+                                            }
+                                        ?>
+                                        <select class="form-control input-sm" name="<?php echo htmlspecialchars($chave); ?>">
+                                            <?php foreach ($opcoes as $opVal => $opLabel): ?>
+                                                <option value="<?php echo htmlspecialchars($opVal); ?>"
+                                                    <?php echo $valorAtual === $opVal ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($opLabel); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
                                     <?php endif; ?>
                                 </td>
                             </tr>

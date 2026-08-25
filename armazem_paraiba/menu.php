@@ -89,6 +89,7 @@
 			],
             "diárias" => [
                 "/diarias/gestao_diarias.php" => "Gestão de Diárias",
+                "/diarias/bases_diarias.php" => "Bases de Diárias",
                 "/diarias/parametros_diarias.php" => "Parâmetros de Diárias"
             ],
 			"painel" => [
