@@ -207,7 +207,117 @@
         KEY idx_data (feit_tx_data)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;");
 
-    
+    // =====================================================
+    // MÓDULO DE TREINAMENTO - Migrações
+    // =====================================================
+
+    // Tabela principal de treinamentos
+    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento (
+        trei_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        trei_tx_titulo VARCHAR(255) NOT NULL,
+        trei_tx_descricao TEXT,
+        trei_tx_conteudo_programatico TEXT,
+        trei_tx_tipo ENUM('dss','treinamento') DEFAULT 'treinamento',
+        trei_tx_tipo_treinamento ENUM('inicial','periodico','eventual') DEFAULT 'eventual',
+        trei_tx_tipo_usuario_permitido TEXT,
+        trei_tx_url_video VARCHAR(500),
+        trei_tx_tipo_video ENUM('youtube','vimeo','upload') DEFAULT 'youtube',
+        trei_nb_carga_horaria INT DEFAULT 0,
+        trei_nb_dias_validade INT DEFAULT 365,
+        trei_tx_thumbnail VARCHAR(500),
+        trei_dt_data_publicacao DATETIME,
+        trei_dt_data_liberacao DATETIME,
+        trei_tx_status ENUM('ativo','inativo') DEFAULT 'ativo',
+        trei_nb_obrigatorio TINYINT(1) DEFAULT 0,
+        trei_tx_avaliacao_pergunta TEXT,
+        trei_tx_avaliacao_opcoes TEXT,
+        trei_nb_avaliacao_resposta_correta INT,
+        trei_nb_quantidade_questoes_prova INT DEFAULT 5,
+        trei_nb_nota_minima_aprovacao INT DEFAULT 70,
+        trei_dt_data_cadastro DATETIME,
+        trei_dt_data_atualiza DATETIME
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+    // Tabela de materiais de apoio
+    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_material (
+        tram_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        tram_nb_treinamento_id INT NOT NULL,
+        tram_tx_nome VARCHAR(255),
+        tram_tx_descricao TEXT,
+        tram_tx_arquivo VARCHAR(500),
+        tram_tx_tipo_arquivo VARCHAR(50),
+        tram_nb_tamanho INT,
+        tram_nb_ordem INT DEFAULT 0,
+        tram_tx_status ENUM('ativo','inativo') DEFAULT 'ativo',
+        tram_dt_data_cadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_treinamento (tram_nb_treinamento_id),
+        FOREIGN KEY (tram_nb_treinamento_id) REFERENCES treinamento(trei_nb_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+    // Tabela de questões (banco de provas)
+    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_questao (
+        treq_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        treq_nb_treinamento_id INT NOT NULL,
+        treq_tx_pergunta TEXT NOT NULL,
+        treq_tx_opcoes JSON NOT NULL,
+        treq_nb_resposta_correta INT NOT NULL,
+        treq_nb_ordem INT DEFAULT 0,
+        treq_tx_status ENUM('ativo','inativo') DEFAULT 'ativo',
+        treq_dt_data_cadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_treinamento (treq_nb_treinamento_id),
+        FOREIGN KEY (treq_nb_treinamento_id) REFERENCES treinamento(trei_nb_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+    // Tabela de progresso do usuário
+    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_progresso (
+        trepr_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        trepr_nb_usuario_id INT NOT NULL,
+        trepr_nb_treinamento_id INT NOT NULL,
+        trepr_dt_data_inicio DATETIME,
+        trepr_nb_tempo_assistido INT DEFAULT 0,
+        trepr_nb_porcentagem_assistida DECIMAL(5,2) DEFAULT 0,
+        trepr_nb_avaliacao_aprovada TINYINT(1) DEFAULT 0,
+        trepr_nb_avaliacao_tentativas INT DEFAULT 0,
+        trepr_tx_avaliacao_respostas_json JSON,
+        trepr_nb_avaliacao_nota DECIMAL(5,2),
+        trepr_nb_concluido TINYINT(1) DEFAULT 0,
+        trepr_dt_data_conclusao DATETIME,
+        trepr_dt_data_cadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_usuario_treinamento (trepr_nb_usuario_id, trepr_nb_treinamento_id),
+        KEY idx_treinamento (trepr_nb_treinamento_id),
+        FOREIGN KEY (trepr_nb_usuario_id) REFERENCES user(user_nb_id) ON DELETE CASCADE,
+        FOREIGN KEY (trepr_nb_treinamento_id) REFERENCES treinamento(trei_nb_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+    // Tabela de atribuições (treinamento x usuário)
+    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_atribuicao (
+        treate_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        treate_nb_treinamento_id INT NOT NULL,
+        treate_nb_usuario_id INT NOT NULL,
+        treate_dt_data_cadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_treinamento_usuario (treate_nb_treinamento_id, treate_nb_usuario_id),
+        KEY idx_usuario (treate_nb_usuario_id),
+        FOREIGN KEY (treate_nb_treinamento_id) REFERENCES treinamento(trei_nb_id) ON DELETE CASCADE,
+        FOREIGN KEY (treate_nb_usuario_id) REFERENCES user(user_nb_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+    // Tabela de logs de auditoria
+    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_log (
+        trelog_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        trelog_nb_treinamento_id INT NOT NULL,
+        trelog_nb_usuario_id INT NOT NULL,
+        trelog_tx_evento VARCHAR(100),
+        trelog_tx_detalhe TEXT,
+        trelog_tx_ip VARCHAR(45),
+        trelog_tx_user_agent TEXT,
+        trelog_dt_data_cadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_treinamento (trelog_nb_treinamento_id),
+        KEY idx_usuario (trelog_nb_usuario_id),
+        FOREIGN KEY (trelog_nb_treinamento_id) REFERENCES treinamento(trei_nb_id) ON DELETE CASCADE,
+        FOREIGN KEY (trelog_nb_usuario_id) REFERENCES user(user_nb_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+    // =====================================================
 
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_grid.php";
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
