@@ -114,11 +114,12 @@
 		if ($tipo === 'youtube') {
 			preg_match('/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/', $url, $matches);
 			$videoId = $matches[1] ?? '';
-			return "https://www.youtube.com/embed/{$videoId}?enablejsapi=1&playsinline=1";
+			$origin = urlencode($_ENV["URL_BASE"] ?? "");
+			return "https://www.youtube.com/embed/{$videoId}?enablejsapi=1&playsinline=1&origin={$origin}";
 		} elseif ($tipo === 'vimeo') {
 			preg_match('/vimeo\.com\/(\d+)/', $url, $matches);
 			$videoId = $matches[1] ?? '';
-			return "https://player.vimeo.com/video/{$videoId}";
+			return "https://player.vimeo.com/video/{$videoId}?enablejsapi=1&player_id=vimeoPlayer";
 		}
 		return $url;
 	}
@@ -327,6 +328,11 @@
 	$notaAtual = $progresso["trepr_nb_avaliacao_nota"] ?? null;
 	$podeAvaliar = ($porcentagem >= 99 && !$aprovado && $tentativas < 2);
 	$embedUrl = gerarEmbedVideo($urlVideo, $tipoVideo);
+	$videoIdYoutube = "";
+	if ($tipoVideo === 'youtube') {
+		preg_match('/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/', $urlVideo, $m);
+		$videoIdYoutube = $m[1] ?? "";
+	}
 
 	// Log de acesso
 	registrarLogTreinamento($treinamentoId, $usuarioId, "acesso", "Acesso ao player");
@@ -344,12 +350,34 @@
 			border-radius: 8px;
 			overflow: hidden;
 			margin-bottom: 20px;
+			user-select: none;
+			-webkit-user-select: none;
 		}
 		.player-container iframe {
 			width: 100%;
 			height: 500px;
 			border: none;
 		}
+		.video-embed-placeholder {
+			width: 100%;
+			height: 500px;
+			background: #000;
+		}
+		.video-embed-placeholder iframe {
+			width: 100%;
+			height: 500px;
+			border: none;
+		}
+		.video-element {
+			width: 100%;
+			height: 500px;
+			background: #000;
+			display: block;
+		}
+		.player-container video::-webkit-media-controls-panel { display: flex !important; }
+		.player-container video::-webkit-media-controls-speed-list-button,
+		.player-container video::-webkit-media-controls-seek-forward-button,
+		.player-container video::-webkit-media-controls-seek-back-button { display: none !important; }
 		.progress-bar-custom {
 			height: 20px;
 			border-radius: 10px;
@@ -426,8 +454,26 @@
 			<!-- COLUNA PRINCIPAL: Player -->
 			<div class='col-md-8'>
 				<!-- Player de Vídeo -->
-				<div class='player-container'>
-					<iframe id='videoPlayer' src='{$embedUrl}' allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture' allowfullscreen></iframe>
+				<div class='player-container' id='playerContainer'>";
+				if ($tipoVideo === 'upload' && !empty($urlVideo)) {
+					echo "
+					<video id='videoElement' class='video-element' controlsList='nodownload nofullscreen noremoteplayback nospeed' preload='metadata'>
+						<source src='{$urlVideo}' type='video/mp4'>
+						Seu navegador não suporta vídeo HTML5.
+					</video>
+					<div class='controles-custom' style='display:flex;justify-content:center;gap:10px;padding:10px;background:#111;'>
+						<button type='button' class='btn btn-sm btn-primary' id='btnPlay'><i class='fa fa-play'></i> Play</button>
+						<button type='button' class='btn btn-sm btn-warning' id='btnPause'><i class='fa fa-pause'></i> Pausa</button>
+						<button type='button' class='btn btn-sm btn-default' id='btnMudo'><i class='fa fa-volume-up'></i> Mudo</button>
+					</div>";
+				} elseif ($tipoVideo === 'youtube') {
+					echo "
+					<div id='videoPlayer' class='video-embed-placeholder'></div>";
+				} else {
+					echo "
+					<iframe id='videoPlayer' src='{$embedUrl}' allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture' allowfullscreen></iframe>";
+				}
+				echo "
 				</div>
 
 				<!-- Barra de Progresso -->
@@ -643,13 +689,30 @@
 
 	<script>
 		// =====================================================
-		// CONTROLE DE PROGRESSO
+		// CONFIGURAÇÃO
 		// =====================================================
-		var temporizador = null;
-		var tempoAtual = {$tempoAssistido};
-		var porcentagemAtual = {$porcentagem};
 		var treinamentoId = {$treinamentoId};
+		var tipoVideo = '{$tipoVideo}';
+		var cargaHoraria = {$cargaHoraria};
+		var referenceDuration = Math.max(1, cargaHoraria * 60);
+		var ultimoTempo = {$tempoAssistido};
+		var watchedSeconds = {$tempoAssistido};
+		var porcentagemAtual = {$porcentagem};
 		var concluido = " . ($concluido ? "true" : "false") . ";
+		var playStartedAt = null;
+		var playBaseTime = 0;
+		var hasReallyStartedPlayback = false;
+		var ultimoEnvio = 0;
+		var AVANCO_MAXIMO = 2;
+		var youtubePlayer = null;
+		var vimeoPlayer = null;
+		var youtubeTrackingTimer = null;
+		var vimeoTrackingTimer = null;
+		var youtubeLastTempo = ultimoTempo;
+		var vimeoLastTempo = ultimoTempo;
+		var youtubeBlockSeeking = false;
+		var vimeoBlockSeeking = false;
+		var blockSeeking = false;
 
 		function formatarTempo(segundos) {
 			var h = Math.floor(segundos / 3600);
@@ -658,51 +721,337 @@
 			return (h > 0 ? h + ':' : '') + (m > 0 ? String(m).padStart(2,'0') + ':' : '00:') + String(s).padStart(2,'0');
 		}
 
-		function atualizarProgresso() {
-			if(concluido) return;
-
-			// Calcular porcentagem baseada no tempo (estimativa: 100% em carga_horaria * 60 segundos)
-			var cargaHoraria = {$cargaHoraria};
-			var tempoTotal = cargaHoraria * 60;
-			if(tempoTotal > 0) {
-				porcentagemAtual = Math.min(100, (tempoAtual / tempoTotal) * 100);
-			} else {
-				porcentagemAtual = Math.min(100, porcentagemAtual + 0.1);
-			}
-
-			// Atualizar display
-			$('#tempoDisplay').text(formatarTempo(tempoAtual));
-			$('#tempoLateral').text(tempoAtual + 's');
-			$('#progressBar').css('width', porcentagemAtual.toFixed(1) + '%');
-
-			// Enviar para servidor (máximo a cada 10 segundos)
+		function salvarProgresso(percent) {
 			$.post(window.location.pathname, {
 				acao: 'atualizarProgresso',
 				treinamento_id: treinamentoId,
-				tempo_assistido: tempoAtual,
-				porcentagem: porcentagemAtual
+				tempo_assistido: watchedSeconds,
+				porcentagem: Math.floor(percent)
 			}, function(data) {
 				if(data.success) {
-					tempoAtual = data.tempo;
-					porcentagemAtual = data.porcentagem;
+					watchedSeconds = Math.max(watchedSeconds, data.tempo);
+					ultimoTempo = Math.max(ultimoTempo, data.tempo);
 				}
 			}, 'json');
+		}
 
-			// Verificar se pode avaliar
-			if(porcentagemAtual >= 99 && !concluido) {
-				// Recarregar para mostrar aba de avaliação
-				if($('#tab_avaliacao').length === 0) {
-					window.location.reload();
-				}
+		function atualizarDisplay(percent) {
+			porcentagemAtual = Math.min(100, percent);
+			$('#tempoDisplay').text(formatarTempo(watchedSeconds));
+			$('#tempoLateral').text(watchedSeconds + 's');
+			$('#progressBar').css('width', porcentagemAtual.toFixed(1) + '%');
+			if(porcentagemAtual >= 99 && !concluido && $('#tab_avaliacao').length === 0) {
+				window.location.reload();
 			}
 		}
 
-		// Iniciar temporizador (a cada 1 segundo)
-		if(!concluido) {
-			temporizador = setInterval(function() {
-				tempoAtual++;
-				atualizarProgresso();
-			}, 1000);
+		// =====================================================
+		// VÍDEO UPLOAD (HTML5) - BLOQUEIO DE ADIANTAMENTO E VELOCIDADE
+		// =====================================================
+		if(tipoVideo === 'upload') {
+			var video = document.getElementById('videoElement');
+			if(video) {
+				video.controls = false;
+
+				video.addEventListener('loadedmetadata', function() {
+					var d = Math.floor(video.duration || 0);
+					if(d > 0) {
+						referenceDuration = cargaHoraria > 0 ? Math.max(1, Math.min(d, referenceDuration)) : d;
+					}
+					video.currentTime = Math.min(ultimoTempo, referenceDuration);
+				});
+
+				// Bloquear teclado que avança o vídeo
+				document.addEventListener('keydown', function(e) {
+					if(['ArrowRight', 'ArrowLeft', ' ', 'j', 'l', 'k'].indexOf(e.key) !== -1) {
+						e.preventDefault();
+						e.stopPropagation();
+					}
+				}, true);
+
+				video.addEventListener('wheel', function(e) { e.preventDefault(); });
+				video.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+
+				// BLOQUEIO PRINCIPAL DE ADIANTAMENTO (seeking)
+				video.addEventListener('seeking', function() {
+					var t = video.currentTime;
+					if(t > ultimoTempo + 0.01) {
+						blockSeeking = true;
+						video.currentTime = ultimoTempo;
+						setTimeout(function() { blockSeeking = false; }, 500);
+					}
+				});
+
+				video.addEventListener('timeupdate', function() {
+					var t = video.currentTime;
+					if(blockSeeking) return;
+					if(t > ultimoTempo + 0.01) {
+						video.currentTime = ultimoTempo;
+						return;
+					}
+					if(hasReallyStartedPlayback && playStartedAt && !video.paused) {
+						var elapsed = Math.max(0, (Date.now() - playStartedAt) / 1000);
+						watchedSeconds = Math.max(watchedSeconds, Math.min(referenceDuration, Math.floor(playBaseTime + elapsed)));
+					}
+					ultimoTempo = Math.max(ultimoTempo, t);
+					var percent = Math.min(100, (watchedSeconds / referenceDuration) * 100);
+					atualizarDisplay(percent);
+					var agora = Date.now();
+					if(agora - ultimoEnvio > 5000) { salvarProgresso(percent); ultimoEnvio = agora; }
+				});
+
+				video.addEventListener('play', function() {
+					hasReallyStartedPlayback = true;
+					playStartedAt = Date.now();
+					playBaseTime = Math.max(0, watchedSeconds);
+				});
+
+				video.addEventListener('pause', function() {
+					if(hasReallyStartedPlayback && playStartedAt) {
+						var elapsed = Math.max(0, (Date.now() - playStartedAt) / 1000);
+						watchedSeconds = Math.max(watchedSeconds, Math.min(referenceDuration, Math.floor(playBaseTime + elapsed)));
+						ultimoTempo = Math.max(ultimoTempo, video.currentTime);
+						salvarProgresso((watchedSeconds / referenceDuration) * 100);
+					}
+					playStartedAt = null;
+				});
+
+				video.addEventListener('ended', function() {
+					if(!hasReallyStartedPlayback) return;
+					ultimoTempo = referenceDuration;
+					watchedSeconds = referenceDuration;
+					salvarProgresso(100);
+					playStartedAt = null;
+				});
+
+				// BLOQUEIO DE VELOCIDADE - não pode ser contornado nem via console
+				Object.defineProperty(video, 'playbackRate', {
+					get: function() { return 1.0; },
+					set: function(value) { return 1.0; },
+					configurable: false
+				});
+				video.addEventListener('ratechange', function() {
+					try { video.playbackRate = 1.0; } catch(e) {}
+				});
+				var observer = new MutationObserver(function() {
+					try { video.playbackRate = 1.0; } catch(e) {}
+				});
+				observer.observe(video, { attributes: true, attributeFilter: ['playbackRate'] });
+
+				$('#btnPlay').on('click', function() { video.play(); });
+				$('#btnPause').on('click', function() { video.pause(); });
+				$('#btnMudo').on('click', function() {
+					video.muted = !video.muted;
+					$('#btnMudo i').toggleClass('fa-volume-up fa-volume-off');
+				});
+			}
+		}
+
+		// =====================================================
+		// YOUTUBE - BLOQUEIO DE ADIANTAMENTO E VELOCIDADE
+		// =====================================================
+		if(tipoVideo === 'youtube') {
+			function fallbackYouTubeEmbed() {
+				if(youtubePlayer) return;
+				var container = document.getElementById('videoPlayer');
+				if(container) {
+					container.innerHTML = '<iframe src=\"{$embedUrl}\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture\" allowfullscreen style=\"width:100%;height:500px;border:none;\"></iframe>';
+				}
+			}
+
+			function carregarYouTubeApi() {
+				if(window.YT && window.YT.Player) { inicializarYouTube(); return; }
+				if(window.__ytLoading) return;
+				window.__ytLoading = true;
+				window.onYouTubeIframeAPIReady = function() { inicializarYouTube(); };
+				var s = document.createElement('script');
+				s.src = 'https://www.youtube.com/iframe_api';
+				s.onerror = function() { fallbackYouTubeEmbed(); };
+				document.head.appendChild(s);
+				window.__ytTimeout = setTimeout(function() {
+					if(!youtubePlayer) fallbackYouTubeEmbed();
+				}, 8000);
+			}
+
+			function inicializarYouTube() {
+				if(window.__ytTimeout) { clearTimeout(window.__ytTimeout); window.__ytTimeout = null; }
+				youtubePlayer = new YT.Player('videoPlayer', {
+					width: '100%',
+					height: '500px',
+					videoId: '{$videoIdYoutube}',
+					playerVars: {
+						enablejsapi: 1,
+						playsinline: 1,
+						rel: 0
+					},
+					events: {
+						onReady: function() {
+							var d = Math.floor(youtubePlayer.getDuration() || 0);
+							if(d > 0) {
+								referenceDuration = cargaHoraria > 0 ? Math.max(1, Math.min(d, referenceDuration)) : d;
+							}
+							var start = Math.min(ultimoTempo, referenceDuration);
+							youtubePlayer.seekTo(start, true);
+							youtubeLastTempo = start;
+						},
+						onStateChange: function(e) {
+							if(e.data === YT.PlayerState.PLAYING) {
+								hasReallyStartedPlayback = true;
+								playStartedAt = Date.now();
+								playBaseTime = Math.max(0, watchedSeconds);
+								youtubeBlockSeeking = false;
+								if(!youtubeTrackingTimer) {
+									youtubeTrackingTimer = setInterval(function() {
+										if(!youtubePlayer || typeof youtubePlayer.getCurrentTime !== 'function') return;
+										var t = youtubePlayer.getCurrentTime();
+										var delta = t - youtubeLastTempo;
+										// Detectou pulo > 2s: bloqueia e reverte
+										if(delta > AVANCO_MAXIMO && !youtubeBlockSeeking) {
+											youtubeBlockSeeking = true;
+											var maxPermitido = youtubeLastTempo + AVANCO_MAXIMO;
+											youtubePlayer.seekTo(maxPermitido, true);
+											youtubeLastTempo = maxPermitido;
+											setTimeout(function() { youtubeBlockSeeking = false; }, 1000);
+											return;
+										}
+										if(hasReallyStartedPlayback && playStartedAt) {
+											var elapsed = Math.max(0, (Date.now() - playStartedAt) / 1000);
+											watchedSeconds = Math.max(watchedSeconds, Math.min(referenceDuration, Math.floor(playBaseTime + elapsed)));
+										}
+										ultimoTempo = Math.max(ultimoTempo, t);
+										youtubeLastTempo = t;
+										var percent = Math.min(100, (watchedSeconds / referenceDuration) * 100);
+										atualizarDisplay(percent);
+										var agora = Date.now();
+										if(agora - ultimoEnvio > 5000) { salvarProgresso(percent); ultimoEnvio = agora; }
+									}, 1000);
+								}
+							}
+							if(e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) {
+								if(hasReallyStartedPlayback && playStartedAt && youtubePlayer) {
+									var t = Math.max(0, Math.floor(youtubePlayer.getCurrentTime() || 0));
+									var elapsed = Math.max(0, (Date.now() - playStartedAt) / 1000);
+									watchedSeconds = Math.max(watchedSeconds, Math.min(referenceDuration, Math.floor(playBaseTime + elapsed)));
+									ultimoTempo = Math.max(ultimoTempo, t);
+									youtubeLastTempo = t;
+									salvarProgresso((watchedSeconds / referenceDuration) * 100);
+								}
+								playStartedAt = null;
+								if(e.data === YT.PlayerState.ENDED) {
+									if(!hasReallyStartedPlayback) return;
+									ultimoTempo = referenceDuration;
+									watchedSeconds = referenceDuration;
+									salvarProgresso(100);
+								}
+								if(youtubeTrackingTimer) { clearInterval(youtubeTrackingTimer); youtubeTrackingTimer = null; }
+							}
+						}
+					}
+				});
+			}
+
+			// Bloqueio de velocidade do YouTube (verificação periódica)
+			setInterval(function() {
+				if(youtubePlayer && typeof youtubePlayer.getPlaybackRate === 'function') {
+					if(youtubePlayer.getPlaybackRate() !== 1.0) {
+						youtubePlayer.setPlaybackRate(1.0);
+					}
+				}
+			}, 500);
+
+			carregarYouTubeApi();
+		}
+
+		// =====================================================
+		// VIMEO - BLOQUEIO DE ADIANTAMENTO E VELOCIDADE
+		// =====================================================
+		if(tipoVideo === 'vimeo') {
+			function carregarVimeoApi() {
+				if(window.Vimeo && window.Vimeo.Player) { inicializarVimeo(); return; }
+				var s = document.createElement('script');
+				s.src = 'https://player.vimeo.com/api/player.js';
+				s.onload = function() { inicializarVimeo(); };
+				document.head.appendChild(s);
+			}
+
+			function inicializarVimeo() {
+				vimeoPlayer = new Vimeo.Player('videoPlayer');
+				vimeoPlayer.getDuration().then(function(d) {
+					d = Math.floor(d || 0);
+					if(d > 0) {
+						referenceDuration = cargaHoraria > 0 ? Math.max(1, Math.min(d, referenceDuration)) : d;
+					}
+					var start = Math.min(ultimoTempo, referenceDuration);
+					vimeoPlayer.setCurrentTime(start).catch(function() {});
+					vimeoLastTempo = start;
+				}).catch(function() {});
+
+				vimeoPlayer.on('play', function() {
+					hasReallyStartedPlayback = true;
+					playStartedAt = Date.now();
+					playBaseTime = Math.max(0, watchedSeconds);
+					if(!vimeoTrackingTimer) {
+						vimeoTrackingTimer = setInterval(function() {
+							vimeoPlayer.getCurrentTime().then(function(t) {
+								var delta = t - vimeoLastTempo;
+								if(delta > AVANCO_MAXIMO && !vimeoBlockSeeking) {
+									vimeoBlockSeeking = true;
+									var maxPermitido = vimeoLastTempo + AVANCO_MAXIMO;
+									vimeoPlayer.setCurrentTime(maxPermitido).catch(function() {});
+									vimeoLastTempo = maxPermitido;
+									setTimeout(function() { vimeoBlockSeeking = false; }, 1000);
+									return;
+								}
+								if(hasReallyStartedPlayback && playStartedAt) {
+									var elapsed = Math.max(0, (Date.now() - playStartedAt) / 1000);
+									watchedSeconds = Math.max(watchedSeconds, Math.min(referenceDuration, Math.floor(playBaseTime + elapsed)));
+								}
+								ultimoTempo = Math.max(ultimoTempo, t);
+								vimeoLastTempo = t;
+								var percent = Math.min(100, (watchedSeconds / referenceDuration) * 100);
+								atualizarDisplay(percent);
+								var agora = Date.now();
+								if(agora - ultimoEnvio > 5000) { salvarProgresso(percent); ultimoEnvio = agora; }
+							}).catch(function() {});
+						}, 1000);
+					}
+				});
+
+				vimeoPlayer.on('pause', function() {
+					if(hasReallyStartedPlayback && playStartedAt) {
+						vimeoPlayer.getCurrentTime().then(function(t) {
+							var elapsed = Math.max(0, (Date.now() - playStartedAt) / 1000);
+							watchedSeconds = Math.max(watchedSeconds, Math.min(referenceDuration, Math.floor(playBaseTime + elapsed)));
+							ultimoTempo = Math.max(ultimoTempo, t);
+							vimeoLastTempo = t;
+							salvarProgresso((watchedSeconds / referenceDuration) * 100);
+						}).catch(function() {});
+					}
+					playStartedAt = null;
+					if(vimeoTrackingTimer) { clearInterval(vimeoTrackingTimer); vimeoTrackingTimer = null; }
+				});
+
+				vimeoPlayer.on('ended', function() {
+					if(!hasReallyStartedPlayback) return;
+					ultimoTempo = referenceDuration;
+					watchedSeconds = referenceDuration;
+					salvarProgresso(100);
+					playStartedAt = null;
+				});
+
+				// Bloqueio de velocidade do Vimeo
+				setInterval(function() {
+					if(vimeoPlayer && typeof vimeoPlayer.getPlaybackRate === 'function') {
+						vimeoPlayer.getPlaybackRate().then(function(rate) {
+							if(rate !== 1.0) {
+								vimeoPlayer.setPlaybackRate(1.0).catch(function() {});
+							}
+						}).catch(function() {});
+					}
+				}, 500);
+			}
+
+			carregarVimeoApi();
 		}
 
 		// =====================================================
@@ -711,7 +1060,7 @@
 
 		function submeterAvaliacao() {
 			// Verificar se todas as questões foram respondidas
-			var totalQuestoes = {$count($questoes)};
+			var totalQuestoes = " . count($questoes) . ";
 			var respondidas = 0;
 			for(var i = 0; i < totalQuestoes; i++) {
 				if($('input[name=\"respostas[]\"]:checked').length > 0 || $('input[type=\"radio\"]:checked').length > 0) {
@@ -790,39 +1139,6 @@
 					}, 'json');
 				}
 			});
-		}
-
-		// =====================================================
-		// API DO YOUTUBE (para detectar fim do vídeo)
-		// =====================================================
-		var tag = document.createElement('script');
-		tag.src = 'https://www.youtube.com/iframe_api';
-		var firstScriptTag = document.getElementsByTagName('script')[0];
-		firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-		var player;
-		function onYouTubeIframeAPIReady() {
-			// Só inicializar se for YouTube
-			if('{$tipoVideo}' === 'youtube') {
-				try {
-					player = new YT.Player('videoPlayer', {
-						events: {
-							'onStateChange': onPlayerStateChange
-						}
-					});
-				} catch(e) {
-					console.log('Erro ao inicializar player YouTube:', e);
-				}
-			}
-		}
-
-		function onPlayerStateChange(event) {
-			// Se o vídeo terminou, marcar 100%
-			if(event.data === YT.PlayerState.ENDED) {
-				porcentagemAtual = 100;
-				atualizarProgresso();
-			}
-			// Se está pausado ou tocando, pode usar para controle
 		}
 	</script>";
 
