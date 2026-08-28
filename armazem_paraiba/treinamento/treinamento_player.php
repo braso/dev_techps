@@ -128,31 +128,46 @@
 	// AJAX: ATUALIZAR PROGRESSO
 	// =====================================================
 
-	if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["acao"] ?? "") === "atualizarProgresso") {
+	if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["acao_player"] ?? "") === "atualizarProgresso") {
 		header('Content-Type: application/json');
 
 		$treinamentoId = (int)($_POST["treinamento_id"] ?? 0);
 		$tempoAssistido = (int)($_POST["tempo_assistido"] ?? 0);
 		$porcentagem = (float)($_POST["porcentagem"] ?? 0);
-
-		// Limitar atualização a 10 segundos por request (anti-fraude)
-		$progresso = obterOuCriarProgresso($treinamentoId, $usuarioId);
-		$tempoAnterior = (int)($progresso["trepr_nb_tempo_assistido"] ?? 0);
-		$tempoMaximo = $tempoAnterior + 10;
-
-		if ($tempoAssistido > $tempoMaximo) {
-			$tempoAssistido = $tempoMaximo;
-		}
-
 		if ($porcentagem > 100) $porcentagem = 100;
 
+		$progresso = obterOuCriarProgresso($treinamentoId, $usuarioId);
+		$tempoAnterior = (int)($progresso["trepr_nb_tempo_assistido"] ?? 0);
+		$porcentagemAnterior = (float)($progresso["trepr_nb_porcentagem_assistida"] ?? 0);
+
+		// Anti-fraude: limitar avanço a 10s por request, exceto quando o vídeo foi concluído (100%)
+		if ($porcentagem < 100) {
+			$tempoMaximo = $tempoAnterior + 10;
+			if ($tempoAssistido > $tempoMaximo) {
+				$tempoAssistido = $tempoMaximo;
+			}
+		}
+
+		// Conclusão automática ao assistir 100% do vídeo
+		$concluido = (int)($progresso["trepr_nb_concluido"] ?? 0);
+		$dataConclusao = $progresso["trepr_dt_data_conclusao"] ?? null;
+		if ($porcentagem >= 100 && !$concluido) {
+			$concluido = 1;
+			$dataConclusao = date("Y-m-d H:i:s");
+		}
+
 		query(
-			"UPDATE treinamento_progresso SET trepr_nb_tempo_assistido = ?, trepr_nb_porcentagem_assistida = ? WHERE trepr_nb_treinamento_id = ? AND trepr_nb_usuario_id = ?",
-			"diii",
-			[$tempoAssistido, $porcentagem, $treinamentoId, $usuarioId]
+			"UPDATE treinamento_progresso SET
+				trepr_nb_tempo_assistido = ?,
+				trepr_nb_porcentagem_assistida = ?,
+				trepr_nb_concluido = ?,
+				trepr_dt_data_conclusao = ?
+			WHERE trepr_nb_treinamento_id = ? AND trepr_nb_usuario_id = ?",
+			"diisii",
+			[$tempoAssistido, $porcentagem, $concluido, $dataConclusao, $treinamentoId, $usuarioId]
 		);
 
-		echo json_encode(["success" => true, "tempo" => $tempoAssistido, "porcentagem" => $porcentagem]);
+		echo json_encode(["success" => true, "tempo" => $tempoAssistido, "porcentagem" => $porcentagem, "concluido" => $concluido]);
 		exit;
 	}
 
@@ -160,7 +175,7 @@
 	// AJAX: SUBMETER AVALIAÇÃO
 	// =====================================================
 
-	if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["acao"] ?? "") === "submeterAvaliacao") {
+	if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["acao_player"] ?? "") === "submeterAvaliacao") {
 		header('Content-Type: application/json');
 
 		$treinamentoId = (int)($_POST["treinamento_id"] ?? 0);
@@ -480,7 +495,7 @@
 				<div class='info-card'>
 					<div class='row'>
 						<div class='col-md-8'>
-							<strong>Progresso:</strong> {$porcentagem}%
+							<strong>Progresso:</strong> <span id='progressoTopo'>{$porcentagem}%</span>
 							<div class='progress progress-bar-custom'>
 								<div class='progress-bar progress-bar-striped progress-bar-animated' role='progressbar' style='width:{$porcentagem}%' id='progressBar'></div>
 							</div>
@@ -526,7 +541,7 @@
 							<p>{$descricao}</p>
 							" . (!empty($conteudoProgramatico) ? "<h5>Conteúdo Programático:</h5><p>" . nl2br($conteudoProgramatico) . "</p>" : "") . "
 							<div class='row'>
-								<div class='col-md-6'><strong>Carga Horária:</strong> {$cargaHoraria} minutos</div>
+								<div class='col-md-6'><strong>Carga Horária:</strong> " . sprintf("%02d:%02d", floor($cargaHoraria / 60), $cargaHoraria % 60) . " min</div>
 								<div class='col-md-6'><strong>Obrigatório:</strong> " . ($obrigatorio ? "Sim" : "Não") . "</div>
 							</div>
 						</div>";
@@ -537,7 +552,7 @@
 						<div class='tab-pane' id='tab_materiais'>";
 					foreach ($materiais as $m) {
 						$tamanhoKB = round(($m["tram_nb_tamanho"] ?? 0) / 1024, 1);
-						$caminho = "treinamento/uploads/" . $m["tram_tx_arquivo"];
+						$caminho = ($_ENV["URL_BASE"] ?? "") . ($CONTEX["path"] ?? "") . "/treinamento/uploads/" . $m["tram_tx_arquivo"];
 						echo "
 							<div class='material-item'>
 								<div>
@@ -634,7 +649,7 @@
 					</div>
 					<div class='row'>
 						<div class='col-xs-6'><strong>Progresso:</strong></div>
-						<div class='col-xs-6'>{$porcentagem}%</div>
+						<div class='col-xs-6'><span id='progressoLateral'>{$porcentagem}%</span></div>
 					</div>
 					<div class='row'>
 						<div class='col-xs-6'><strong>Tempo Assistido:</strong></div>
@@ -642,7 +657,7 @@
 					</div>
 					<div class='row'>
 						<div class='col-xs-6'><strong>Carga Horária:</strong></div>
-						<div class='col-xs-6'>{$cargaHoraria} min</div>
+						<div class='col-xs-6'>" . sprintf("%02d:%02d", floor($cargaHoraria / 60), $cargaHoraria % 60) . "</div>
 					</div>
 					" . ($tentativas > 0 ? "
 					<div class='row'>
@@ -654,14 +669,6 @@
 						<div class='col-xs-6'><strong>Nota Atual:</strong></div>
 						<div class='col-xs-6'><strong>{$notaAtual}%</strong></div>
 					</div>" : "") . "
-				</div>
-
-				<div class='info-card'>
-					<h4><i class='fa fa-graduation-cap'></i> Avaliação</h4>
-					<p><strong>Questões:</strong> " . count($questoes) . "</p>
-					<p><strong>Nota Mínima:</strong> {$treinamento["trei_nb_nota_minima_aprovacao"]}%</p>
-					<p><strong>Tentativas:</strong> {$tentativas}/2</p>
-					" . ($aprovado ? "<p class='text-success'><strong>Status:</strong> Aprovado</p>" : "") . "
 				</div>
 
 				<a href='treinamento_assistir.php' class='btn btn-default btn-block'>
@@ -694,13 +701,10 @@
 		var treinamentoId = {$treinamentoId};
 		var tipoVideo = '{$tipoVideo}';
 		var cargaHoraria = {$cargaHoraria};
-		var referenceDuration = Math.max(1, cargaHoraria * 60);
+		var referenceDuration = Math.max(1, cargaHoraria);
 		var ultimoTempo = {$tempoAssistido};
-		var watchedSeconds = {$tempoAssistido};
 		var porcentagemAtual = {$porcentagem};
 		var concluido = " . ($concluido ? "true" : "false") . ";
-		var playStartedAt = null;
-		var playBaseTime = 0;
 		var hasReallyStartedPlayback = false;
 		var ultimoEnvio = 0;
 		var AVANCO_MAXIMO = 2;
@@ -715,30 +719,59 @@
 		var blockSeeking = false;
 
 		function formatarTempo(segundos) {
-			var h = Math.floor(segundos / 3600);
-			var m = Math.floor((segundos % 3600) / 60);
-			var s = segundos % 60;
+			var total = Math.floor(segundos);
+			var h = Math.floor(total / 3600);
+			var m = Math.floor((total % 3600) / 60);
+			var s = total % 60;
 			return (h > 0 ? h + ':' : '') + (m > 0 ? String(m).padStart(2,'0') + ':' : '00:') + String(s).padStart(2,'0');
+		}
+
+		function obterProgressoAtual() {
+			return Math.min(ultimoTempo, referenceDuration);
 		}
 
 		function salvarProgresso(percent) {
 			$.post(window.location.pathname, {
-				acao: 'atualizarProgresso',
+				acao_player: 'atualizarProgresso',
 				treinamento_id: treinamentoId,
-				tempo_assistido: watchedSeconds,
+				tempo_assistido: obterProgressoAtual(),
 				porcentagem: Math.floor(percent)
 			}, function(data) {
 				if(data.success) {
-					watchedSeconds = Math.max(watchedSeconds, data.tempo);
 					ultimoTempo = Math.max(ultimoTempo, data.tempo);
 				}
 			}, 'json');
 		}
 
+		// Salvar progresso quando o usuário sair da página (fechar aba, navegar, etc.)
+		function salvarProgressoFinal() {
+			var segundos = obterProgressoAtual();
+			if(segundos <= 0 && !hasReallyStartedPlayback) return;
+			var percent = Math.min(100, Math.floor((segundos / referenceDuration) * 100));
+			var dados = new URLSearchParams();
+			dados.append('acao_player', 'atualizarProgresso');
+			dados.append('treinamento_id', treinamentoId);
+			dados.append('tempo_assistido', segundos);
+			dados.append('porcentagem', percent);
+			try {
+				if(navigator.sendBeacon) {
+					navigator.sendBeacon(window.location.pathname, dados);
+				} else {
+					fetch(window.location.pathname, { method: 'POST', body: dados, keepalive: true });
+				}
+			} catch(e) {}
+		}
+
+		window.addEventListener('pagehide', salvarProgressoFinal);
+		window.addEventListener('beforeunload', salvarProgressoFinal);
+
 		function atualizarDisplay(percent) {
 			porcentagemAtual = Math.min(100, percent);
-			$('#tempoDisplay').text(formatarTempo(watchedSeconds));
-			$('#tempoLateral').text(watchedSeconds + 's');
+			var segundos = Math.min(ultimoTempo, referenceDuration);
+			$('#tempoDisplay').text(formatarTempo(segundos));
+			$('#tempoLateral').text(Math.floor(segundos) + 's');
+			$('#progressoTopo').text(porcentagemAtual.toFixed(1) + '%');
+			$('#progressoLateral').text(porcentagemAtual.toFixed(1) + '%');
 			$('#progressBar').css('width', porcentagemAtual.toFixed(1) + '%');
 			if(porcentagemAtual >= 99 && !concluido && $('#tab_avaliacao').length === 0) {
 				window.location.reload();
@@ -789,12 +822,9 @@
 						video.currentTime = ultimoTempo;
 						return;
 					}
-					if(hasReallyStartedPlayback && playStartedAt && !video.paused) {
-						var elapsed = Math.max(0, (Date.now() - playStartedAt) / 1000);
-						watchedSeconds = Math.max(watchedSeconds, Math.min(referenceDuration, Math.floor(playBaseTime + elapsed)));
-					}
+					// Progresso baseado na posição MÁXIMA do vídeo (não no tempo decorrido)
 					ultimoTempo = Math.max(ultimoTempo, t);
-					var percent = Math.min(100, (watchedSeconds / referenceDuration) * 100);
+					var percent = Math.min(100, (ultimoTempo / referenceDuration) * 100);
 					atualizarDisplay(percent);
 					var agora = Date.now();
 					if(agora - ultimoEnvio > 5000) { salvarProgresso(percent); ultimoEnvio = agora; }
@@ -802,26 +832,20 @@
 
 				video.addEventListener('play', function() {
 					hasReallyStartedPlayback = true;
-					playStartedAt = Date.now();
-					playBaseTime = Math.max(0, watchedSeconds);
 				});
 
 				video.addEventListener('pause', function() {
-					if(hasReallyStartedPlayback && playStartedAt) {
-						var elapsed = Math.max(0, (Date.now() - playStartedAt) / 1000);
-						watchedSeconds = Math.max(watchedSeconds, Math.min(referenceDuration, Math.floor(playBaseTime + elapsed)));
+					if(hasReallyStartedPlayback) {
 						ultimoTempo = Math.max(ultimoTempo, video.currentTime);
-						salvarProgresso((watchedSeconds / referenceDuration) * 100);
+						salvarProgresso(Math.min(100, (ultimoTempo / referenceDuration) * 100));
 					}
-					playStartedAt = null;
 				});
 
 				video.addEventListener('ended', function() {
 					if(!hasReallyStartedPlayback) return;
 					ultimoTempo = referenceDuration;
-					watchedSeconds = referenceDuration;
 					salvarProgresso(100);
-					playStartedAt = null;
+					atualizarDisplay(100);
 				});
 
 				// BLOQUEIO DE VELOCIDADE - não pode ser contornado nem via console
@@ -873,8 +897,20 @@
 				}, 8000);
 			}
 
+			function atualizarDuracaoYouTube() {
+				if(!youtubePlayer || typeof youtubePlayer.getDuration !== 'function') return false;
+				var d = Math.floor(youtubePlayer.getDuration() || 0);
+				if(d > 0) {
+					referenceDuration = cargaHoraria > 0 ? Math.max(1, Math.min(d, referenceDuration)) : d;
+					return true;
+				}
+				return false;
+			}
+
 			function inicializarYouTube() {
 				if(window.__ytTimeout) { clearTimeout(window.__ytTimeout); window.__ytTimeout = null; }
+				var container = document.getElementById('videoPlayer');
+				if(container) { container.innerHTML = ''; }
 				youtubePlayer = new YT.Player('videoPlayer', {
 					width: '100%',
 					height: '500px',
@@ -886,10 +922,7 @@
 					},
 					events: {
 						onReady: function() {
-							var d = Math.floor(youtubePlayer.getDuration() || 0);
-							if(d > 0) {
-								referenceDuration = cargaHoraria > 0 ? Math.max(1, Math.min(d, referenceDuration)) : d;
-							}
+							atualizarDuracaoYouTube();
 							var start = Math.min(ultimoTempo, referenceDuration);
 							youtubePlayer.seekTo(start, true);
 							youtubeLastTempo = start;
@@ -897,8 +930,7 @@
 						onStateChange: function(e) {
 							if(e.data === YT.PlayerState.PLAYING) {
 								hasReallyStartedPlayback = true;
-								playStartedAt = Date.now();
-								playBaseTime = Math.max(0, watchedSeconds);
+								atualizarDuracaoYouTube();
 								youtubeBlockSeeking = false;
 								if(!youtubeTrackingTimer) {
 									youtubeTrackingTimer = setInterval(function() {
@@ -914,13 +946,10 @@
 											setTimeout(function() { youtubeBlockSeeking = false; }, 1000);
 											return;
 										}
-										if(hasReallyStartedPlayback && playStartedAt) {
-											var elapsed = Math.max(0, (Date.now() - playStartedAt) / 1000);
-											watchedSeconds = Math.max(watchedSeconds, Math.min(referenceDuration, Math.floor(playBaseTime + elapsed)));
-										}
+										// Progresso baseado na posição MÁXIMA do vídeo
 										ultimoTempo = Math.max(ultimoTempo, t);
 										youtubeLastTempo = t;
-										var percent = Math.min(100, (watchedSeconds / referenceDuration) * 100);
+										var percent = Math.min(100, (ultimoTempo / referenceDuration) * 100);
 										atualizarDisplay(percent);
 										var agora = Date.now();
 										if(agora - ultimoEnvio > 5000) { salvarProgresso(percent); ultimoEnvio = agora; }
@@ -928,20 +957,17 @@
 								}
 							}
 							if(e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) {
-								if(hasReallyStartedPlayback && playStartedAt && youtubePlayer) {
+								if(hasReallyStartedPlayback && youtubePlayer) {
 									var t = Math.max(0, Math.floor(youtubePlayer.getCurrentTime() || 0));
-									var elapsed = Math.max(0, (Date.now() - playStartedAt) / 1000);
-									watchedSeconds = Math.max(watchedSeconds, Math.min(referenceDuration, Math.floor(playBaseTime + elapsed)));
 									ultimoTempo = Math.max(ultimoTempo, t);
 									youtubeLastTempo = t;
-									salvarProgresso((watchedSeconds / referenceDuration) * 100);
+									salvarProgresso(Math.min(100, (ultimoTempo / referenceDuration) * 100));
 								}
-								playStartedAt = null;
 								if(e.data === YT.PlayerState.ENDED) {
 									if(!hasReallyStartedPlayback) return;
 									ultimoTempo = referenceDuration;
-									watchedSeconds = referenceDuration;
 									salvarProgresso(100);
+									atualizarDisplay(100);
 								}
 								if(youtubeTrackingTimer) { clearInterval(youtubeTrackingTimer); youtubeTrackingTimer = null; }
 							}
@@ -988,8 +1014,6 @@
 
 				vimeoPlayer.on('play', function() {
 					hasReallyStartedPlayback = true;
-					playStartedAt = Date.now();
-					playBaseTime = Math.max(0, watchedSeconds);
 					if(!vimeoTrackingTimer) {
 						vimeoTrackingTimer = setInterval(function() {
 							vimeoPlayer.getCurrentTime().then(function(t) {
@@ -1002,13 +1026,10 @@
 									setTimeout(function() { vimeoBlockSeeking = false; }, 1000);
 									return;
 								}
-								if(hasReallyStartedPlayback && playStartedAt) {
-									var elapsed = Math.max(0, (Date.now() - playStartedAt) / 1000);
-									watchedSeconds = Math.max(watchedSeconds, Math.min(referenceDuration, Math.floor(playBaseTime + elapsed)));
-								}
+								// Progresso baseado na posição MÁXIMA do vídeo
 								ultimoTempo = Math.max(ultimoTempo, t);
 								vimeoLastTempo = t;
-								var percent = Math.min(100, (watchedSeconds / referenceDuration) * 100);
+								var percent = Math.min(100, (ultimoTempo / referenceDuration) * 100);
 								atualizarDisplay(percent);
 								var agora = Date.now();
 								if(agora - ultimoEnvio > 5000) { salvarProgresso(percent); ultimoEnvio = agora; }
@@ -1018,25 +1039,21 @@
 				});
 
 				vimeoPlayer.on('pause', function() {
-					if(hasReallyStartedPlayback && playStartedAt) {
+					if(hasReallyStartedPlayback) {
 						vimeoPlayer.getCurrentTime().then(function(t) {
-							var elapsed = Math.max(0, (Date.now() - playStartedAt) / 1000);
-							watchedSeconds = Math.max(watchedSeconds, Math.min(referenceDuration, Math.floor(playBaseTime + elapsed)));
 							ultimoTempo = Math.max(ultimoTempo, t);
 							vimeoLastTempo = t;
-							salvarProgresso((watchedSeconds / referenceDuration) * 100);
+							salvarProgresso(Math.min(100, (ultimoTempo / referenceDuration) * 100));
 						}).catch(function() {});
 					}
-					playStartedAt = null;
 					if(vimeoTrackingTimer) { clearInterval(vimeoTrackingTimer); vimeoTrackingTimer = null; }
 				});
 
 				vimeoPlayer.on('ended', function() {
 					if(!hasReallyStartedPlayback) return;
 					ultimoTempo = referenceDuration;
-					watchedSeconds = referenceDuration;
 					salvarProgresso(100);
-					playStartedAt = null;
+					atualizarDisplay(100);
 				});
 
 				// Bloqueio de velocidade do Vimeo
@@ -1107,7 +1124,7 @@
 			}).then((result) => {
 				if (result.isConfirmed) {
 					$.post(window.location.pathname, {
-						acao: 'submeterAvaliacao',
+						acao_player: 'submeterAvaliacao',
 						treinamento_id: treinamentoId,
 						respostas: respostas
 					}, function(data) {

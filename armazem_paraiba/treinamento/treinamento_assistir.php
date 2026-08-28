@@ -245,6 +245,7 @@
 			$tipo = $t["trei_tx_tipo"];
 			$tipoLabel = ($tipo === "dss") ? "DSS" : "Treinamento";
 			$cargaHoraria = $t["trei_nb_carga_horaria"] ?? 0;
+			$cargaHorariaLabel = sprintf("%02d:%02d", floor($cargaHoraria / 60), $cargaHoraria % 60);
 			$obrigatorio = ($t["trei_nb_obrigatorio"] ?? 0) == 1;
 			$thumbnail = $t["trei_tx_thumbnail"] ?? "";
 			$porcentagem = round($t["porcentagem"] ?? 0, 1);
@@ -274,7 +275,7 @@
 			}
 
 			// Thumbnail
-			$thumbSrc = !empty($thumbnail) ? "treinamento/uploads/{$thumbnail}" : "";
+			$thumbSrc = !empty($thumbnail) ? ($_ENV["URL_BASE"] ?? "") . ($CONTEX["path"] ?? "") . "/treinamento/uploads/{$thumbnail}" : "";
 			$thumbHtml = !empty($thumbSrc)
 				? "<img src='{$thumbSrc}' class='thumbnail' alt='{$titulo}'>"
 				: "<div class='thumbnail' style='display:flex;align-items:center;justify-content:center;background:#3c8dbc;color:#fff;font-size:48px;'><i class='fa fa-graduation-cap'></i></div>";
@@ -300,7 +301,7 @@
 						<p class='text-muted' style='font-size:13px;'>" . substr($descricao, 0, 120) . (strlen($descricao) > 120 ? "..." : "") . "</p>
 
 						<div class='info-item'>
-							<i class='fa fa-clock'></i> <strong>{$cargaHoraria}</strong> minutos
+							<i class='fa fa-clock'></i> <strong>{$cargaHorariaLabel}</strong> min
 						</div>";
 
 			if ($progresso > 0) {

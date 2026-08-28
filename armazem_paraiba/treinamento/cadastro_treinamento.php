@@ -66,7 +66,14 @@
 			"trei_tx_tipo_treinamento" => $_POST["tipo_treinamento"] ?? "eventual",
 			"trei_tx_url_video" => $_POST["url_video"] ?? null,
 			"trei_tx_tipo_video" => $_POST["tipo_video"] ?? "youtube",
-			"trei_nb_carga_horaria" => (int)($_POST["carga_horaria"] ?? 0),
+			"trei_nb_carga_horaria" => (function() {
+				$segundos = 0;
+				if (!empty($_POST["carga_horaria"])) {
+					$partes = array_map('intval', explode(":", $_POST["carga_horaria"]));
+					$segundos = (int)($partes[0] ?? 0) * 60 + (int)($partes[1] ?? 0);
+				}
+				return $segundos;
+			})(),
 			"trei_nb_dias_validade" => (int)($_POST["dias_validade"] ?? 365),
 			"trei_tx_status" => $_POST["status"] ?? "ativo",
 			"trei_nb_obrigatorio" => isset($_POST["obrigatorio"]) ? 1 : 0,
@@ -331,7 +338,8 @@
 		$tipoTreinamento = $dados["trei_tx_tipo_treinamento"] ?? "eventual";
 		$urlVideo = $dados["trei_tx_url_video"] ?? "";
 		$tipoVideo = $dados["trei_tx_tipo_video"] ?? "youtube";
-		$cargaHoraria = $dados["trei_nb_carga_horaria"] ?? 0;
+		$cargaHoraria = (int)($dados["trei_nb_carga_horaria"] ?? 0);
+		$cargaHoraria = sprintf("%02d:%02d", floor($cargaHoraria / 60), $cargaHoraria % 60);
 		$diasValidade = $dados["trei_nb_dias_validade"] ?? 365;
 		$thumbnail = $dados["trei_tx_thumbnail"] ?? "";
 		$dataPublicacao = !empty($dados["trei_dt_data_publicacao"]) ? date("d/m/Y", strtotime($dados["trei_dt_data_publicacao"])) : date("d/m/Y");
@@ -350,21 +358,30 @@
 		}
 
 		// Usuários dos perfis selecionados (para a aba de atribuições)
-		$usuarios = [];
+		$perfisComUsuarios = [];
 		if (!empty($perfisPermitidos)) {
 			$placeholders = implode(",", array_fill(0, count($perfisPermitidos), "?"));
 			$rsUsuarios = query(
-				"SELECT DISTINCT u.user_nb_id, u.user_tx_nome, u.user_tx_nivel
+				"SELECT DISTINCT u.user_nb_id, u.user_tx_nome, u.user_tx_nivel, up.perfil_nb_id, p.perfil_tx_nome
 				 FROM user u
 				 JOIN usuario_perfil up ON up.user_nb_id = u.user_nb_id
+				 JOIN perfil_acesso p ON p.perfil_nb_id = up.perfil_nb_id
 				 WHERE up.ativo = 1 AND u.user_tx_status = 'ativo'
 				 AND up.perfil_nb_id IN ({$placeholders})
-				 ORDER BY u.user_tx_nome",
+				 ORDER BY p.perfil_tx_nome, u.user_tx_nome",
 				str_repeat("i", count($perfisPermitidos)),
 				$perfisPermitidos
 			);
 			while ($row = mysqli_fetch_assoc($rsUsuarios)) {
-				$usuarios[] = $row;
+				$pid = $row["perfil_nb_id"];
+				if (!isset($perfisComUsuarios[$pid])) {
+					$perfisComUsuarios[$pid] = [
+						"perfil_nb_id" => $pid,
+						"perfil_tx_nome" => $row["perfil_tx_nome"],
+						"usuarios" => []
+					];
+				}
+				$perfisComUsuarios[$pid]["usuarios"][] = $row;
 			}
 		}
 
@@ -423,7 +440,7 @@
 									" . combo("Tipo Treinamento", "tipo_treinamento", $tipoTreinamento, "col-md-12", ["inicial" => "Inicial", "periodico" => "Periódico", "eventual" => "Eventual"]) . "
 								</div>
 								<div class='col-md-4'>
-									" . campo("Carga Horária (min)", "carga_horaria", $cargaHoraria, "col-md-12", "999") . "
+									" . campo("Duração (mm:ss)", "carga_horaria", $cargaHoraria, "col-md-12", "00:00") . "
 								</div>
 							</div>
 							<div class='row'>
@@ -452,9 +469,6 @@
 								</div>
 							</div>
 							<div class='row'>
-								<div class='col-md-4'>
-									" . campo("Qtd. Questões Prova", "quantidade_questoes_prova", $qtdQuestoes, "col-md-12", "9") . "
-								</div>
 								<div class='col-md-4' style='margin-top:25px;'>
 									<label>
 										<input type='checkbox' name='obrigatorio' value='1' " . ($obrigatorio ? "checked" : "") . "> Obrigatório
@@ -509,23 +523,28 @@
 						<div class='tab-pane' id='tab_atribuicao'>
 							<div class='row'>
 								<div class='col-md-12'>
-									<p class='text-muted'>Os funcionários dos perfis selecionados já vêm marcados (acesso liberado). Desmarque para bloquear o acesso individual de um funcionário específico.</p>";
-									if (empty($usuarios)) {
+									<p class='text-muted'>Os funcionários dos perfis selecionados já vêm marcados (acesso liberado). Desmarque para bloquear o acesso individual de um funcionário específico.</p>
+									<div id='listaUsuariosAtribuicao'>";
+									if (empty($perfisComUsuarios)) {
 										echo "<div class='alert alert-warning'><i class='fa fa-info-circle'></i> Selecione pelo menos um perfil na aba <strong>Dados Gerais</strong> para listar os funcionários aqui.</div>";
 									} else {
-										echo "<div class='row'>";
-										foreach ($usuarios as $u) {
-											$checked = in_array($u["user_nb_id"], $bloqueados) ? "" : " checked";
-											echo "<div class='col-md-4 col-sm-6'>";
-											echo "<label style='font-weight:normal;cursor:pointer;'>";
-											echo "<input type='checkbox' name='usuarios_atribuidos[]' value='{$u["user_nb_id"]}'{$checked}> ";
-											echo htmlspecialchars($u["user_tx_nome"]);
-											echo "</label>";
+										foreach ($perfisComUsuarios as $grupo) {
+											echo "<h5 style='margin-top:15px;border-bottom:1px solid #eee;padding-bottom:5px;'><i class='fa fa-users'></i> <strong>" . htmlspecialchars($grupo["perfil_tx_nome"]) . "</strong></h5>";
+											echo "<div class='row'>";
+											foreach ($grupo["usuarios"] as $u) {
+												$checked = in_array($u["user_nb_id"], $bloqueados) ? "" : " checked";
+												echo "<div class='col-md-4 col-sm-6'>";
+												echo "<label style='font-weight:normal;cursor:pointer;'>";
+												echo "<input type='checkbox' name='usuarios_atribuidos[]' value='{$u["user_nb_id"]}'{$checked}> ";
+												echo htmlspecialchars($u["user_tx_nome"]);
+												echo "</label>";
+												echo "</div>";
+											}
 											echo "</div>";
 										}
-										echo "</div>";
 									}
 									echo "
+									</div>
 								</div>
 							</div>
 						</div>";
@@ -554,6 +573,49 @@
 				f.appendChild(h);
 				f.submit();
 				return false;
+			}
+			$('input[name=carga_horaria]').on('input', function() {
+				var v = $(this).val().replace(/[^\d]/g, '').slice(0, 4);
+				if(v.length > 2) v = v.slice(0, 2) + ':' + v.slice(2);
+				$(this).val(v);
+			});
+
+			// Carregar funcionários dos perfis selecionados (aba Atribuições)
+			function carregarUsuariosAtribuicao() {
+				var container = $('#listaUsuariosAtribuicao');
+				if(!container.length) return;
+				var perfis = $('#selectPerfis').val() || [];
+				var treinamentoId = $('input[name=treinamento_id]').val() || $('input[name=id]').val() || '';
+				$.get(window.location.pathname, {
+					listar_usuarios_perfis: 1,
+					perfis: JSON.stringify(perfis),
+					treinamento_id: treinamentoId
+				}, function(data) {
+					if(!data.perfis || data.perfis.length === 0) {
+						container.html('<div class=\"alert alert-warning\"><i class=\"fa fa-info-circle\"></i> Selecione pelo menos um perfil na aba <strong>Dados Gerais</strong> para listar os funcionários aqui.</div>');
+						return;
+					}
+					var html = '';
+					data.perfis.forEach(function(p) {
+						html += '<h5 style=\"margin-top:15px;border-bottom:1px solid #eee;padding-bottom:5px;\"><i class=\"fa fa-users\"></i> <strong>' + $('<span>').text(p.perfil_tx_nome).html() + '</strong></h5>';
+						html += '<div class=\"row\">';
+						p.usuarios.forEach(function(u) {
+							var checked = data.bloqueados.indexOf(parseInt(u.user_nb_id)) === -1 ? ' checked' : '';
+							html += '<div class=\"col-md-4 col-sm-6\">' +
+								'<label style=\"font-weight:normal;cursor:pointer;\">' +
+								'<input type=\"checkbox\" name=\"usuarios_atribuidos[]\" value=\"' + u.user_nb_id + '\"' + checked + '> ' +
+								$('<span>').text(u.user_tx_nome).html() +
+								'</label></div>';
+						});
+						html += '</div>';
+					});
+					container.html(html);
+				}, 'json');
+			}
+
+			$('#selectPerfis').on('change', carregarUsuariosAtribuicao);
+			if($('#listaUsuariosAtribuicao').length) {
+				carregarUsuariosAtribuicao();
 			}
 			$('select[name=tipo]').change(function(){
 				$('#div_tipo_treinamento').toggle($(this).val() === 'treinamento');
@@ -657,6 +719,60 @@
 	function index() {
 		include_once __DIR__."/../check_permission.php";
 		verificaPermissao('/treinamento/cadastro_treinamento.php');
+
+		// AJAX: listar usuários dos perfis selecionados (aba Atribuições)
+		// (colocado aqui pois o dispatcher do funcoes.php chama index() durante o include do conecta)
+		if (isset($_GET["listar_usuarios_perfis"])) {
+			header('Content-Type: application/json');
+
+			$perfisParam = $_GET["perfis"] ?? "";
+			$perfis = json_decode($perfisParam, true);
+			if (!is_array($perfis)) {
+				$perfis = array_map('intval', explode(",", (string)$perfisParam));
+			}
+			$perfis = array_values(array_filter(array_map('intval', $perfis)));
+			$treinamentoId = (int)($_GET["treinamento_id"] ?? 0);
+
+			$usuarios = [];
+			$perfisComUsuarios = [];
+			if (!empty($perfis)) {
+				$placeholders = implode(",", array_fill(0, count($perfis), "?"));
+				$rs = query(
+					"SELECT DISTINCT u.user_nb_id, u.user_tx_nome, up.perfil_nb_id, p.perfil_tx_nome
+					 FROM user u
+					 JOIN usuario_perfil up ON up.user_nb_id = u.user_nb_id
+					 JOIN perfil_acesso p ON p.perfil_nb_id = up.perfil_nb_id
+					 WHERE up.ativo = 1 AND u.user_tx_status = 'ativo'
+					 AND up.perfil_nb_id IN ({$placeholders})
+					 ORDER BY p.perfil_tx_nome, u.user_tx_nome",
+					str_repeat("i", count($perfis)),
+					$perfis
+				);
+				while ($rs && ($row = mysqli_fetch_assoc($rs))) {
+					$usuarios[] = $row;
+					$pid = $row["perfil_nb_id"];
+					if (!isset($perfisComUsuarios[$pid])) {
+						$perfisComUsuarios[$pid] = [
+							"perfil_nb_id" => $pid,
+							"perfil_tx_nome" => $row["perfil_tx_nome"],
+							"usuarios" => []
+						];
+					}
+					$perfisComUsuarios[$pid]["usuarios"][] = $row;
+				}
+			}
+
+			$bloqueados = [];
+			if ($treinamentoId > 0) {
+				$rsB = query("SELECT trebl_nb_usuario_id FROM treinamento_bloqueio WHERE trebl_nb_treinamento_id = ?", "i", [$treinamentoId]);
+				while ($rsB && ($rowB = mysqli_fetch_assoc($rsB))) {
+					$bloqueados[] = (int)$rowB["trebl_nb_usuario_id"];
+				}
+			}
+
+			echo json_encode(["perfis" => array_values($perfisComUsuarios), "usuarios" => $usuarios, "bloqueados" => $bloqueados]);
+			exit;
+		}
 
 		// Salvamento do formulário (contorna o dispatcher do funcoes.php)
 		if ($_SERVER["REQUEST_METHOD"] === "POST" && !empty($_POST["salvar"])) {
