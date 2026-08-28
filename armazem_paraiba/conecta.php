@@ -317,6 +317,18 @@
         FOREIGN KEY (trelog_nb_usuario_id) REFERENCES user(user_nb_id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
+    // Tabela de bloqueios individuais (usuário desmarcado não vê o treinamento mesmo com perfil)
+    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_bloqueio (
+        trebl_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        trebl_nb_treinamento_id INT NOT NULL,
+        trebl_nb_usuario_id INT NOT NULL,
+        trebl_dt_data_cadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_treinamento_usuario (trebl_nb_treinamento_id, trebl_nb_usuario_id),
+        KEY idx_usuario (trebl_nb_usuario_id),
+        FOREIGN KEY (trebl_nb_treinamento_id) REFERENCES treinamento(trei_nb_id) ON DELETE CASCADE,
+        FOREIGN KEY (trebl_nb_usuario_id) REFERENCES user(user_nb_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
     // =====================================================
 
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_grid.php";

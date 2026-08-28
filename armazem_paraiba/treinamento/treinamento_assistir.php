@@ -48,12 +48,18 @@
 				FROM treinamento t
 				WHERE t.trei_tx_status = 'ativo'
 				AND (t.trei_dt_data_liberacao IS NULL OR t.trei_dt_data_liberacao <= NOW())
+				AND NOT EXISTS (
+					SELECT 1 FROM treinamento_bloqueio tb
+					WHERE tb.trebl_nb_treinamento_id = t.trei_nb_id
+					AND tb.trebl_nb_usuario_id = ?
+				)
 				AND (
 					-- Sem perfil definido: todos com acesso
 					t.trei_tx_tipo_usuario_permitido IS NULL
 					OR t.trei_tx_tipo_usuario_permitido = ''
-					-- Perfil do usuário está na lista de perfis permitidos
-					OR JSON_CONTAINS(t.trei_tx_tipo_usuario_permitido, CAST(? AS JSON))
+					-- Perfil do usuário está na lista de perfis permitidos (número ou string)
+					OR JSON_CONTAINS(t.trei_tx_tipo_usuario_permitido, ?)
+					OR JSON_CONTAINS(t.trei_tx_tipo_usuario_permitido, ?)
 					-- Atribuído individualmente ao usuário
 					OR EXISTS (
 						SELECT 1 FROM treinamento_atribuicao ta
@@ -62,8 +68,8 @@
 					)
 				)
 				ORDER BY t.trei_nb_id DESC",
-				"iiiiiii",
-				[$usuarioId, $usuarioId, $usuarioId, $usuarioId, $perfilUsuario, $usuarioId]
+				"iiiiisii",
+				[$usuarioId, $usuarioId, $usuarioId, $usuarioId, $usuarioId, '"' . $perfilUsuario . '"', $perfilUsuario, $usuarioId]
 			);
 		}
 
@@ -258,13 +264,13 @@
 				$statusLabel = "Em Andamento";
 				$btnClass = "btn-warning";
 				$btnLabel = "<i class='fa fa-play'></i> Continuar";
-				$btnAction = "treinamento/player.php?id={$treinamentoId}";
+				$btnAction = "treinamento_player.php?id={$treinamentoId}";
 			} else {
 				$statusClass = "badge-info";
 				$statusLabel = "Não Iniciado";
 				$btnClass = "btn-primary";
 				$btnLabel = "<i class='fa fa-play'></i> Assistir";
-				$btnAction = "treinamento/player.php?id={$treinamentoId}";
+				$btnAction = "treinamento_player.php?id={$treinamentoId}";
 			}
 
 			// Thumbnail

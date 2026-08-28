@@ -76,6 +76,7 @@
 		];
 
 		$perfisPermitidos = $_POST["perfis_permitidos"] ?? [];
+		$perfisPermitidos = array_map('intval', $perfisPermitidos);
 		$novo["trei_tx_tipo_usuario_permitido"] = !empty($perfisPermitidos) ? json_encode($perfisPermitidos) : null;
 
 		if (!empty($_POST["data_publicacao"])) {
@@ -85,16 +86,6 @@
 		if (!empty($_POST["data_liberacao"])) {
 			$dt = DateTime::createFromFormat('d/m/Y', $_POST["data_liberacao"]);
 			$novo["trei_dt_data_liberacao"] = $dt ? $dt->format('Y-m-d') : null;
-		}
-
-		if (!empty($_FILES["thumbnail"]["name"])) {
-			$ext = strtolower(pathinfo($_FILES["thumbnail"]["name"], PATHINFO_EXTENSION));
-			$permitidos = ["jpg", "jpeg", "png", "gif", "webp"];
-			if (in_array($ext, $permitidos)) {
-				$nomeArquivo = "thumb_" . time() . "." . $ext;
-				move_uploaded_file($_FILES["thumbnail"]["tmp_name"], $uploadDir . $nomeArquivo);
-				$novo["trei_tx_thumbnail"] = $nomeArquivo;
-			}
 		}
 
 		if (!empty($_POST["id"])) {
@@ -117,13 +108,52 @@
 			set_status("Treinamento cadastrado com sucesso!");
 		}
 
-		if (($novo["trei_tx_tipo"] ?? $_POST["tipo"] ?? "") === "treinamento") {
-			query("DELETE FROM treinamento_atribuicao WHERE treate_nb_treinamento_id = ?", "i", [$treinamentoId]);
-			$usuariosAtribuidos = $_POST["usuarios_atribuidos"] ?? [];
-			if (!empty($usuariosAtribuidos)) {
-				foreach ($usuariosAtribuidos as $userId) {
+		// Upload do material de apoio (substitui o thumbnail)
+		if (!empty($_FILES["material_arquivo"]["name"])) {
+			$materialDir = __DIR__ . "/uploads/materiais/" . $treinamentoId . "/";
+			if (!is_dir($materialDir)) {
+				mkdir($materialDir, 0755, true);
+			}
+			$nomeOriginal = $_FILES["material_arquivo"]["name"];
+			$ext = strtolower(pathinfo($nomeOriginal, PATHINFO_EXTENSION));
+			$permitidos = ["pdf", "jpg", "jpeg", "png", "gif", "webp"];
+			if (in_array($ext, $permitidos)) {
+				$tamanho = $_FILES["material_arquivo"]["size"];
+				$nomeSalvo = "mat_" . time() . "_" . rand(1000, 9999) . "." . $ext;
+				if (move_uploaded_file($_FILES["material_arquivo"]["tmp_name"], $materialDir . $nomeSalvo)) {
+					$cnt = mysqli_fetch_assoc(query(
+						"SELECT COUNT(*) as total FROM treinamento_material WHERE tram_nb_treinamento_id = ?",
+						"i", [$treinamentoId]
+					));
+					$ordem = ($cnt["total"] ?? 0) + 1;
+					inserir("treinamento_material",
+						["tram_nb_treinamento_id", "tram_tx_nome", "tram_tx_descricao", "tram_tx_arquivo", "tram_tx_tipo_arquivo", "tram_nb_tamanho", "tram_nb_ordem"],
+						[$treinamentoId, $nomeOriginal, "", "materiais/" . $treinamentoId . "/" . $nomeSalvo, $ext, $tamanho, $ordem]
+					);
+				}
+			}
+		}
+
+		// Bloqueios individuais: usuários dos perfis selecionados que foram desmarcados
+		query("DELETE FROM treinamento_bloqueio WHERE trebl_nb_treinamento_id = ?", "i", [$treinamentoId]);
+		if (!empty($perfisPermitidos)) {
+			// Todos os usuários dos perfis selecionados
+			$placeholders = implode(",", array_fill(0, count($perfisPermitidos), "?"));
+			$rsPerfisUsers = query(
+				"SELECT DISTINCT u.user_nb_id FROM user u
+				 JOIN usuario_perfil up ON up.user_nb_id = u.user_nb_id
+				 WHERE up.ativo = 1 AND u.user_tx_status = 'ativo'
+				 AND up.perfil_nb_id IN ({$placeholders})",
+				str_repeat("i", count($perfisPermitidos)),
+				$perfisPermitidos
+			);
+			$usuariosMarcados = $_POST["usuarios_atribuidos"] ?? [];
+			$usuariosMarcados = array_map('intval', $usuariosMarcados);
+			while ($rsPerfisUsers && ($row = mysqli_fetch_assoc($rsPerfisUsers))) {
+				$userId = (int)$row["user_nb_id"];
+				if (!in_array($userId, $usuariosMarcados)) {
 					query(
-						"INSERT IGNORE INTO treinamento_atribuicao (treate_nb_treinamento_id, treate_nb_usuario_id, treate_dt_data_cadastro) VALUES (?, ?, ?)",
+						"INSERT IGNORE INTO treinamento_bloqueio (trebl_nb_treinamento_id, trebl_nb_usuario_id, trebl_dt_data_cadastro) VALUES (?, ?, ?)",
 						"iis",
 						[$treinamentoId, $userId, date("Y-m-d H:i:s")]
 					);
@@ -319,20 +349,34 @@
 			$perfis[] = $row;
 		}
 
+		// Usuários dos perfis selecionados (para a aba de atribuições)
 		$usuarios = [];
-		$rsUsuarios = query("SELECT user_nb_id, user_tx_nome FROM user WHERE user_tx_status = 'ativo' ORDER BY user_tx_nome");
-		while ($row = mysqli_fetch_assoc($rsUsuarios)) {
-			$usuarios[] = $row;
+		if (!empty($perfisPermitidos)) {
+			$placeholders = implode(",", array_fill(0, count($perfisPermitidos), "?"));
+			$rsUsuarios = query(
+				"SELECT DISTINCT u.user_nb_id, u.user_tx_nome, u.user_tx_nivel
+				 FROM user u
+				 JOIN usuario_perfil up ON up.user_nb_id = u.user_nb_id
+				 WHERE up.ativo = 1 AND u.user_tx_status = 'ativo'
+				 AND up.perfil_nb_id IN ({$placeholders})
+				 ORDER BY u.user_tx_nome",
+				str_repeat("i", count($perfisPermitidos)),
+				$perfisPermitidos
+			);
+			while ($row = mysqli_fetch_assoc($rsUsuarios)) {
+				$usuarios[] = $row;
+			}
 		}
 
-		$atribuidos = [];
+		// Usuários bloqueados individualmente (desmarcados na atribuição)
+		$bloqueados = [];
 		if ($isEdicao) {
-			$rsAtribuidos = query(
-				"SELECT treate_nb_usuario_id FROM treinamento_atribuicao WHERE treate_nb_treinamento_id = ?",
+			$rsBloqueados = query(
+				"SELECT trebl_nb_usuario_id FROM treinamento_bloqueio WHERE trebl_nb_treinamento_id = ?",
 				"i", [$dados["trei_nb_id"]]
 			);
-			while ($row = mysqli_fetch_assoc($rsAtribuidos)) {
-				$atribuidos[] = $row["treate_nb_usuario_id"];
+			while ($row = mysqli_fetch_assoc($rsBloqueados)) {
+				$bloqueados[] = $row["trebl_nb_usuario_id"];
 			}
 		}
 
@@ -355,8 +399,6 @@
 					<ul class='nav nav-tabs'>
 						<li class='active'><a href='#tab_dados' data-toggle='tab'>Dados Gerais</a></li>" .
 						($isEdicao ? "<li><a href='#tab_atribuicao' data-toggle='tab'>Atribuições</a></li>" : "") .
-						($isEdicao ? "<li><a href='#tab_questoes' data-toggle='tab'>Banco de Questões</a></li>" : "") .
-						($isEdicao ? "<li><a href='#tab_materiais' data-toggle='tab'>Materiais de Apoio</a></li>" : "") .
 					"</ul>
 					<div class='tab-content'>
 						<div class='tab-pane active' id='tab_dados'>
@@ -433,10 +475,31 @@
 								</div>
 							</div>
 							<div class='row'>
-								<div class='col-md-4'>
-									<label>Thumbnail:</label><br>
-									<input type='file' name='thumbnail' accept='image/*' class='form-control'>
-									" . (!empty($thumbnail) ? "<br><img src='uploads/{$thumbnail}' class='video-preview'>" : "") . "
+								<div class='col-md-12'>
+									<label>Material de Apoio (PDF ou Imagem):</label>
+									<input type='file' name='material_arquivo' accept='.pdf,.jpg,.jpeg,.png,.gif,.webp' class='form-control'>
+									<small class='text-muted'>Envie um arquivo de apoio (PDF ou imagem) que será exibido junto ao treinamento.</small>";
+									if ($isEdicao) {
+										$materiais = [];
+										$rsMateriais = query(
+											"SELECT * FROM treinamento_material WHERE tram_nb_treinamento_id = ? AND tram_tx_status = 'ativo' ORDER BY tram_nb_ordem",
+											"i", [$dados["trei_nb_id"]]
+										);
+										while ($row = mysqli_fetch_assoc($rsMateriais)) {
+											$materiais[] = $row;
+										}
+										if (!empty($materiais)) {
+											echo "<br><strong>Materiais já enviados:</strong><br>";
+											foreach ($materiais as $m) {
+												$tamanhoKB = round(($m["tram_nb_tamanho"] ?? 0) / 1024, 1);
+												echo "<div class='material-item'>";
+												echo "<span><i class='fa fa-file'></i> " . htmlspecialchars($m["tram_tx_nome"]) . " ({$tamanhoKB} KB)</span>";
+												echo "<a href='cadastro_treinamento.php?acao_excluir_material={$m["tram_nb_id"]}&treinamento_id={$dados["trei_nb_id"]}' class='btn btn-danger btn-xs' onclick=\"return confirm('Excluir este material?');\"><i class='fa fa-trash'></i></a>";
+												echo "</div>";
+											}
+										}
+									}
+									echo "
 								</div>
 							</div>
 						</div>";
@@ -446,137 +509,26 @@
 						<div class='tab-pane' id='tab_atribuicao'>
 							<div class='row'>
 								<div class='col-md-12'>
-									<p class='text-muted'>Selecione os usuários que terão acesso a este treinamento.</p>
-									<select name='usuarios_atribuidos[]' id='selectUsuarios' multiple class='form-control' style='height:200px;'>";
-									foreach ($usuarios as $u) {
-										$selected = in_array($u["user_nb_id"], $atribuidos) ? " selected" : "";
-										echo "<option value='{$u["user_nb_id"]}'{$selected}>{$u["user_tx_nome"]}</option>";
+									<p class='text-muted'>Os funcionários dos perfis selecionados já vêm marcados (acesso liberado). Desmarque para bloquear o acesso individual de um funcionário específico.</p>";
+									if (empty($usuarios)) {
+										echo "<div class='alert alert-warning'><i class='fa fa-info-circle'></i> Selecione pelo menos um perfil na aba <strong>Dados Gerais</strong> para listar os funcionários aqui.</div>";
+									} else {
+										echo "<div class='row'>";
+										foreach ($usuarios as $u) {
+											$checked = in_array($u["user_nb_id"], $bloqueados) ? "" : " checked";
+											echo "<div class='col-md-4 col-sm-6'>";
+											echo "<label style='font-weight:normal;cursor:pointer;'>";
+											echo "<input type='checkbox' name='usuarios_atribuidos[]' value='{$u["user_nb_id"]}'{$checked}> ";
+											echo htmlspecialchars($u["user_tx_nome"]);
+											echo "</label>";
+											echo "</div>";
+										}
+										echo "</div>";
 									}
 									echo "
-									</select>
 								</div>
 							</div>
 						</div>";
-						}
-
-						if ($isEdicao) {
-							$questoes = [];
-							$rsQuestoes = query(
-								"SELECT * FROM treinamento_questao WHERE treq_nb_treinamento_id = ? ORDER BY treq_nb_ordem",
-								"i", [$dados["trei_nb_id"]]
-							);
-							while ($row = mysqli_fetch_assoc($rsQuestoes)) {
-								$questoes[] = $row;
-							}
-
-							echo "
-						<div class='tab-pane' id='tab_questoes'>
-							<div class='row'>
-								<div class='col-md-12'>
-									<h4>Cadastrar Nova Questão</h4>
-									<div class='box box-info box-solid'>
-										<div class='box-body'>
-											<div class='row'>
-												<div class='col-md-12'>
-													" . textarea("Pergunta", "qtd_pergunta", "", "col-md-12") . "
-												</div>
-											</div>
-											<div class='row'>
-												<div class='col-md-6'>" . campo("Opção 1", "qtd_opcao_1", "", "col-md-12") . "</div>
-												<div class='col-md-6'>" . campo("Opção 2", "qtd_opcao_2", "", "col-md-12") . "</div>
-											</div>
-											<div class='row'>
-												<div class='col-md-6'>" . campo("Opção 3", "qtd_opcao_3", "", "col-md-12") . "</div>
-												<div class='col-md-6'>" . campo("Opção 4", "qtd_opcao_4", "", "col-md-12") . "</div>
-											</div>
-											<div class='row'>
-												<div class='col-md-4'>
-													" . combo("Resposta Correta", "qtd_resposta_correta", "0", "col-md-12", ["0" => "Opção 1", "1" => "Opção 2", "2" => "Opção 3", "3" => "Opção 4"]) . "
-												</div>
-												<div class='col-md-4' style='margin-top:25px;'>
-													<button type='button' name='salvar_questao' value='1' class='btn btn-info' onclick=\"return submitForm('salvar_questao');\"><i class='fa fa-plus'></i> Adicionar Questão</button>
-												</div>
-											</div>
-										</div>
-									</div>
-									<h4>Questões Cadastradas (" . count($questoes) . ")</h4>";
-
-							if (empty($questoes)) {
-								echo "<p class='text-muted'>Nenhuma questão cadastrada.</p>";
-							} else {
-								foreach ($questoes as $idx => $q) {
-									$opcoes = json_decode($q["treq_tx_opcoes"], true);
-									$correta = (int)$q["treq_nb_resposta_correta"];
-									echo "
-									<div class='questao-item'>
-										<div style='display:flex; justify-content:space-between;'>
-											<strong>Q" . ($idx + 1) . ": " . htmlspecialchars($q["treq_tx_pergunta"]) . "</strong>
-											<a href='cadastro_treinamento.php?acao_excluir_questao={$q["treq_nb_id"]}&treinamento_id={$dados["trei_nb_id"]}' class='btn btn-danger btn-xs' onclick=\"return confirm('Excluir esta questão?');\"><i class='fa fa-trash'></i></a>
-										</div>
-										<div class='opcoes'>";
-									foreach ($opcoes as $oi => $op) {
-										$icon = ($oi === $correta) ? "fa-check-circle text-green" : "fa-circle-o text-muted";
-										echo "<i class='fa {$icon}'></i> " . htmlspecialchars($op) . "<br>";
-									}
-									echo "</div></div>";
-								}
-							}
-							echo "</div></div></div>";
-						}
-
-						if ($isEdicao) {
-							$materiais = [];
-							$rsMateriais = query(
-								"SELECT * FROM treinamento_material WHERE tram_nb_treinamento_id = ? AND tram_tx_status = 'ativo' ORDER BY tram_nb_ordem",
-								"i", [$dados["trei_nb_id"]]
-							);
-							while ($row = mysqli_fetch_assoc($rsMateriais)) {
-								$materiais[] = $row;
-							}
-
-							echo "
-						<div class='tab-pane' id='tab_materiais'>
-							<div class='row'>
-								<div class='col-md-12'>
-									<h4>Enviar Novo Material</h4>
-									<div class='box box-success box-solid'>
-										<div class='box-body'>
-											<div class='row'>
-												<div class='col-md-4'>" . campo("Nome do Material", "material_nome", "", "col-md-12") . "</div>
-												<div class='col-md-4'>" . campo("Descrição", "material_descricao", "", "col-md-12") . "</div>
-												<div class='col-md-4'>
-													<label>Arquivo:</label>
-													<input type='file' name='material_arquivo' class='form-control' required>
-												</div>
-											</div>
-											<div class='row'>
-												<div class='col-md-4' style='margin-top:25px;'>
-													<button type='button' name='salvar_material' value='1' class='btn btn-success' onclick=\"return submitForm('salvar_material');\"><i class='fa fa-upload'></i> Enviar Material</button>
-												</div>
-											</div>
-										</div>
-									</div>
-									<h4>Materiais Cadastrados (" . count($materiais) . ")</h4>";
-
-							if (empty($materiais)) {
-								echo "<p class='text-muted'>Nenhum material cadastrado.</p>";
-							} else {
-								foreach ($materiais as $m) {
-									$tamanhoKB = round(($m["tram_nb_tamanho"] ?? 0) / 1024, 1);
-									echo "
-									<div class='material-item'>
-										<div>
-											<i class='fa fa-file'></i>
-											<strong>" . htmlspecialchars($m["tram_tx_nome"]) . "</strong>
-											<span class='text-muted'> ({$tamanhoKB} KB)</span>
-										</div>
-										<div>
-											<a href='cadastro_treinamento.php?acao_excluir_material={$m["tram_nb_id"]}&treinamento_id={$dados["trei_nb_id"]}' class='btn btn-danger btn-xs' onclick=\"return confirm('Excluir este material?');\"><i class='fa fa-trash'></i></a>
-										</div>
-									</div>";
-								}
-							}
-							echo "</div></div></div>";
 						}
 
 					echo "
@@ -624,9 +576,6 @@
 				}
 			}).trigger('change');
 
-			if($('#selectUsuarios').length){
-				$('#selectUsuarios').select2({ placeholder: 'Selecione os usuários...', allowClear: true, language: 'pt-BR' });
-			}
 			if($('#selectPerfis').length){
 				$('#selectPerfis').select2({ placeholder: 'Selecione os perfis...', allowClear: true, language: 'pt-BR' });
 			}
@@ -714,22 +663,10 @@
 			cadastrar();
 			return;
 		}
-		if ($_SERVER["REQUEST_METHOD"] === "POST" && !empty($_POST["salvar_questao"])) {
-			cadastrarQuestao();
-			return;
-		}
-		if ($_SERVER["REQUEST_METHOD"] === "POST" && !empty($_POST["salvar_material"])) {
-			uploadMaterial();
-			return;
-		}
 
 		// Exclusões via GET (contorna o dispatcher do funcoes.php)
 		if (isset($_GET["acao_excluir"]) && is_numeric($_GET["acao_excluir"])) {
 			excluirTreinamento((int)$_GET["acao_excluir"]);
-			return;
-		}
-		if (isset($_GET["acao_excluir_questao"]) && is_numeric($_GET["acao_excluir_questao"])) {
-			excluirQuestao((int)$_GET["acao_excluir_questao"], (int)($_GET["treinamento_id"] ?? 0));
 			return;
 		}
 		if (isset($_GET["acao_excluir_material"]) && is_numeric($_GET["acao_excluir_material"])) {

@@ -47,6 +47,16 @@
 			return true;
 		}
 
+		// Verificar se o usuário está bloqueado individualmente (desmarcado na atribuição)
+		$bloqueado = mysqli_fetch_assoc(query(
+			"SELECT 1 FROM treinamento_bloqueio WHERE trebl_nb_treinamento_id = ? AND trebl_nb_usuario_id = ?",
+			"ii",
+			[$treinamentoId, $usuarioId]
+		));
+		if (!empty($bloqueado)) {
+			return false;
+		}
+
 		// Verificar se há perfis permitidos definidos
 		$perfisPermitidos = !empty($treinamento["trei_tx_tipo_usuario_permitido"])
 			? json_decode($treinamento["trei_tx_tipo_usuario_permitido"], true)
