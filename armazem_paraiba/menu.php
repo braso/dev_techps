@@ -89,6 +89,7 @@
 			],
             "diárias" => [
                 "/diarias/gestao_diarias.php" => "Gestão de Diárias",
+                "/diarias/bases_diarias.php" => "Bases de Diárias",
                 "/diarias/parametros_diarias.php" => "Parâmetros de Diárias"
             ],
 			"painel" => [
@@ -122,8 +123,12 @@
                 "/saude_seguranca/entrega_epi.php"  => "Entrega de EPI",
                 "/saude_seguranca/estoque_epi.php"  => "Estoque de EPI"
             ],
-            "suporte" => [
+			"suporte" => [
                 "/suporte/index.php" => "Chamados de Suporte",
+            ],
+            "treinamento" => [
+                "/treinamento/cadastro_treinamento.php" => "Gerenciar Treinamentos",
+                "/treinamento/treinamento_assistir.php" => "Meus Treinamentos",
             ],
         ];
 $path = strtolower($_SERVER['REQUEST_URI']);  
@@ -148,6 +153,7 @@ if ($showComunicado) {
             "assinatura" => "",
             "diárias" => "",
             "suporte" => "",
+            "treinamento" => "",
         ];
         // Perfil vinculado ao usuário (se existir)
         $perfilId = 0;
@@ -194,6 +200,7 @@ if ($showComunicado) {
             "assinatura" => "fa fa-file-contract",
             "diárias" => "fa fa-money-bill-wave",
             "suporte" => "fa fa-life-ring",
+            "treinamento" => "fa fa-graduation-cap",
         ];
         $iconMap = [
             "Celular" => "fa fa-mobile",
@@ -240,7 +247,9 @@ if ($showComunicado) {
             "Parâmetros de Diárias" => "fa fa-sliders-h",
             "Chamados de Suporte" => "fa fa-life-ring",
             "Gestão de Suporte" => "fa fa-tasks",
-            "Dashboard de Suporte" => "fa fa-bar-chart"
+            "Dashboard de Suporte" => "fa fa-bar-chart",
+            "Gerenciar Treinamentos" => "fa fa-graduation-cap",
+            "Meus Treinamentos" => "fa fa-play-circle"
         ];
 
         // Verifica se existe pelo menos uma placa cadastrada para mostrar o menu Logística.
@@ -328,7 +337,7 @@ if ($showComunicado) {
 
         $isAdmin = is_int(strpos($nivel, "Administrador"));
         $isSuperAdmin = is_int(strpos($nivel, "Super Administrador"));
-        $menusConcat = $menus["cadastros"].$menus["ponto"].$menus["painel"].($menus["logística"] ?? "").($menus["epi"] ?? "").($menus["assinatura"] ?? "").($menus["diárias"] ?? "").($menus["suporte"]?? "").($menus["relatórios"] ?? "");
+        $menusConcat = $menus["cadastros"].$menus["ponto"].$menus["painel"].($menus["logística"] ?? "").($menus["epi"] ?? "").($menus["assinatura"] ?? "").($menus["diárias"] ?? "").($menus["suporte"]?? "").($menus["relatórios"] ?? "").($menus["treinamento"] ?? "");
         if ($isSuperAdmin) {
             return $menusConcat;
         }

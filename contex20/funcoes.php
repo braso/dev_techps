@@ -35,13 +35,13 @@
 		}
 		exit;
 	}
-	if(function_exists("index")){
+if(function_exists("index")){
 		index();
 		exit;
 	}
 
 	/**
-	 * Pôe uma variável em um <pre></pre> para ser exibido de forma identada. 
+	 * Pôe uma variável em um <pre></pre> para ser exibida de forma identada. 
 	 * $die indica se o código deve parar logo após exibir essa variável.
 	 */
 	function dd($variavel, bool $die = true){
@@ -248,7 +248,7 @@
 
 		$types = "";
 		foreach($campos as $key => $campo){
-			if(is_int(strpos($campo, "_tx_"))){
+			if(is_int(strpos($campo, "_tx_")) || is_int(strpos($campo, "_dt_"))){
 				$types .= "s";
 			}else{
 				$types .= "d";

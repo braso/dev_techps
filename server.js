@@ -593,6 +593,65 @@ app.get("/health", (req, res) => {
 
 
 
+/*
+==================================================
+DIARIAS - KM E POSICOES DO DIA
+Consumido pelo modulo de diarias (modo_km=api) para
+calcular km rodado e detectar pernoite fora da base.
+==================================================
+*/
+app.get("/diarias/resumo", (req, res) => {
+  const placa = String(req.query.placa || "").trim().toUpperCase();
+  const data = String(req.query.data || "").trim();
+
+  if (!placa || !/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+    return res.status(400).json({ ok: false, error: "placa e data (YYYY-MM-DD) obrigatorios" });
+  }
+
+  const query = `
+    SELECT vehicle_plate, moduleTime, hodometro, speed, ignition, longitude, latitude
+    FROM TECHPS_LOGISTICA_POS
+    WHERE vehicle_plate = ?
+      AND DATE(moduleTime) = ?
+    ORDER BY moduleTime ASC
+  `;
+
+  db.query(query, [placa, data], (err, results) => {
+    if (err) {
+      console.error("[DIARIAS] Erro ao buscar posicoes:", err);
+      return res.status(500).json({ ok: false, error: "Erro ao buscar posicoes" });
+    }
+
+    let km = null;
+    let prev = null;
+    const posicoes = [];
+    results.forEach((r) => {
+      if (r.hodometro !== null && r.hodometro !== undefined) {
+        const cur = Number(r.hodometro);
+        if (prev !== null && cur >= prev) {
+          const d = cur - prev;
+          if (d >= 0 && d <= 5000) {
+            km = km === null ? 0 : km;
+            km += d;
+          }
+        }
+        prev = cur;
+      }
+      posicoes.push({
+        lat: r.latitude,
+        lon: r.longitude,
+        t: r.moduleTime,
+        ign: r.ignition,
+        spd: r.speed
+      });
+    });
+
+    res.json({ ok: true, placa, data, km, total: results.length, posicoes });
+  });
+});
+
+
+
 
 app.get("/export/top", (req, res) => {
   const top = parseInt(req.query.top) || 1;
