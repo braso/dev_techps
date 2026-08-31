@@ -73,6 +73,13 @@ function db_salvar() {
         exit;
     }
 
+    // Para marcar como base, obrigatoriamente deve selecionar um POI (o raio vem dele).
+    if ($ehbase === 'sim' && $poiId <= 0) {
+        db_setFlash('ERRO: Para marcar como base, selecione o POI correspondente na lista acima.', true);
+        header("Location: bases_diarias.php");
+        exit;
+    }
+
     if ($id > 0) {
         diar_query(
             "UPDATE diaria_base
@@ -106,7 +113,7 @@ function db_salvar() {
     exit;
 }
 
-function db_excluir() {
+function db_desativar() {
     $id = intval(db($_POST, 'id', 0));
     if ($id <= 0) {
         db_setFlash('ERRO: Base invalida.', true);
@@ -120,9 +127,39 @@ function db_excluir() {
     exit;
 }
 
+function db_ativar() {
+    $id = intval(db($_POST, 'id', 0));
+    if ($id <= 0) {
+        db_setFlash('ERRO: Base invalida.', true);
+        header("Location: bases_diarias.php");
+        exit;
+    }
+    diar_query("UPDATE diaria_base SET diba_tx_status = 'ativo' WHERE diba_nb_id = ?", "i", array($id));
+    diar_log_runtime("Base {$id} reativada");
+    db_setFlash('Base reativada.', false);
+    header("Location: bases_diarias.php");
+    exit;
+}
+
+function db_excluir() {
+    $id = intval(db($_POST, 'id', 0));
+    if ($id <= 0) {
+        db_setFlash('ERRO: Base invalida.', true);
+        header("Location: bases_diarias.php");
+        exit;
+    }
+    diar_query("DELETE FROM diaria_base WHERE diba_nb_id = ?", "i", array($id));
+    diar_log_runtime("Base {$id} excluida definitivamente");
+    db_setFlash('Base excluida definitivamente.', false);
+    header("Location: bases_diarias.php");
+    exit;
+}
+
 // Entry-points do Contex: o framework chama a funcao com o nome da acao do botao.
 function salvar() { db_salvar(); }
 function excluir() { db_excluir(); }
+function desativar() { db_desativar(); }
+function ativar() { db_ativar(); }
 function marcarPoiBase() {
     $id = intval(db($_POST, 'poi_id', 0));
     if ($id <= 0) {
@@ -187,20 +224,27 @@ cabecalho("Bases para Diarias");
                                 <option value="">-- Selecione um POI para preencher --</option>
                                 <?php if (empty($pois)): ?>
                                     <option value="" disabled>Nenhum POI ativo com coordenadas.</option>
-                                <?php else: foreach ($pois as $poi): ?>
+                                <?php else:
+                                    $poiBaseAtual = diar_buscarPoiBase();
+                                    $poiBaseAtualId = $poiBaseAtual ? intval($poiBaseAtual['poi_nb_id']) : 0;
+                                    foreach ($pois as $poi):
+                                        $ehBaseAtual = ($poiBaseAtualId > 0 && intval($poi['poi_nb_id']) === $poiBaseAtualId);
+                                ?>
                                     <option value="<?php echo intval($poi['poi_nb_id']); ?>"
                                         data-nome="<?php echo htmlspecialchars(strval($poi['poi_tx_nome'])); ?>"
                                         data-lat="<?php echo htmlspecialchars(strval($poi['poi_tx_latitude'])); ?>"
                                         data-lon="<?php echo htmlspecialchars(strval($poi['poi_tx_longitude'])); ?>"
-                                        data-raio="<?php echo intval($poi['poi_nb_raio']); ?>">
+                                        data-raio="<?php echo intval($poi['poi_nb_raio']); ?>"
+                                        <?php echo $ehBaseAtual ? 'data-ehbase="1"' : ''; ?>>
                                         <?php echo htmlspecialchars(strval($poi['poi_tx_nome'])); ?>
+                                        <?php if ($ehBaseAtual): ?> <strong style="color:#27ae60;">(BASE ATUAL)</strong><?php endif; ?>
                                         <?php if (!empty($poi['poi_tx_endereco'])): ?>
                                             - <?php echo htmlspecialchars(strval($poi['poi_tx_endereco'])); ?>
                                         <?php endif; ?>
                                     </option>
                                 <?php endforeach; endif; ?>
                             </select>
-                            <small style="color:#888;">Ao selecionar, nome, latitude, longitude e raio sao preenchidos automaticamente. Edite se precisar.</small>
+                            <small style="color:#888;">Ao selecionar, nome, latitude, longitude e raio sao preenchidos automaticamente. Apenas 1 POI pode ser a base de referencia.</small>
                         </div>
                     </div>
                     <?php
@@ -250,11 +294,41 @@ cabecalho("Bases para Diarias");
                             </tr>
                         </thead>
                         <tbody>
+                        <?php
+                            // Identifica a base de referencia (a que corresponde ao POI base marcado).
+                            $poiBaseGrid = diar_buscarPoiBase();
+                            $latPoiBase = $poiBaseGrid ? floatval($poiBaseGrid['poi_tx_latitude']) : 0;
+                            $lonPoiBase = $poiBaseGrid ? floatval($poiBaseGrid['poi_tx_longitude']) : 0;
+
+                            // Mapa: qual POI corresponde a cada base (mesmas coordenadas).
+                            $mapPoiPorBase = array();
+                            foreach ($bases as $bb) {
+                                $mapPoiPorBase[intval($bb['diba_nb_id'])] = 0;
+                                foreach ($pois as $poi) {
+                                    if (abs(floatval($bb['diba_tx_latitude']) - floatval($poi['poi_tx_latitude'])) < 0.0001
+                                        && abs(floatval($bb['diba_tx_longitude']) - floatval($poi['poi_tx_longitude'])) < 0.0001) {
+                                        $mapPoiPorBase[intval($bb['diba_nb_id'])] = intval($poi['poi_nb_id']);
+                                        break;
+                                    }
+                                }
+                            }
+                        ?>
                         <?php if (empty($bases)): ?>
                             <tr><td colspan="7" style="text-align:center;color:#999;padding:20px;"><i class="fa fa-inbox"></i> Nenhuma base cadastrada.</td></tr>
                         <?php else: foreach ($bases as $b): ?>
+                            <?php
+                                $ehReferencia = ($latPoiBase != 0 && $lonPoiBase != 0
+                                    && abs(floatval(db($b, 'diba_tx_latitude', 0)) - $latPoiBase) < 0.0001
+                                    && abs(floatval(db($b, 'diba_tx_longitude', 0)) - $lonPoiBase) < 0.0001);
+                                $poiDaBase = intval($mapPoiPorBase[intval(db($b, 'diba_nb_id', 0))]);
+                            ?>
                             <tr>
-                                <td><?php echo htmlspecialchars(strval(db($b, 'diba_tx_nome', ''))); ?></td>
+                                <td>
+                                    <?php echo htmlspecialchars(strval(db($b, 'diba_tx_nome', ''))); ?>
+                                    <?php if ($ehReferencia): ?>
+                                        <span class="label label-success" title="Esta e a base de referencia (POI marcado como base)"><i class="fa fa-home"></i> BASE</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td><?php echo htmlspecialchars(strval(db($b, 'empr_tx_nome', '-'))); ?></td>
                                 <td><?php echo htmlspecialchars(strval(db($b, 'diba_tx_latitude', ''))); ?></td>
                                 <td><?php echo htmlspecialchars(strval(db($b, 'diba_tx_longitude', ''))); ?></td>
@@ -270,11 +344,26 @@ cabecalho("Bases para Diarias");
                                         data-latitude="<?php echo htmlspecialchars(strval(db($b, 'diba_tx_latitude', ''))); ?>"
                                         data-longitude="<?php echo htmlspecialchars(strval(db($b, 'diba_tx_longitude', ''))); ?>"
                                         data-raio="<?php echo intval(db($b, 'diba_nb_raio', 0)); ?>"
-                                        data-status="<?php echo htmlspecialchars(strval(db($b, 'diba_tx_status', 'ativo'))); ?>"><i class="fa fa-pencil"></i></button>
-                                    <form method="post" onsubmit="return confirm('Desativar esta base?');" style="display:inline-block;margin:0;">
+                                        data-status="<?php echo htmlspecialchars(strval(db($b, 'diba_tx_status', 'ativo'))); ?>"
+                                        data-ehbase="<?php echo $ehReferencia ? 'sim' : 'nao'; ?>"
+                                        data-poi="<?php echo $poiDaBase; ?>"><i class="fa fa-pencil"></i></button>
+                                    <?php if (strval(db($b, 'diba_tx_status', '')) === 'ativo'): ?>
+                                        <form method="post" onsubmit="return confirm('Desativar esta base?');" style="display:inline-block;margin:0;">
+                                            <input type="hidden" name="acao" value="desativar">
+                                            <input type="hidden" name="id" value="<?php echo intval(db($b, 'diba_nb_id', 0)); ?>">
+                                            <button class="btn btn-warning btn-xs" type="submit" title="Desativar"><i class="fa fa-toggle-off"></i></button>
+                                        </form>
+                                    <?php else: ?>
+                                        <form method="post" onsubmit="return confirm('Reativar esta base?');" style="display:inline-block;margin:0;">
+                                            <input type="hidden" name="acao" value="ativar">
+                                            <input type="hidden" name="id" value="<?php echo intval(db($b, 'diba_nb_id', 0)); ?>">
+                                            <button class="btn btn-success btn-xs" type="submit" title="Reativar"><i class="fa fa-toggle-on"></i></button>
+                                        </form>
+                                    <?php endif; ?>
+                                    <form method="post" onsubmit="return confirm('EXCLUIR DEFINITIVAMENTE esta base? Esta acao nao pode ser desfeita.');" style="display:inline-block;margin:0;">
                                         <input type="hidden" name="acao" value="excluir">
                                         <input type="hidden" name="id" value="<?php echo intval(db($b, 'diba_nb_id', 0)); ?>">
-                                        <button class="btn btn-danger btn-xs" type="submit" title="Desativar"><i class="fa fa-trash"></i></button>
+                                        <button class="btn btn-danger btn-xs" type="submit" title="Excluir definitivamente"><i class="fa fa-trash"></i></button>
                                     </form>
                                 </td>
                             </tr>
@@ -306,15 +395,43 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Confirma a troca de base quando o usuario marca "E base? = Sim" com um POI diferente do atual.
+    var formBase = document.querySelector('form');
+    if (formBase) {
+        formBase.addEventListener('submit', function(e) {
+            var ehbase = document.querySelector('select[name="ehbase"]');
+            var selPoi = document.getElementById('select_poi');
+            if (!ehbase || !selPoi) { return; }
+            if (ehbase.value === 'sim') {
+                var opt = selPoi.options[selPoi.selectedIndex];
+                var ehBaseAtual = opt ? opt.getAttribute('data-ehbase') === '1' : false;
+                if (!ehBaseAtual && selPoi.value) {
+                    var ok = confirm('Marcar este POI como base de referencia? A base atual sera desmarcada (apenas 1 base e permitida).');
+                    if (!ok) { e.preventDefault(); }
+                } else if (!selPoi.value) {
+                    alert('Selecione o POI que sera a base de referencia.');
+                    e.preventDefault();
+                }
+            }
+        });
+    }
+
     document.querySelectorAll('.btn_editar_base').forEach(function(btn) {
         btn.addEventListener('click', function() {
-            if (selPoi) { selPoi.value = ''; }
+            var poiEditar = btn.getAttribute('data-poi') || '0';
+            if (selPoi) {
+                selPoi.value = poiEditar; // seleciona o POI correspondente (se houver)
+            }
             document.getElementById('base_id').value = btn.getAttribute('data-id') || '0';
             document.querySelector('input[name="nome"]').value = btn.getAttribute('data-nome') || '';
             document.querySelector('select[name="empresa"]').value = btn.getAttribute('data-empresa') || '0';
             document.querySelector('input[name="latitude"]').value = btn.getAttribute('data-latitude') || '';
             document.querySelector('input[name="longitude"]').value = btn.getAttribute('data-longitude') || '';
             document.querySelector('select[name="status"]').value = btn.getAttribute('data-status') || 'ativo';
+            var ehbase = document.querySelector('select[name="ehbase"]');
+            if (ehbase) { ehbase.value = btn.getAttribute('data-ehbase') === 'sim' ? 'sim' : 'nao'; }
+            var poiIdField = document.getElementById('poi_id_field');
+            if (poiIdField) { poiIdField.value = poiEditar; }
             window.scrollTo({top: 0, behavior: 'smooth'});
         });
     });

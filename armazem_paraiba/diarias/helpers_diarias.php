@@ -149,8 +149,9 @@ function diar_parametrosPadrao() {
         'limite_km_almoco' => array('80', 'Limite de km (ida): ate = almoco R$40, acima = sem pernoite R$55'),
         'valor_diaria_cheia' => array('107.00', 'Valor padrao da diaria cheia usado no lancamento manual do gestor'),
         'distancia_pernoite_metros' => array('1000', 'Distancia (em metros) alem do raio da base para considerar pernoite. Ex.: raio 110 + 1000 = 1110m do centro = pernoite'),
+        'url_api_logistica' => array('https://logistica.integracao.techpsgj.com.br', 'URL base da API de logistica (GPS) para consultar posicoes quando as batidas nao tem coordenadas'),
         'autogerar_consumo' => array('sim', 'Gera automaticamente o consumo do dia anterior ao abrir a gestao (sim/nao)'),
-        'limite_dias_autogeracao' => array('7', 'Quantidade maxima de dias anteriores para gerar automaticamente')
+        'limite_dias_autogeracao' => array('0', 'Quantidade maxima de dias anteriores para gerar automaticamente (0 = desativado)')
     );
 }
 
@@ -784,16 +785,19 @@ function diar_pernoiteViaPonto($entidadeId, $data, $empresaId, $parametros = arr
 // Retorna array('pernoite' => ..., 'pico_km' => ...).
 function diar_pernoiteViaGPSFallback($entidadeId, $data, $empresaId, $parametros = array()) {
     $out = array('pernoite' => null, 'pico_km' => null);
+    $parametros = empty($parametros) ? diar_buscarParametros() : $parametros;
 
     $placa = diar_placaDoDia($entidadeId, $data);
     if ($placa === '') {
         return $out;
     }
 
-    // Tentar SQL direto (TECHPS_LOGISTICA_POS).
+    $posicoes = array();
+
+    // 1) Tentar SQL direto (TECHPS_LOGISTICA_POS no mesmo banco).
     if (diar_colunaExiste('TECHPS_LOGISTICA_POS', 'hodometro')) {
         $res = diar_query(
-            "SELECT latitude, longitude, hodometro
+            "SELECT latitude, longitude, hodometro, moduleTime
              FROM TECHPS_LOGISTICA_POS
              WHERE vehicle_plate = ? AND DATE(moduleTime) = ?
                AND latitude IS NOT NULL AND longitude IS NOT NULL
@@ -802,50 +806,150 @@ function diar_pernoiteViaGPSFallback($entidadeId, $data, $empresaId, $parametros
             array($placa, $data)
         );
         if ($res instanceof mysqli_result && mysqli_num_rows($res) > 0) {
-            $latBase = 0; $lonBase = 0; $raioBase = 1000;
-            $poiBase = diar_buscarPoiBase();
-            if ($poiBase !== null) {
-                $latBase = floatval($poiBase['poi_tx_latitude']);
-                $lonBase = floatval($poiBase['poi_tx_longitude']);
-                $raioBase = intval($poiBase['poi_nb_raio']);
-            }
-            if ($latBase == 0 && $lonBase == 0) { return $out; }
-
-            $picoMetros = 0.0;
-            $ultimaLat = 0; $ultimaLon = 0;
-            $hPrev = null;
             while ($row = mysqli_fetch_assoc($res)) {
-                $lat = floatval($row['latitude']);
-                $lon = floatval($row['longitude']);
-                if ($lat == 0 && $lon == 0) { continue; }
-                $dist = diar_distanciaMeters($latBase, $lonBase, $lat, $lon);
-                if ($dist > $picoMetros) { $picoMetros = $dist; }
-                $ultimaLat = $lat; $ultimaLon = $lon;
-                // Deltas de hodometro para km.
-                $h = floatval($row['hodometro']);
-                if ($h > 0 && $hPrev !== null && $h >= $hPrev) {
-                    $d = $h - $hPrev;
-                    if ($d <= 5000) {
-                        $out['pico_km'] = ($out['pico_km'] === null ? 0 : $out['pico_km']) + $d;
-                    }
-                }
-                $hPrev = $h;
+                $posicoes[] = array(
+                    'lat' => floatval($row['latitude']),
+                    'lon' => floatval($row['longitude']),
+                    'hodometro' => floatval($row['hodometro'])
+                );
             }
-            // Se nao acumulou km por hodometro, usar pico de distancia.
-            if ($out['pico_km'] === null) {
-                $out['pico_km'] = round($picoMetros / 1000, 2);
-            } else {
-                $out['pico_km'] = round($out['pico_km'], 2);
-            }
-            $distanciaPernoite = intval(diar_val($parametros, 'distancia_pernoite_metros', 1000));
-            $limiarPernoite = $raioBase + $distanciaPernoite;
-            $distUltima = diar_distanciaMeters($latBase, $lonBase, $ultimaLat, $ultimaLon);
-            $out['pernoite'] = ($distUltima > $limiarPernoite) ? 'sim' : 'nao';
-            return $out;
         }
     }
 
+    // 2) Tentar API externa de logistica (POST /data1 — mesmo fluxo do logistica.js).
+    if (empty($posicoes)) {
+        $apiUrl = rtrim(strval(diar_val($parametros, 'url_api_logistica', '')), '/');
+        if ($apiUrl !== '') {
+            $posicoes = diar_buscarPosicoesApi($apiUrl, $placa, $data);
+        }
+    }
+
+    if (empty($posicoes)) {
+        return $out;
+    }
+
+    // Buscar base de referencia (POI base ou diaria_base).
+    $latBase = 0; $lonBase = 0; $raioBase = 1000;
+    $poiBase = diar_buscarPoiBase();
+    if ($poiBase !== null) {
+        $latBase = floatval($poiBase['poi_tx_latitude']);
+        $lonBase = floatval($poiBase['poi_tx_longitude']);
+        $raioBase = intval($poiBase['poi_nb_raio']);
+    } else {
+        $bases = diar_buscarBases(intval($empresaId));
+        if (!empty($bases)) {
+            $base = $bases[0];
+            $latBase = floatval(diar_val($base, 'diba_tx_latitude', 0));
+            $lonBase = floatval(diar_val($base, 'diba_tx_longitude', 0));
+            $raioBase = intval(diar_val($base, 'diba_nb_raio', 1000));
+        }
+    }
+    if ($latBase == 0 && $lonBase == 0) {
+        return $out;
+    }
+
+    // Calcular pico (km ida) e pernoite a partir das posicoes.
+    $picoMetros = 0.0;
+    $ultimaLat = 0; $ultimaLon = 0;
+    $hPrev = null;
+    $kmHodometro = null;
+    foreach ($posicoes as $p) {
+        $lat = floatval(diar_val($p, 'lat', 0));
+        $lon = floatval(diar_val($p, 'lon', 0));
+        if ($lat == 0 && $lon == 0) { continue; }
+        $dist = diar_distanciaMeters($latBase, $lonBase, $lat, $lon);
+        if ($dist > $picoMetros) { $picoMetros = $dist; }
+        $ultimaLat = $lat; $ultimaLon = $lon;
+        // Deltas de hodometro para km. O hodometro da API vem em metros (ex.: 132558925 = 132558 km).
+        $h = floatval(diar_val($p, 'hodometro', 0));
+        if ($h > 100000) { $h = $h / 1000; }
+        if ($h > 0 && $hPrev !== null && $h >= $hPrev) {
+            $d = $h - $hPrev;
+            if ($d <= 5000) {
+                $kmHodometro = ($kmHodometro === null ? 0 : $kmHodometro) + $d;
+            }
+        }
+        $hPrev = $h;
+    }
+
+    // Se nao acumulou km por hodometro, usar pico de distancia.
+    $out['pico_km'] = ($kmHodometro !== null)
+        ? round($kmHodometro, 2)
+        : round($picoMetros / 1000, 2);
+
+    // Pernoite: ultima posicao alem do limiar (raio + distancia configurada).
+    $distanciaPernoite = intval(diar_val($parametros, 'distancia_pernoite_metros', 1000));
+    $limiarPernoite = $raioBase + $distanciaPernoite;
+    $distUltima = diar_distanciaMeters($latBase, $lonBase, $ultimaLat, $ultimaLon);
+    $out['pernoite'] = ($distUltima > $limiarPernoite) ? 'sim' : 'nao';
+
     return $out;
+}
+
+// Busca posicoes da placa no dia via API externa de logistica (POST /data1).
+function diar_buscarPosicoesApi($apiUrl, $placa, $data) {
+    $placa = trim(strtoupper(strval($placa)));
+    $data = diar_dataParaSql($data);
+    if ($placa === '' || $data === '' || $apiUrl === '') {
+        return array();
+    }
+
+    $payload = json_encode(array(
+        'plate' => $placa,
+        'date_start' => $data.' 00:00:00',
+        'date_end' => $data.' 23:59:59',
+        'speed' => 99
+    ));
+
+    $resposta = false;
+    if (function_exists('curl_init')) {
+        $ch = curl_init($apiUrl.'/data1');
+        curl_setopt_array($ch, array(
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 20,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_HTTPHEADER => array('Content-Type: application/json')
+        ));
+        $resposta = curl_exec($ch);
+        curl_close($ch);
+    } else {
+        $ctx = stream_context_create(array(
+            'http' => array(
+                'method' => 'POST',
+                'header' => "Content-Type: application/json\r\n",
+                'content' => $payload,
+                'timeout' => 20
+            )
+        ));
+        $resposta = @file_get_contents($apiUrl.'/data1', false, $ctx);
+    }
+
+    if ($resposta === false || $resposta === '') {
+        return array();
+    }
+    $dados = json_decode($resposta, true);
+    if (!is_array($dados)) {
+        return array();
+    }
+    // Se a API retornou {ok:false,...}, nao ha dados utilizaveis.
+    if (isset($dados['ok']) && $dados['ok'] === false) {
+        return array();
+    }
+
+    $posicoes = array();
+    foreach ($dados as $row) {
+        if (!is_array($row)) { continue; }
+        $lat = floatval(diar_val($row, 'latitude', 0));
+        $lon = floatval(diar_val($row, 'longitude', 0));
+        if ($lat == 0 && $lon == 0) { continue; }
+        $posicoes[] = array(
+            'lat' => $lat,
+            'lon' => $lon,
+            'hodometro' => floatval(diar_val($row, 'hodometro', 0))
+        );
+    }
+    return $posicoes;
 }
 function diar_distanciaBatidasDia($entidadeId, $data) {
     $entidadeId = intval($entidadeId);
@@ -1046,9 +1150,12 @@ function diar_gerarConsumosPendentes($entidadeId, $dataFim = '', $diasRetroativo
     if (strtolower(trim(strval(diar_val($parametros, 'autogerar_consumo', 'sim')))) !== 'sim') {
         return array('gerados' => 0, 'pulados' => 0, 'motivos' => array());
     }
-    // Se nao especificado, usar o limite configurado nos parametros.
+    // Se nao especificado, usar o limite configurado nos parametros (0 = desativado).
     if ($diasRetroativos <= 0) {
-        $diasRetroativos = max(1, intval(diar_val($parametros, 'limite_dias_autogeracao', '7')));
+        $diasRetroativos = intval(diar_val($parametros, 'limite_dias_autogeracao', '0'));
+    }
+    if ($diasRetroativos <= 0) {
+        return array('gerados' => 0, 'pulados' => 0, 'motivos' => array());
     }
     $idUser = intval(diar_sessao('user_nb_id', 0));
     $dataFim = ($dataFim === '') ? date('Y-m-d') : diar_dataParaSql($dataFim);

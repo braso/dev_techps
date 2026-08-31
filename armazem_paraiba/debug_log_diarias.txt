@@ -139,3 +139,25 @@ Stack trace:
 2026-08-25 10:38:52 | Consumos automaticos gerados para entidade 27: 2
 2026-08-25 10:38:52 | Consumos automaticos gerados para entidade 28: 1
 2026-08-25 10:38:52 | Processamento automatico na abertura: 16 consumo(s) gerados
+2026-08-31 10:50:32 | Base 6 reativada
+2026-08-31 10:50:53 | Base 6 atualizada: Transcopel Transportes
+2026-08-31 10:50:53 | POI 12 marcado como base
+2026-08-31 10:51:08 | Limpeza de registros futuros (>{}) removidos, entidade=0
+2026-08-31 10:51:11 | Limpeza de registros futuros (>{}) removidos, entidade=0
+2026-08-31 10:51:47 | Deposito lancado: entidade 26, data 2026-08-31, dias 6, valor 642
+2026-08-31 10:51:47 | Limpeza de registros futuros (>{}) removidos, entidade=0
+2026-08-31 10:52:02 | Limpeza de registros futuros (>{}) removidos, entidade=0
+2026-08-31 10:52:05 | Limpeza de registros futuros (>{}) removidos, entidade=0
+2026-08-31 10:52:08 | Limpeza de registros futuros (>{}) removidos, entidade=0
+2026-08-31 10:52:09 | Limpeza de registros futuros (>{}) removidos, entidade=0
+2026-08-31 10:52:12 | Limpeza de registros futuros (>{}) removidos, entidade=0
+2026-08-31 10:52:13 | Limpeza de registros futuros (>{}) removidos, entidade=0
+2026-08-31 10:52:33 | Deposito lancado: entidade 2, data 2026-08-31, dias 6, valor 642
+2026-08-31 10:52:33 | Limpeza de registros futuros (>{}) removidos, entidade=0
+2026-08-31 10:52:37 | Limpeza de registros futuros (>{}) removidos, entidade=0
+2026-08-31 10:52:57 | Deposito lancado: entidade 13, data 2026-08-31, dias 6, valor 642
+2026-08-31 10:52:57 | Limpeza de registros futuros (>{}) removidos, entidade=0
+2026-08-31 10:54:20 | Limpeza de registros futuros (>{}) removidos, entidade=0
+2026-08-31 10:54:26 | Limpeza de registros futuros (>{}) removidos, entidade=0
+2026-08-31 10:54:34 | Deposito lancado: entidade 23, data 2026-08-31, dias 6, valor 642
+2026-08-31 10:54:34 | Limpeza de registros futuros (>{}) removidos, entidade=0
