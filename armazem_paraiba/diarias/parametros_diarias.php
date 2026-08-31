@@ -26,7 +26,8 @@ function dp_tipoCampo($chave) {
         'limite_km_almoco' => 'inteiro',
         'distancia_pernoite_metros' => 'inteiro',
         'autogerar_consumo' => 'simnao',
-        'limite_dias_autogeracao' => 'inteiro'
+        'limite_dias_autogeracao' => 'inteiro',
+        'url_api_logistica' => 'texto'
     );
     return isset($tipos[$chave]) ? $tipos[$chave] : 'moeda';
 }
@@ -44,6 +45,10 @@ function dp_salvarParametros() {
         if (!isset($_POST[$chave])) {
             continue;
         }
+        // Campo somente leitura (configurado pelo sistema).
+        if ($chave === 'url_api_logistica') {
+            continue;
+        }
         $valor = trim(strval($_POST[$chave]));
         $tipo = dp_tipoCampo($chave);
 
@@ -53,6 +58,9 @@ function dp_salvarParametros() {
                 break;
             case 'simnao':
                 $valor = ($valor === 'sim') ? 'sim' : 'nao';
+                break;
+            case 'texto':
+                $valor = trim(strval($valor));
                 break;
             default:
                 $valor = ($valor === '') ? '0' : strval(max(0, diar_parseValorMonetario($valor)));
@@ -141,7 +149,8 @@ cabecalho("Parametros de Diarias");
                                                value="<?php echo htmlspecialchars($valorAtual); ?>">
                                     <?php elseif ($tipoCampo === 'texto'): ?>
                                         <input type="text" class="form-control input-sm" name="<?php echo htmlspecialchars($chave); ?>"
-                                               value="<?php echo htmlspecialchars($valorAtual); ?>" placeholder="http://servidor:porta">
+                                               value="<?php echo htmlspecialchars($valorAtual); ?>" placeholder="http://servidor:porta"
+                                               <?php echo ($chave === 'url_api_logistica') ? 'readonly title="Campo somente leitura — configurado pelo sistema"' : ''; ?>>
                                     <?php else: ?>
                                         <?php
                                             $opcoes = array();
