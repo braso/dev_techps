@@ -87,11 +87,11 @@
 		$novo["trei_tx_tipo_usuario_permitido"] = !empty($perfisPermitidos) ? json_encode($perfisPermitidos) : null;
 
 		if (!empty($_POST["data_publicacao"])) {
-			$dt = DateTime::createFromFormat('d/m/Y', $_POST["data_publicacao"]);
+			$dt = DateTime::createFromFormat('Y-m-d', $_POST["data_publicacao"]) ?: DateTime::createFromFormat('d/m/Y', $_POST["data_publicacao"]);
 			$novo["trei_dt_data_publicacao"] = $dt ? $dt->format('Y-m-d') : null;
 		}
 		if (!empty($_POST["data_liberacao"])) {
-			$dt = DateTime::createFromFormat('d/m/Y', $_POST["data_liberacao"]);
+			$dt = DateTime::createFromFormat('Y-m-d', $_POST["data_liberacao"]) ?: DateTime::createFromFormat('d/m/Y', $_POST["data_liberacao"]);
 			$novo["trei_dt_data_liberacao"] = $dt ? $dt->format('Y-m-d') : null;
 		}
 
@@ -141,30 +141,21 @@
 			}
 		}
 
-		// Bloqueios individuais: usuários dos perfis selecionados que foram desmarcados
+		// Bloqueios individuais: apenas usuários da origem (renderizados na aba Atribuições) que foram desmarcados
+		// A lista de origem vem do formulário - se ela não estiver presente, nenhum bloqueio é criado (todos têm acesso)
 		query("DELETE FROM treinamento_bloqueio WHERE trebl_nb_treinamento_id = ?", "i", [$treinamentoId]);
-		if (!empty($perfisPermitidos)) {
-			// Todos os usuários dos perfis selecionados
-			$placeholders = implode(",", array_fill(0, count($perfisPermitidos), "?"));
-			$rsPerfisUsers = query(
-				"SELECT DISTINCT u.user_nb_id FROM user u
-				 JOIN usuario_perfil up ON up.user_nb_id = u.user_nb_id
-				 WHERE up.ativo = 1 AND u.user_tx_status = 'ativo'
-				 AND up.perfil_nb_id IN ({$placeholders})",
-				str_repeat("i", count($perfisPermitidos)),
-				$perfisPermitidos
-			);
-			$usuariosMarcados = $_POST["usuarios_atribuidos"] ?? [];
-			$usuariosMarcados = array_map('intval', $usuariosMarcados);
-			while ($rsPerfisUsers && ($row = mysqli_fetch_assoc($rsPerfisUsers))) {
-				$userId = (int)$row["user_nb_id"];
-				if (!in_array($userId, $usuariosMarcados)) {
-					query(
-						"INSERT IGNORE INTO treinamento_bloqueio (trebl_nb_treinamento_id, trebl_nb_usuario_id, trebl_dt_data_cadastro) VALUES (?, ?, ?)",
-						"iis",
-						[$treinamentoId, $userId, date("Y-m-d H:i:s")]
-					);
-				}
+		$usuariosOrigem = $_POST["usuarios_origem"] ?? [];
+		$usuariosMarcados = $_POST["usuarios_atribuidos"] ?? [];
+		$usuariosOrigem = array_map('intval', $usuariosOrigem);
+		$usuariosMarcados = array_map('intval', $usuariosMarcados);
+		if (!empty($usuariosOrigem)) {
+			$bloquearIds = array_diff($usuariosOrigem, $usuariosMarcados);
+			foreach ($bloquearIds as $userId) {
+				query(
+					"INSERT IGNORE INTO treinamento_bloqueio (trebl_nb_treinamento_id, trebl_nb_usuario_id, trebl_dt_data_cadastro) VALUES (?, ?, ?)",
+					"iis",
+					[$treinamentoId, $userId, date("Y-m-d H:i:s")]
+				);
 			}
 		}
 
@@ -342,8 +333,8 @@
 		$cargaHoraria = sprintf("%02d:%02d", floor($cargaHoraria / 60), $cargaHoraria % 60);
 		$diasValidade = $dados["trei_nb_dias_validade"] ?? 365;
 		$thumbnail = $dados["trei_tx_thumbnail"] ?? "";
-		$dataPublicacao = !empty($dados["trei_dt_data_publicacao"]) ? date("d/m/Y", strtotime($dados["trei_dt_data_publicacao"])) : date("d/m/Y");
-		$dataLiberacao = !empty($dados["trei_dt_data_liberacao"]) ? date("d/m/Y", strtotime($dados["trei_dt_data_liberacao"])) : date("d/m/Y");
+		$dataPublicacao = !empty($dados["trei_dt_data_publicacao"]) ? date("Y-m-d", strtotime($dados["trei_dt_data_publicacao"])) : date("Y-m-d");
+		$dataLiberacao = !empty($dados["trei_dt_data_liberacao"]) ? date("Y-m-d", strtotime($dados["trei_dt_data_liberacao"])) : date("Y-m-d");
 		$obrigatorio = $dados["trei_nb_obrigatorio"] ?? 0;
 		$status = $dados["trei_tx_status"] ?? "ativo";
 		$notaMinima = $dados["trei_nb_nota_minima_aprovacao"] ?? 70;
@@ -536,6 +527,7 @@
 												echo "<div class='col-md-4 col-sm-6'>";
 												echo "<label style='font-weight:normal;cursor:pointer;'>";
 												echo "<input type='checkbox' name='usuarios_atribuidos[]' value='{$u["user_nb_id"]}'{$checked}> ";
+												echo "<input type='hidden' name='usuarios_origem[]' value='{$u["user_nb_id"]}'>";
 												echo htmlspecialchars($u["user_tx_nome"]);
 												echo "</label>";
 												echo "</div>";
@@ -604,6 +596,7 @@
 							html += '<div class=\"col-md-4 col-sm-6\">' +
 								'<label style=\"font-weight:normal;cursor:pointer;\">' +
 								'<input type=\"checkbox\" name=\"usuarios_atribuidos[]\" value=\"' + u.user_nb_id + '\"' + checked + '> ' +
+								'<input type=\"hidden\" name=\"usuarios_origem[]\" value=\"' + u.user_nb_id + '\">' +
 								$('<span>').text(u.user_tx_nome).html() +
 								'</label></div>';
 						});
@@ -702,9 +695,20 @@
 						window.location.href = 'cadastro_treinamento.php?acao_excluir=' + id;
 					}
 				});
+			});
+			$(document).on('click', '.btn-acompanhar-treinamento', function(event){
+				event.preventDefault();
+				var row = $(this).closest('tr');
+				var id = row.attr('data-row-id');
+				if(!id){
+					id = row.find('td').first().text().trim();
+				}
+				if(!id) return;
+				window.location.href = 'treinamento_acompanhamento.php?id=' + id;
 			});";
 
 		$gridFields["actions"] = [
+			"<spam class='btn-acompanhar-treinamento' style='cursor:pointer;color:#27ae60;margin-right:5px;' title='Acompanhamento'><i class='fa fa-users'></i></spam>",
 			"<spam class='btn-editar-treinamento' style='cursor:pointer;color:#337ab7;margin-right:5px;' title='Alterar'><i class='fa fa-pencil'></i></spam>",
 			"<spam class='btn-excluir-treinamento' style='cursor:pointer;color:#d9534f;' title='Excluir'><i class='fa fa-trash'></i></spam>"
 		];
