@@ -65,7 +65,7 @@
     $__fInicio  = trim(strval($_GET["data_inicio"] ?? ""));
     $__fFim     = trim(strval($_GET["data_fim"] ?? ""));
 
-    $__statusListagem = ["aberto", "em_analise", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi", "teste_interno"];
+    $__statusListagem = ["aberto", "em_analise", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi", "teste_interno", "aguardando_atualizacao"];
 
     $__queryFiltro = [];
     if ($__fEmpresa !== "") $__queryFiltro["empresa"] = $__fEmpresa;
@@ -100,6 +100,7 @@
         "reaberto"           => "Reaberto",
         "encaminhado_ssi"    => "Encaminhado a SSI",
         "teste_interno"      => "Teste Interno",
+        "aguardando_atualizacao" => "Aguardando Atualização",
     ];
     $__tipoLabel = [
         "duvida"           => "Dúvida operacional",
@@ -374,7 +375,8 @@
         var mapa = {
             aberto: "#f6c23e", em_analise: "#8e44ad", em_andamento: "#36b9cc",
             aguardando_cliente: "#4e73df", resolvido: "#1cc88a", cancelado: "#7f8c8d",
-            reaberto: "#f6c23e", encaminhado_ssi: "#e74a3b", teste_interno: "#16a085"
+            reaberto: "#f6c23e", encaminhado_ssi: "#e74a3b", teste_interno: "#16a085",
+            aguardando_atualizacao: "#e67e22"
         };
         return mapa[status] || "#95a5a6";
     }

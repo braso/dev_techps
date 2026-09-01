@@ -8,6 +8,7 @@
 		header("Expires: 0");
 
 
+	ini_set('session.gc_maxlifetime', 12*60*60); //Mesmo tempo de vida do conecta.php
 	$started = session_start();
 	
 	include_once "load_env.php";

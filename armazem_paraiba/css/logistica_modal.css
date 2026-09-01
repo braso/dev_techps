@@ -15,18 +15,21 @@ img{
 
 
 .container {
-    width: 1200px;
+    width: 96%;
+    max-width: 1700px;
     background-color: #fff;
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    margin-top: 20px;
+    margin: 20px auto 0;
 }
 
     .form_title {
     display: flex;
     align-items: center; /* Alinha verticalmente ao centro */
     justify-content: flex-start; /* Alinha horizontalmente ao início */
+    gap: 10px;
+    flex-wrap: wrap; /* Em telas pequenas o botão desce em vez de espremer o título */
     padding: 10px 0;
     top: 0; /* Define a distância do topo da tela */
     background-color: #fff; /* Garante que o fundo do elemento não fique transparente */
@@ -198,9 +201,9 @@ h2 {
 
 
 .table {
-    width: 95%;
+    width: 98%;
     border-collapse: collapse; /* Remove espaços entre células */
-    font-size: 10px; /* Tamanho da fonte menor para compactar o conteúdo */
+    font-size: 11px; /* Tamanho da fonte menor para compactar o conteúdo */
     margin: 0 auto; /* Centraliza a tabela horizontalmente */
 }
 

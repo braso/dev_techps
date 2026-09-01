@@ -4,7 +4,9 @@
 		error_reporting(E_ALL);
 	//*/
     if(empty(session_id())){
-        $lifetime = 30*60;
+        //Sessão sem limite prático de inatividade: o logout por inatividade fica só na
+        //batida_ponto.php (timer de 15s no próprio HTML da tela).
+        $lifetime = 12*60*60;
         ini_set('session.gc_maxlifetime', $lifetime);
     }
     if(empty(session_id())){
@@ -22,15 +24,13 @@
 	
 	// session_cache_limiter("public, no-store");
 	
-	$_SESSION['last_activity'] = time();
 	if(isset($_SESSION['user_tx_login']) && !isset($_SESSION['domain'])){
 		$_SESSION['domain'] = $CONTEX['path'];
 	}
-	
+
 	if(!isset($interno) && !isset($_POST['interno'])){
 		if(
-			(empty($_SESSION['last_activity']) || (time()-(int)$_SESSION['last_activity'] > (int)ini_get('session.gc_maxlifetime')))	//Se a sessão expirou
-			|| (empty($_SESSION['domain']) || $_SESSION['domain'] != $CONTEX['path'])													//ou se o login é relacionado a outro domínio
+			(empty($_SESSION['domain']) || $_SESSION['domain'] != $CONTEX['path'])	//Se não há login ou o login é relacionado a outro domínio
 		){
 			echo 
 				"<form action='".$_ENV["URL_BASE"].$CONTEX['path']."/logout.php' name='form_logout' method='post'>

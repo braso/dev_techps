@@ -931,7 +931,8 @@ const SUPORTE_STATUS = {
     cancelado:            "Cancelado",
     reaberto:             "Reaberto",
     encaminhado_ssi:      "Encaminhado a SSI",
-    teste_interno:        "Teste Interno"
+    teste_interno:        "Teste Interno",
+    aguardando_atualizacao: "Aguardando Atualização"
 };
 
 const SUPORTE_TIPOS = {
@@ -1150,7 +1151,7 @@ function criarTabelasSuporte() {
             responsavel_email VARCHAR(190) NOT NULL DEFAULT '',
             pagina_url VARCHAR(500) NOT NULL DEFAULT '',
             descricao TEXT NOT NULL,
-            status ENUM('aberto','em_analise','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi','teste_interno') NOT NULL DEFAULT 'aberto',
+            status ENUM('aberto','em_analise','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi','teste_interno','aguardando_atualizacao') NOT NULL DEFAULT 'aberto',
             tipo ENUM('duvida','sugestao','bug') DEFAULT NULL,
             prioridade ENUM('baixa','media','alta','urgente') NOT NULL DEFAULT 'media',
             ssi_codigo VARCHAR(30) DEFAULT NULL,
@@ -1246,7 +1247,7 @@ function migrarTabelasSuporte() {
         "ALTER TABLE suporte_ticket ADD COLUMN atendente_nome VARCHAR(150) DEFAULT NULL",
         "ALTER TABLE suporte_ticket ADD COLUMN aceito_em DATETIME DEFAULT NULL",
         "ALTER TABLE suporte_ticket ADD COLUMN fechado_em DATETIME DEFAULT NULL",
-        "ALTER TABLE suporte_ticket MODIFY status ENUM('aberto','em_analise','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi','teste_interno') NOT NULL DEFAULT 'aberto'",
+        "ALTER TABLE suporte_ticket MODIFY status ENUM('aberto','em_analise','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi','teste_interno','aguardando_atualizacao') NOT NULL DEFAULT 'aberto'",
         "ALTER TABLE suporte_ticket ADD COLUMN setor_id BIGINT UNSIGNED DEFAULT NULL",
         "ALTER TABLE suporte_ticket ADD COLUMN setor_nome VARCHAR(150) DEFAULT NULL",
         "ALTER TABLE suporte_ticket ADD COLUMN prioridade ENUM('baixa','media','alta','urgente') NOT NULL DEFAULT 'media'",
@@ -1742,7 +1743,7 @@ app.get("/suporte/dashboard", exigirAdminSuporte, async (req, res) => {
             slaHorasPorPrioridade[p] = /^\d+$/.test(bruto) ? parseInt(bruto, 10) : null;
         }
 
-        const STATUS_ABERTOS = new Set(["aberto", "em_analise", "em_andamento", "aguardando_cliente", "reaberto", "encaminhado_ssi", "teste_interno"]);
+        const STATUS_ABERTOS = new Set(["aberto", "em_analise", "em_andamento", "aguardando_cliente", "reaberto", "encaminhado_ssi", "teste_interno", "aguardando_atualizacao"]);
 
         const normalizarPagina = (url) => {
             let s = String(url || "").trim();
@@ -2220,6 +2221,8 @@ app.post("/suporte/tickets/:id/status", exigirAdminSuporte, async (req, res) => 
                 avisos = "O chamado foi encaminhado ao setor de suporte interno (SSI " + novoTicket.ssi_codigo + "). " + (novoTicket.ssi_prioridade === "urgente" ? "Tratamento prioritário — solução urgente em produção." : "Será resolvido na próxima atualização do sistema.");
             } else if (status === "teste_interno") {
                 avisos = "A correção já foi desenvolvida e está em teste interno pela nossa equipe antes de ser liberada.";
+            } else if (status === "aguardando_atualizacao") {
+                avisos = "A correção/melhoria do seu chamado já foi desenvolvida, testada e aprovada — está aguardando apenas a próxima atualização do sistema em produção. Assim que a atualização for publicada, o chamado será concluído.";
             }
             notificarChamado(novoTicket, titulo, htmlEmailSuporte(novoTicket, titulo, avisos));
         }

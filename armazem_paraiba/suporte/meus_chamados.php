@@ -79,6 +79,7 @@
         "reaberto"           => '<span class="label label-warning">Reaberto</span>',
         "encaminhado_ssi"    => '<span class="label label-danger">Encaminhado a SSI</span>',
         "teste_interno"      => '<span class="label label-default" style="background:#16a085;">Teste Interno</span>',
+        "aguardando_atualizacao" => '<span class="label label-default" style="background:#e67e22;">Aguardando Atualização</span>',
     ];
 
     function suporte_meus_badge(array $labels, string $status): string {

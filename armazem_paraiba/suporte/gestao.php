@@ -97,7 +97,7 @@
             }
         } elseif ($acao === "status" && $id > 0) {
             $novoStatus = $_POST["status"] ?? "";
-            $statusPermitidos = ["aberto", "em_analise", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi", "teste_interno"];
+            $statusPermitidos = ["aberto", "em_analise", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi", "teste_interno", "aguardando_atualizacao"];
             if (in_array($novoStatus, $statusPermitidos, true)) {
                 $post = ["status" => $novoStatus];
                 if ($novoStatus === "encaminhado_ssi") {
@@ -190,7 +190,10 @@
                     <strong>Aberto → Em Análise → Em Andamento → Concluído</strong> (os status especiais — Aguardando cliente, Reaberto e Cancelado — continuam disponíveis para os casos que precisarem).
                     <br><br>
                     Chamados classificados como <strong>Bug de sistema</strong> e encaminhados à SSI seguem um fluxo próprio:
-                    <strong>Encaminhado a SSI → Em Andamento → Teste Interno → Concluído</strong>. Não existe uma "SSI" separada para fechar — o código SSI é só uma etiqueta gravada no próprio chamado, então concluir o chamado já encerra a SSI junto.
+                    <strong>Encaminhado a SSI → Em Andamento → Teste Interno → Aguardando Atualização → Concluído</strong>. Não existe uma "SSI" separada para fechar — o código SSI é só uma etiqueta gravada no próprio chamado, então concluir o chamado já encerra a SSI junto.
+                    <br><br>
+                    <strong>Aguardando Atualização</strong> indica que a correção/melhoria já foi desenvolvida, testada e aprovada, e está apenas esperando a próxima atualização do sistema subir para produção — os envolvidos são avisados por e-mail automaticamente.
+                    Procedimento de fechamento: quem finaliza o atendimento deve conferir tudo que está subindo na atualização de sistema e verificar se as correções/melhorias deste chamado realmente subiram, antes de marcar como <strong>Concluído</strong>.
                 </div>
 
                 <form method="post">
@@ -276,6 +279,7 @@
                 "reaberto"           => ['<span class="label label-warning">Reaberto</span>'],
                 "encaminhado_ssi"    => ['<span class="label label-danger">Encaminhado a SSI</span>'],
                 "teste_interno"      => ['<span class="label label-default" style="background:#16a085;">Teste Interno</span>'],
+                "aguardando_atualizacao" => ['<span class="label label-default" style="background:#e67e22;">Aguardando Atualização</span>'],
             ];
             $__badge = $__statusMap[$__status][0] ?? '<span class="label label-default">' . htmlspecialchars($__status) . '</span>';
             $__tipoMap = ["duvida" => "Dúvida operacional", "sugestao" => "Sugestão", "bug" => "Bug de sistema"];
@@ -372,11 +376,18 @@
                     </form>
                 <?php endif; ?>
                 <?php if ($__status !== "resolvido" && $__status !== "cancelado"): ?>
+                    <?php
+                        // Procedimento de fechamento: saindo de "Aguardando Atualização", quem finaliza
+                        // deve conferir o que subiu na atualização antes de concluir o chamado.
+                        $__confirmConcluir = $__status === "aguardando_atualizacao"
+                            ? "A atualização já subiu para produção? Confira tudo que subiu na atualização de sistema e confirme que a correção/melhoria deste chamado está no ar antes de concluir."
+                            : "Marcar como concluído?";
+                    ?>
                     <form method="post">
                         <input type="hidden" name="sup_acao" value="status" />
                         <input type="hidden" name="id" value="<?= $__verId ?>" />
                         <input type="hidden" name="status" value="resolvido" />
-                        <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Marcar como concluído?');"><i class="fa fa-check"></i> Concluído</button>
+                        <button type="submit" class="btn btn-success btn-sm" onclick="return confirm(<?= htmlspecialchars(json_encode($__confirmConcluir), ENT_QUOTES) ?>);"><i class="fa fa-check"></i> Concluído</button>
                     </form>
                 <?php endif; ?>
                 <?php if ($__status !== "resolvido" && $__status !== "cancelado"): ?>
@@ -425,8 +436,22 @@
                     <form method="post" style="border-left:1px solid #ddd;padding-left:12px;">
                         <input type="hidden" name="sup_acao" value="status" />
                         <input type="hidden" name="id" value="<?= $__verId ?>" />
+                        <input type="hidden" name="status" value="aguardando_atualizacao" />
+                        <button type="submit" class="btn btn-default btn-sm" style="border-color:#e67e22;color:#e67e22;" onclick="return confirm('Aprovado no teste interno — marcar como Aguardando Atualização? Os envolvidos serão avisados de que a correção espera a próxima atualização em produção.');"><i class="fa fa-cloud-upload"></i> Aprovado — aguardar atualização</button>
+                    </form>
+                    <form method="post">
+                        <input type="hidden" name="sup_acao" value="status" />
+                        <input type="hidden" name="id" value="<?= $__verId ?>" />
                         <input type="hidden" name="status" value="em_andamento" />
                         <button type="submit" class="btn btn-default btn-sm" onclick="return confirm('Reprovado no teste interno — voltar para Em Andamento?');"><i class="fa fa-undo"></i> Reprovado no teste, voltar</button>
+                    </form>
+                <?php endif; ?>
+                <?php if ($__status === "aguardando_atualizacao"): ?>
+                    <form method="post" style="border-left:1px solid #ddd;padding-left:12px;">
+                        <input type="hidden" name="sup_acao" value="status" />
+                        <input type="hidden" name="id" value="<?= $__verId ?>" />
+                        <input type="hidden" name="status" value="em_andamento" />
+                        <button type="submit" class="btn btn-default btn-sm" onclick="return confirm('A correção não subiu na atualização — voltar para Em Andamento?');"><i class="fa fa-undo"></i> Não subiu, voltar</button>
                     </form>
                 <?php endif; ?>
             </div>
@@ -481,7 +506,7 @@
     $__fFim     = trim(strval($_GET["data_fim"] ?? ""));
     $__fPagina  = max((int) ($_GET["pagina"] ?? 1), 1);
 
-    $__statusListagem = ["aberto", "em_analise", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi", "teste_interno"];
+    $__statusListagem = ["aberto", "em_analise", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi", "teste_interno", "aguardando_atualizacao"];
     $__prioridadeListagem = ["baixa", "media", "alta", "urgente"];
 
     $__queryFiltro = ["pagina" => $__fPagina, "limit" => 25];
@@ -542,6 +567,7 @@
                             <option value="reaberto" <?= ($__fStatus === "reaberto") ? "selected" : "" ?>>Reaberto</option>
                             <option value="encaminhado_ssi" <?= ($__fStatus === "encaminhado_ssi") ? "selected" : "" ?>>Encaminhado a SSI</option>
                             <option value="teste_interno" <?= ($__fStatus === "teste_interno") ? "selected" : "" ?>>Teste Interno</option>
+                            <option value="aguardando_atualizacao" <?= ($__fStatus === "aguardando_atualizacao") ? "selected" : "" ?>>Aguardando Atualização</option>
                         </select>
                     </div>
                     <div class="form-group" style="margin-right:10px;">
@@ -602,6 +628,7 @@
                                     "reaberto"           => '<span class="label label-warning">Reaberto</span>',
                                     "encaminhado_ssi"    => '<span class="label label-danger">Encaminhado a SSI</span>',
                                     "teste_interno"      => '<span class="label label-default" style="background:#16a085;">Teste Interno</span>',
+                                    "aguardando_atualizacao" => '<span class="label label-default" style="background:#e67e22;">Aguardando Atualização</span>',
                                 ];
                                 $__badgeT = $__badgeMap[$__statusT] ?? '<span class="label label-default">' . htmlspecialchars($__statusT) . '</span>';
                                 $__tipoLabel = ["duvida" => "Dúvida", "sugestao" => "Sugestão", "bug" => "Bug"][strval($__t["tipo"] ?? "")] ?? "";
