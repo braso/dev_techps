@@ -4,7 +4,8 @@ ini_set("display_errors", 1);
 error_reporting(E_ALL);
 
 if(empty(session_id())){
-    $lifetime = 30*60;
+    //Mesmo tempo de vida do conecta.php principal: sem logout por inatividade fora da batida_ponto.php.
+    $lifetime = 12*60*60;
     ini_set('session.gc_maxlifetime', $lifetime);
 }
 if(empty(session_id())){

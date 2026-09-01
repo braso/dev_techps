@@ -68,7 +68,7 @@
     $__fPagina  = max((int) ($_GET["pagina"] ?? 1), 1);
 
     $__queryFiltro = ["empresa" => $__fEmpresa, "pagina" => $__fPagina, "limit" => 25];
-    $__statusPermitidos = ["aberto", "em_analise", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi", "teste_interno"];
+    $__statusPermitidos = ["aberto", "em_analise", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi", "teste_interno", "aguardando_atualizacao"];
     if (in_array($__fStatus, $__statusPermitidos, true)) $__queryFiltro["status"] = $__fStatus;
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $__fInicio)) $__queryFiltro["data_inicio"] = $__fInicio;
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $__fFim)) $__queryFiltro["data_fim"] = $__fFim;
@@ -129,6 +129,7 @@
                             <option value="reaberto" <?= ($__fStatus === "reaberto") ? "selected" : "" ?>>Reaberto</option>
                             <option value="encaminhado_ssi" <?= ($__fStatus === "encaminhado_ssi") ? "selected" : "" ?>>Encaminhado a SSI</option>
                             <option value="teste_interno" <?= ($__fStatus === "teste_interno") ? "selected" : "" ?>>Teste Interno</option>
+                            <option value="aguardando_atualizacao" <?= ($__fStatus === "aguardando_atualizacao") ? "selected" : "" ?>>Aguardando Atualização</option>
                         </select>
                     </div>
                     <div class="form-group" style="margin-right:10px;">
@@ -178,6 +179,7 @@
                                     "reaberto"           => '<span class="label label-warning">Reaberto</span>',
                                     "encaminhado_ssi"    => '<span class="label label-danger">Encaminhado a SSI</span>',
                                     "teste_interno"      => '<span class="label label-default" style="background:#16a085;">Teste Interno</span>',
+                                    "aguardando_atualizacao" => '<span class="label label-default" style="background:#e67e22;">Aguardando Atualização</span>',
                                 ];
                                 $__badge = $__badgeMap[$__status] ?? '<span class="label label-default">' . htmlspecialchars($__status) . '</span>';
                             ?>

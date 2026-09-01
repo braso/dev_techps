@@ -227,6 +227,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const displayResults = (data, plate, dateStart, dateEnd, speed, motoristaNome) => {
       resultsDiv.innerHTML = "";
 
+      // A API pode devolver posições fora de ordem cronológica: garante a
+      // ordenação por data/hora antes de detectar paradas e calcular KM.
+      data = [...data].sort((a, b) => new Date(a.moduleTime) - new Date(b.moduleTime));
+      // Zera a referência de hodômetro da consulta anterior (senão a 1ª
+      // "Diferença KM" da nova busca compara com a busca passada).
+      previousHodometro = null;
+
       // Botão de Busca Manual
       const btnBuscar = document.createElement("button");
       btnBuscar.id = "btnBuscarEnderecos";
@@ -296,6 +303,8 @@ document.addEventListener("DOMContentLoaded", () => {
                           <th>Início de Parada</th>
                           <th>Fim de Parada</th>
                           <th>Endereço</th>
+                          <th>POI</th>
+                          <th>Ação Esperada</th>
                           <th>Latitude</th>
                           <th>Longitude</th>
                           <th>Ignição</th>
@@ -315,13 +324,14 @@ document.addEventListener("DOMContentLoaded", () => {
         let stopEnd = null;
         let isStopped = false;
         let currentIgnition = null;
-  
+        let stopHods = []; // hodômetros das posições da parada atual (p/ mediana)
+
         dataGroupedByDate[date].forEach((row, index) => {
           if (parseInt(row.speed) <= 5) {
             if (!isStopped || currentIgnition !== row.ignition) {
               if (isStopped) {
                 const totalTime = (new Date(row.moduleTime) - stopStart) / 1000;
-  
+
                 if (totalTime >= 5 * 60) {
                   appendStopRow(
                     tbody,
@@ -329,9 +339,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     stopStart,
                     new Date(row.moduleTime),
                     currentIgnition,
-                    totalTime
+                    totalTime,
+                    medianaHodometro(stopHods)
                   );
-  
+
                   if (currentIgnition === "true") {
                     totalStopsIgnitionOn++;
                     totalTrueTime += totalTime;
@@ -341,18 +352,20 @@ document.addEventListener("DOMContentLoaded", () => {
                   }
                 }
               }
-  
+
               stopStart = new Date(row.moduleTime);
               isStopped = true;
               currentIgnition = row.ignition;
+              stopHods = [];
             }
-  
+
             stopEnd = new Date(row.moduleTime);
+            stopHods.push(parseFloat(row.hodometro));
           } else {
             if (isStopped) {
               stopEnd = new Date(row.moduleTime);
               const totalTime = (stopEnd - stopStart) / 1000;
-  
+
               if (totalTime >= 5 * 60) {
                 appendStopRow(
                   tbody,
@@ -360,9 +373,10 @@ document.addEventListener("DOMContentLoaded", () => {
                   stopStart,
                   stopEnd,
                   currentIgnition,
-                  totalTime
+                  totalTime,
+                  medianaHodometro(stopHods)
                 );
-  
+
                 if (currentIgnition === "true") {
                   totalStopsIgnitionOn++;
                   totalTrueTime += totalTime;
@@ -371,17 +385,17 @@ document.addEventListener("DOMContentLoaded", () => {
                   totalFalseTime += totalTime;
                 }
               }
-  
+
               isStopped = false;
             }
           }
         });
-  
+
         tableDates.push(date);
-  
+
         if (isStopped) {
           const totalTime = (stopEnd - stopStart) / 1000;
-  
+
           if (totalTime >= 5 * 60) {
             appendStopRow(
               tbody,
@@ -389,7 +403,8 @@ document.addEventListener("DOMContentLoaded", () => {
               stopStart,
               stopEnd,
               currentIgnition,
-              totalTime
+              totalTime,
+              medianaHodometro(stopHods)
             );
   
             if (currentIgnition === "true") {
@@ -476,11 +491,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const secondTable = document.createElement("table");
         secondTable.classList.add("table", "table-bordered");
         secondTable.innerHTML = `<thead class="thead-dark">
-                      <tr> 
+                      <tr>
                           <th></th>
                           <th>Início de Parada</th>
                           <th>Fim de Parada</th>
                           <th>Endereço</th>
+                          <th>POI</th>
+                          <th>Ação Esperada</th>
                           <th>Latitude</th>
                           <th>Longitude</th>
                           <th>Ignição</th>
@@ -531,9 +548,10 @@ document.addEventListener("DOMContentLoaded", () => {
           const start = cells[1].innerText.trim();
           const end = cells[2].innerText.trim();
           const address = cells[3].innerText.trim();
-          const latitude = cells[4].innerText.trim();
-          const longitude = cells[5].innerText.trim();
-          const ignition = cells[6].innerText.trim();
+          // Índices 4 e 5 são as colunas POI e Ação Esperada.
+          const latitude = cells[6].innerText.trim();
+          const longitude = cells[7].innerText.trim();
+          const ignition = cells[8].innerText.trim();
   
           const plate = document.getElementById("plate").value.trim();
           const comment = document.getElementById("coment").value.trim();
@@ -604,12 +622,13 @@ document.addEventListener("DOMContentLoaded", () => {
   
               selectedRows.push(currentRow);
               const currentCells = currentRow.getElementsByTagName("td");
-              const currentLatitude = parseFloat(currentCells[4].innerText.trim());
-              const currentLongitude = parseFloat(currentCells[5].innerText.trim());
+              // Índices 4 e 5 são as colunas POI e Ação Esperada.
+              const currentLatitude = parseFloat(currentCells[6].innerText.trim());
+              const currentLongitude = parseFloat(currentCells[7].innerText.trim());
               const currentStartTime = currentCells[1].innerText.trim();
               const currentEndTime = currentCells[2].innerText.trim();
               const currentAddress = currentCells[3].innerText.trim();
-              const currentIgnition = currentCells[6].innerText.trim();
+              const currentIgnition = currentCells[8].innerText.trim();
   
               coordinates.push({
                 ignition: currentIgnition,
@@ -1030,11 +1049,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const moduleDate = moduleDateTime.toLocaleDateString();
       const moduleTime = moduleDateTime.toLocaleTimeString();
     
-      let currentHodometro = row.hodometro;
-      let hodometroDifference = currentHodometro - previousHodometro;
-    
-      let formattedCurrentHodometro = formatKilometers(currentHodometro);
-  let formattedHodometroDifference = formatKilometers(hodometroDifference);
+      let currentHodometro = parseFloat(row.hodometro);
+      let hodometroDifference = previousHodometro !== null ? currentHodometro - previousHodometro : null;
+
+      let formattedCurrentHodometro = isNaN(currentHodometro) ? "—" : formatDistance(currentHodometro);
+  let formattedHodometroDifference = hodometroDifference === null ? "<--" : (hodometroDifference >= 0 ? formatDistance(hodometroDifference.toFixed(2)) : "—");
 
   let enderecoDisplay = row.endereco || "Endereço não informado";
 
@@ -1042,6 +1061,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <td>${moduleDate}</td>
           <td>${moduleTime}</td>
           <td data-lat="${row.latitude}" data-lon="${row.longitude}">${enderecoDisplay}</td>
+          ${celulasPoi(row.latitude, row.longitude)}
           <td>${row.latitude}</td>
           <td>${row.longitude}</td>
               <td>${row.ignition}</td>
@@ -1171,44 +1191,99 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
     
-    function appendStopRow(tbody, row, stopStart, stopEnd, ignition, totalTime) {
+    // Encontra a POI mais próxima da coordenada (dentro do raio de cada POI).
+    // Retorna o objeto da POI ou null se nenhuma cobrir o ponto.
+    function encontrarPoiProximo(lat, lon) {
+      var pois = window.pois || [];
+      lat = parseFloat(lat);
+      lon = parseFloat(lon);
+      if (isNaN(lat) || isNaN(lon)) return null;
+      var melhor = null;
+      var melhorDist = Infinity;
+      for (var i = 0; i < pois.length; i++) {
+        var p = pois[i];
+        var pl = parseFloat(p.poi_tx_latitude);
+        var pn = parseFloat(p.poi_tx_longitude);
+        if (isNaN(pl) || isNaN(pn)) continue;
+        var raio = parseInt(p.poi_nb_raio, 10) || 50;
+        var dist = calcularDistancia(lat, lon, pl, pn) * 1000; // metros
+        if (dist <= raio && dist < melhorDist) {
+          melhorDist = dist;
+          melhor = p;
+        }
+      }
+      return melhor;
+    }
+
+    // Monta as duas células (POI e Ação Esperada) de uma coordenada.
+    function celulasPoi(lat, lon) {
+      var poi = encontrarPoiProximo(lat, lon);
+      var nome = poi ? poi.poi_tx_nome : "";
+      var acoes = poi && poi.poi_tx_acoes_esperadas ? poi.poi_tx_acoes_esperadas : "";
+      return `<td>${nome || "—"}</td>
+        <td>${acoes || "—"}</td>`;
+    }
+
+    // Mediana dos hodômetros de uma parada: o rastreador envia posições com
+    // hodômetro fora de ordem (histórico embarcado misturado), então usar uma
+    // única linha gera KM/diferenças erradas; a mediana ignora esses picos.
+    function medianaHodometro(valores) {
+      var v = (valores || []).filter(function (n) { return !isNaN(n); }).sort(function (a, b) { return a - b; });
+      if (!v.length) return NaN;
+      var m = Math.floor(v.length / 2);
+      return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
+    }
+
+    function appendStopRow(tbody, row, stopStart, stopEnd, ignition, totalTime, stopHod) {
       const totalTimeSeconds = (stopEnd - stopStart) / 1000;
       const totalTimeMinutes = totalTimeSeconds / 60;
-    
+
       if (totalTimeMinutes < 2) {
         return;
       }
-    
+
       const tr = document.createElement("tr");
-    
+
       if (ignition === "true") {
         tr.classList.add("high-speed");
       } else {
         tr.classList.add("low-speed");
       }
-    
-          // Calcula a diferença de hodômetro
-    let hodometroDifference = previousHodometro !== null ? formatDistance((row.hodometro - previousHodometro).toFixed(2)) : "<--"; // Se previousHodometro for null, a diferença não é aplicável
+
+    // Hodômetro da parada (metros): mediana das posições da parada; se não
+    // veio, cai para o da linha de referência.
+    const hod = (typeof stopHod === "number" && !isNaN(stopHod)) ? stopHod : parseFloat(row.hodometro);
+
+    // Diferença de hodômetro em relação à parada anterior. Negativa = dado
+    // inconsistente do rastreador: mostra "—" em vez de um valor errado.
+    let hodometroDifference = "<--";
+    if (previousHodometro !== null && !isNaN(hod)) {
+      const diffM = hod - previousHodometro;
+      hodometroDifference = diffM >= 0 ? formatDistance(diffM.toFixed(2)) : "—";
+    }
 
     let enderecoDisplay = row.endereco || "Endereço não informado";
 
-    tr.innerHTML = 
+    tr.innerHTML =
         `<td><img src="imagens/LGS.png" alt="Ícone"  class="row-img" /></td>
         <td>${stopStart.toLocaleTimeString()}</td>
         <td>${stopEnd.toLocaleTimeString()}</td>
         <td data-lat="${row.latitude}" data-lon="${row.longitude}">${enderecoDisplay}</td>
+        ${celulasPoi(row.latitude, row.longitude)}
         <td>${row.latitude}</td>
         <td>${row.longitude}</td>
         <td>${ `<i class="fas fa-power-off" style="color: ` + (ignition === "true" ? `green` : `red`) + `;"></i>` }</td>
         <td>${calculateTotalTime(stopStart, stopEnd)}</td>
         <td><a href="https://www.google.com/maps/place/${row.latitude},${row.longitude}" target="_blank"><ion-icon name="map-outline"></ion-icon></a></td>
-        <td>${formatDistance(row.hodometro)}</td> <!-- Formatando a distância do hodômetro -->
-        <td>${hodometroDifference}</td> <!-- Exibe a diferença de hodômetro -->`;
+        <td>${isNaN(hod) ? "—" : formatDistance(hod)}</td> <!-- Hodômetro da parada -->
+        <td>${hodometroDifference}</td> <!-- Diferença desde a parada anterior -->`;
 
     tbody.appendChild(tr);
 
     // Atualizando o hodômetro anterior para o próximo loop
-    previousHodometro = row.hodometro;
+    if (!isNaN(hod)) {
+      previousHodometro = hod;
+    }
 }
     
     function calculateTotalTime(start, end) {

@@ -1,23 +1,6 @@
 <?php
 	include_once "funcoes_ponto.php";
 
-	// Definir a função updateTimer ANTES de qualquer output
-	ob_start();
-	?><script>
-		var timeoutId;
-		window.updateTimer = function() { 
-			if(typeof timeoutId !== 'undefined' && timeoutId) {
-				clearTimeout(timeoutId);
-			}
-			timeoutId = setTimeout(function(){
-				let form = document.getElementById('loginTimeoutForm');
-				if(form) form.submit();
-			}, 15*60*1000);
-		}
-	</script><?php
-	$scriptContent = ob_get_clean();
-	$GLOBALS['updateTimerScript'] = $scriptContent;
-
 	// Função para criar/atualizar tabelas se não existir
 	function criarTabelaSolicitacoes() {
 		query("CREATE TABLE IF NOT EXISTS solicitacoes_ajuste (
@@ -1114,29 +1097,7 @@
 			}
 		}
 
-		// Buffer the output to inject script in head
-		ob_start();
 		cabecalho("Ajuste de {$rotulos['modulo']}");
-		$cabecalho_html = ob_get_clean();
-
-		// Injetar script no head antes de fechar
-		$script_updateTimer = "
-		<script>
-			var timeoutId;
-			window.updateTimer = function() { 
-				if(typeof timeoutId !== 'undefined' && timeoutId) {
-					clearTimeout(timeoutId);
-				}
-				timeoutId = setTimeout(function(){
-					let form = document.getElementById('loginTimeoutForm');
-					if(form) form.submit();
-				}, 15*60*1000);
-			}
-		</script>";
-		
-		// Injetar o script antes de </head>
-		$cabecalho_html = str_replace("</head>", $script_updateTimer . "\n</head>", $cabecalho_html);
-		echo $cabecalho_html;
 
 		// Mensagem de sucesso se houver
 		if (isset($_GET['msg']) && $_GET['msg'] === 'sucesso') {

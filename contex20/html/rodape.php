@@ -28,8 +28,6 @@
         <!-- FIM FOOTER -->
         <!-- INICIO CORE PLUGINS -->
 
-        <form id="loginTimeoutForm" method="post" target="<?=($_SERVER['DOCUMENT_ROOT']).$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]?>/logout.php" action="logout"></form>
-        
         <script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap/js/bootstrap.min.js" type="text/javascript"></script>
         <script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/js.cookie.min.js" type="text/javascript"></script>
         <script src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/assets/global/plugins/bootstrap-hover-dropdown/bootstrap-hover-dropdown.min.js" type="text/javascript"></script>
@@ -48,18 +46,6 @@
 
 
         <script>
-            var timeoutId;
-            function updateTimer(){
-                if(timeoutId){
-                    clearTimeout(timeoutId);
-                }
-                timeoutId = setTimeout(function(){
-                    let form = document.getElementById('loginTimeoutForm');
-                    form.submit();
-                    window.location.href = '<?= $CONTEX['path']?>/logout.php';
-                }, 15*60*1000);
-            }
-
             document.getElementsByClassName('loading')[0].style.display = 'none';
         </script>
 

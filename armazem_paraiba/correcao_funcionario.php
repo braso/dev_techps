@@ -10,7 +10,7 @@
 	// Guard de segurança: a página e TODAS as ações são restritas ao Super Administrador.
 	// O dispatch de ações acontece dentro de "conecta.php", por isso o guard roda antes.
 	if(empty(session_id())){
-		ini_set('session.gc_maxlifetime', 30*60);
+		ini_set('session.gc_maxlifetime', 12*60*60);
 		session_start();
 	}
 
