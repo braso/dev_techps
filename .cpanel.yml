@@ -16,7 +16,7 @@ deployment:
     - export MIDIADIGITAL=/home/devtechpsgj/public_html/dev/midia_digital
     - export PBTRANSPORTES=/home/devtechpsgj/public_html/dev/pb_transportes
     - export LEMON=/home/devtechpsgj/public_html/dev/lemon
-    - export DEVTRANSCOPEL=/home/devtechpsgj/public_html/dev/transcopel
+    - export TRANSCOPEL=/home/devtechpsgj/public_html/dev/transcopel
     - export QUALY=/home/devtechpsgj/public_html/dev/qualy_transportes
     - export GST=/home/devtechpsgj/public_html/dev/gst
     - export DEMO=/home/devtechpsgj/public_html/dev/demo
