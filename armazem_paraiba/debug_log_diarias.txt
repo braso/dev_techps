@@ -272,3 +272,6 @@ Stack trace:
 2026-09-02 09:55:34 | Limpeza de registros futuros (>{}) removidos, entidade=0
 2026-09-02 09:55:34 | Consumos automaticos gerados para entidade 26: 1
 2026-09-02 09:55:34 | Processamento automatico na abertura: 1 consumo(s) gerados
+2026-09-02 10:39:35 | Limpeza de registros futuros (>{}) removidos, entidade=0
+2026-09-02 10:39:35 | Consumos automaticos gerados para entidade 26: 1
+2026-09-02 10:39:35 | Processamento automatico na abertura: 1 consumo(s) gerados
