@@ -21,11 +21,10 @@ function dg_getFlashGestao() {
     return array($mensagem, $erro);
 }
 
-// Monta URL de retorno mantendo empresa, funcionario e periodo selecionados.
+// Monta URL de retorno mantendo empresa e funcionario selecionados.
 function dg_urlRetorno() {
     $empresa = intval(dg($_GET, 'empresa', 0));
     $funcionario = intval(dg($_GET, 'funcionario', 0));
-    $mes = preg_replace('/[^0-9\-]/', '', strval(dg($_GET, 'mes', date('Y-m'))));
 
     $params = array();
     if ($empresa > 0) {
@@ -33,9 +32,6 @@ function dg_urlRetorno() {
     }
     if ($funcionario > 0) {
         $params[] = 'funcionario='.$funcionario;
-    }
-    if ($mes !== '') {
-        $params[] = 'mes='.$mes;
     }
 
     return 'gestao_diarias.php'.(empty($params) ? '' : '?'.implode('&', $params));
@@ -298,11 +294,6 @@ if ($acao === 'processar') { dg_processar(); }
 
 list($mensagem, $erro) = dg_getFlashGestao();
 
-$mesFiltro = preg_replace('/[^0-9\-]/', '', strval(dg($_GET, 'mes', date('Y-m'))));
-if (!preg_match('/^\d{4}-\d{2}$/', $mesFiltro)) {
-    $mesFiltro = date('Y-m');
-}
-
 $empresas = diar_buscarEmpresas();
 $empresaSel = intval(dg($_GET, 'empresa', 0));
 
@@ -361,10 +352,24 @@ if ($autogerar) {
 
 $resumoSemana = diar_resumoSemana($funcionarioSel);
 
+// Semana do controle (padrao: semana atual, segunda a domingo).
+// GET semana = data da segunda-feira da semana desejada.
+$semanaRaw = preg_replace('/[^0-9\-]/', '', strval(dg($_GET, 'semana', '')));
+if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $semanaRaw) && date('N', strtotime($semanaRaw)) == 1) {
+    $dataIniSemana = $semanaRaw;
+} else {
+    $diaSemanaHoje = intval(date('N'));
+    $dataIniSemana = date('Y-m-d', strtotime('-'.($diaSemanaHoje - 1).' days'));
+}
+$dataFimSemana = date('Y-m-d', strtotime($dataIniSemana.' +6 days'));
+$controleSemana = diar_controleSemana($funcionarioSel, $dataIniSemana, $dataFimSemana);
+$semanaAnterior = date('Y-m-d', strtotime($dataIniSemana.' -7 days'));
+$semanaProxima = date('Y-m-d', strtotime($dataIniSemana.' +7 days'));
+
 // Lista de motoristas com pre-visualizacao (painel esquerdo).
 $motoristas = diar_listarMotoristas($empresaSel);
 $resumoFrota = array();
-foreach (diar_resumoMotoristas($empresaSel, $mesFiltro) as $rFrota) {
+foreach (diar_resumoMotoristas($empresaSel, 'all') as $rFrota) {
     $resumoFrota[intval($rFrota['enti_nb_id'])] = $rFrota;
 }
 
@@ -395,6 +400,42 @@ cabecalho("Gestao de Diarias");
 #lista_motoristas::-webkit-scrollbar { width: 8px; }
 #lista_motoristas::-webkit-scrollbar-thumb { background: #c2cad8; border-radius: 4px; }
 .dg-aba { padding-top: 15px; }
+.sdc-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.sdc-col { min-width: 0; }
+@media (max-width: 991px) {
+    .sdc-grid { grid-template-columns: repeat(4, 1fr); }
+}
+@media (max-width: 767px) {
+    .sdc-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 479px) {
+    .sdc-grid { grid-template-columns: 1fr; }
+}
+.sdc-card {
+    border: 1px solid #e4e9f0; border-radius: 10px; padding: 12px; margin-bottom: 12px;
+    background: #fff; min-height: 118px; transition: all .15s; height: 100%;
+}
+.sdc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.sdc-card.sdc-hoje { border: 2px solid #36c6d3; }
+.sdc-card.sdc-cheia { border-left: 5px solid #27ae60; }
+.sdc-card.sdc-sem-pernoite { border-left: 5px solid #f39c12; }
+.sdc-card.sdc-almoco { border-left: 5px solid #5bc0de; }
+.sdc-card.sdc-outra { border-left: 5px solid #95a5a6; }
+.sdc-card.sdc-vazio { background: #fafbfc; border-style: dashed; }
+.sdc-cabecalho { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+.sdc-cabecalho span { color: #888; }
+.sdc-tipo { font-size: 12px; font-weight: 600; }
+.sdc-valor { font-size: 18px; font-weight: 700; margin: 2px 0; }
+.sdc-meta { font-size: 11px; color: #777; margin-top: 3px; }
+.sdc-pernoite { color: #e74c3c; font-weight: 600; }
+.sdc-pernoite-ok { color: #27ae60; }
+.sdc-alerta { color: #e67e22; margin-left: 5px; }
+.sdc-vazio-texto { color: #aaa; font-size: 12px; padding-top: 8px; }
 .nav-tabs > li > a { border-radius: 6px 6px 0 0; }
 </style>
 
@@ -482,7 +523,7 @@ cabecalho("Gestao de Diarias");
                                 : "<span class='label label-success' title='Saldo positivo'>Ok</span>";
                             $alertaIcone = $temAlertaFrota ? " <i class='fa fa-warning' style='color:#b33;' title='Com alerta Lei 13.103'></i>" : '';
                         ?>
-                        <a href="gestao_diarias.php?empresa=<?php echo $empresaSel; ?>&funcionario=<?php echo $mid; ?>&mes=<?php echo htmlspecialchars($mesFiltro); ?>"
+                        <a href="gestao_diarias.php?empresa=<?php echo $empresaSel; ?>&funcionario=<?php echo $mid; ?>"
                            class="lista-motorista-card<?php echo $funcionarioSel === $mid ? ' ativa' : ''; ?>"
                            data-nome="<?php echo htmlspecialchars(mb_strtolower($nomeM)); ?>"
                            data-matricula="<?php echo htmlspecialchars(mb_strtolower($matriculaM)); ?>"
@@ -522,15 +563,14 @@ cabecalho("Gestao de Diarias");
         <?php else: ?>
             <?php
                 list($setorFuncionario, $subsetorFuncionario) = diar_buscarSetorSubsetor($funcionarioSel);
-                $saldoPeriodo = diar_saldoMotorista($funcionarioSel, $mesFiltro);
                 $saldoGeral = diar_saldoMotorista($funcionarioSel);
-                $consumos = diar_buscarConsumos($funcionarioSel, $mesFiltro);
-                $depositos = diar_buscarDepositos($funcionarioSel, $mesFiltro);
-                $badgeSaldo = ($saldoPeriodo['saldo'] < 0)
+                $consumos = diar_buscarConsumos($funcionarioSel);
+                $depositos = diar_buscarDepositos($funcionarioSel);
+                $badgeSaldo = ($saldoGeral['saldo'] < 0)
                     ? "<span class='label label-danger'>Negativo</span>"
                     : "<span class='label label-success'>Positivo</span>";
-                $classeSaldo = ($saldoPeriodo['saldo'] < 0) ? 'font-red' : 'font-green';
-                $classeSaldoDias = ($saldoPeriodo['saldo_dias'] < 0) ? 'font-red' : 'font-blue';
+                $classeSaldo = ($saldoGeral['saldo'] < 0) ? 'font-red' : 'font-green';
+                $classeSaldoDias = ($saldoGeral['saldo_dias'] < 0) ? 'font-red' : 'font-blue';
             ?>
 
             <div class="portlet light">
@@ -550,56 +590,157 @@ cabecalho("Gestao de Diarias");
                                 <i class="fa fa-bolt"></i> Gerar diarias pendentes
                             </button>
                         </form>
-                        <form method="get" class="form-inline" style="margin:0;display:inline-block;">
-                            <input type="hidden" name="empresa" value="<?php echo $empresaSel; ?>">
-                            <input type="hidden" name="funcionario" value="<?php echo $funcionarioSel; ?>">
-                            <label for="mes" style="font-weight:600;">Periodo:&nbsp;</label>
-                            <input type="month" class="form-control input-sm" id="mes" name="mes" value="<?php echo htmlspecialchars($mesFiltro); ?>">
-                            <button type="submit" class="btn blue btn-sm" style="margin-left:6px;">Aplicar</button>
-                        </form>
                     </div>
                 </div>
                 <div class="portlet-body">
                     <ul class="nav nav-tabs">
-                        <li class="active"><a href="javascript:;" onclick="dg_mudarAba('geral', this)"><i class="fa fa-dashboard"></i> Visao Geral</a></li>
+                        <li class="active"><a href="javascript:;" onclick="dg_mudarAba('semana', this)"><i class="fa fa-calendar-week"></i> Semana</a></li>
+                        <li><a href="javascript:;" onclick="dg_mudarAba('geral', this)"><i class="fa fa-dashboard"></i> Visao Geral</a></li>
                         <li><a href="javascript:;" onclick="dg_mudarAba('lancar', this)"><i class="fa fa-plus"></i> Lancar</a></li>
                         <li><a href="javascript:;" onclick="dg_mudarAba('extrato', this)"><i class="fa fa-list-alt"></i> Extrato</a></li>
                     </ul>
 
+                    <!-- ===== ABA: SEMANA ===== -->
+                    <div class="dg-aba" id="dg-aba-semana">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="alert alert-info" style="font-size:13px;padding:8px 12px;">
+                                    <i class="fa fa-calendar"></i> Controle da semana:
+                                    <strong><?php echo date('d/m/Y', strtotime($dataIniSemana)).' a '.date('d/m/Y', strtotime($dataFimSemana)); ?></strong>
+                                    <span style="float:right;">
+                                        <a href="gestao_diarias.php?empresa=<?php echo $empresaSel; ?>&funcionario=<?php echo $funcionarioSel; ?>&semana=<?php echo $semanaAnterior; ?>" class="btn btn-default btn-xs">&laquo; Semana anterior</a>
+                                        <a href="gestao_diarias.php?empresa=<?php echo $empresaSel; ?>&funcionario=<?php echo $funcionarioSel; ?>" class="btn btn-primary btn-xs">Semana atual</a>
+                                        <a href="gestao_diarias.php?empresa=<?php echo $empresaSel; ?>&funcionario=<?php echo $funcionarioSel; ?>&semana=<?php echo $semanaProxima; ?>" class="btn btn-default btn-xs">Proxima semana &raquo;</a>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sdc-grid">
+                            <?php foreach ($controleSemana['dias'] as $diaSemana): ?>
+                                <?php
+                                    $classeDia = ($diaSemana['data'] === date('Y-m-d')) ? 'sdc-hoje' : '';
+                                    if ($diaSemana['tem_consumo']) {
+                                        $classeTipo = array(
+                                            'cheia' => 'sdc-cheia',
+                                            'sem_pernoite' => 'sdc-sem-pernoite',
+                                            'almoco' => 'sdc-almoco',
+                                            'outra' => 'sdc-outra'
+                                        );
+                                        $classeDia .= ' '.($classeTipo[$diaSemana['tipo']] ?? 'sdc-outra');
+                                    } else {
+                                        $classeDia .= ' sdc-vazio';
+                                    }
+                                ?>
+                                <div class="sdc-col">
+                                    <div class="sdc-card <?php echo trim($classeDia); ?>">
+                                        <div class="sdc-cabecalho">
+                                            <strong><?php echo $diaSemana['dia_semana']; ?></strong>
+                                            <span><?php echo date('d/m', strtotime($diaSemana['data'])); ?></span>
+                                        </div>
+                                        <?php if ($diaSemana['tem_consumo']): ?>
+                                            <div class="sdc-tipo"><?php echo diar_consumoTipoLabel($diaSemana['tipo']); ?></div>
+                                            <div class="sdc-valor"><?php echo diar_formatarValor($diaSemana['valor']); ?></div>
+                                            <div class="sdc-meta">
+                                                <?php if ($diaSemana['km'] !== null && $diaSemana['km'] !== ''): ?>
+                                                    <span title="Km"><?php echo number_format(floatval($diaSemana['km']), 1, ',', '.'); ?> km</span>
+                                                <?php endif; ?>
+                                                <?php if ($diaSemana['pernoite'] === 'sim'): ?>
+                                                    <span class="sdc-pernoite">Dormiu fora</span>
+                                                <?php elseif ($diaSemana['pernoite'] === 'nao'): ?>
+                                                    <span class="sdc-pernoite-ok">Na base</span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="sdc-meta">
+                                                <?php echo diar_consumoOrigemLabel($diaSemana['origem']); ?>
+                                                <?php if (!empty($diaSemana['detalhes']['alertas']) && is_array($diaSemana['detalhes']['alertas'])): ?>
+                                                    <span class="sdc-alerta" title="<?php echo htmlspecialchars(implode(' | ', $diaSemana['detalhes']['alertas'])); ?>"><i class="fa fa-warning"></i></span>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php else: ?>
+                                            <div class="sdc-vazio-texto">
+                                                <?php echo $diaSemana['tem_jornada'] ? 'Jornada sem diaria' : 'Sem jornada'; ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="portlet light" style="margin-top:5px;">
+                                    <div class="portlet-title">
+                                        <div class="caption">
+                                            <span class="caption-subject bold font-dark"><i class="fa fa-calculator"></i> Resumo da Semana</span>
+                                        </div>
+                                    </div>
+                                    <div class="portlet-body">
+                                        <div class="row">
+                                            <div class="col-md-2">
+                                                <div class="dashboard-stat2 bordered">
+                                                    <div class="display"><div class="number"><h3 class="font-yellow"><?php echo diar_formatarValor($controleSemana['total_consumido']); ?></h3><small>Total consumido</small></div><div class="icon"><i class="fa fa-level-up"></i></div></div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="dashboard-stat2 bordered">
+                                                    <div class="display"><div class="number"><h3 class="font-dark"><?php echo $controleSemana['dias_com_diaria']; ?> / 7</h3><small>Dias com diaria</small></div><div class="icon"><i class="fa fa-calendar-check-o"></i></div></div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="dashboard-stat2 bordered">
+                                                    <div class="display"><div class="number"><h3 class="font-green"><?php echo $controleSemana['qtd_cheia']; ?></h3><small>Cheias (R$107)</small></div><div class="icon"><i class="fa fa-bed"></i></div></div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="dashboard-stat2 bordered">
+                                                    <div class="display"><div class="number"><h3 class="font-blue"><?php echo $controleSemana['qtd_sem_pernoite']; ?></h3><small>Sem pernoite (R$55)</small></div><div class="icon"><i class="fa fa-road"></i></div></div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="dashboard-stat2 bordered">
+                                                    <div class="display"><div class="number"><h3 class="font-info"><?php echo $controleSemana['qtd_almoco']; ?></h3><small>Almoco (R$40)</small></div><div class="icon"><i class="fa fa-cutlery"></i></div></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- ===== ABA: VISÃO GERAL ===== -->
-                    <div class="dg-aba" id="dg-aba-geral">
+                    <div class="dg-aba" id="dg-aba-geral" style="display:none;">
                         <div class="row">
                             <div class="col-md-3">
                                 <div class="dashboard-stat2 bordered">
                                     <div class="display">
-                                        <div class="number"><h3 class="<?php echo $classeSaldo; ?>"><?php echo diar_formatarValor($saldoPeriodo['saldo']); ?></h3><small>Saldo do periodo</small></div>
+                                        <div class="number"><h3 class="<?php echo $classeSaldo; ?>"><?php echo diar_formatarValor($saldoGeral['saldo']); ?></h3><small>Saldo geral</small></div>
                                         <div class="icon"><i class="fa fa-wallet"></i></div>
                                     </div>
-                                    <div class="progress-info"><?php echo $badgeSaldo; ?><span style="margin-left:6px;font-size:12px;color:#AAB5BC;"><?php echo $saldoPeriodo['saldo_dias']; ?> dia(s) cobertos</span></div>
+                                    <div class="progress-info"><?php echo $badgeSaldo; ?><span style="margin-left:6px;font-size:12px;color:#AAB5BC;"><?php echo $saldoGeral['saldo_dias']; ?> dia(s) cobertos</span></div>
                                 </div>
                             </div>
                             <div class="col-md-2">
                                 <div class="dashboard-stat2 bordered">
-                                    <div class="display"><div class="number"><h3 class="font-green"><?php echo diar_formatarValor($saldoPeriodo['depositado']); ?></h3><small>Depositado</small></div><div class="icon"><i class="fa fa-level-down"></i></div></div>
-                                    <div class="progress-info"><span style="font-size:12px;color:#AAB5BC;"><?php echo $saldoPeriodo['dias_depositados']; ?> dia(s)</span></div>
+                                    <div class="display"><div class="number"><h3 class="font-green"><?php echo diar_formatarValor($saldoGeral['depositado']); ?></h3><small>Total depositado</small></div><div class="icon"><i class="fa fa-level-down"></i></div></div>
+                                    <div class="progress-info"><span style="font-size:12px;color:#AAB5BC;"><?php echo $saldoGeral['dias_depositados']; ?> dia(s)</span></div>
                                 </div>
                             </div>
                             <div class="col-md-2">
                                 <div class="dashboard-stat2 bordered">
-                                    <div class="display"><div class="number"><h3 class="font-yellow"><?php echo diar_formatarValor($saldoPeriodo['consumido']); ?></h3><small>Consumido</small></div><div class="icon"><i class="fa fa-level-up"></i></div></div>
-                                    <div class="progress-info"><span style="font-size:12px;color:#AAB5BC;"><?php echo $saldoPeriodo['dias_consumidos']; ?> dia(s)</span></div>
+                                    <div class="display"><div class="number"><h3 class="font-yellow"><?php echo diar_formatarValor($saldoGeral['consumido']); ?></h3><small>Total consumido</small></div><div class="icon"><i class="fa fa-level-up"></i></div></div>
+                                    <div class="progress-info"><span style="font-size:12px;color:#AAB5BC;"><?php echo $saldoGeral['dias_consumidos']; ?> dia(s)</span></div>
                                 </div>
                             </div>
                             <div class="col-md-2">
                                 <div class="dashboard-stat2 bordered">
-                                    <div class="display"><div class="number"><h3 class="<?php echo $classeSaldoDias; ?>"><?php echo $saldoPeriodo['saldo_dias']; ?></h3><small>Saldo em dias</small></div><div class="icon"><i class="fa fa-calendar-check-o"></i></div></div>
-                                    <div class="progress-info"><span style="font-size:12px;color:#AAB5BC;"><?php echo $saldoPeriodo['saldo_dias'] < 0 ? 'consumiu alem do depositado' : 'dias cobertos'; ?></span></div>
+                                    <div class="display"><div class="number"><h3 class="<?php echo $classeSaldoDias; ?>"><?php echo $saldoGeral['saldo_dias']; ?></h3><small>Saldo em dias</small></div><div class="icon"><i class="fa fa-calendar-check-o"></i></div></div>
+                                    <div class="progress-info"><span style="font-size:12px;color:#AAB5BC;"><?php echo $saldoGeral['saldo_dias'] < 0 ? 'consumiu alem do depositado' : 'dias cobertos'; ?></span></div>
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="dashboard-stat2 bordered">
-                                    <div class="display"><div class="number"><h3 class="font-dark"><?php echo diar_formatarValor($saldoGeral['saldo']); ?></h3><small>Saldo geral</small></div><div class="icon"><i class="fa fa-database"></i></div></div>
-                                    <div class="progress-info"><span style="font-size:12px;color:#AAB5BC;">Todos os periodos | <?php echo $saldoGeral['saldo_dias']; ?> dia(s)</span></div>
+                                    <div class="display"><div class="number"><h3 class="font-dark"><?php echo count($consumos); ?></h3><small>Dias com diaria</small></div><div class="icon"><i class="fa fa-calendar-check-o"></i></div></div>
+                                    <div class="progress-info"><span style="font-size:12px;color:#AAB5BC;">Consumos: <?php echo count($consumos); ?> dia(s) | Depositos: <?php echo count($depositos); ?></span></div>
                                 </div>
                             </div>
                         </div>
@@ -725,7 +866,7 @@ cabecalho("Gestao de Diarias");
                             <div class="col-md-7">
                                 <div class="portlet light" style="margin-top:5px;">
                                     <div class="portlet-title">
-                                        <div class="caption"><span class="caption-subject bold font-dark"><i class="fa fa-calendar-check-o"></i> Consumos do Periodo</span></div>
+                                        <div class="caption"><span class="caption-subject bold font-dark"><i class="fa fa-calendar-check-o"></i> Consumos (todos)</span></div>
                                         <div class="actions"><span class="label label-success"><?php echo count($consumos); ?> consumo(s)</span></div>
                                     </div>
                                     <div class="portlet-body">
@@ -817,7 +958,7 @@ cabecalho("Gestao de Diarias");
                             <div class="col-md-5">
                                 <div class="portlet light" style="margin-top:5px;">
                                     <div class="portlet-title">
-                                        <div class="caption"><span class="caption-subject bold font-dark"><i class="fa fa-list-alt"></i> Depositos do Periodo</span></div>
+                                        <div class="caption"><span class="caption-subject bold font-dark"><i class="fa fa-list-alt"></i> Depositos (todos)</span></div>
                                         <div class="actions"><span class="label label-primary"><?php echo count($depositos); ?> deposito(s)</span></div>
                                     </div>
                                     <div class="portlet-body">
@@ -880,7 +1021,6 @@ cabecalho("Gestao de Diarias");
                     <input type="hidden" name="id_consumo" id="edit_id_consumo">
                     <input type="hidden" name="empresa" value="<?php echo $empresaSel; ?>">
                     <input type="hidden" name="funcionario" value="<?php echo $funcionarioSel; ?>">
-                    <input type="hidden" name="mes" value="<?php echo htmlspecialchars($mesFiltro); ?>">
                     <?php
                         echo linha_form(array(
                             campo_data('Data do Consumo', 'data_consumo', date('Y-m-d'), 4, "id='edit_data_consumo'"),
@@ -973,7 +1113,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (comboEmpresa) {
         comboEmpresa.addEventListener('change', function() {
             if (this.value) {
-                location.href = 'gestao_diarias.php?empresa=' + this.value + '&mes=<?php echo htmlspecialchars($mesFiltro); ?>';
+                location.href = 'gestao_diarias.php?empresa=' + this.value;
             }
         });
     }

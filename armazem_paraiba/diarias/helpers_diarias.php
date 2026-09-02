@@ -1235,6 +1235,102 @@ function diar_limparConsumosInvalidos($entidadeId = 0) {
     return $hoje;
 }
 
+// Controle semanal (segunda a domingo): um registro por dia com a diaria consumida.
+// $dataIni deve ser a segunda-feira da semana. Retorna dias + totais.
+function diar_controleSemana($entidadeId, $dataIni, $dataFim = '') {
+    $entidadeId = intval($entidadeId);
+    $dataIni = diar_dataParaSql($dataIni);
+    $dataFim = ($dataFim === '') ? date('Y-m-d', strtotime($dataIni.' +6 days')) : diar_dataParaSql($dataFim);
+
+    $out = array(
+        'data_inicio' => $dataIni,
+        'data_fim' => $dataFim,
+        'dias' => array(),
+        'total_consumido' => 0.0,
+        'dias_com_diaria' => 0,
+        'dias_com_pernoite' => 0,
+        'qtd_cheia' => 0,
+        'qtd_sem_pernoite' => 0,
+        'qtd_almoco' => 0,
+        'qtd_outra' => 0
+    );
+    if ($entidadeId <= 0 || $dataIni === '' || $dataFim === '') {
+        return $out;
+    }
+
+    // Consumos do periodo (um por dia — o motor nao duplica).
+    $consumos = array();
+    $res = diar_query(
+        "SELECT * FROM diaria_consumo
+         WHERE dcon_nb_entidade = ? AND dcon_tx_data BETWEEN ? AND ?
+         ORDER BY dcon_tx_data ASC",
+        "iss",
+        array($entidadeId, $dataIni, $dataFim)
+    );
+    if ($res instanceof mysqli_result) {
+        while ($row = mysqli_fetch_assoc($res)) {
+            $consumos[$row['dcon_tx_data']] = $row;
+        }
+    }
+
+    $diasNomes = array('Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado', 'Domingo');
+    for ($i = 0; $i < 7; $i++) {
+        $data = date('Y-m-d', strtotime($dataIni.' +'.$i.' days'));
+        $dia = array(
+            'data' => $data,
+            'dia_semana' => $diasNomes[$i],
+            'tem_consumo' => false,
+            'tipo' => '',
+            'valor' => 0.0,
+            'km' => null,
+            'pernoite' => null,
+            'origem' => '',
+            'jornada_inicio' => '',
+            'jornada_fim' => '',
+            'observacao' => '',
+            'tem_jornada' => false,
+            'detalhes' => array()
+        );
+        if (isset($consumos[$data])) {
+            $c = $consumos[$data];
+            $dia['tem_consumo'] = true;
+            $dia['tipo'] = strval(diar_val($c, 'dcon_tx_tipo', ''));
+            $dia['valor'] = floatval(diar_val($c, 'dcon_tx_valor', 0));
+            $dia['km'] = diar_val($c, 'dcon_tx_km', null);
+            $dia['pernoite'] = diar_val($c, 'dcon_tx_pernoite', null);
+            $dia['origem'] = strval(diar_val($c, 'dcon_tx_origem', 'manual'));
+            $dia['jornada_inicio'] = strval(diar_val($c, 'dcon_tx_jornada_inicio', ''));
+            $dia['jornada_fim'] = strval(diar_val($c, 'dcon_tx_jornada_fim', ''));
+            $dia['observacao'] = strval(diar_val($c, 'dcon_tx_observacao', ''));
+            $det = diar_val($c, 'dcon_tx_detalhes', '');
+            if ($det !== '') {
+                $dec = json_decode($det, true);
+                $dia['detalhes'] = is_array($dec) ? $dec : array();
+            }
+            $out['total_consumido'] = round($out['total_consumido'] + $dia['valor'], 2);
+            $out['dias_com_diaria']++;
+            if ($dia['pernoite'] === 'sim') { $out['dias_com_pernoite']++; }
+            switch ($dia['tipo']) {
+                case 'cheia': $out['qtd_cheia']++; break;
+                case 'sem_pernoite': $out['qtd_sem_pernoite']++; break;
+                case 'almoco': $out['qtd_almoco']++; break;
+                default: if ($dia['tipo'] !== '') { $out['qtd_outra']++; } break;
+            }
+        } else {
+            // Sem consumo: verifica se houve jornada no dia (para indicar "sem diaria").
+            $jornada = diar_jornadaDoDia($entidadeId, $data);
+            $dia['tem_jornada'] = $jornada['ativo'];
+            if ($jornada['ativo']) {
+                $dia['jornada_inicio'] = $jornada['inicio'];
+                $dia['jornada_fim'] = $jornada['fim'];
+            }
+        }
+        $out['dias'][] = $dia;
+    }
+
+    return $out;
+}
+
 // Resumo semanal (segunda a domingo) de um funcionario em relacao a uma data de referencia.
 function diar_resumoSemana($entidadeId, $dataRef = '') {
     $entidadeId = intval($entidadeId);
@@ -1304,10 +1400,15 @@ function diar_listarMotoristas($empresaId = 0) {
     return ($res instanceof mysqli_result) ? mysqli_fetch_all($res, MYSQLI_ASSOC) : array();
 }
 
-// Resumo mensal em lote (depositado, consumido, saldo, dias, ultima diaria e alertas) por motorista.
+// Resumo em lote (depositado, consumido, saldo, dias, ultima diaria e alertas) por motorista.
+// $periodo vazio ou 'all' = todos os periodos (historico completo).
 function diar_resumoMotoristas($empresaId = 0, $periodo = '') {
-    if (!preg_match('/^\d{4}-\d{2}$/', $periodo)) {
-        $periodo = date('Y-m');
+    // Filtro de periodo: apenas se for mes valido (YYYY-MM).
+    $filtroPeriodoDep = '';
+    $filtroPeriodoCon = '';
+    if (preg_match('/^\d{4}-\d{2}$/', $periodo)) {
+        $filtroPeriodoDep = " AND depr_tx_data LIKE '".$periodo."-%'";
+        $filtroPeriodoCon = " AND dcon_tx_data LIKE '".$periodo."-%'";
     }
     $filtro = '';
     $vars = array();
@@ -1327,7 +1428,7 @@ function diar_resumoMotoristas($empresaId = 0, $periodo = '') {
             FROM entidade e
             LEFT JOIN (
                 SELECT depr_nb_entidade AS eid, SUM(depr_tx_valor_total) AS depositado, SUM(depr_nb_dias) AS dias_depositados
-                FROM diaria_deposito WHERE depr_tx_data LIKE '".$periodo."-%'
+                FROM diaria_deposito WHERE 1=1 {$filtroPeriodoDep}
                 GROUP BY depr_nb_entidade
             ) dep ON dep.eid = e.enti_nb_id
             LEFT JOIN (
@@ -1337,7 +1438,7 @@ function diar_resumoMotoristas($empresaId = 0, $periodo = '') {
                        MAX(dcon_tx_data) AS ultima_data,
                        SUM(CASE WHEN dcon_tx_origem = 'auto' THEN 1 ELSE 0 END) AS total_auto,
                        MAX(CASE WHEN dcon_tx_detalhes LIKE '%\"alertas\":%' THEN 1 ELSE 0 END) AS tem_alerta
-                FROM diaria_consumo WHERE dcon_tx_data LIKE '".$periodo."-%'
+                FROM diaria_consumo WHERE 1=1 {$filtroPeriodoCon}
                 GROUP BY dcon_nb_entidade
             ) con ON con.eid = e.enti_nb_id
             WHERE e.enti_tx_status = 'ativo'
