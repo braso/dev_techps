@@ -624,17 +624,7 @@ function diar_placaDoDia($entidadeId, $data) {
     if ($entidadeId <= 0 || $data === '') {
         return '';
     }
-    $r = diar_fetch_assoc_safe(diar_query(
-        "SELECT plac_tx_placa FROM placa
-         WHERE plac_nb_entidade = ? AND plac_tx_placa <> '' AND plac_tx_placa IS NOT NULL
-         ORDER BY plac_nb_id DESC LIMIT 1",
-        "i",
-        array($entidadeId)
-    ));
-    if (!empty($r['plac_tx_placa'])) {
-        return $r['plac_tx_placa'];
-    }
-    // Fallback: placa registrada no inicio de jornada do dia.
+    // Padrao: placa informada na batida de inicio de jornada do dia.
     $p = diar_fetch_assoc_safe(diar_query(
         "SELECT p.pont_tx_placa
          FROM ponto p
@@ -649,7 +639,18 @@ function diar_placaDoDia($entidadeId, $data) {
         "iss",
         array($entidadeId, $data.' 00:00:00', $data.' 23:59:59')
     ));
-    return strval(diar_val($p, 'pont_tx_placa', ''));
+    if (!empty($p['pont_tx_placa'])) {
+        return strval($p['pont_tx_placa']);
+    }
+    // Fallback: placa vinculada no cadastro (tabela placa).
+    $r = diar_fetch_assoc_safe(diar_query(
+        "SELECT plac_tx_placa FROM placa
+         WHERE plac_nb_entidade = ? AND plac_tx_placa <> '' AND plac_tx_placa IS NOT NULL
+         ORDER BY plac_nb_id DESC LIMIT 1",
+        "i",
+        array($entidadeId)
+    ));
+    return strval(diar_val($r, 'plac_tx_placa', ''));
 }
 
 // Inicio/fim de jornada do dia a partir da tabela ponto (macroponto 1 = inicio, 2 = fim).
