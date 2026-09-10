@@ -565,12 +565,6 @@ function salvarNovoTipoPoi(){
     <script src="js/logistica.js?v=<?=filemtime(__DIR__.'/js/logistica.js')?>"></script>
     <script src="js/logistica_modal.js"></script>
 
-</body>
-
-</html>
-
-</style>
-</style>
 
 
 <script>
@@ -641,7 +635,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-</script>
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js"></script>
@@ -816,3 +809,5 @@ document.addEventListener('DOMContentLoaded', function() {
         #addPoiBtnMap:hover {
             background: #f0f0f0 !important;
         }
+
+</style>

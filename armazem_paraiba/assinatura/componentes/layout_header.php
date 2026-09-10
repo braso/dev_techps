@@ -58,6 +58,10 @@ if($empresaTitulo === "" && isset($conn) && ($conn instanceof mysqli)){
             border-radius: 0.375rem;
             transition: all 0.2s;
         }
+        /* Menu do sistema completo (ate 10 secoes): links mais compactos no header. */
+        .navbar-techps nav .nav-link {
+            padding: 0.5rem 0.6rem;
+        }
         .nav-link:hover {
             color: #1f2937;
             background-color: #f3f4f6;
@@ -81,87 +85,50 @@ if($empresaTitulo === "" && isset($conn) && ($conn instanceof mysqli)){
                 <div class="flex items-center gap-4">
                     <a href="<?php echo $baseContex; ?>/index.php" class="flex-shrink-0 flex items-center gap-3">
                         <img class="h-8 w-auto object-contain" src="<?php echo $baseAssinatura; ?>/assets/logo.png" alt="TechPS Logo">
-                        <div class="hidden md:block h-6 w-px bg-gray-300"></div>
-                        <span class="hidden md:block text-lg font-bold text-gray-800 tracking-tight">Assinatura Digital</span>
+                        <div class="hidden md:block xl:hidden h-6 w-px bg-gray-300"></div>
+                        <span class="hidden md:block xl:hidden text-lg font-bold text-gray-800 tracking-tight">Assinatura Digital</span>
                     </a>
                 </div>
 
                 <!-- Navigation (Desktop - System Menu) -->
-                <nav class="hidden md:flex space-x-2">
+                <nav class="hidden xl:flex items-center space-x-0.5">
                     <?php
-                    // Definição dos Menus do Sistema (Baseado em menu.php)
-                    $menu_sistema = [
-                        "Cadastros" => [
-                            "RFID" => $baseContex."/cadastro_rfid.php",
-                            "Celular" => $baseContex."/cadastro_celular.php",
-                            "Empresa/Filial" => $baseContex."/cadastro_empresa.php",
-                            "Endosso" => $baseContex."/cadastro_endosso.php",
-                            "Feriado" => $baseContex."/cadastro_feriado.php",
-                            "Férias" => $baseContex."/cadastro_ferias.php",
-                            "Funcionário" => $baseContex."/cadastro_funcionario.php",
-                            "Abono" => $baseContex."/cadastro_abono.php",
-                            "Macro" => $baseContex."/cadastro_macro.php",
-                            "Motivo" => $baseContex."/cadastro_motivo.php",
-                            "Cargo" => $baseContex."/cadastro_operacao.php",
-                            "Parâmetro" => $baseContex."/cadastro_parametro.php",
-                            "Placas" => $baseContex."/cadastro_placa.php",
-                            "Setor" => $baseContex."/cadastro_setor.php",
-                            "Tipo de Documento" => $baseContex."/cadastro_tipo_doc.php",
-                            "Usuário" => $baseContex."/cadastro_usuario.php",
-                            "Habilidades Técnicas" => $baseContex."/cadastro_habilidade_tecnica.php",
-                            "Habilidades Comportamentais" => $baseContex."/cadastro_habilidade_comportamental.php",
-                            "Perfil de Acesso" => $baseContex."/cadastro_perfil_acesso.php",
-                            "Permissões de Usuários" => $baseContex."/cadastro_usuario_perfil.php"
-                        ],
-                        "Ponto" => [
-                            "Registrar Ponto" => $baseContex."/batida_ponto.php",
-                            "Consultar Endossos" => $baseContex."/endosso.php",
-                            "Espelhos de Ponto" => $baseContex."/espelho_ponto.php",
-                            "Integrações de Ponto" => $baseContex."/carregar_ponto.php",
-                            "Não Cadastrados" => $baseContex."/nao_cadastrados.php",
-                            "Não Conformidades" => $baseContex."/nao_conformidade.php",
-                            "Auditoria" => $baseContex."/ponto_auditoria.php"
-                        ],
-                        "Painel" => [
-                            "Ajustes" => $baseContex."/paineis/ajustes.php",
-                            "Disponibilidade" => $baseContex."/paineis/disponibilidade.php",
-                            "Endosso" => $baseContex."/paineis/endosso.php",
-                            "Jornada Aberta" => $baseContex."/paineis/jornada.php",
-                            "Não Conformidades Jurídicas" => $baseContex."/paineis/nc_juridica.php",
-                            "Saldo" => $baseContex."/paineis/saldo.php",
-                            "Escalas" => $baseContex."/paineis/escala_parametro.php"
-                        ],
-                        "Relatórios" => [
-                            "Pontos" => $baseContex."/relatorio_pontos.php"
-                        ],
-                        "Assinatura Digital" => [
-                            "Dashboard" => $baseAssinatura."/index.php",
-                            "Nova Assinatura" => $baseAssinatura."/nova_assinatura.php",
-                            "Assinatura com Governança" => $baseAssinatura."/governanca.php",
-                            "Documentos" => $baseAssinatura."/documentos.php",
-                            "Consultar" => $baseAssinatura."/consultar.php",
-                            "Signatários Externos" => $baseAssinatura."/cadastro_signatario.php",
-                            "Validar Assinatura" => "#iti",
-                           // "Finalizar (ICP)" => $baseAssinatura."/finalizar.php"
-                        ]
-                    ];
+                    // Mesmo menu do sistema: seções, permissões por perfil e regras de nível vêm
+                    // de menu_estrutura.php, a mesma fonte do menu padrão. Antes era um array fixo
+                    // copiado do menu.php, que parou no tempo e ignorava o perfil do usuário.
+                    include_once __DIR__ . "/../../menu_estrutura.php";
+                    $menuNos = menu_estrutura_do_nivel($_SESSION["user_tx_nivel"] ?? "");
 
-                    foreach($menu_sistema as $categoria => $itens) {
+                    $menuEsc = function($texto): string {
+                        return htmlspecialchars(strval($texto), ENT_QUOTES, "UTF-8");
+                    };
+                    // "Validar Assinatura" não navega: abre as instruções do ITI (definidas no rodapé).
+                    $menuAtributos = function(array $item) use ($baseContex, $menuEsc): string {
+                        return !empty($item["iti"])
+                            ? 'href="javascript:void(0);" onclick="abrirInstrucoesITI(); return false;"'
+                            : 'href="' . $menuEsc($baseContex . $item["path"]) . '"';
+                    };
+
+                    foreach($menuNos as $no) {
+                        if($no["tipo"] === "link"){
+                            echo '<a '.$menuAtributos($no).' class="nav-link">'.$menuEsc($no["label"]).'</a>';
+                            continue;
+                        }
+                        // Seção sem nenhuma página acessível não vira um dropdown vazio.
+                        if(empty($no["itens"])){
+                            continue;
+                        }
                         echo '
                         <div class="relative group">
                             <button class="nav-link flex items-center h-full">
-                                <span>'.$categoria.'</span>
+                                <span>'.$menuEsc($no["titulo"]).'</span>
                                 <i class="fas fa-chevron-down ml-1 text-xs text-gray-400"></i>
                             </button>
                             <div class="absolute left-0 top-full pt-2 w-56 hidden group-hover:block z-50">
                                 <div class="bg-white border border-gray-200 rounded-md shadow-lg max-h-[80vh] overflow-y-auto">
                                     <div class="py-1">';
-                                    foreach($itens as $nome => $link) {
-                                        if($nome === "Validar Assinatura"){
-                                            echo '<a href="javascript:void(0);" onclick="abrirInstrucoesITI(); return false;" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">'.$nome.'</a>';
-                                        } else {
-                                            echo '<a href="'.$link.'" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">'.$nome.'</a>';
-                                        }
+                                    foreach($no["itens"] as $item) {
+                                        echo '<a '.$menuAtributos($item).' class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">'.$menuEsc($item["label"]).'</a>';
                                     }
                         echo '          </div>
                                 </div>
@@ -181,7 +148,7 @@ if($empresaTitulo === "" && isset($conn) && ($conn instanceof mysqli)){
                                 echo strtoupper(substr($user_login, 0, 1));
                             ?>
                         </div>
-                        <div class="hidden sm:block text-sm">
+                        <div class="hidden sm:block xl:hidden 2xl:block text-sm">
                             <p class="font-medium text-gray-700 leading-none"><?php echo $user_login; ?></p>
                             <p class="text-xs text-gray-500 mt-0.5">Usuário Sistema</p>
                         </div>
@@ -193,7 +160,7 @@ if($empresaTitulo === "" && isset($conn) && ($conn instanceof mysqli)){
                     </a>
                     
                     <!-- Mobile Menu Button -->
-                    <button class="md:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500">
+                    <button type="button" id="mobile-menu-btn" class="xl:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500">
                         <span class="sr-only">Open menu</span>
                         <i class="fas fa-bars text-xl"></i>
                     </button>
@@ -202,27 +169,30 @@ if($empresaTitulo === "" && isset($conn) && ($conn instanceof mysqli)){
         </div>
         
         <!-- Mobile Navigation (Hidden by default) -->
-        <div class="md:hidden hidden border-t border-gray-200 bg-gray-50" id="mobile-menu">
+        <div class="xl:hidden hidden border-t border-gray-200 bg-gray-50" id="mobile-menu">
             <div class="px-2 pt-2 pb-3 space-y-2">
                 <?php
                     $secIndex = 0;
-                    foreach($menu_sistema as $categoria => $itens) {
+                    foreach($menuNos as $no) {
+                        if($no["tipo"] === "link"){
+                            echo '<a '.$menuAtributos($no).' class="block bg-white border border-gray-200 rounded-md px-3 py-3 text-sm font-semibold text-gray-800">'.$menuEsc($no["label"]).'</a>';
+                            continue;
+                        }
+                        if(empty($no["itens"])){
+                            continue;
+                        }
                         $secIndex++;
                         $secId = "mobile-sec-" . $secIndex;
                         echo '
                             <div class="bg-white border border-gray-200 rounded-md overflow-hidden">
                                 <button type="button" class="w-full flex items-center justify-between px-3 py-3 text-left text-sm font-semibold text-gray-800" data-mobile-toggle="'.$secId.'">
-                                    <span>'.htmlspecialchars($categoria, ENT_QUOTES, "UTF-8").'</span>
+                                    <span>'.$menuEsc($no["titulo"]).'</span>
                                     <i class="fas fa-chevron-down text-xs text-gray-400"></i>
                                 </button>
                                 <div id="'.$secId.'" class="hidden border-t border-gray-200 bg-gray-50">
                                     <div class="py-1">';
-                                        foreach($itens as $nome => $link) {
-                                            if($nome === "Validar Assinatura"){
-                                                echo '<a href="javascript:void(0);" onclick="abrirInstrucoesITI(); return false;" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">'.htmlspecialchars($nome, ENT_QUOTES, "UTF-8").'</a>';
-                                            } else {
-                                                echo '<a href="'.$link.'" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">'.htmlspecialchars($nome, ENT_QUOTES, "UTF-8").'</a>';
-                                            }
+                                        foreach($no["itens"] as $item) {
+                                            echo '<a '.$menuAtributos($item).' class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">'.$menuEsc($item["label"]).'</a>';
                                         }
                         echo '      </div>
                                 </div>

@@ -7,6 +7,7 @@
     include "load_env.php";
     include_once "conecta.php";
     include_once "check_permission.php";
+    include_once "menu_estrutura.php";
     echo '<link rel="stylesheet" href="'.$CONTEX['path'].'/css/menu.css">';
 
 	function verificarAtividade($paginasAtivas) {
@@ -18,348 +19,42 @@
 		return "";
 	}
 
+    // Desenha o menu Metronic a partir da estrutura compartilhada (menu_estrutura.php).
+    // Quais seções e páginas aparecem — domínio, placas, perfil de acesso, nível — é
+    // decidido lá; aqui é só HTML. O cabeçalho do módulo de assinatura usa a mesma fonte.
     function mostrarMenuDoNivel($nivel): string{
         global $CONTEX;
-        // Normaliza o nível para comparação estável e sem depender de caixa alta/baixa.
-        $nivelNormalizado = mb_strtolower(trim(strval($nivel ?? "")));
-        // Considera as duas grafias encontradas no sistema para o mesmo perfil.
-        $ehTerceirizado = in_array($nivelNormalizado, ["terceirizado"], true);
-        // Nome da seção principal do menu para este perfil.
-        $rotuloSecaoPonto = $ehTerceirizado ? "Produção" : "Ponto";
-        // Traduz apenas os textos exibidos no menu; caminhos e permissões permanecem inalterados.
-        $rotuloMenuPonto = function(string $label) use ($ehTerceirizado): string {
-            if(!$ehTerceirizado){
-                return $label;
+
+        $html = "";
+        foreach(menu_estrutura_do_nivel($nivel) as $no){
+            if($no["tipo"] === "link"){
+                $html .= "<li class=''><a href='".$CONTEX["path"].$no["path"]."' class='nav-link'> ".$no["label"]."</a></li>";
+                continue;
             }
-            $mapa = [
-                "Registrar Ponto" => "Registrar Produção",
-                "Espelhos de Ponto" => "Espelhos de Produção",
-                "Integrações de Ponto" => "Integrações de Produção",
-                "Pontos" => "Produções"
-            ];
-            return $mapa[$label] ?? $label;
-        };
-		
-		$camposOcultosProdução = [];
-		if(is_int(strpos($_SERVER["REQUEST_URI"], 'dev'))){
-			$camposOcultosProdução = [
-				"/paineis/disponibilidade.php" 	  => "Disponibilidade",
-			];
-		}
-		
 
-        $paginas = [
-            "cadastros" => [
-                "/cadastro_rfid.php" 		=> "RFID",
-                "/cadastro_celular.php" 	=> "Celular",
-                "/cadastro_empresa.php" 	=> "Empresa/Filial",
-                "/cadastro_endosso.php" 	=> "Endosso",
-                "/cadastro_feriado.php" 	=> "Feriado",
-                "/cadastro_ferias.php" 		=> "Férias",
-                "/cadastro_funcionario.php"	=> "Funcionário",
-                "/correcao_funcionario.php" => "Corrigir Funcionário",
-                "/cadastro_facial.php"      => "Facial",
-                "/cadastro_abono.php"		=> "Abono",
-                "/cadastro_macro.php" 		=> "Macro",
-                "/cadastro_motivo.php" 		=> "Motivo",
-                "/cadastro_operacao.php" 	=> "Cargo",
-                "/cadastro_parametro.php" 	=> "Parâmetro",
-                "/cadastro_placa.php" 		=> "Placas",
-                "/cadastro_setor.php" 		=> "Setor",
-                "/cadastro_tipo_doc.php" 	=> "Tipo de Documento",
-                "/documentos/cadastro_documento.php" => "Gestão de Documentos",
-                "/cadastro_usuario.php" 	=> "Usuário",            
-                "/cadastro_habilidade_tecnica.php" 	=> "Habilidades Técnicas",
-                "/cadastro_habilidade_comportamental.php" 	=> "Habilidades Comportamentais",
-                "/cadastro_perfil_acesso.php" 	=> "Perfil de Acesso",
-                "/cadastro_usuario_perfil.php" 	=> "Permisoes de usuarios",
-               // "/cadastro_comunicado_interno.php" 	=> "Comunicado Interno",
-            ],
-			"ponto" => [
-				"/batida_ponto.php"     => "Registrar Ponto",
-				"/endosso.php" 			=> "Consultar Endossos",
-				"/espelho_ponto.php" 	=> "Espelhos de Ponto",
-				"/carregar_ponto.php" 	=> "Integrações de Ponto",
-				"/nao_cadastrados.php" 	=> "Não Cadastrados",
-				"/nao_conformidade.php" => "Não Conformidades",
-				"/ponto_auditoria.php" => "Auditoria",
-                "/telas/gerenciar_ajustes.php" => "Gerenciar Ajustes",
-                "/trocadeturno/gestao_troca_turno.php" => "Gestão de Turno",
-                "/trocadeturno/solicitar_troca_turno.php" => "Troca de Turno"
-			],
-            "diárias" => [
-                "/diarias/gestao_diarias.php" => "Gestão de Diárias",
-                "/diarias/bases_diarias.php" => "Bases de Diárias",
-                "/diarias/parametros_diarias.php" => "Parâmetros de Diárias"
-            ],
-			"painel" => [
-				"/dashboard.php"				=> "Torre de Comando",
-				"/paineis/ajustes.php"			=> "Ajustes",
-				"/paineis/disponibilidade.php"	=> "Disponibilidade",
-				"/paineis/endosso.php"			=> "Endosso",
-				"/paineis/jornada.php"			=> "Jornada Aberta",
-				"/paineis/nc_juridica.php"		=> "Não Conformidades Jurídicas",
-				"/paineis/saldo.php"			=> "Saldo",
-                "/paineis/escala_parametro.php"	=> "Escalas"
-			] + $camposOcultosProdução,
-			"logística" => [
-				"/cadastro_poi.php"  => "POI",
-				
-			],
-			"relatórios" => [
-					"/relatorio_pontos.php" => "Pontos"
-			],
-            "assinatura" => [
-                "/assinatura/index.php"             => "Dashboard",
-                "/assinatura/nova_assinatura.php"   => "Nova Assinatura",
-                "/assinatura/governanca.php"        => "Assinatura com Governança",
-                "/assinatura/documentos.php"        => "Documentos",
-                "/assinatura/consultar.php"         => "Consultar",
-                "/assinatura/cadastro_signatario.php" => "Signatários Externos",
-                "#iti"                              => "Validar Assinatura",
-            ],
-            "epi" => [
-                "/saude_seguranca/cadastro_epi.php" => "Cadastro de EPI",
-                "/saude_seguranca/entrega_epi.php"  => "Entrega de EPI",
-                "/saude_seguranca/estoque_epi.php"  => "Estoque de EPI"
-            ],
-			"suporte" => [
-                "/suporte/index.php" => "Chamados de Suporte",
-            ],
-            "treinamento" => [
-                "/treinamento/cadastro_treinamento.php" => "Gerenciar Treinamentos",
-                "/treinamento/treinamento_assistir.php" => "Meus Treinamentos",
-            ],
-        ];
-$path = strtolower($_SERVER['REQUEST_URI']);  
-$showComunicado = (strpos($path, "/techps") !== false);
-
-// Gestão de Suporte: visível nos domínios TechPS (produção) e Demo (desenvolvimento).
-if (strpos($path, "/techps") !== false || strpos($path, "/demo") !== false) {
-    $paginas["suporte"]["/suporte/gestao.php"] = "Gestão de Suporte";
-    $paginas["suporte"]["/suporte/dashboard.php"] = "Dashboard de Suporte";
-}
-
-if ($showComunicado) {
-    $paginas["cadastros"]["/cadastro_comunicado.php"] = "Comunicado";
-}
-        $menus = [
-            "cadastros" => "",
-            "ponto" => "",
-            "painel" => "",
-            "logística" => "",
-            "epi" => "",
-            "relatórios" => "",
-            "assinatura" => "",
-            "diárias" => "",
-            "suporte" => "",
-            "treinamento" => "",
-        ];
-        // Perfil vinculado ao usuário (se existir)
-        $perfilId = 0;
-        if(!empty($_SESSION["user_nb_id"])){
-            $rsPerfil = query("SELECT perfil_nb_id FROM usuario_perfil WHERE ativo = 1 AND user_nb_id = ? LIMIT 1", "i", [$_SESSION["user_nb_id"]]);
-            $rowPerfil = $rsPerfil ? mysqli_fetch_assoc($rsPerfil) : null;
-            if(!empty($rowPerfil["perfil_nb_id"])) $perfilId = (int)$rowPerfil["perfil_nb_id"];
-        }
-
-        $allowedBySecao = [];
-        $labelsIndex = [];
-        foreach($paginas as $secName => $secao){
-            foreach($secao as $key => $label){
-                if(!isset($labelsIndex[$label])) $labelsIndex[$label] = [];
-                $labelsIndex[$label][] = strtolower($secName);
-            }
-        }
-        if($perfilId > 0){
-            $rs = query(
-                "SELECT m.menu_tx_label FROM perfil_menu_item p"
-                ." JOIN menu_item m ON m.menu_nb_id = p.menu_nb_id"
-                ." WHERE p.perfil_nb_id = ? AND p.perm_ver = 1 AND m.menu_tx_ativo = 1",
-                "i",
-                [$perfilId]
-            );
-            while($rs && ($r = mysqli_fetch_assoc($rs))){
-                $label = $r["menu_tx_label"];
-                if(!empty($labelsIndex[$label])){
-                    foreach($labelsIndex[$label] as $sec){
-                        if(!isset($allowedBySecao[$sec])) $allowedBySecao[$sec] = [];
-                        $allowedBySecao[$sec][] = $label;
-                    }
-                }
-            }
-        }
-
-        $iconSection = [
-            "cadastros" => "fa fa-folder-open",
-            "ponto" => "fa fa-clock",
-            "painel" => "fa fa-tachometer",
-            "logística" => "fa fa-truck",
-            "epi" => "fa fa-shield-alt",
-            "relatórios" => "fa fa-file-alt",
-            "assinatura" => "fa fa-file-contract",
-            "diárias" => "fa fa-money-bill-wave",
-            "suporte" => "fa fa-life-ring",
-            "treinamento" => "fa fa-graduation-cap",
-        ];
-        $iconMap = [
-            "Celular" => "fa fa-mobile",
-            "Empresa/Filial" => "fa fa-building",
-            "Endosso" => "fa fa-check-circle",
-            "Feriado" => "fa fa-calendar-day",
-            "Férias" => "fa fa-umbrella-beach",
-            "Funcionário" => "fa fa-user",
-            "Corrigir Funcionário" => "fa fa-user-edit",
-            "Macro" => "fa fa-sitemap",
-            "Motivo" => "fa fa-comment-dots",
-            "Operação" => "fa fa-cogs",
-            "Parâmetro" => "fa fa-sliders-h",
-            "Placas" => "fa fa-id-badge",
-            "RFID" => "fa fa-id-badge",
-            "Setor" => "fa fa-layer-group",
-            "Tipo de Documento" => "fa fa-file",
-            "Usuário" => "fa fa-user-cog",
-            "Habilidades Técnicas" => "fa fa-tools",
-            "Habilidades Comportamentais" => "fa fa-users",
-            "Perfil de Acesso" => "fa fa-shield-alt",
-            "Permisoes de usuarios" => "fa fa-user-shield",
-            "Comunicado" => "fa fa-bullhorn",
-            "Registrar Ponto" => "fa fa-clock",
-            "Consultar Endossos" => "fa fa-clipboard-check",
-            "Espelhos de Ponto" => "fa fa-file-alt",
-            "Integrações de Ponto" => "fa fa-exchange-alt",
-            "Não Cadastrados" => "fa fa-user-slash",
-            "Não Conformidades" => "fa fa-exclamation-triangle",
-            "Torre de Comando" => "fa fa-tachometer",
-            "Ajustes" => "fa fa-wrench",
-            "Disponibilidade" => "fa fa-calendar-check",
-            "Jornada Aberta" => "fa fa-road",
-            "Não Conformidades Jurídicas" => "fa fa-balance-scale",
-            "Saldo" => "fa fa-chart-line",
-            "Pontos" => "fa fa-list-alt",
-            "POI" => "fa fa-map-pin",
-            "Logística" => "fa fa-truck",
-            "Signatários Externos" => "fa fa-address-card",
-            "Cadastro de EPI" => "fa fa-plus-circle",
-            "Entrega de EPI" => "fa fa-exchange-alt",
-            "Estoque de EPI" => "fa fa-boxes",
-            "Gestão de Diárias" => "fa fa-hand-holding-usd",
-            "Parâmetros de Diárias" => "fa fa-sliders-h",
-            "Chamados de Suporte" => "fa fa-life-ring",
-            "Gestão de Suporte" => "fa fa-tasks",
-            "Dashboard de Suporte" => "fa fa-bar-chart",
-            "Gerenciar Treinamentos" => "fa fa-graduation-cap",
-            "Meus Treinamentos" => "fa fa-play-circle"
-        ];
-
-        // Verifica se existe pelo menos uma placa cadastrada para mostrar o menu Logística.
-        $temPlacaCadastrada = false;
-        $rsPlacas = query("SELECT 1 FROM placa LIMIT 1");
-        if($rsPlacas && mysqli_num_rows($rsPlacas) > 0){
-            $temPlacaCadastrada = true;
-        }
-
-        // Remove a seção logística antes do loop se não houver placas cadastradas
-        if(!$temPlacaCadastrada){
-            unset($paginas["logística"]);
-        }
-
-            foreach($paginas as $title => $secao){
             $children = "";
-            $secKey = strtolower($title);
-            $parentAllowed = false;
-            if($perfilId > 0){
-                $parentAllowed = !empty($allowedBySecao[$secKey]) && in_array(ucfirst($title), $allowedBySecao[$secKey]);
-            }
-            $countItems = 0;
-            foreach($secao as $key => $value){
-                if ($key !== "#iti") {
-                    $full = __DIR__.$key;
-                    if(!file_exists($full)){
-                        continue;
-                    }
-                }
-                // Filtra filhos por permissões diretas do menu
-                if($perfilId > 0){
-                    $nivelUser = $_SESSION["user_tx_nivel"] ?? "";
-                    $isAdminUser = (is_int(strpos($nivelUser, "Administrador")) || is_int(strpos($nivelUser, "Super Administrador")));
-                    if(function_exists('temPermissaoMenu') && !$isAdminUser){
-                        if(!temPermissaoMenu($key)){
-                            continue;
-                        }
-                    }
-                }
-                // Só altera a apresentação da seção "ponto" para usuários terceirizados.
-                $labelExibicao = ($secKey === "ponto") ? $rotuloMenuPonto($value) : $value;
-                if ($key === "#iti") {
-                    $children .= "<li class='dd'><a href='javascript:void(0);' onclick='abrirInstrucoesITI(); return false;' class='nav-link'> ".$labelExibicao."</a></li>";
+            foreach($no["itens"] as $item){
+                if ($item["iti"]) {
+                    $children .= "<li class='dd'><a href='javascript:void(0);' onclick='abrirInstrucoesITI(); return false;' class='nav-link'> ".$item["label"]."</a></li>";
                 } else {
-                    $children .= "<li class='dd'><a href='".$CONTEX["path"].$key."' class='nav-link'> ".$labelExibicao."</a></li>";
+                    $children .= "<li class='dd'><a href='".$CONTEX["path"].$item["path"]."' class='nav-link'> ".$item["label"]."</a></li>";
                 }
-                $countItems++;
             }
-            // Se houver perfil vinculado, mostra a seção se houver filhos OU se o PAI estiver permitido
-            $showSection = true;
-            if($perfilId > 0){
-                $showSection = ($children !== "" || $parentAllowed);
-            }
-            //Decide se a seção é simples ou 2 colunas
-            if($showSection){
-                $ulClass = "dropdown-menu pull-left";
-                if($countItems > 10){
-                    $ulClass .= " dropdown-2cols";
-                }
 
-                // Mantém o título original das demais seções e personaliza apenas a de ponto.
-                $tituloExibicao = ($secKey === "ponto") ? $rotuloSecaoPonto : ucfirst($title);
-                $menus[$title] = "
-                    <li class='menu-dropdown classic-menu-dropdown ".verificarAtividade(array_keys($secao))."'>
-                        <a>".$tituloExibicao."</a>
+            //Decide se a seção é simples ou 2 colunas
+            $ulClass = "dropdown-menu pull-left";
+            if($no["duas_colunas"]){
+                $ulClass .= " dropdown-2cols";
+            }
+
+            $html .= "
+                    <li class='menu-dropdown classic-menu-dropdown ".verificarAtividade($no["paths"])."'>
+                        <a>".$no["titulo"]."</a>
                         <ul class='".$ulClass."'>".$children."</ul>
                     </li>";
-            } else {
-                $menus[$title] = "";
-            }
         }
-		
-		/*
-		if(is_bool(strpos($_SERVER["REQUEST_URI"], 'dev'))){
-			// unset($menus["relatórios"]);
-			unset($menus["suporte"]);
-		}
-		*/
-	
-        // Menu enxuto para perfis operacionais (inclui terceirizado).
-        $menuMotorista = 
-            "<li class=''><a href='".$CONTEX["path"]."/batida_ponto.php'		class='nav-link'> ".$rotuloMenuPonto("Registrar Ponto")."</a></li>
-             <li class=''><a href='".$CONTEX["path"]."/espelho_ponto.php'		class='nav-link'> ".$rotuloMenuPonto("Espelhos de Ponto")."</a></li>"
-        ;
-
-        $isAdmin = is_int(strpos($nivel, "Administrador"));
-        $isSuperAdmin = is_int(strpos($nivel, "Super Administrador"));
-        $menusConcat = $menus["cadastros"].$menus["ponto"].$menus["painel"].($menus["logística"] ?? "").($menus["epi"] ?? "").($menus["assinatura"] ?? "").($menus["diárias"] ?? "").($menus["suporte"]?? "").($menus["relatórios"] ?? "").($menus["treinamento"] ?? "");
-        if ($isSuperAdmin) {
-            return $menusConcat;
-        }
-        if ($perfilId > 0) {
-            // Garante o acesso rápido ao espelho para níveis operacionais quando o perfil não o trouxer explicitamente.
-            if(in_array($nivel, ["Motorista", "Ajudante", "Funcionário", "Terceirizado"]) && strpos($menusConcat, "/espelho_ponto.php") === false){
-                $menusConcat .= "<li class=''><a href='".$CONTEX["path"]."/espelho_ponto.php' class='nav-link'> ".$rotuloMenuPonto("Espelhos de Ponto")."</a></li>";
-            }
-            return $menusConcat;
-        }
-        if ($isAdmin) {
-            return $menusConcat;
-        }
-        if (is_int(strpos($nivel, "Supervisão"))) {
-            return $menus["cadastros"].$menus["ponto"];
-        }
-        if(in_array($nivel, ["Motorista", "Ajudante", "Funcionário", "Terceirizado"])){
-            return $menuMotorista;
-        }
-
-		return "";
-	}
+        return $html;
+    }
 
     echo 
         "<!-- INICIO HEADER MENU -->"

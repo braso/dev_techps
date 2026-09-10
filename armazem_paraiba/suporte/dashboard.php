@@ -12,7 +12,8 @@
 
     $__empresaAtual = trim(strval($_ENV["CONTEX_PATH"] ?? ""), "/");
     // Dashboard central: mesmos domínios liberados para a Gestão de Suporte.
-    if (strpos($__empresaAtual, "techps") === false && strpos($__empresaAtual, "demo") === false) {
+    // TEMPORARIO (validacao): armazem_paraiba liberado junto com techps/demo.
+    if (strpos($__empresaAtual, "techps") === false && strpos($__empresaAtual, "demo") === false && strpos($__empresaAtual, "armazem_paraiba") === false) {
         echo "<script>alert('Acesso restrito ao domínio TechPS.'); window.location.href='" . ($_ENV["CONTEX_PATH"] ?? "") . "/batida_ponto.php';</script>";
         exit;
     }
