@@ -129,7 +129,9 @@ function formPerfil(){
     query("UPDATE menu_item SET menu_tx_secao = 'Batida de Ponto' WHERE menu_tx_secao = 'motorista'");
 
     $menuPairs = [];
-    $menuPath = __DIR__."/menu.php";
+    // A lista de secoes/paginas mora em menu_estrutura.php (fonte unica do menu padrao e do
+    // cabecalho da assinatura). O menu.php so desenha, entao nao tem mais o array para ler.
+    $menuPath = __DIR__."/menu_estrutura.php";
     if(file_exists($menuPath)){
         $txt = file_get_contents($menuPath);
         $secs = ["cadastros","ponto","diárias","painel","logística","epi","relatórios","assinatura","suporte","treinamento"];
@@ -141,7 +143,7 @@ function formPerfil(){
             }
         }
         if(strpos($txt, '/cadastro_comunicado.php') !== false){ $menuPairs[] = ["cadastros","Comunicado","/cadastro_comunicado.php"]; }
-        // Itens de suporte só aparecem no menu.php condicionados ao domínio (TechPS/Demo),
+        // Itens de suporte só aparecem no menu condicionados ao domínio (TechPS/Demo),
         // então não caem no regex acima (que só lê o array literal da seção). Adiciona
         // manualmente pra também poderem ser liberados/restringidos por perfil.
         if(strpos($txt, '/suporte/gestao.php') !== false){ $menuPairs[] = ["suporte","Gestão de Suporte","/suporte/gestao.php"]; }
@@ -185,13 +187,18 @@ function formPerfil(){
         }
     }
 
-    $validPaths = array_map(function($p){ return $p[2]; }, $menuPairs);
-    $rsAll = query("SELECT menu_nb_id, menu_tx_path FROM menu_item WHERE menu_tx_ativo = 1 ORDER BY menu_nb_id ASC");
-    while($rsAll && ($rr = mysqli_fetch_assoc($rsAll))){
-        $p = $rr["menu_tx_path"];
-        $full = __DIR__.$p;
-        if(!file_exists($full) || !in_array($p, $validPaths)){
-            query("UPDATE menu_item SET menu_tx_ativo = 0 WHERE menu_nb_id = ?", "i", [$rr["menu_nb_id"]]);
+    // Trava: se a leitura do menu nao trouxe nenhum item, algo quebrou no parser (arquivo
+    // movido, formato alterado) — nao e o menu que ficou vazio. Desativar "o que nao veio"
+    // nesse caso apagaria todos os itens e derrubaria o menu de quem tem perfil de acesso.
+    if(!empty($menuPairs)){
+        $validPaths = array_map(function($p){ return $p[2]; }, $menuPairs);
+        $rsAll = query("SELECT menu_nb_id, menu_tx_path FROM menu_item WHERE menu_tx_ativo = 1 ORDER BY menu_nb_id ASC");
+        while($rsAll && ($rr = mysqli_fetch_assoc($rsAll))){
+            $p = $rr["menu_tx_path"];
+            $full = __DIR__.$p;
+            if(!file_exists($full) || !in_array($p, $validPaths)){
+                query("UPDATE menu_item SET menu_tx_ativo = 0 WHERE menu_nb_id = ?", "i", [$rr["menu_nb_id"]]);
+            }
         }
     }
 

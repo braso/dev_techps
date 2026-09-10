@@ -1049,6 +1049,86 @@ function htmlEmailNotificacaoInterna(ticket) {
     );
 }
 
+// E-mail para o atendente vinculado ao setor do chamado — roteamento por equipe.
+// "externo" avisa quem atende o cliente; "interno_ssi" avisa quem desenvolve a correção.
+function htmlEmailAtendenteSetor(ticket, escopo) {
+    const ehSsi = escopo === "interno_ssi";
+    const titulo = ehSsi ? "Chamado encaminhado à SSI" : "Novo chamado no seu setor";
+    const cor = ehSsi ? "#c0392b" : "#e67e22";
+    const chamada = ehSsi
+        ? "Este chamado foi classificado como bug e encaminhado ao atendimento interno (SSI). Você está vinculado a esse setor como atendimento interno."
+        : "Você está vinculado a esse setor como atendimento externo. Acesse a Gestão de Suporte para assumir o chamado.";
+    return (
+        "<div style='font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;'>" +
+        "<h2 style='color:" + cor + ";margin-bottom:4px;'>" + escH(titulo) + "</h2>" +
+        "<p style='color:#888;margin-top:0;font-size:13px;'>Chamado #" + escH(ticket.id) + " — " + escH(ticket.setor_nome || "sem setor") + "</p>" +
+        "<table style='border-collapse:collapse;width:100%;font-size:14px;'>" +
+        "<tr><td style='padding:6px 0;color:#555;width:130px;'><strong>Empresa:</strong></td><td>" + escH(ticket.empresa_nome || ticket.empresa_key || "") + "</td></tr>" +
+        "<tr><td style='padding:6px 0;color:#555;'><strong>Setor:</strong></td><td>" + escH(ticket.setor_nome || "—") + "</td></tr>" +
+        "<tr><td style='padding:6px 0;color:#555;'><strong>Usuário:</strong></td><td>" + escH(ticket.user_nome || ticket.user_login || "") + "</td></tr>" +
+        (ticket.ssi_codigo ? "<tr><td style='padding:6px 0;color:#555;'><strong>SSI:</strong></td><td>" + escH(ticket.ssi_codigo) + " (" + (ticket.ssi_prioridade === "urgente" ? "Prioritária — urgente em produção" : "Próxima atualização") + ")</td></tr>" : "") +
+        "</table>" +
+        "<div style='background:#f7f7f7;border:1px solid #eee;border-radius:6px;padding:12px;margin-top:12px;'>" +
+        "<strong style='color:#555;'>Descrição do problema:</strong><br>" +
+        "<span style='white-space:pre-wrap;color:#333;'>" + escH(ticket.descricao || "") + "</span>" +
+        "</div>" +
+        "<p style='color:#555;font-size:14px;margin-top:14px;'>" + chamada + "</p>" +
+        "<p style='color:#aaa;font-size:12px;margin-top:20px;'>Tech PS — Sistema de Suporte</p>" +
+        "</div>"
+    );
+}
+
+// Atendentes ativos vinculados a um setor num dos escopos (externo / interno_ssi).
+// Sem setor no chamado, ou setor sem ninguém vinculado, devolve lista vazia — quem
+// cobre esse caso é a lista geral de e-mails (suporte_config.emails_notificacao).
+async function atendentesDoSetor(setorId, escopo) {
+    const id = parseInt(setorId, 10);
+    if (!id || id < 1) return [];
+    try {
+        return await suporteQuery(
+            "SELECT a.id, a.nome, a.email FROM suporte_atendente a " +
+            "JOIN suporte_atendente_setor v ON v.atendente_id = a.id " +
+            "WHERE v.setor_id = ? AND v.escopo = ? AND a.status = 'ativo' AND a.email <> '' " +
+            "ORDER BY a.nome ASC",
+            [id, escopo]
+        );
+    } catch (err) {
+        console.error("[SUPORTE] Erro ao buscar atendentes do setor:", err.message);
+        return [];
+    }
+}
+
+// Chamados antigos gravaram so o nome do atendente: a coluna atendente_id nasceu
+// depois, e o "Iniciar atendimento" nao resolvia a equipe. Sem o vinculo, o filtro
+// "Meus atendimentos" nao acha esses chamados mesmo com o nome certo na tela.
+// Liga cada chamado orfao ao cadastro quando o nome bate com um unico atendente.
+async function vincularChamadosPorNome() {
+    try {
+        const r = await suporteQuery(
+            "UPDATE suporte_ticket t " +
+            "SET t.atendente_id = (SELECT a.id FROM suporte_atendente a WHERE a.nome = t.atendente_nome LIMIT 1) " +
+            "WHERE t.atendente_id IS NULL AND COALESCE(t.atendente_nome, '') <> '' " +
+            "AND (SELECT COUNT(*) FROM suporte_atendente a2 WHERE a2.nome = t.atendente_nome) = 1",
+            []
+        );
+        const n = r && r.affectedRows ? r.affectedRows : 0;
+        if (n) console.log("[SUPORTE] Chamados religados ao atendente pelo nome: " + n);
+        return n;
+    } catch (err) {
+        console.error("[SUPORTE] Erro ao religar chamados por nome:", err.message);
+        return 0;
+    }
+}
+
+// Dispara o aviso direcionado para todos os atendentes do setor no escopo informado.
+async function notificarAtendentesSetor(ticket, escopo, assunto) {
+    const equipe = await atendentesDoSetor(ticket.setor_id, escopo);
+    if (!equipe.length) return 0;
+    const html = htmlEmailAtendenteSetor(ticket, escopo);
+    equipe.forEach((a) => enviarEmailSuporte(a.email, assunto, html));
+    return equipe.length;
+}
+
 // Lê uma chave de configuração do suporte (tabela suporte_config). Retorna "" se ausente/erro.
 async function obterConfigSuporte(chave) {
     try {
@@ -1226,6 +1306,30 @@ function criarTabelasSuporte() {
             atualizado_por VARCHAR(150) DEFAULT NULL,
             atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (chave)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+        `CREATE TABLE IF NOT EXISTS suporte_atendente (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            nome VARCHAR(150) NOT NULL,
+            email VARCHAR(190) NOT NULL,
+            login VARCHAR(100) NOT NULL DEFAULT '',
+            origem_empresa VARCHAR(60) NOT NULL DEFAULT '',
+            status ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo',
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uniq_atendente_email (email)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+        `CREATE TABLE IF NOT EXISTS suporte_atendente_setor (
+            atendente_id BIGINT UNSIGNED NOT NULL,
+            setor_id BIGINT UNSIGNED NOT NULL,
+            escopo ENUM('externo','interno_ssi') NOT NULL DEFAULT 'externo',
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (atendente_id, setor_id, escopo),
+            KEY idx_vinculo_setor (setor_id, escopo),
+            CONSTRAINT fk_vinculo_atendente FOREIGN KEY (atendente_id)
+                REFERENCES suporte_atendente (id) ON DELETE CASCADE,
+            CONSTRAINT fk_vinculo_setor FOREIGN KEY (setor_id)
+                REFERENCES suporte_setor (id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     ];
     sqls.forEach((sql) => {
@@ -1252,7 +1356,8 @@ function migrarTabelasSuporte() {
         "ALTER TABLE suporte_ticket ADD COLUMN setor_nome VARCHAR(150) DEFAULT NULL",
         "ALTER TABLE suporte_ticket ADD COLUMN prioridade ENUM('baixa','media','alta','urgente') NOT NULL DEFAULT 'media'",
         "ALTER TABLE suporte_arquivo ADD COLUMN tipo ENUM('imagem','video','documento','audio') NOT NULL DEFAULT 'imagem'",
-        "ALTER TABLE suporte_arquivo MODIFY tipo ENUM('imagem','video','documento','audio') NOT NULL DEFAULT 'imagem'"
+        "ALTER TABLE suporte_arquivo MODIFY tipo ENUM('imagem','video','documento','audio') NOT NULL DEFAULT 'imagem'",
+        "ALTER TABLE suporte_ticket ADD COLUMN atendente_id BIGINT UNSIGNED DEFAULT NULL"
     ];
     const roda = (sql) => {
         suporteQuery(sql, [])
@@ -1596,6 +1701,24 @@ app.post("/suporte/tickets", uploadSuporte.array("anexos", SUPORTE.maxArquivos),
             );
         }
 
+        // Aviso direcionado: atendentes de atendimento externo vinculados ao setor
+        // do chamado. Sem setor, ou setor sem equipe, ninguem recebe aqui - o aviso
+        // geral abaixo continua cobrindo esse caso.
+        await notificarAtendentesSetor(
+            {
+                id: ticketId,
+                empresa_key: empresa,
+                empresa_nome: empresaNome,
+                setor_id: setorId,
+                setor_nome: setorNome,
+                user_nome: unome,
+                user_login: ulogin,
+                descricao: descricao
+            },
+            "externo",
+            "Novo chamado #" + ticketId + (setorNome ? " - " + setorNome : "") + " - TechPS"
+        );
+
         // Aviso interno: e-mail(s) cadastrados em Gestão de Suporte → Configurações.
         const emailsNotificacao = await obterConfigSuporte("emails_notificacao");
         if (emailsNotificacao) {
@@ -1635,6 +1758,8 @@ app.get("/suporte/tickets", exigirAdminSuporte, async (req, res) => {
 
         const setorIdFiltro = parseInt(req.query.setor_id, 10);
         const userIds = String(req.query.user_ids || "").split(",").map((v) => v.trim()).filter(Boolean).slice(0, 500);
+        // Dono do chamado: id numerico filtra por atendente; "sem" traz os nao atribuidos.
+        const atendenteFiltro = String(req.query.atendente_id || "").trim();
 
         let where = [];
         let params = [];
@@ -1645,10 +1770,12 @@ app.get("/suporte/tickets", exigirAdminSuporte, async (req, res) => {
         if (dataInicio && /^\d{4}-\d{2}-\d{2}$/.test(dataInicio)) { where.push("created_at >= ?"); params.push(dataInicio + " 00:00:00"); }
         if (dataFim && /^\d{4}-\d{2}-\d{2}$/.test(dataFim)) { where.push("created_at <= ?"); params.push(dataFim + " 23:59:59"); }
         if (userIds.length) { where.push("user_id IN (" + userIds.map(() => "?").join(",") + ")"); params.push(...userIds); }
+        if (atendenteFiltro === "sem") { where.push("atendente_id IS NULL"); }
+        else if (parseInt(atendenteFiltro, 10) > 0) { where.push("atendente_id = ?"); params.push(parseInt(atendenteFiltro, 10)); }
         const filtro = where.length ? "WHERE " + where.join(" AND ") : "";
 
         const linhas = await suporteQuery(
-            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, responsavel_nome, responsavel_email, pagina_url, descricao, status, tipo, prioridade, ssi_codigo, ssi_prioridade, atendente_nome, aceito_em, fechado_em, created_at, setor_id, setor_nome FROM suporte_ticket " + filtro + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, responsavel_nome, responsavel_email, pagina_url, descricao, status, tipo, prioridade, ssi_codigo, ssi_prioridade, atendente_id, atendente_nome, aceito_em, fechado_em, created_at, setor_id, setor_nome FROM suporte_ticket " + filtro + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
             params.concat([limite, offset])
         );
         const totalRows = await suporteQuery(
@@ -1670,7 +1797,7 @@ app.get("/suporte/tickets/:id", exigirAdminSuporte, async (req, res) => {
         if (!id || id < 1) return res.status(400).json({ ok: false, msg: "ID inválido." });
 
         const linhas = await suporteQuery(
-            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, responsavel_nome, responsavel_email, pagina_url, descricao, status, tipo, prioridade, ssi_codigo, ssi_prioridade, atendente_nome, aceito_em, fechado_em, created_at, setor_id, setor_nome FROM suporte_ticket WHERE id = ?",
+            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, responsavel_nome, responsavel_email, pagina_url, descricao, status, tipo, prioridade, ssi_codigo, ssi_prioridade, atendente_id, atendente_nome, aceito_em, fechado_em, created_at, setor_id, setor_nome FROM suporte_ticket WHERE id = ?",
             [id]
         );
         if (!linhas.length) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
@@ -1721,11 +1848,14 @@ app.get("/suporte/dashboard", exigirAdminSuporte, async (req, res) => {
         const dataInicio = String(req.query.data_inicio || "").trim();
         const dataFim = String(req.query.data_fim || "").trim();
         const setorIdFiltro = parseInt(req.query.setor_id, 10);
+        const atendenteFiltro = String(req.query.atendente_id || "").trim();
 
         let where = [];
         let params = [];
         if (empresa) { where.push("empresa_key = ?"); params.push(empresa); }
         if (setorIdFiltro && setorIdFiltro > 0) { where.push("setor_id = ?"); params.push(setorIdFiltro); }
+        if (atendenteFiltro === "sem") { where.push("atendente_id IS NULL"); }
+        else if (parseInt(atendenteFiltro, 10) > 0) { where.push("atendente_id = ?"); params.push(parseInt(atendenteFiltro, 10)); }
         if (status && SUPORTE_STATUS[status]) { where.push("status = ?"); params.push(status); }
         if (dataInicio && /^\d{4}-\d{2}-\d{2}$/.test(dataInicio)) { where.push("created_at >= ?"); params.push(dataInicio + " 00:00:00"); }
         if (dataFim && /^\d{4}-\d{2}-\d{2}$/.test(dataFim)) { where.push("created_at <= ?"); params.push(dataFim + " 23:59:59"); }
@@ -1923,6 +2053,159 @@ app.get("/suporte/setores", async (req, res) => {
     }
 });
 
+// == Equipe de atendimento ==============================================
+// Atendentes da TechPS vinculados aos setores, em dois escopos: "externo"
+// (atende o cliente) e "interno_ssi" (desenvolve a correcao do bug).
+
+// Lista atendentes com os setores vinculados em cada escopo.
+app.get("/suporte/atendentes", exigirAdminSuporte, async (req, res) => {
+    try {
+        const atendentes = await suporteQuery(
+            "SELECT id, nome, email, login, origem_empresa, status FROM suporte_atendente ORDER BY status ASC, nome ASC",
+            []
+        );
+        const vinculos = await suporteQuery(
+            "SELECT v.atendente_id, v.setor_id, v.escopo, s.nome AS setor_nome " +
+            "FROM suporte_atendente_setor v JOIN suporte_setor s ON s.id = v.setor_id ORDER BY s.nome ASC",
+            []
+        );
+        const porAtendente = new Map();
+        vinculos.forEach((v) => {
+            if (!porAtendente.has(v.atendente_id)) porAtendente.set(v.atendente_id, { externo: [], interno_ssi: [] });
+            porAtendente.get(v.atendente_id)[v.escopo].push({ setor_id: v.setor_id, setor_nome: v.setor_nome });
+        });
+        const lista = atendentes.map((a) => ({
+            ...a,
+            setores_externo: (porAtendente.get(a.id) || {}).externo || [],
+            setores_interno_ssi: (porAtendente.get(a.id) || {}).interno_ssi || []
+        }));
+        res.json({ ok: true, atendentes: lista });
+    } catch (err) {
+        console.error("[SUPORTE] Erro ao listar atendentes:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao listar atendentes." });
+    }
+});
+
+// Cria ou atualiza um atendente e regrava os vinculos de setor dos dois escopos.
+// O e-mail e a chave: reenviar o mesmo e-mail atualiza o cadastro existente.
+app.post("/suporte/atendentes", exigirAdminSuporte, async (req, res) => {
+    try {
+        const nome = String(req.body.nome || "").trim().slice(0, 150);
+        const email = String(req.body.email || "").trim().toLowerCase().slice(0, 190);
+        const login = String(req.body.login || "").trim().slice(0, 100);
+        const origemEmpresa = String(req.body.origem_empresa || "").trim().slice(0, 60);
+        const status = ["ativo", "inativo"].includes(String(req.body.status || "").trim())
+            ? String(req.body.status).trim()
+            : "ativo";
+
+        if (!nome) return res.status(400).json({ ok: false, msg: "Nome do atendente e obrigatorio." });
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ ok: false, msg: "E-mail do atendente invalido." });
+        }
+
+        await suporteQuery(
+            "INSERT INTO suporte_atendente (nome, email, login, origem_empresa, status) VALUES (?, ?, ?, ?, ?) " +
+            "ON DUPLICATE KEY UPDATE nome = VALUES(nome), login = VALUES(login), origem_empresa = VALUES(origem_empresa), status = VALUES(status)",
+            [nome, email, login, origemEmpresa, status]
+        );
+        const achado = await suporteQuery("SELECT id FROM suporte_atendente WHERE email = ?", [email]);
+        if (!achado.length) return res.status(500).json({ ok: false, msg: "Nao foi possivel gravar o atendente." });
+        const atendenteId = achado[0].id;
+
+        // Regrava os vinculos: o que vier no POST passa a ser a verdade.
+        const normalizarIds = (valor) => {
+            const bruto = Array.isArray(valor) ? valor : String(valor || "").split(",");
+            return [...new Set(bruto.map((v) => parseInt(v, 10)).filter((v) => v > 0))];
+        };
+        const setoresExterno = normalizarIds(req.body["setores_externo"] || req.body["setores_externo[]"]);
+        const setoresSsi = normalizarIds(req.body["setores_interno_ssi"] || req.body["setores_interno_ssi[]"]);
+
+        await suporteQuery("DELETE FROM suporte_atendente_setor WHERE atendente_id = ?", [atendenteId]);
+        for (const setorId of setoresExterno) {
+            await suporteQuery(
+                "INSERT IGNORE INTO suporte_atendente_setor (atendente_id, setor_id, escopo) VALUES (?, ?, 'externo')",
+                [atendenteId, setorId]
+            );
+        }
+        for (const setorId of setoresSsi) {
+            await suporteQuery(
+                "INSERT IGNORE INTO suporte_atendente_setor (atendente_id, setor_id, escopo) VALUES (?, ?, 'interno_ssi')",
+                [atendenteId, setorId]
+            );
+        }
+
+        // Quem entra na equipe assume tambem os chamados que ja levavam o nome dele.
+        await vincularChamadosPorNome();
+
+        res.json({ ok: true, msg: "Atendente salvo.", atendente_id: atendenteId });
+    } catch (err) {
+        console.error("[SUPORTE] Erro ao salvar atendente:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao salvar atendente." });
+    }
+});
+
+// Remove o atendente da equipe. Os chamados ja atribuidos a ele preservam o
+// nome gravado (atendente_nome), so perdem o vinculo (atendente_id fica nulo).
+app.post("/suporte/atendentes/:id/remover", exigirAdminSuporte, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        if (!id || id < 1) return res.status(400).json({ ok: false, msg: "ID invalido." });
+        await suporteQuery("UPDATE suporte_ticket SET atendente_id = NULL WHERE atendente_id = ?", [id]);
+        const del = await suporteQuery("DELETE FROM suporte_atendente WHERE id = ?", [id]);
+        if (!del.affectedRows) return res.status(404).json({ ok: false, msg: "Atendente nao encontrado." });
+        res.json({ ok: true, msg: "Atendente removido da equipe." });
+    } catch (err) {
+        console.error("[SUPORTE] Erro ao remover atendente:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao remover atendente." });
+    }
+});
+
+// Atribui (ou desatribui, com atendente_id = 0) o dono do chamado.
+app.post("/suporte/tickets/:id/atribuir", exigirAdminSuporte, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        const atendenteId = parseInt(req.body.atendente_id, 10) || 0;
+        const autor = String(req.body.autor || "Gestao TechPS").slice(0, 150);
+        if (!id || id < 1) return res.status(400).json({ ok: false, msg: "ID invalido." });
+
+        const chk = await suporteQuery("SELECT * FROM suporte_ticket WHERE id = ?", [id]);
+        if (!chk.length) return res.status(404).json({ ok: false, msg: "Chamado nao encontrado." });
+
+        if (atendenteId === 0) {
+            await suporteQuery("UPDATE suporte_ticket SET atendente_id = NULL, atendente_nome = NULL WHERE id = ?", [id]);
+            registrarEventoSuporte(id, "atribuicao", "Atendente removido do chamado", autor);
+            return res.json({ ok: true, msg: "Atendente removido do chamado." });
+        }
+
+        const alvo = await suporteQuery(
+            "SELECT id, nome, email FROM suporte_atendente WHERE id = ? AND status = 'ativo'",
+            [atendenteId]
+        );
+        if (!alvo.length) return res.status(400).json({ ok: false, msg: "Atendente invalido ou inativo." });
+
+        await suporteQuery(
+            "UPDATE suporte_ticket SET atendente_id = ?, atendente_nome = ? WHERE id = ?",
+            [alvo[0].id, alvo[0].nome, id]
+        );
+        registrarEventoSuporte(id, "atribuicao", "Chamado atribuido a " + alvo[0].nome, autor);
+
+        // Aviso ao atendente designado - o escopo segue o estagio do chamado.
+        const escopo = String(chk[0].status || "") === "encaminhado_ssi" ? "interno_ssi" : "externo";
+        if (alvo[0].email) {
+            enviarEmailSuporte(
+                alvo[0].email,
+                "Chamado #" + id + " atribuido a voce - TechPS",
+                htmlEmailAtendenteSetor({ ...chk[0], id }, escopo)
+            );
+        }
+
+        res.json({ ok: true, msg: "Chamado atribuido a " + alvo[0].nome + "." });
+    } catch (err) {
+        console.error("[SUPORTE] Erro ao atribuir chamado:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao atribuir chamado." });
+    }
+});
+
 // Chaves de configuração do SLA — uma por nível de prioridade, valor em horas corridas.
 const SUPORTE_SLA_CAMPOS = ["sla_baixa_horas", "sla_media_horas", "sla_alta_horas", "sla_urgente_horas"];
 
@@ -2092,9 +2375,22 @@ app.post("/suporte/tickets/:id/aceitar", exigirAdminSuporte, async (req, res) =>
         const chk = await suporteQuery("SELECT * FROM suporte_ticket WHERE id = ?", [id]);
         if (!chk.length) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
 
+        // Quem clica em "Iniciar atendimento" vira o dono do chamado. Se essa pessoa
+        // estiver cadastrada na equipe de atendimento, grava tambem o vinculo (atendente_id)
+        // para o combo de responsavel e os filtros baterem com o nome exibido.
+        const atendenteLogin = String(req.body.atendente_login || "").trim();
+        let atendenteId = null;
+        if (atendenteLogin !== "" || atendente !== "") {
+            const naEquipe = await suporteQuery(
+                "SELECT id FROM suporte_atendente WHERE status = 'ativo' AND (login = ? OR nome = ?) LIMIT 1",
+                [atendenteLogin, atendente]
+            );
+            if (naEquipe.length) atendenteId = naEquipe[0].id;
+        }
+
         const upd = await suporteQuery(
-            "UPDATE suporte_ticket SET status = 'em_andamento', atendente_nome = ?, aceito_em = NOW() WHERE id = ?",
-            [atendente, id]
+            "UPDATE suporte_ticket SET status = 'em_andamento', atendente_id = ?, atendente_nome = ?, aceito_em = NOW() WHERE id = ?",
+            [atendenteId, atendente, id]
         );
         if (!upd.affectedRows) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
 
@@ -2202,6 +2498,34 @@ app.post("/suporte/tickets/:id/status", exigirAdminSuporte, async (req, res) => 
 
         const novoTicket = { ...chk[0], status, ssi_codigo: ssiCodigo || chk[0].ssi_codigo, ssi_prioridade: ssiPrioridade || chk[0].ssi_prioridade };
 
+        // Encaminhado a SSI: avisa quem atende internamente esse setor (time de desenvolvimento).
+        if (status === "encaminhado_ssi") {
+            const equipeSsi = await atendentesDoSetor(novoTicket.setor_id, "interno_ssi");
+
+            // Atribuição automática só quando não há dúvida de quem é o dono: o setor tem
+            // exatamente um atendente interno. Com dois ou mais, a escolha continua do gestor.
+            if (equipeSsi.length === 1) {
+                await suporteQuery(
+                    "UPDATE suporte_ticket SET atendente_id = ?, atendente_nome = ? WHERE id = ?",
+                    [equipeSsi[0].id, equipeSsi[0].nome, id]
+                );
+                novoTicket.atendente_id = equipeSsi[0].id;
+                novoTicket.atendente_nome = equipeSsi[0].nome;
+                registrarEventoSuporte(
+                    id,
+                    "atribuicao",
+                    "Chamado atribuído automaticamente a " + equipeSsi[0].nome + " (único atendente interno do setor)",
+                    "Sistema"
+                );
+            }
+
+            if (equipeSsi.length) {
+                const htmlSsi = htmlEmailAtendenteSetor(novoTicket, "interno_ssi");
+                const assuntoSsi = "Chamado #" + id + " encaminhado à SSI - TechPS";
+                equipeSsi.forEach((a) => enviarEmailSuporte(a.email, assuntoSsi, htmlSsi));
+            }
+        }
+
         // E-mails de status / encerramento.
         {
             const ehEncerramento = (status === "resolvido" || status === "cancelado");
@@ -2256,6 +2580,7 @@ app.use((err, req, res, next) => {
 // Cria as tabelas do banco externo ao iniciar (se configurado).
 criarTabelasSuporte();
 migrarTabelasSuporte();
+vincularChamadosPorNome();
 
 // Configuração do servidor HTTP para aceitar requisições HTTP
 const httpServer = http.createServer(app);

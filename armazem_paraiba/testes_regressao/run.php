@@ -216,16 +216,23 @@ function runnerSourceContracts(): void
             '/batida_ponto.php',
             '/espelho_ponto.php',
         ],
-        'menu.php' => [
-            '/endosso.php',
-            '/espelho_ponto.php',
-            '/paineis/endosso.php',
-        ],
-        'assinatura/componentes/layout_header.php' => [
+        // Secoes e paginas do menu ficam em menu_estrutura.php (fonte unica). menu.php e o
+        // cabecalho da assinatura so desenham, e o cadastro de perfil sincroniza menu_item
+        // lendo esse arquivo — os tres precisam continuar apontando para ele.
+        'menu_estrutura.php' => [
             '/cadastro_endosso.php',
             '/endosso.php',
             '/espelho_ponto.php',
             '/paineis/endosso.php',
+        ],
+        'menu.php' => [
+            'menu_estrutura_do_nivel(',
+        ],
+        'assinatura/componentes/layout_header.php' => [
+            'menu_estrutura_do_nivel(',
+        ],
+        'cadastro_perfil_acesso.php' => [
+            '/menu_estrutura.php',
         ],
         'espelho_ponto.php' => [
             'include "funcoes_ponto.php"',
@@ -536,15 +543,16 @@ function runnerIntegrationTests(array &$summary): void
         runnerAssertContains('/batida_ponto.php', $checkPermission, 'Regra especial de batida foi removida.');
         runnerAssertContains('/espelho_ponto.php', $checkPermission, 'Regra especial de espelho foi removida.');
 
-        $menu = runnerReadFile($appDir . '/menu.php');
+        $menu = runnerReadFile($appDir . '/menu_estrutura.php');
         runnerAssertContains('/endosso.php', $menu, 'Menu consultando endosso foi alterado.');
         runnerAssertContains('/espelho_ponto.php', $menu, 'Menu de espelho foi alterado.');
         runnerAssertContains('/paineis/endosso.php', $menu, 'Menu do painel de endosso foi alterado.');
 
+        // menu.php e o cabecalho da assinatura nao tem mais lista propria: leem a mesma estrutura.
+        $menuRender = runnerReadFile($appDir . '/menu.php');
+        runnerAssertContains('menu_estrutura_do_nivel(', $menuRender, 'menu.php deixou de usar a estrutura compartilhada do menu.');
         $layoutHeader = runnerReadFile($appDir . '/assinatura/componentes/layout_header.php');
-        runnerAssertContains('/endosso.php', $layoutHeader, 'Header de assinatura perdeu endosso.');
-        runnerAssertContains('/espelho_ponto.php', $layoutHeader, 'Header de assinatura perdeu espelho.');
-        runnerAssertContains('/paineis/endosso.php', $layoutHeader, 'Header de assinatura perdeu painel.');
+        runnerAssertContains('menu_estrutura_do_nivel(', $layoutHeader, 'Header de assinatura deixou de usar a estrutura compartilhada do menu.');
     }, $summary);
 }
 

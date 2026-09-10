@@ -46,7 +46,7 @@
         }
 
         (function() {
-            const menuBtn = document.querySelector('button.md\\:hidden');
+            const menuBtn = document.getElementById('mobile-menu-btn');
             if (menuBtn) {
                 menuBtn.addEventListener('click', function() {
                     const menu = document.getElementById('mobile-menu');
