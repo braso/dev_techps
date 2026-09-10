@@ -502,7 +502,7 @@
 						</div>
 						<div class='col-md-4 text-right'>
 							<strong>Tempo:</strong>
-							<span class='tempo-display' id='tempoDisplay'>{$tempoAssistido}s</span>
+							<span class='tempo-display' id='tempoDisplay'>" . sprintf("%02d:%02d", floor($tempoAssistido / 60), $tempoAssistido % 60) . "</span>
 						</div>
 					</div>
 				</div>";
@@ -653,7 +653,7 @@
 					</div>
 					<div class='row'>
 						<div class='col-xs-6'><strong>Tempo Assistido:</strong></div>
-						<div class='col-xs-6'><span id='tempoLateral'>{$tempoAssistido}s</span></div>
+						<div class='col-xs-6'><span id='tempoLateral'>" . sprintf("%02d:%02d", floor($tempoAssistido / 60), $tempoAssistido % 60) . "</span></div>
 					</div>
 					<div class='row'>
 						<div class='col-xs-6'><strong>Carga Horária:</strong></div>
@@ -769,7 +769,7 @@
 			porcentagemAtual = Math.min(100, percent);
 			var segundos = Math.min(ultimoTempo, referenceDuration);
 			$('#tempoDisplay').text(formatarTempo(segundos));
-			$('#tempoLateral').text(Math.floor(segundos) + 's');
+			$('#tempoLateral').text(formatarTempo(segundos));
 			$('#progressoTopo').text(porcentagemAtual.toFixed(1) + '%');
 			$('#progressoLateral').text(porcentagemAtual.toFixed(1) + '%');
 			$('#progressBar').css('width', porcentagemAtual.toFixed(1) + '%');
