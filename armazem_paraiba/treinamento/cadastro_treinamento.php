@@ -76,6 +76,7 @@
 			})(),
 			"trei_nb_dias_validade" => (int)($_POST["dias_validade"] ?? 365),
 			"trei_tx_status" => $_POST["status"] ?? "ativo",
+			"trei_tx_gerar_notificacao" => isset($_POST["gerar_notificacao"]) ? "sim" : "nao",
 			"trei_nb_obrigatorio" => isset($_POST["obrigatorio"]) ? 1 : 0,
 			"trei_nb_nota_minima_aprovacao" => (int)($_POST["nota_minima_aprovacao"] ?? 70),
 			"trei_nb_quantidade_questoes_prova" => (int)($_POST["quantidade_questoes_prova"] ?? 5),
@@ -336,6 +337,7 @@
 		$dataPublicacao = !empty($dados["trei_dt_data_publicacao"]) ? date("Y-m-d", strtotime($dados["trei_dt_data_publicacao"])) : date("Y-m-d");
 		$dataLiberacao = !empty($dados["trei_dt_data_liberacao"]) ? date("Y-m-d", strtotime($dados["trei_dt_data_liberacao"])) : date("Y-m-d");
 		$obrigatorio = $dados["trei_nb_obrigatorio"] ?? 0;
+		$gerarNotificacao = ($dados["trei_tx_gerar_notificacao"] ?? "nao") === "sim";
 		$status = $dados["trei_tx_status"] ?? "ativo";
 		$notaMinima = $dados["trei_nb_nota_minima_aprovacao"] ?? 70;
 		$qtdQuestoes = $dados["trei_nb_quantidade_questoes_prova"] ?? 5;
@@ -474,6 +476,11 @@
 								<div class='col-md-4' style='margin-top:25px;'>
 									<label>
 										<input type='checkbox' name='obrigatorio' value='1' " . ($obrigatorio ? "checked" : "") . "> Obrigatório
+									</label>
+								</div>
+								<div class='col-md-4' style='margin-top:25px;'>
+									<label>
+										<input type='checkbox' name='gerar_notificacao' value='1' " . ($gerarNotificacao ? "checked" : "") . "> <i class='fa fa-bell'></i> Gerar notificação de novo treinamento
 									</label>
 								</div>
 							</div>

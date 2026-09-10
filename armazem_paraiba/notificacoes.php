@@ -59,6 +59,7 @@ function notificacao_categorias_disponiveis(): array {
         "abonos_mes"         => "Abonos lançados no mês",
         "frota_indisponivel" => "Motoristas indisponíveis agora",
         "saldo_negativo"     => "Banco de horas do período negativo",
+        "treinamento"        => "Treinamentos novos para assistir",
     ];
 }
 
@@ -254,6 +255,51 @@ function notificacao_calcular(array $categoriasAtivas): array {
                     "titulo" => "Banco de horas negativo",
                     "texto" => torre_horas_fmt($saldoTotais["saldoFinal"]) . "h — ref. " . torre_mes_label($saldoRef["mes"]),
                     "link" => "paineis/saldo.php",
+                ];
+            }
+        }
+    }
+
+    if (in_array("treinamento", $categoriasAtivas, true)) {
+        // Treinamentos novos (geram notificação) disponíveis para o usuário logado e ainda não concluídos
+        $usuarioId = intval($_SESSION["user_nb_id"] ?? 0);
+        if ($usuarioId > 0) {
+            $perfilUsuario = 0;
+            $rsPerfil = query("SELECT perfil_nb_id FROM usuario_perfil WHERE ativo = 1 AND user_nb_id = ? LIMIT 1", "i", [$usuarioId]);
+            $rowPerfil = torre_fetch_assoc($rsPerfil);
+            if (!empty($rowPerfil)) $perfilUsuario = intval($rowPerfil["perfil_nb_id"] ?? 0);
+
+            $totalTreinamentos = intval(torre_fetch_assoc(query(
+                "SELECT COUNT(*) AS c FROM treinamento t
+                 WHERE t.trei_tx_status = 'ativo'
+                   AND t.trei_tx_gerar_notificacao = 'sim'
+                   AND (t.trei_dt_data_liberacao IS NULL OR t.trei_dt_data_liberacao <= NOW())
+                   AND NOT EXISTS (
+                       SELECT 1 FROM treinamento_bloqueio tb
+                       WHERE tb.trebl_nb_treinamento_id = t.trei_nb_id AND tb.trebl_nb_usuario_id = ?
+                   )
+                   AND NOT EXISTS (
+                       -- A notificação sai assim que o usuário INICIA o treinamento
+                       SELECT 1 FROM treinamento_progresso tp
+                       WHERE tp.trepr_nb_treinamento_id = t.trei_nb_id
+                         AND tp.trepr_nb_usuario_id = ?
+                   )
+                   AND (
+                       t.trei_tx_tipo_usuario_permitido IS NULL
+                       OR t.trei_tx_tipo_usuario_permitido = ''
+                       OR JSON_CONTAINS(t.trei_tx_tipo_usuario_permitido, ?)
+                       OR JSON_CONTAINS(t.trei_tx_tipo_usuario_permitido, ?)
+                   )",
+                "iiss",
+                [$usuarioId, $usuarioId, '"' . $perfilUsuario . '"', $perfilUsuario]
+            ))["c"] ?? 0);
+
+            if ($totalTreinamentos > 0) {
+                $itens[] = [
+                    "icone" => "fa-graduation-cap", "cor" => "#3c8dbc",
+                    "titulo" => $totalTreinamentos . " treinamento(s) novo(s) para assistir",
+                    "texto" => "Novos conteúdos disponíveis no seu perfil",
+                    "link" => "treinamento/treinamento_assistir.php",
                 ];
             }
         }

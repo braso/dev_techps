@@ -238,6 +238,12 @@
         trei_dt_data_atualiza DATETIME
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
+    // Campo de notificação de novo treinamento (migração segura para tabelas existentes)
+    $__checkGerarNotif = mysqli_query($conn, "SHOW COLUMNS FROM treinamento LIKE 'trei_tx_gerar_notificacao'");
+    if ($__checkGerarNotif && mysqli_num_rows($__checkGerarNotif) === 0) {
+        mysqli_query($conn, "ALTER TABLE treinamento ADD COLUMN trei_tx_gerar_notificacao ENUM('sim','nao') NOT NULL DEFAULT 'nao' AFTER trei_tx_status");
+    }
+
     // Tabela de materiais de apoio
     mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_material (
         tram_nb_id INT AUTO_INCREMENT PRIMARY KEY,
