@@ -9,7 +9,7 @@
 	$usuarioId = $_SESSION["user_nb_id"] ?? 0;
 	$nivelUsuario = $_SESSION["user_tx_nivel"] ?? "";
 	$isAdmin = (strpos($nivelUsuario, "Administrador") !== false);
-	$treinamentoId = (int)($_GET["id"] ?? $_POST["treinamento_id"] ?? 0);
+	$treinamentoId = (int)($_GET["id"] ?? $_GET["treinamento_id"] ?? $_POST["treinamento_id"] ?? 0);
 
 	if (!$treinamentoId) {
 		header("Location: treinamento_assistir.php");
@@ -289,6 +289,84 @@
 	}
 
 	// =====================================================
+	// AJAX: MENSAGENS DA CONVERSA (chat do treinamento)
+	// =====================================================
+
+	if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["acao_player"] ?? "") === "mensagem_enviar") {
+		header('Content-Type: application/json');
+		$treinamentoId = (int)($_POST["treinamento_id"] ?? 0);
+		$texto = trim((string)($_POST["texto"] ?? ""));
+		if ($treinamentoId <= 0 || $texto === "" || !verificarAcesso($treinamentoId, $usuarioId, $isAdmin)) {
+			echo json_encode(["success" => false, "message" => "Não foi possível enviar a mensagem."]);
+			exit;
+		}
+		query(
+			"INSERT INTO treinamento_mensagem (trem_nb_treinamento_id, trem_nb_usuario_id, trem_tx_usuario_nome, trem_tx_usuario_login, trem_tx_usuario_nivel, trem_tx_tipo, trem_tx_mensagem) VALUES (?, ?, ?, ?, ?, 'texto', ?)",
+			"iissss",
+			[$treinamentoId, $usuarioId, $_SESSION["user_tx_nome"] ?? "", $_SESSION["user_tx_login"] ?? "", $_SESSION["user_tx_nivel"] ?? "", $texto]
+		);
+		registrarLogTreinamento($treinamentoId, $usuarioId, "mensagem", "Mensagem enviada na conversa");
+		echo json_encode(["success" => true]);
+		exit;
+	}
+
+	if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["acao_player"] ?? "") === "mensagem_anexo") {
+		header('Content-Type: application/json');
+		$treinamentoId = (int)($_POST["treinamento_id"] ?? 0);
+		if ($treinamentoId <= 0 || !verificarAcesso($treinamentoId, $usuarioId, $isAdmin) || empty($_FILES["arquivo"]["name"])) {
+			echo json_encode(["success" => false, "message" => "Não foi possível enviar o arquivo."]);
+			exit;
+		}
+		$ext = strtolower(pathinfo($_FILES["arquivo"]["name"], PATHINFO_EXTENSION));
+		$tiposImagem = ["jpg", "jpeg", "png", "gif", "webp"];
+		$tiposAudio = ["mp3", "wav", "ogg", "oga", "m4a", "webm", "weba", "aac"];
+		if (in_array($ext, $tiposImagem)) {
+			$tipo = "imagem";
+		} elseif (in_array($ext, $tiposAudio)) {
+			$tipo = "audio";
+		} else {
+			echo json_encode(["success" => false, "message" => "Formato não permitido. Envie imagem ou áudio."]);
+			exit;
+		}
+		$dir = __DIR__ . "/uploads/conversa/" . $treinamentoId . "/";
+		if (!is_dir($dir)) mkdir($dir, 0755, true);
+		$nomeSalvo = "conv_" . time() . "_" . rand(1000, 9999) . "." . $ext;
+		if (!move_uploaded_file($_FILES["arquivo"]["tmp_name"], $dir . $nomeSalvo)) {
+			echo json_encode(["success" => false, "message" => "Erro ao salvar o arquivo."]);
+			exit;
+		}
+		query(
+			"INSERT INTO treinamento_mensagem (trem_nb_treinamento_id, trem_nb_usuario_id, trem_tx_usuario_nome, trem_tx_usuario_login, trem_tx_usuario_nivel, trem_tx_tipo, trem_tx_arquivo, trem_tx_mensagem) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+			"iissssss",
+			[$treinamentoId, $usuarioId, $_SESSION["user_tx_nome"] ?? "", $_SESSION["user_tx_login"] ?? "", $_SESSION["user_tx_nivel"] ?? "", $tipo, "conversa/" . $treinamentoId . "/" . $nomeSalvo, $_FILES["arquivo"]["name"]]
+		);
+		registrarLogTreinamento($treinamentoId, $usuarioId, "mensagem_anexo", "Anexo enviado na conversa ({$tipo})");
+		echo json_encode(["success" => true]);
+		exit;
+	}
+
+	if (($_GET["acao_player"] ?? "") === "mensagens_listar") {
+		header('Content-Type: application/json');
+		$treinamentoId = (int)($_GET["treinamento_id"] ?? 0);
+		$aposId = (int)($_GET["apos_id"] ?? 0);
+		if ($treinamentoId <= 0 || !verificarAcesso($treinamentoId, $usuarioId, $isAdmin)) {
+			echo json_encode(["success" => false, "mensagens" => []]);
+			exit;
+		}
+		$mensagens = [];
+		$rs = query(
+			"SELECT * FROM treinamento_mensagem WHERE trem_nb_treinamento_id = ? AND trem_nb_id > ? ORDER BY trem_nb_id ASC LIMIT 200",
+			"ii",
+			[$treinamentoId, $aposId]
+		);
+		while ($rs && ($row = mysqli_fetch_assoc($rs))) {
+			$mensagens[] = $row;
+		}
+		echo json_encode(["success" => true, "mensagens" => $mensagens]);
+		exit;
+	}
+
+	// =====================================================
 	// VERIFICAR ACESSO
 	// =====================================================
 
@@ -313,6 +391,20 @@
 			$materiais[] = $row;
 		}
 	}
+
+	// Buscar mensagens da conversa
+	$mensagensChat = [];
+	$rsChat = query(
+		"SELECT * FROM treinamento_mensagem WHERE trem_nb_treinamento_id = ? ORDER BY trem_nb_id ASC LIMIT 200",
+		"i",
+		[$treinamentoId]
+	);
+	if ($rsChat) {
+		while ($row = mysqli_fetch_assoc($rsChat)) {
+			$mensagensChat[] = $row;
+		}
+	}
+	$ultimoIdChat = !empty($mensagensChat) ? (int)end($mensagensChat)["trem_nb_id"] : 0;
 
 	// Buscar questões para avaliação
 	$questoes = [];
@@ -462,6 +554,14 @@
 		}
 		.tab-content { padding: 15px 0; }
 		.nav-tabs-custom > .nav-tabs > li.active > a { border-top-color: #3c8dbc; }
+		.chat-container { max-height: 350px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px; padding: 12px; background: #fafafa; }
+		.chat-msg { margin-bottom: 12px; max-width: 80%; padding: 8px 12px; border-radius: 8px; }
+		.chat-msg-outro { background: #e9f1f8; border: 1px solid #c9dcec; }
+		.chat-msg-meu { background: #d4edda; border: 1px solid #b7dcc3; margin-left: auto; }
+		.chat-msg-cabecalho { font-size: 12px; margin-bottom: 3px; color: #444; }
+		.chat-msg-corpo { font-size: 13px; word-wrap: break-word; }
+		.chat-imagem { max-width: 220px; border-radius: 6px; border: 1px solid #ddd; }
+		.chat-form { margin-top: 12px; }
 	</style>
 
 	<div class='container-fluid'>
@@ -532,6 +632,7 @@
 						<li class='active'><a href='#tab_descricao' data-toggle='tab'>Descrição</a></li>
 						" . (!empty($materiais) ? "<li><a href='#tab_materiais' data-toggle='tab'>Materiais (" . count($materiais) . ")</a></li>" : "") . "
 						" . ($podeAvaliar || $tentativas > 0 ? "<li><a href='#tab_avaliacao' data-toggle='tab'>Avaliação</a></li>" : "") . "
+						<li><a href='#tab_conversa' data-toggle='tab'><i class='fa fa-comments'></i> Conversa" . (!empty($mensagensChat) ? " (" . count($mensagensChat) . ")" : "") . "</a></li>
 					</ul>
 					<div class='tab-content'>
 
@@ -541,7 +642,7 @@
 							<p>{$descricao}</p>
 							" . (!empty($conteudoProgramatico) ? "<h5>Conteúdo Programático:</h5><p>" . nl2br($conteudoProgramatico) . "</p>" : "") . "
 							<div class='row'>
-								<div class='col-md-6'><strong>Carga Horária:</strong> " . sprintf("%02d:%02d", floor($cargaHoraria / 60), $cargaHoraria % 60) . " min</div>
+								<div class='col-md-6'><strong>Carga Horária:</strong> " . sprintf("%02dm:%02ds", floor($cargaHoraria / 60), $cargaHoraria % 60) . "</div>
 								<div class='col-md-6'><strong>Obrigatório:</strong> " . ($obrigatorio ? "Sim" : "Não") . "</div>
 							</div>
 						</div>";
@@ -634,6 +735,61 @@
 						</div>";
 				}
 
+				// ABA: CONVERSA
+				echo "
+						<div class='tab-pane' id='tab_conversa'>
+							<div class='row'>
+								<div class='col-md-12'>
+									<p class='text-muted'><i class='fa fa-comments'></i> Interaja com outros participantes deste treinamento. Todas as mensagens ficam registradas para auditoria.</p>
+									<div id='chatContainer' class='chat-container'>";
+									if (empty($mensagensChat)) {
+										echo "<p class='text-muted text-center'><i class='fa fa-comment-o'></i> Nenhuma mensagem ainda. Seja o primeiro a interagir!</p>";
+									} else {
+										$chatBase = ($_ENV["URL_BASE"] ?? "") . ($CONTEX["path"] ?? "") . "/treinamento/uploads/";
+										foreach ($mensagensChat as $msg) {
+											$ehMeu = ((int)($msg["trem_nb_usuario_id"] ?? 0) === (int)$usuarioId);
+											$tipo = $msg["trem_tx_tipo"] ?? "texto";
+											$corpo = "";
+											if ($tipo === "texto") {
+												$corpo = nl2br(htmlspecialchars($msg["trem_tx_mensagem"] ?? ""));
+											} elseif ($tipo === "imagem") {
+												$corpo = "<a href='" . $chatBase . $msg["trem_tx_arquivo"] . "' target='_blank'><img src='" . $chatBase . $msg["trem_tx_arquivo"] . "' class='chat-imagem' alt='imagem'></a>";
+											} elseif ($tipo === "audio") {
+												$corpo = "<audio controls preload='none' style='max-width:280px;'><source src='" . $chatBase . $msg["trem_tx_arquivo"] . "'></audio>";
+											}
+											$nomeAutor = htmlspecialchars($msg["trem_tx_usuario_nome"] ?? "Usuário");
+											$dataMsg = date("d/m/Y H:i", strtotime($msg["trem_dt_data_cadastro"] ?? "now"));
+											echo "
+									<div class='chat-msg " . ($ehMeu ? "chat-msg-meu" : "chat-msg-outro") . "'>
+										<div class='chat-msg-cabecalho'>
+											<i class='fa fa-user-circle'></i> <strong>{$nomeAutor}</strong>
+											<span class='text-muted' style='font-size:11px;'> - {$dataMsg}</span>
+										</div>
+										<div class='chat-msg-corpo'>{$corpo}</div>
+									</div>";
+										}
+									}
+									echo "
+									</div>
+									<div class='chat-form'>
+										<div class='input-group'>
+											<input type='text' id='chatTexto' class='form-control' placeholder='Escreva sua mensagem...' maxlength='1000'>
+											<span class='input-group-btn'>
+												<button type='button' class='btn btn-primary' id='chatEnviar'><i class='fa fa-paper-plane'></i></button>
+											</span>
+										</div>
+										<div style='margin-top:8px;'>
+											<input type='file' id='chatArquivo' accept='image/*,audio/*' style='display:none;'>
+											<button type='button' class='btn btn-sm btn-default' id='chatAnexar'><i class='fa fa-paperclip'></i> Anexar imagem/áudio</button>
+											<button type='button' class='btn btn-sm btn-info' id='chatGravar'><i class='fa fa-microphone'></i> Gravar áudio</button>
+											<button type='button' class='btn btn-sm btn-danger' id='chatParar' style='display:none;'><i class='fa fa-stop'></i> Parar e enviar</button>
+											<small class='text-muted' id='chatGravando' style='display:none;margin-left:8px;'><i class='fa fa-circle text-danger'></i> Gravando...</small>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>";
+
 				echo "
 					</div>
 				</div>
@@ -657,7 +813,7 @@
 					</div>
 					<div class='row'>
 						<div class='col-xs-6'><strong>Carga Horária:</strong></div>
-						<div class='col-xs-6'>" . sprintf("%02d:%02d", floor($cargaHoraria / 60), $cargaHoraria % 60) . "</div>
+						<div class='col-xs-6'>" . sprintf("%02dm:%02ds", floor($cargaHoraria / 60), $cargaHoraria % 60) . "</div>
 					</div>
 					" . ($tentativas > 0 ? "
 					<div class='row'>
@@ -1157,6 +1313,162 @@
 				}
 			});
 		}
+
+		// =====================================================
+		// CONVERSA (CHAT DO TREINAMENTO)
+		// =====================================================
+		var chatBaseUrl = '{$_ENV["URL_BASE"]}{$CONTEX["path"]}/treinamento/uploads/';
+		var ultimoIdChat = {$ultimoIdChat};
+		var chatRecorder = null;
+		var chatChunks = [];
+
+		function chatAnexarHtml(m) {
+			var tipo = m.trem_tx_tipo || 'texto';
+			var corpo = '';
+			if(tipo === 'texto') {
+				corpo = $('<div>').text(m.trem_tx_mensagem || '').html().replace(/\\n/g, '<br>');
+			} else if(tipo === 'imagem') {
+				corpo = '<a href=\"' + chatBaseUrl + m.trem_tx_arquivo + '\" target=\"_blank\"><img src=\"' + chatBaseUrl + m.trem_tx_arquivo + '\" class=\"chat-imagem\" alt=\"imagem\"></a>';
+			} else if(tipo === 'audio') {
+				corpo = '<audio controls preload=\"none\" style=\"max-width:280px;\"><source src=\"' + chatBaseUrl + m.trem_tx_arquivo + '\"></audio>';
+			}
+			var ehMeu = (parseInt(m.trem_nb_usuario_id) === {$usuarioId});
+			var nome = $('<span>').text(m.trem_tx_usuario_nome || 'Usuário').html();
+			var data = new Date(m.trem_dt_data_cadastro);
+			var dataLabel = '';
+			if(!isNaN(data)) {
+				dataLabel = String(data.getDate()).padStart(2,'0') + '/' + String(data.getMonth()+1).padStart(2,'0') + '/' + data.getFullYear() + ' ' + String(data.getHours()).padStart(2,'0') + ':' + String(data.getMinutes()).padStart(2,'0');
+			}
+			return '<div class=\"chat-msg ' + (ehMeu ? 'chat-msg-meu' : 'chat-msg-outro') + '\">' +
+				'<div class=\"chat-msg-cabecalho\"><i class=\"fa fa-user-circle\"></i> <strong>' + nome + '</strong>' +
+				'<span class=\"text-muted\" style=\"font-size:11px;\"> - ' + dataLabel + '</span></div>' +
+				'<div class=\"chat-msg-corpo\">' + corpo + '</div></div>';
+		}
+
+		function carregarMensagens() {
+			$.get(window.location.pathname, {
+				acao_player: 'mensagens_listar',
+				treinamento_id: treinamentoId,
+				apos_id: ultimoIdChat
+			}, function(data) {
+				if(!data.success || !data.mensagens || data.mensagens.length === 0) return;
+				var container = $('#chatContainer');
+				var estavaVazio = container.find('.chat-msg').length === 0;
+				var tinhaPlaceholder = container.text().indexOf('Nenhuma mensagem') !== -1;
+				if(tinhaPlaceholder) container.html('');
+				data.mensagens.forEach(function(m) {
+					container.append(chatAnexarHtml(m));
+					ultimoIdChat = Math.max(ultimoIdChat, parseInt(m.trem_nb_id));
+				});
+				container.scrollTop(container[0].scrollHeight);
+			}, 'json');
+		}
+
+		$('#chatEnviar').on('click', function() {
+			var texto = $('#chatTexto').val().trim();
+			if(!texto) return;
+			$.post(window.location.pathname, {
+				acao_player: 'mensagem_enviar',
+				treinamento_id: treinamentoId,
+				texto: texto
+			}, function(data) {
+				if(data.success) {
+					$('#chatTexto').val('');
+					carregarMensagens();
+				} else {
+					Swal.fire({ icon: 'error', title: 'Erro', text: data.message || 'Não foi possível enviar.' });
+				}
+			}, 'json');
+		});
+
+		$('#chatTexto').on('keydown', function(e) {
+			if(e.key === 'Enter') $('#chatEnviar').click();
+		});
+
+		$('#chatAnexar').on('click', function() { $('#chatArquivo').click(); });
+
+		$('#chatArquivo').on('change', function() {
+			var arquivo = this.files[0];
+			if(!arquivo) return;
+			var formData = new FormData();
+			formData.append('acao_player', 'mensagem_anexo');
+			formData.append('treinamento_id', treinamentoId);
+			formData.append('arquivo', arquivo);
+			$.ajax({
+				url: window.location.pathname,
+				method: 'POST',
+				data: formData,
+				processData: false,
+				contentType: false,
+				dataType: 'json',
+				success: function(data) {
+					if(data.success) {
+						carregarMensagens();
+					} else {
+						Swal.fire({ icon: 'error', title: 'Erro', text: data.message || 'Não foi possível enviar o arquivo.' });
+					}
+					$('#chatArquivo').val('');
+				}
+			});
+		});
+
+		$('#chatGravar').on('click', function() {
+			if(!navigator.mediaDevices || !window.MediaRecorder) {
+				Swal.fire({ icon: 'warning', title: 'Atenção', text: 'Gravação de áudio não suportada neste navegador. Você pode anexar um arquivo de áudio.' });
+				return;
+			}
+			navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+				chatRecorder = new MediaRecorder(stream);
+				chatChunks = [];
+				chatRecorder.ondataavailable = function(e) {
+					if(e.data.size > 0) chatChunks.push(e.data);
+				};
+				chatRecorder.onstop = function() {
+					stream.getTracks().forEach(function(t) { t.stop(); });
+					var blob = new Blob(chatChunks, { type: 'audio/webm' });
+					var formData = new FormData();
+					formData.append('acao_player', 'mensagem_anexo');
+					formData.append('treinamento_id', treinamentoId);
+					formData.append('arquivo', new File([blob], 'gravacao_' + Date.now() + '.webm', { type: 'audio/webm' }));
+					$.ajax({
+						url: window.location.pathname,
+						method: 'POST',
+						data: formData,
+						processData: false,
+						contentType: false,
+						dataType: 'json',
+						success: function(data) {
+							if(data.success) {
+								carregarMensagens();
+							} else {
+								Swal.fire({ icon: 'error', title: 'Erro', text: data.message || 'Não foi possível enviar o áudio.' });
+							}
+						}
+					});
+				};
+				chatRecorder.start();
+				$('#chatGravar').hide();
+				$('#chatParar').show();
+				$('#chatGravando').show();
+			}).catch(function() {
+				Swal.fire({ icon: 'error', title: 'Erro', text: 'Não foi possível acessar o microfone.' });
+			});
+		});
+
+		$('#chatParar').on('click', function() {
+			if(chatRecorder && chatRecorder.state === 'recording') {
+				chatRecorder.stop();
+			}
+			$('#chatParar').hide();
+			$('#chatGravando').hide();
+			$('#chatGravar').show();
+		});
+
+		setInterval(carregarMensagens, 5000);
+		setTimeout(function() {
+			var container = $('#chatContainer');
+			if(container.length) container.scrollTop(container[0].scrollHeight);
+		}, 300);
 	</script>";
 
 	rodape();

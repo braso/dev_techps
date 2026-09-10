@@ -329,6 +329,23 @@
         FOREIGN KEY (trebl_nb_usuario_id) REFERENCES user(user_nb_id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
+    // Tabela de mensagens da conversa do treinamento (chat + auditoria)
+    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_mensagem (
+        trem_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        trem_nb_treinamento_id INT NOT NULL,
+        trem_nb_usuario_id INT NOT NULL,
+        trem_tx_usuario_nome VARCHAR(200),
+        trem_tx_usuario_login VARCHAR(100),
+        trem_tx_usuario_nivel VARCHAR(50),
+        trem_tx_tipo ENUM('texto','audio','imagem') DEFAULT 'texto',
+        trem_tx_mensagem TEXT,
+        trem_tx_arquivo VARCHAR(300),
+        trem_dt_data_cadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_treinamento (trem_nb_treinamento_id),
+        FOREIGN KEY (trem_nb_treinamento_id) REFERENCES treinamento(trei_nb_id) ON DELETE CASCADE,
+        FOREIGN KEY (trem_nb_usuario_id) REFERENCES user(user_nb_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
     // =====================================================
 
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_grid.php";

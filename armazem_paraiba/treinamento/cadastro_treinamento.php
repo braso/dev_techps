@@ -396,6 +396,17 @@
 			.questao-item { background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin-bottom: 10px; }
 			.questao-item .opcoes { margin-left: 20px; }
 			.material-item { display: flex; align-items: center; justify-content: space-between; padding: 8px; background: #f5f5f5; border-radius: 4px; margin-bottom: 5px; }
+			.perfil-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+			.perfil-card-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 10px; }
+			.perfil-card-titulo { font-size: 14px; color: #2c6a86; }
+			.perfil-card-contador { background: #f0f7fb; border: 1px solid #d5e6f2; border-radius: 15px; padding: 3px 12px; font-size: 12px; color: #555; }
+			.perfil-contador-num { font-size: 14px; color: #3c8dbc; }
+			.atribuicao-resumo { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 15px; }
+			.atribuicao-resumo-item { flex: 1; min-width: 150px; background: linear-gradient(135deg, #3c8dbc, #2c6a86); border-radius: 10px; padding: 15px; text-align: center; color: #fff; box-shadow: 0 3px 8px rgba(60,141,188,0.3); }
+			.atribuicao-resumo-item-sucesso { background: linear-gradient(135deg, #27ae60, #1e8449); box-shadow: 0 3px 8px rgba(39,174,96,0.3); }
+			.atribuicao-resumo-item-info { background: linear-gradient(135deg, #337ab7, #23527c); box-shadow: 0 3px 8px rgba(51,122,183,0.3); }
+			.atribuicao-resumo-num { font-size: 26px; font-weight: bold; }
+			.atribuicao-resumo-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9; }
 		</style>
 
 		<div class='box box-primary'>
@@ -519,21 +530,60 @@
 									if (empty($perfisComUsuarios)) {
 										echo "<div class='alert alert-warning'><i class='fa fa-info-circle'></i> Selecione pelo menos um perfil na aba <strong>Dados Gerais</strong> para listar os funcionários aqui.</div>";
 									} else {
+										$totalGeral = 0;
+										$selecionadosGeral = 0;
 										foreach ($perfisComUsuarios as $grupo) {
-											echo "<h5 style='margin-top:15px;border-bottom:1px solid #eee;padding-bottom:5px;'><i class='fa fa-users'></i> <strong>" . htmlspecialchars($grupo["perfil_tx_nome"]) . "</strong></h5>";
-											echo "<div class='row'>";
+											$totalGrupo = count($grupo["usuarios"]);
+											$selGrupo = 0;
+											foreach ($grupo["usuarios"] as $u) {
+												if (!in_array($u["user_nb_id"], $bloqueados)) $selGrupo++;
+											}
+											$totalGeral += $totalGrupo;
+											$selecionadosGeral += $selGrupo;
+											$pctGrupo = $totalGrupo > 0 ? round(($selGrupo / $totalGrupo) * 100) : 0;
+											echo "
+										<div class='perfil-card'>
+											<div class='perfil-card-header'>
+												<div class='perfil-card-titulo'><i class='fa fa-users'></i> <strong>" . htmlspecialchars($grupo["perfil_tx_nome"]) . "</strong></div>
+												<div class='perfil-card-contador'>
+													<span class='perfil-contador-num'><strong>{$selGrupo}</strong>/{$totalGrupo}</span> selecionados
+												</div>
+											</div>
+											<div class='progress' style='height:6px;margin-bottom:10px;'>
+												<div class='progress-bar progress-bar-success perfil-bar' role='progressbar' style='width:{$pctGrupo}%'></div>
+											</div>
+											<div class='row'>";
 											foreach ($grupo["usuarios"] as $u) {
 												$checked = in_array($u["user_nb_id"], $bloqueados) ? "" : " checked";
-												echo "<div class='col-md-4 col-sm-6'>";
-												echo "<label style='font-weight:normal;cursor:pointer;'>";
-												echo "<input type='checkbox' name='usuarios_atribuidos[]' value='{$u["user_nb_id"]}'{$checked}> ";
-												echo "<input type='hidden' name='usuarios_origem[]' value='{$u["user_nb_id"]}'>";
-												echo htmlspecialchars($u["user_tx_nome"]);
-												echo "</label>";
-												echo "</div>";
+												echo "
+												<div class='col-md-4 col-sm-6'>
+													<label style='font-weight:normal;cursor:pointer;'>
+														<input type='checkbox' class='checkbox-perfil' name='usuarios_atribuidos[]' value='{$u["user_nb_id"]}'{$checked}>
+														<input type='hidden' name='usuarios_origem[]' value='{$u["user_nb_id"]}'>
+														" . htmlspecialchars($u["user_tx_nome"]) . "
+													</label>
+												</div>";
 											}
-											echo "</div>";
+											echo "
+											</div>
+										</div>";
 										}
+										$pctGeral = $totalGeral > 0 ? round(($selecionadosGeral / $totalGeral) * 100) : 0;
+										echo "
+									<div class='atribuicao-resumo'>
+										<div class='atribuicao-resumo-item'>
+											<div class='atribuicao-resumo-num'>{$totalGeral}</div>
+											<div class='atribuicao-resumo-label'>Total de Funcionários</div>
+										</div>
+										<div class='atribuicao-resumo-item atribuicao-resumo-item-sucesso'>
+											<div class='atribuicao-resumo-num' id='resumoSelecionados'>{$selecionadosGeral}</div>
+											<div class='atribuicao-resumo-label'>Selecionados (com acesso)</div>
+										</div>
+										<div class='atribuicao-resumo-item atribuicao-resumo-item-info'>
+											<div class='atribuicao-resumo-num' id='resumoPercentual'>{$pctGeral}%</div>
+											<div class='atribuicao-resumo-label'>% com Acesso</div>
+										</div>
+									</div>";
 									}
 									echo "
 									</div>
@@ -589,22 +639,56 @@
 					}
 					var html = '';
 					data.perfis.forEach(function(p) {
-						html += '<h5 style=\"margin-top:15px;border-bottom:1px solid #eee;padding-bottom:5px;\"><i class=\"fa fa-users\"></i> <strong>' + $('<span>').text(p.perfil_tx_nome).html() + '</strong></h5>';
-						html += '<div class=\"row\">';
+						var total = p.usuarios.length;
+						html += '<div class=\"perfil-card\">' +
+							'<div class=\"perfil-card-header\">' +
+							'<div class=\"perfil-card-titulo\"><i class=\"fa fa-users\"></i> <strong>' + $('<span>').text(p.perfil_tx_nome).html() + '</strong></div>' +
+							'<div class=\"perfil-card-contador\"><span class=\"perfil-contador-num\"><strong>0</strong>/' + total + '</span> selecionados</div>' +
+							'</div>' +
+							'<div class=\"progress\" style=\"height:6px;margin-bottom:10px;\">' +
+							'<div class=\"progress-bar progress-bar-success perfil-bar\" role=\"progressbar\" style=\"width:0%\"></div>' +
+							'</div>' +
+							'<div class=\"row\">';
 						p.usuarios.forEach(function(u) {
 							var checked = data.bloqueados.indexOf(parseInt(u.user_nb_id)) === -1 ? ' checked' : '';
 							html += '<div class=\"col-md-4 col-sm-6\">' +
 								'<label style=\"font-weight:normal;cursor:pointer;\">' +
-								'<input type=\"checkbox\" name=\"usuarios_atribuidos[]\" value=\"' + u.user_nb_id + '\"' + checked + '> ' +
+								'<input type=\"checkbox\" class=\"checkbox-perfil\" name=\"usuarios_atribuidos[]\" value=\"' + u.user_nb_id + '\"' + checked + '> ' +
 								'<input type=\"hidden\" name=\"usuarios_origem[]\" value=\"' + u.user_nb_id + '\">' +
 								$('<span>').text(u.user_tx_nome).html() +
 								'</label></div>';
 						});
-						html += '</div>';
+						html += '</div></div>';
 					});
+					html += '<div class=\"atribuicao-resumo\">' +
+						'<div class=\"atribuicao-resumo-item\"><div class=\"atribuicao-resumo-num\" id=\"resumoTotal\">0</div><div class=\"atribuicao-resumo-label\">Total de Funcionários</div></div>' +
+						'<div class=\"atribuicao-resumo-item atribuicao-resumo-item-sucesso\"><div class=\"atribuicao-resumo-num\" id=\"resumoSelecionados\">0</div><div class=\"atribuicao-resumo-label\">Selecionados (com acesso)</div></div>' +
+						'<div class=\"atribuicao-resumo-item atribuicao-resumo-item-info\"><div class=\"atribuicao-resumo-num\" id=\"resumoPercentual\">0%</div><div class=\"atribuicao-resumo-label\">% com Acesso</div></div>' +
+						'</div>';
 					container.html(html);
+					atualizarContadores();
 				}, 'json');
 			}
+
+			function atualizarContadores() {
+				var totalGeral = 0;
+				var selecionadosGeral = 0;
+				$('.perfil-card').each(function() {
+					var card = $(this);
+					var total = card.find('.checkbox-perfil').length;
+					var selecionados = card.find('.checkbox-perfil:checked').length;
+					card.find('.perfil-contador-num strong').text(selecionados);
+					var pct = total > 0 ? Math.round((selecionados / total) * 100) : 0;
+					card.find('.perfil-bar').css('width', pct + '%');
+					totalGeral += total;
+					selecionadosGeral += selecionados;
+				});
+				$('#resumoTotal').text(totalGeral);
+				$('#resumoSelecionados').text(selecionadosGeral);
+				$('#resumoPercentual').text(totalGeral > 0 ? Math.round((selecionadosGeral / totalGeral) * 100) + '%' : '0%');
+			}
+
+			$(document).on('change', '.checkbox-perfil', atualizarContadores);
 
 			$('#selectPerfis').on('change', carregarUsuariosAtribuicao);
 			if($('#listaUsuariosAtribuicao').length) {
