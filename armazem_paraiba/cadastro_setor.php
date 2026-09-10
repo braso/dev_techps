@@ -7,11 +7,9 @@
 	include "conecta.php";
 
 	// Só o domínio /demo mantém a lista mestra de setores usados no módulo de suporte.
-	// TEMPORARIO (validacao): armazem_paraiba liberado junto com /demo.
 	function suporteSetorDominioEhDemo(): bool {
 		$empresaAtual = trim(strval($_ENV["CONTEX_PATH"] ?? ""), "/");
-		return strpos($empresaAtual, "demo") !== false
-			|| strpos($empresaAtual, "armazem_paraiba") !== false;
+		return strpos($empresaAtual, "demo") !== false;
 	}
 
 	function ensureColunaDisponivelSuporte(){

@@ -133,8 +133,7 @@
 			$showComunicado = (strpos($path, "/techps") !== false);
 
 			// Gestão de Suporte: visível nos domínios TechPS (produção) e Demo (desenvolvimento).
-			// TEMPORARIO (validacao): armazem_paraiba liberado junto.
-			if (strpos($path, "/techps") !== false || strpos($path, "/demo") !== false || strpos($path, "/armazem_paraiba") !== false) {
+			if (strpos($path, "/techps") !== false || strpos($path, "/demo") !== false) {
 				$paginas["suporte"]["/suporte/gestao.php"] = "Gestão de Suporte";
 				$paginas["suporte"]["/suporte/dashboard.php"] = "Dashboard de Suporte";
 			}
