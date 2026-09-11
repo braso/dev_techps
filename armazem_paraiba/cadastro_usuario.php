@@ -801,6 +801,33 @@
 
 function index() {
         global $CONTEX;
+
+        // AJAX: ids de usuários que têm perfil com permissão de registrar ponto
+        // (dentro do index pois o dispatcher do funcoes.php chama index() durante o include do conecta)
+        if (isset($_GET["registra_ponto_json"])) {
+            header('Content-Type: application/json');
+            if (empty($_SESSION["user_nb_id"])) {
+                echo json_encode(["ids" => []]);
+                exit;
+            }
+            $ids = [];
+            $rs = query(
+                "SELECT DISTINCT up2.user_nb_id AS user_id
+                 FROM usuario_perfil up2
+                 JOIN perfil_menu_item pmi2 ON pmi2.perfil_nb_id = up2.perfil_nb_id
+                 JOIN menu_item mi2 ON mi2.menu_nb_id = pmi2.menu_nb_id
+                 WHERE up2.ativo = 1
+                   AND pmi2.perm_ver = 1
+                   AND mi2.menu_tx_ativo = 1
+                   AND mi2.menu_tx_path = '/batida_ponto.php'"
+            );
+            while ($rs && ($r = mysqli_fetch_assoc($rs))) {
+                if (!empty($r["user_id"])) $ids[] = (int)$r["user_id"];
+            }
+            echo json_encode(["ids" => $ids]);
+            exit;
+        }
+
         $permitido = false;
         $hasMenuPermission = false;
 		if(in_array($_SESSION["user_tx_nivel"], ["Motorista","Ajudante","Funcionário", "Terceirizado"])){
@@ -938,7 +965,6 @@ function index() {
                 "TELEFONE"      => "user_tx_fone",
                 "EMPRESA"       => "empr_tx_nome",
                 "STATUS"        => "user_tx_status",
-				"RFID"          => "rfids_tx_uid",
                 "AUTENTICAÇÃO"  => "rfids_nb_id",
                 "FACIAL"        => "IF(user.user_tx_face_descriptor IS NOT NULL AND user.user_tx_face_descriptor != '', 1, 0) AS tem_facial"
             ];
@@ -1009,6 +1035,13 @@ function index() {
 
                         var htmlIcones = '';
 
+                        // Registra Ponto (ícone informativo: quem tem perfil com permissão de registrar ponto)
+                        if (registraPontoIds[idUsuario]) {
+                            htmlIcones += '<span class=\"glyphicon glyphicon-ok-circle\" style=\"color:#28a745;font-size:14px;margin-right:12px;\" title=\"Registra ponto - perfil com permissão\"></span>';
+                        } else {
+                            htmlIcones += '<span class=\"glyphicon glyphicon-ban-circle\" style=\"color:#d9534f;font-size:14px;margin-right:12px;\" title=\"Não registra ponto\"></span>';
+                        }
+
                         // RFID
                         if (idRfid !== '') {
                             htmlIcones += '<span onclick=\"abrirRfidDireto(' + idRfid + ', ' + idUsuario + ')\" class=\"glyphicon glyphicon-credit-card\" style=\"color:#28a745;font-size:14px;margin-right:12px;cursor:pointer;\" title=\"Editar Crachá Ativo\"></span>';
@@ -1028,6 +1061,19 @@ function index() {
 
                         tdAutenticacao.html(htmlIcones);
                     });
+                };
+
+                // FUNÇÃO: Ícone Registra Ponto na coluna AUTENTICAÇÃO - identifica quem tem perfil com permissão de registrar ponto
+                var registraPontoIds = {};
+                const carregarRegistraPonto = function(callback) {
+                    fetch('cadastro_usuario.php?registra_ponto_json=1', { cache: 'no-store' })
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) {
+                            registraPontoIds = {};
+                            (data.ids || []).forEach(function(id) { registraPontoIds[id] = true; });
+                            if (callback) callback();
+                        })
+                        .catch(function(e) { if (callback) callback(); });
                 };
 
                 window.abrirFacialPorUser = function(idUsuario) {
@@ -1060,7 +1106,9 @@ function index() {
                     if(typeof funcoesInternasAntiga === 'function') funcoesInternasAntiga(); 
                     
                     // Roda a sua formatação de crachás
+                    carregarRegistraPonto(function() {
                     formatarBiometria();
+                });
                     // Oculta coluna FACIAL (usada só internamente para o ícone)
                     var idxFacialHide = pegarIndiceColuna('FACIAL');
                     if (idxFacialHide !== -1) {

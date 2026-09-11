@@ -2882,6 +2882,34 @@
 	
 function index(){
 		
+        // AJAX: ids de funcionários (entidades) cujo usuário tem perfil com permissão de registrar ponto
+        // (dentro do index pois o dispatcher do funcoes.php chama index() durante o include do conecta)
+        if (isset($_GET["registra_ponto_json"])) {
+            header('Content-Type: application/json');
+            if (empty($_SESSION["user_nb_id"])) {
+                echo json_encode(["ids" => []]);
+                exit;
+            }
+            $ids = [];
+            $rs = query(
+                "SELECT DISTINCT u2.user_nb_entidade AS enti_id
+                 FROM user u2
+                 JOIN usuario_perfil up2 ON up2.user_nb_id = u2.user_nb_id
+                 JOIN perfil_menu_item pmi2 ON pmi2.perfil_nb_id = up2.perfil_nb_id
+                 JOIN menu_item mi2 ON mi2.menu_nb_id = pmi2.menu_nb_id
+                 WHERE u2.user_tx_status = 'ativo'
+                   AND up2.ativo = 1
+                   AND pmi2.perm_ver = 1
+                   AND mi2.menu_tx_ativo = 1
+                   AND mi2.menu_tx_path = '/batida_ponto.php'"
+            );
+            while ($rs && ($r = mysqli_fetch_assoc($rs))) {
+                if (!empty($r["enti_id"])) $ids[] = (int)$r["enti_id"];
+            }
+            echo json_encode(["ids" => $ids]);
+            exit;
+        }
+
         // APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
         verificaPermissao('/cadastro_funcionario.php');
 		
@@ -2962,7 +2990,6 @@ function index(){
                 "PARÂMETRO DA JORNADA" 	=> "para_tx_nome",
                 "CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",
                 "STATUS" 				=> "enti_tx_status",
-				"UID"                   => "rfids_tx_uid",
                 "AUTENTICAÇÃO"          => "rfids_nb_id",
                 "FACIAL"                => "IF(user.user_tx_face_descriptor IS NOT NULL AND user.user_tx_face_descriptor != '', 1, 0) AS tem_facial",
                 "ABONO FERIADO ESCALA"  => "IF(para_tx_tipo = 'escala', IF(para_tx_abonarFeriadoEscala = 'sim', 'Sim', 'Não'), '—') AS para_tx_abonarFeriadoEscala"
@@ -2982,13 +3009,12 @@ function index(){
                 "DATA CADASTRO" 		=> "DATE_FORMAT(enti_tx_dataCadastro, '%d/%m/%Y')",
                 "PARÂMETRO DA JORNADA" 	=> "para_tx_nome",
                 "CONVENÇÃO PADRÃO" 		=> "IF(enti_tx_ehPadrao = \"sim\", \"Sim\", \"Não\") AS enti_tx_ehPadrao",
-                "STATUS" 				=> "enti_tx_status",
-				"UID"                   => "rfids_tx_uid",
+"STATUS" 				=> "enti_tx_status",
                 "AUTENTICAÇÃO"          => "rfids_nb_id",
                 "FACIAL"                => "IF(user.user_tx_face_descriptor IS NOT NULL AND user.user_tx_face_descriptor != '', 1, 0) AS tem_facial"
             ];
 
-			$allGridFields = [
+            $allGridFields = [
                 "CÓDIGO" 				=> "enti_nb_id",
                 "NOME" 					=> "enti_tx_nome",
                 "MATRÍCULA" 			=> "enti_tx_matricula",
@@ -3136,6 +3162,13 @@ function index(){
 
                         var htmlIcones = '';
 
+                        // Registra Ponto (ícone informativo: quem tem perfil com permissão de registrar ponto)
+                        if (registraPontoIds[idEntidade]) {
+                            htmlIcones += '<span class=\"glyphicon glyphicon-ok-circle\" style=\"color:#28a745;font-size:14px;margin-right:12px;\" title=\"Registra ponto - perfil com permissão\"></span>';
+                        } else {
+                            htmlIcones += '<span class=\"glyphicon glyphicon-ban-circle\" style=\"color:#d9534f;font-size:14px;margin-right:12px;\" title=\"Não registra ponto\"></span>';
+                        }
+
                         // RFID
                         if (idRfid !== '') {
                             htmlIcones += '<span onclick=\"abrirRfidDireto(' + idRfid + ', ' + idEntidade + ')\" class=\"glyphicon glyphicon-credit-card\" style=\"color:#28a745;font-size:14px;margin-right:12px;cursor:pointer;\" title=\"Editar Crachá Ativo\"></span>';
@@ -3155,6 +3188,19 @@ function index(){
 
                         tdAutenticacao.html(htmlIcones);
                     });
+                };
+
+                // FUNÇÃO: Ícone Registra Ponto na coluna AUTENTICAÇÃO - identifica quem tem perfil com permissão de registrar ponto
+                var registraPontoIds = {};
+                const carregarRegistraPonto = function(callback) {
+                    fetch('cadastro_funcionario.php?registra_ponto_json=1', { cache: 'no-store' })
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) {
+                            registraPontoIds = {};
+                            (data.ids || []).forEach(function(id) { registraPontoIds[id] = true; });
+                            if (callback) callback();
+                        })
+                        .catch(function(e) { if (callback) callback(); });
                 };
 
                 window.abrirFacialDireto = function(idEntidade) {
@@ -3196,7 +3242,9 @@ function index(){
                     if(typeof funcoesInternasAntiga === 'function') funcoesInternasAntiga(); 
                     
                     // Roda a formatação de crachás
+                    carregarRegistraPonto(function() {
                     formatarBiometria();
+                });
                     // Oculta coluna FACIAL (usada só internamente para o ícone)
                     var idxFacialHide = pegarIndiceColuna('FACIAL');
                     if (idxFacialHide !== -1) {
