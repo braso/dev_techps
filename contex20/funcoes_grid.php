@@ -387,6 +387,7 @@
 				urlGridConfig = '{$_ENV["APP_PATH"]}/contex20/grid_config_controller.php';
 				urlGridPdf = '{$_ENV["APP_PATH"]}{$_ENV["CONTEX_PATH"]}/impressao/grid.php';
 				userEmpresaId = '".(int)($_SESSION["user_nb_empresa"] ?? 0)."';
+				gridUserId = '".(int)($_SESSION["user_nb_id"] ?? 0)."';
 			</script>
 			<script>
 				const searchFields = ".json_encode($camposBusca).";
