@@ -69,6 +69,11 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
     $grid_name = $_POST['grid_name'] ?? '';
     $columns = $_POST['columns'] ?? ''; // JSON string
 
+    // Fallback: o próprio frontend envia o id do usuário logado (o grid o injeta na página)
+    if(empty($user_id) && !empty($_POST['guc_user_id'])){
+        $user_id = (int)$_POST['guc_user_id'];
+    }
+
     if(empty($user_id) && !empty($_SESSION['user_tx_login'] ?? '')){
         $stmtUser = $conn->prepare("SELECT user_nb_id FROM user WHERE user_tx_login = ? AND user_tx_status = 'ativo' LIMIT 1");
         $login = $_SESSION['user_tx_login'];
@@ -108,7 +113,24 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
         $padrao = mysqli_fetch_assoc(query("SELECT gup_nb_id, gup_tx_configs FROM grid_user_padrao WHERE gup_nb_user = ? AND gup_nb_ordem = ?", "ii", [(int)$user_id, $ordem]));
         if(empty($padrao)){
             http_response_code(400);
-            echo json_encode(['error' => 'Padrão não encontrado']);
+            $totalPadroes = 0;
+            $rsTotal = query("SELECT COUNT(*) AS c, GROUP_CONCAT(gup_nb_ordem) AS ordens FROM grid_user_padrao WHERE gup_nb_user = ?", "i", [(int)$user_id]);
+            if ($rsTotal) {
+                $rowTotal = mysqli_fetch_assoc($rsTotal);
+                $totalPadroes = (int)($rowTotal["c"] ?? 0);
+                $ordensExistentes = strval($rowTotal["ordens"] ?? "");
+            }
+            echo json_encode([
+                'error' => 'Padrão não encontrado',
+                'diagnostico' => [
+                    'user_id' => (int)$user_id,
+                    'login_sessao' => $_SESSION['user_tx_login'] ?? '',
+                    'domain_sessao' => $_SESSION['domain'] ?? '',
+                    'ordem_solicitada' => $ordem,
+                    'total_padroes_banco' => $totalPadroes,
+                    'ordens_existentes' => $ordensExistentes ?? '',
+                ]
+            ], JSON_UNESCAPED_UNICODE);
             exit;
         }
         $configs = json_decode(strval($padrao["gup_tx_configs"] ?? "{}"), true);

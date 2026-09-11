@@ -704,7 +704,7 @@ function mudarPadraoGrid(ordem){
     $.ajax({
         url: (typeof urlGridConfig !== 'undefined' ? urlGridConfig : '../contex20/grid_config_controller.php'),
         method: 'POST',
-        data: { guc_acao: 'ativar_padrao', ordem: ordem },
+        data: { guc_acao: 'ativar_padrao', ordem: ordem, guc_user_id: (typeof gridUserId !== 'undefined' ? gridUserId : '') },
         dataType: 'json',
         success: function(r){
             if(r.success){
@@ -729,7 +729,7 @@ function renomearPadraoGrid(){
     $.ajax({
         url: (typeof urlGridConfig !== 'undefined' ? urlGridConfig : '../contex20/grid_config_controller.php'),
         method: 'POST',
-        data: { guc_acao: 'renomear_padrao', ordem: ordem, nome: novoNome },
+        data: { guc_acao: 'renomear_padrao', ordem: ordem, nome: novoNome, guc_user_id: (typeof gridUserId !== 'undefined' ? gridUserId : '') },
         dataType: 'json',
         success: function(r){
             if(r.success){ location.reload(); }
@@ -934,7 +934,8 @@ function saveColumnConfig(){
             guc_acao: 'salvar_padrao',
             ordem: padraoAtualGrid(),
             grid_name: gridName,
-            columns: JSON.stringify(config)
+            columns: JSON.stringify(config),
+            guc_user_id: (typeof gridUserId !== 'undefined' ? gridUserId : '')
         },
         dataType: 'json',
         success: function(response){
