@@ -29,7 +29,21 @@
 	$filtroStatus = $_GET["filtro_status"] ?? "";
 	$filtroStatus = in_array($filtroStatus, ["nao_iniciado", "em_andamento", "concluido", "bloqueado"]) ? $filtroStatus : "";
 
-	// Buscar usuários com acesso: pertencem aos perfis permitidos e não estão bloqueados
+	// Empresas habilitadas do treinamento (vazio = todas)
+	$empresasHabAcomp = [];
+	if (!empty($treinamento["trei_tx_empresas_habilitadas"])) {
+		$empresasHabAcomp = json_decode($treinamento["trei_tx_empresas_habilitadas"], true);
+		if (!is_array($empresasHabAcomp)) $empresasHabAcomp = [];
+	}
+	$condEmpresaAcomp = "";
+	$tiposEmpresaAcomp = "";
+	$valsEmpresaAcomp = [];
+	if (!empty($empresasHabAcomp)) {
+		$empresasHabAcomp = array_map('intval', $empresasHabAcomp);
+		$condEmpresaAcomp = " AND u.user_nb_empresa IN (" . implode(",", $empresasHabAcomp) . ")";
+	}
+
+	// Buscar usuários com acesso: pertencem aos perfis permitidos, às empresas habilitadas e não estão bloqueados
 	$usuarios = [];
 	if (!empty($perfisPermitidos)) {
 		$placeholders = implode(",", array_fill(0, count($perfisPermitidos), "?"));
@@ -53,6 +67,7 @@
 				AND tb.trebl_nb_treinamento_id = ?
 			 WHERE up.ativo = 1 AND u.user_tx_status = 'ativo'
 			 AND up.perfil_nb_id IN ({$placeholders})
+			 {$condEmpresaAcomp}
 			 ORDER BY p.perfil_tx_nome, u.user_tx_nome",
 			"ii" . str_repeat("i", count($perfisPermitidos)),
 			array_merge([$treinamentoId, $treinamentoId], $perfisPermitidos)
@@ -98,7 +113,8 @@
 				ON tb.trebl_nb_usuario_id = u.user_nb_id
 				AND tb.trebl_nb_treinamento_id = ?
 			 WHERE up.ativo = 1 AND u.user_tx_status = 'ativo'
-			 AND up.perfil_nb_id IN ({$placeholders})",
+			 AND up.perfil_nb_id IN ({$placeholders})
+			 {$condEmpresaAcomp}",
 			"ii" . str_repeat("i", count($perfisPermitidos)),
 			array_merge([$treinamentoId, $treinamentoId], $perfisPermitidos)
 		);

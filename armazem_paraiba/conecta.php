@@ -295,6 +295,75 @@
         FOREIGN KEY (trepr_nb_treinamento_id) REFERENCES treinamento(trei_nb_id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
+    // Migração: progresso por episódio (séries)
+    $__checkEpiProg = mysqli_query($conn, "SHOW COLUMNS FROM treinamento_progresso LIKE 'trepr_nb_episodio_id'");
+    if ($__checkEpiProg && mysqli_num_rows($__checkEpiProg) === 0) {
+        mysqli_query($conn, "ALTER TABLE treinamento_progresso ADD COLUMN trepr_nb_episodio_id INT NULL AFTER trepr_nb_treinamento_id, ADD UNIQUE KEY uk_usuario_episodio (trepr_nb_usuario_id, trepr_nb_treinamento_id, trepr_nb_episodio_id)");
+    }
+    // Remover a unique antiga que impede múltiplos registros por treinamento (necessário para séries)
+    $__checkUkAntiga = mysqli_query($conn, "SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'treinamento_progresso' AND INDEX_NAME = 'uk_usuario_treinamento'");
+    if ($__checkUkAntiga && mysqli_num_rows($__checkUkAntiga) > 0) {
+        mysqli_query($conn, "ALTER TABLE treinamento_progresso DROP INDEX uk_usuario_treinamento");
+    }
+
+    // Migração: campo série no treinamento
+    $__checkSerie = mysqli_query($conn, "SHOW COLUMNS FROM treinamento LIKE 'trei_tx_serie'");
+    if ($__checkSerie && mysqli_num_rows($__checkSerie) === 0) {
+        mysqli_query($conn, "ALTER TABLE treinamento ADD COLUMN trei_tx_serie ENUM('sim','nao') NOT NULL DEFAULT 'nao' AFTER trei_tx_status");
+    }
+
+    // Migração: empresas habilitadas por treinamento (JSON de ids; NULL/vazio = todas)
+    $__checkEmpHab = mysqli_query($conn, "SHOW COLUMNS FROM treinamento LIKE 'trei_tx_empresas_habilitadas'");
+    if ($__checkEmpHab && mysqli_num_rows($__checkEmpHab) === 0) {
+        mysqli_query($conn, "ALTER TABLE treinamento ADD COLUMN trei_tx_empresas_habilitadas TEXT NULL AFTER trei_tx_tipo_usuario_permitido");
+    }
+
+    // Migração: instrutor responsável e criador do treinamento
+    $__checkInstrutor = mysqli_query($conn, "SHOW COLUMNS FROM treinamento LIKE 'trei_tx_instrutor_tipo'");
+    if ($__checkInstrutor && mysqli_num_rows($__checkInstrutor) === 0) {
+        mysqli_query($conn, "ALTER TABLE treinamento
+            ADD COLUMN trei_tx_instrutor_tipo ENUM('funcionario','externo') NOT NULL DEFAULT 'funcionario' AFTER trei_nb_obrigatorio,
+            ADD COLUMN trei_nb_instrutor_entidade_id INT NULL AFTER trei_tx_instrutor_tipo,
+            ADD COLUMN trei_tx_instrutor_nome VARCHAR(200) NULL AFTER trei_nb_instrutor_entidade_id,
+            ADD COLUMN trei_tx_instrutor_cpf VARCHAR(20) NULL AFTER trei_tx_instrutor_nome,
+            ADD COLUMN trei_tx_instrutor_capacitacao VARCHAR(255) NULL AFTER trei_tx_instrutor_cpf,
+            ADD COLUMN trei_nb_user_cadastro INT NULL AFTER trei_tx_instrutor_capacitacao,
+            ADD COLUMN trei_tx_criador_nome VARCHAR(200) NULL AFTER trei_nb_user_cadastro,
+            ADD COLUMN trei_tx_criador_cargo VARCHAR(200) NULL AFTER trei_tx_criador_nome,
+            ADD COLUMN trei_tx_criador_setor VARCHAR(200) NULL AFTER trei_tx_criador_cargo");
+    }
+
+    // Tabela de episódios (séries de vídeos)
+    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_episodio (
+        trepi_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        trepi_nb_treinamento_id INT NOT NULL,
+        trepi_nb_ordem INT NOT NULL DEFAULT 1,
+        trepi_tx_titulo VARCHAR(255) NOT NULL,
+        trepi_tx_descricao TEXT,
+        trepi_tx_url_video VARCHAR(500),
+        trepi_tx_tipo_video ENUM('youtube','vimeo','upload') DEFAULT 'youtube',
+        trepi_nb_carga_horaria INT DEFAULT 0,
+        trepi_nb_nota_minima_aprovacao INT DEFAULT NULL,
+        trepi_tx_status ENUM('ativo','inativo') DEFAULT 'ativo',
+        trepi_dt_data_cadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_treinamento (trepi_nb_treinamento_id),
+        FOREIGN KEY (trepi_nb_treinamento_id) REFERENCES treinamento(trei_nb_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+    // Tabela de questões por episódio
+    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_episodio_questao (
+        trepq_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        trepq_nb_episodio_id INT NOT NULL,
+        trepq_tx_pergunta TEXT NOT NULL,
+        trepq_tx_opcoes JSON NOT NULL,
+        trepq_nb_resposta_correta INT NOT NULL,
+        trepq_nb_ordem INT DEFAULT 0,
+        trepq_tx_status ENUM('ativo','inativo') DEFAULT 'ativo',
+        trepq_dt_data_cadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_episodio (trepq_nb_episodio_id),
+        FOREIGN KEY (trepq_nb_episodio_id) REFERENCES treinamento_episodio(trepi_nb_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
     // Tabela de atribuições (treinamento x usuário)
     mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_atribuicao (
         treate_nb_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -350,6 +419,17 @@
         KEY idx_treinamento (trem_nb_treinamento_id),
         FOREIGN KEY (trem_nb_treinamento_id) REFERENCES treinamento(trei_nb_id) ON DELETE CASCADE,
         FOREIGN KEY (trem_nb_usuario_id) REFERENCES user(user_nb_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+    // Controle de leitura da conversa por gestor (marca até onde cada gestor visualizou)
+    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_mensagem_leitura (
+        trei_nb_id INT NOT NULL,
+        user_nb_id INT NOT NULL,
+        trel_nb_ultimo_id_lido INT NOT NULL DEFAULT 0,
+        trel_dt_data_leitura DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (trei_nb_id, user_nb_id),
+        FOREIGN KEY (trei_nb_id) REFERENCES treinamento(trei_nb_id) ON DELETE CASCADE,
+        FOREIGN KEY (user_nb_id) REFERENCES user(user_nb_id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
     // =====================================================

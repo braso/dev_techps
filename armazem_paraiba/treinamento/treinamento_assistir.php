@@ -19,9 +19,9 @@
 			$rs = query(
 				"SELECT t.*,
 					(SELECT COUNT(*) FROM treinamento_progresso tp WHERE tp.trepr_nb_treinamento_id = t.trei_nb_id AND tp.trepr_nb_usuario_id = ?) as usuario_progresso,
-					(SELECT tp.trepr_nb_porcentagem_assistida FROM treinamento_progresso tp WHERE tp.trepr_nb_treinamento_id = t.trei_nb_id AND tp.trepr_nb_usuario_id = ?) as porcentagem,
-					(SELECT tp.trepr_nb_concluido FROM treinamento_progresso tp WHERE tp.trepr_nb_treinamento_id = t.trei_nb_id AND tp.trepr_nb_usuario_id = ?) as concluido,
-					(SELECT tp.trepr_nb_avaliacao_aprovada FROM treinamento_progresso tp WHERE tp.trepr_nb_treinamento_id = t.trei_nb_id AND tp.trepr_nb_usuario_id = ?) as avaliacao_aprovada
+					(SELECT tp.trepr_nb_porcentagem_assistida FROM treinamento_progresso tp WHERE tp.trepr_nb_treinamento_id = t.trei_nb_id AND tp.trepr_nb_usuario_id = ? ORDER BY tp.trepr_nb_id DESC LIMIT 1) as porcentagem,
+					(SELECT tp.trepr_nb_concluido FROM treinamento_progresso tp WHERE tp.trepr_nb_treinamento_id = t.trei_nb_id AND tp.trepr_nb_usuario_id = ? ORDER BY tp.trepr_nb_id DESC LIMIT 1) as concluido,
+					(SELECT tp.trepr_nb_avaliacao_aprovada FROM treinamento_progresso tp WHERE tp.trepr_nb_treinamento_id = t.trei_nb_id AND tp.trepr_nb_usuario_id = ? ORDER BY tp.trepr_nb_id DESC LIMIT 1) as avaliacao_aprovada
 				FROM treinamento t
 				WHERE t.trei_tx_status = 'ativo'
 				AND (t.trei_dt_data_liberacao IS NULL OR t.trei_dt_data_liberacao <= NOW())
@@ -37,14 +37,17 @@
 				$perfilUsuario = (int)$rowPerfil["perfil_nb_id"];
 			}
 
+			// Empresa do usuário logado
+			$empresaUsuario = (int)($_SESSION["user_nb_empresa"] ?? 0);
+
 			// Usuário comum: buscar treinamentos que ele tem acesso
 			// Verifica se o perfil do usuário está na lista de perfis permitidos do treinamento
 			$rs = query(
 				"SELECT t.*,
 					(SELECT COUNT(*) FROM treinamento_progresso tp WHERE tp.trepr_nb_treinamento_id = t.trei_nb_id AND tp.trepr_nb_usuario_id = ?) as usuario_progresso,
-					(SELECT tp.trepr_nb_porcentagem_assistida FROM treinamento_progresso tp WHERE tp.trepr_nb_treinamento_id = t.trei_nb_id AND tp.trepr_nb_usuario_id = ?) as porcentagem,
-					(SELECT tp.trepr_nb_concluido FROM treinamento_progresso tp WHERE tp.trepr_nb_treinamento_id = t.trei_nb_id AND tp.trepr_nb_usuario_id = ?) as concluido,
-					(SELECT tp.trepr_nb_avaliacao_aprovada FROM treinamento_progresso tp WHERE tp.trepr_nb_treinamento_id = t.trei_nb_id AND tp.trepr_nb_usuario_id = ?) as avaliacao_aprovada
+					(SELECT tp.trepr_nb_porcentagem_assistida FROM treinamento_progresso tp WHERE tp.trepr_nb_treinamento_id = t.trei_nb_id AND tp.trepr_nb_usuario_id = ? ORDER BY tp.trepr_nb_id DESC LIMIT 1) as porcentagem,
+					(SELECT tp.trepr_nb_concluido FROM treinamento_progresso tp WHERE tp.trepr_nb_treinamento_id = t.trei_nb_id AND tp.trepr_nb_usuario_id = ? ORDER BY tp.trepr_nb_id DESC LIMIT 1) as concluido,
+					(SELECT tp.trepr_nb_avaliacao_aprovada FROM treinamento_progresso tp WHERE tp.trepr_nb_treinamento_id = t.trei_nb_id AND tp.trepr_nb_usuario_id = ? ORDER BY tp.trepr_nb_id DESC LIMIT 1) as avaliacao_aprovada
 				FROM treinamento t
 				WHERE t.trei_tx_status = 'ativo'
 				AND (t.trei_dt_data_liberacao IS NULL OR t.trei_dt_data_liberacao <= NOW())
@@ -52,6 +55,13 @@
 					SELECT 1 FROM treinamento_bloqueio tb
 					WHERE tb.trebl_nb_treinamento_id = t.trei_nb_id
 					AND tb.trebl_nb_usuario_id = ?
+				)
+				AND (
+					-- Empresa do usuário habilitada (vazio = todas)
+					t.trei_tx_empresas_habilitadas IS NULL
+					OR t.trei_tx_empresas_habilitadas = ''
+					OR JSON_CONTAINS(t.trei_tx_empresas_habilitadas, ?)
+					OR JSON_CONTAINS(t.trei_tx_empresas_habilitadas, ?)
 				)
 				AND (
 					-- Sem perfil definido: todos com acesso
@@ -68,8 +78,8 @@
 					)
 				)
 				ORDER BY t.trei_nb_id DESC",
-				"iiiiisii",
-				[$usuarioId, $usuarioId, $usuarioId, $usuarioId, $usuarioId, '"' . $perfilUsuario . '"', $perfilUsuario, $usuarioId]
+				"iiiiisiiii",
+				[$usuarioId, $usuarioId, $usuarioId, $usuarioId, $usuarioId, '"' . $empresaUsuario . '"', $empresaUsuario, '"' . $perfilUsuario . '"', $perfilUsuario, $usuarioId]
 			);
 		}
 
@@ -252,26 +262,81 @@
 			$concluido = ($t["concluido"] ?? 0) == 1;
 			$aprovado = ($t["avaliacao_aprovada"] ?? 0) == 1;
 			$progresso = $t["usuario_progresso"] ?? 0;
+			$ehSerieCard = ($t["trei_tx_serie"] ?? "nao") === "sim";
+
+			// Série: calcular progresso pelos episódios (episódio atual / total)
+			$episodioAtualCard = 0;
+			$totalEpisodiosCard = 0;
+			$serieIniciada = false;
+			$serieConcluida = false;
+			if ($ehSerieCard) {
+				$rsEpiCard = query(
+					"SELECT trepi_nb_id FROM treinamento_episodio WHERE trepi_nb_treinamento_id = ? AND trepi_tx_status = 'ativo' ORDER BY trepi_nb_ordem, trepi_nb_id",
+					"i", [$treinamentoId]
+				);
+				$todosEpi = [];
+				while ($rsEpiCard && ($rEpiCard = mysqli_fetch_assoc($rsEpiCard))) {
+					$todosEpi[] = (int)$rEpiCard["trepi_nb_id"];
+				}
+				$totalEpisodiosCard = count($todosEpi);
+				foreach ($todosEpi as $idxEpi => $idEpi) {
+					$progEpiCard = mysqli_fetch_assoc(query(
+						"SELECT trepr_nb_avaliacao_aprovada, trepr_nb_porcentagem_assistida, trepr_dt_data_inicio FROM treinamento_progresso WHERE trepr_nb_treinamento_id = ? AND trepr_nb_usuario_id = ? AND trepr_nb_episodio_id = ?",
+						"iii", [$treinamentoId, $usuarioId, $idEpi]
+					));
+					if (!empty($progEpiCard) && !empty($progEpiCard["trepr_dt_data_inicio"])) {
+						$serieIniciada = true;
+					}
+					if (((int)($progEpiCard["trepr_nb_avaliacao_aprovada"] ?? 0)) === 1) {
+						$episodioAtualCard = $idxEpi + 1;
+					} else {
+						break;
+					}
+				}
+				$serieConcluida = ($episodioAtualCard >= $totalEpisodiosCard && $totalEpisodiosCard > 0);
+			}
 
 			// Definir status
+			if ($ehSerieCard) {
+				if ($serieConcluida) {
+					$statusClass = "badge-success";
+					$statusLabel = "Concluído";
+					$btnClass = "btn-default";
+					$btnLabel = "<i class='fa fa-refresh'></i> Rever";
+					$btnAction = "treinamento_player.php?id={$treinamentoId}";
+				} elseif ($serieIniciada) {
+					$statusClass = "badge-warning";
+					$statusLabel = "Em Andamento";
+					$btnClass = "btn-warning";
+					$btnLabel = "<i class='fa fa-play'></i> Continuar (Ep. " . ($episodioAtualCard + 1) . ")";
+					$btnAction = "treinamento_player.php?id={$treinamentoId}";
+				} else {
+					$statusClass = "badge-info";
+					$statusLabel = "Não Iniciado";
+					$btnClass = "btn-primary";
+					$btnLabel = "<i class='fa fa-play'></i> Assistir";
+					$btnAction = "treinamento_player.php?id={$treinamentoId}";
+				}
+} else {
 			if ($concluido) {
 				$statusClass = "badge-success";
 				$statusLabel = "Concluído";
-				$btnClass = "btn-success";
-				$btnLabel = "<i class='fa fa-check'></i> Concluído";
-				$btnAction = "";
+				$btnClass = "btn-default";
+				$btnLabel = "<i class='fa fa-refresh'></i> Assistir novamente";
+				$btnAction = "treinamento_player.php?id={$treinamentoId}";
 			} elseif ($progresso > 0) {
-				$statusClass = "badge-warning";
-				$statusLabel = "Em Andamento";
-				$btnClass = "btn-warning";
-				$btnLabel = "<i class='fa fa-play'></i> Continuar";
-				$btnAction = "treinamento_player.php?id={$treinamentoId}";
-			} else {
-				$statusClass = "badge-info";
-				$statusLabel = "Não Iniciado";
-				$btnClass = "btn-primary";
-				$btnLabel = "<i class='fa fa-play'></i> Assistir";
-				$btnAction = "treinamento_player.php?id={$treinamentoId}";
+					$statusClass = "badge-warning";
+					$statusLabel = "Em Andamento";
+					$btnClass = "btn-warning";
+					$btnLabel = "<i class='fa fa-play'></i> Continuar";
+					$btnAction = "treinamento_player.php?id={$treinamentoId}";
+				} else {
+					$statusClass = "badge-info";
+					$statusLabel = "Não Iniciado";
+					$btnClass = "btn-primary";
+					$btnLabel = "<i class='fa fa-play'></i> Assistir";
+					$btnAction = "treinamento_player.php?id={$treinamentoId}";
+				}
 			}
 
 			// Thumbnail
@@ -302,7 +367,8 @@
 
 						<div class='info-item'>
 							<i class='fa fa-clock'></i> <strong>{$cargaHorariaLabel}</strong> min
-						</div>";
+						</div>
+						" . ($ehSerieCard ? "<div class='info-item'><i class='fa fa-video-camera'></i> <strong>Série:</strong> " . ($serieConcluida ? "Concluída" : "Episódio " . ($episodioAtualCard + 1) . " de {$totalEpisodiosCard}") . "</div>" : "") . "";
 
 			if ($progresso > 0) {
 				echo "

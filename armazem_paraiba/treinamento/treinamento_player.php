@@ -47,6 +47,17 @@
 			return true;
 		}
 
+		// Verificar empresa habilitada (vazio = todas)
+		$empresasHab = !empty($treinamento["trei_tx_empresas_habilitadas"])
+			? json_decode($treinamento["trei_tx_empresas_habilitadas"], true)
+			: [];
+		if (!empty($empresasHab)) {
+			$empresaUsuario = (int)($_SESSION["user_nb_empresa"] ?? 0);
+			if (!in_array($empresaUsuario, array_map('intval', $empresasHab))) {
+				return false;
+			}
+		}
+
 		// Verificar se o usuário está bloqueado individualmente (desmarcado na atribuição)
 		$bloqueado = mysqli_fetch_assoc(query(
 			"SELECT 1 FROM treinamento_bloqueio WHERE trebl_nb_treinamento_id = ? AND trebl_nb_usuario_id = ?",
@@ -88,22 +99,33 @@
 		return !empty($atribuido);
 	}
 
-	function obterOuCriarProgresso($treinamentoId, $usuarioId) {
+	function obterOuCriarProgresso($treinamentoId, $usuarioId, $episodioId = 0) {
+		$episodioId = (int)$episodioId;
+		$episodioParam = $episodioId > 0 ? $episodioId : null;
+
 		$progresso = mysqli_fetch_assoc(query(
-			"SELECT * FROM treinamento_progresso WHERE trepr_nb_treinamento_id = ? AND trepr_nb_usuario_id = ?",
-			"ii",
-			[$treinamentoId, $usuarioId]
+			"SELECT * FROM treinamento_progresso WHERE trepr_nb_treinamento_id = ? AND trepr_nb_usuario_id = ? AND trepr_nb_episodio_id <=> ?",
+			"iii",
+			[$treinamentoId, $usuarioId, $episodioParam]
 		));
 
 		if (empty($progresso)) {
-			inserir("treinamento_progresso",
-				["trepr_nb_usuario_id", "trepr_nb_treinamento_id", "trepr_dt_data_inicio"],
-				[$usuarioId, $treinamentoId, date("Y-m-d H:i:s")]
-			);
+			if ($episodioParam === null) {
+				inserir("treinamento_progresso",
+					["trepr_nb_usuario_id", "trepr_nb_treinamento_id", "trepr_dt_data_inicio"],
+					[$usuarioId, $treinamentoId, date("Y-m-d H:i:s")]
+				);
+			} else {
+				query(
+					"INSERT INTO treinamento_progresso (trepr_nb_usuario_id, trepr_nb_treinamento_id, trepr_nb_episodio_id, trepr_dt_data_inicio) VALUES (?, ?, ?, ?)",
+					"iiis",
+					[$usuarioId, $treinamentoId, $episodioParam, date("Y-m-d H:i:s")]
+				);
+			}
 			$progresso = mysqli_fetch_assoc(query(
-				"SELECT * FROM treinamento_progresso WHERE trepr_nb_treinamento_id = ? AND trepr_nb_usuario_id = ?",
-				"ii",
-				[$treinamentoId, $usuarioId]
+				"SELECT * FROM treinamento_progresso WHERE trepr_nb_treinamento_id = ? AND trepr_nb_usuario_id = ? AND trepr_nb_episodio_id <=> ?",
+				"iii",
+				[$treinamentoId, $usuarioId, $episodioParam]
 			));
 		}
 
@@ -132,13 +154,13 @@
 		header('Content-Type: application/json');
 
 		$treinamentoId = (int)($_POST["treinamento_id"] ?? 0);
+		$episodioId = (int)($_POST["episodio_id"] ?? 0);
 		$tempoAssistido = (int)($_POST["tempo_assistido"] ?? 0);
 		$porcentagem = (float)($_POST["porcentagem"] ?? 0);
 		if ($porcentagem > 100) $porcentagem = 100;
 
-		$progresso = obterOuCriarProgresso($treinamentoId, $usuarioId);
+		$progresso = obterOuCriarProgresso($treinamentoId, $usuarioId, $episodioId);
 		$tempoAnterior = (int)($progresso["trepr_nb_tempo_assistido"] ?? 0);
-		$porcentagemAnterior = (float)($progresso["trepr_nb_porcentagem_assistida"] ?? 0);
 
 		// Anti-fraude: limitar avanço a 10s por request, exceto quando o vídeo foi concluído (100%)
 		if ($porcentagem < 100) {
@@ -149,12 +171,17 @@
 		}
 
 		// Conclusão automática ao assistir 100% do vídeo
+		// (para séries, a conclusão do episódio não marca o treinamento geral - depende da avaliação)
 		$concluido = (int)($progresso["trepr_nb_concluido"] ?? 0);
 		$dataConclusao = $progresso["trepr_dt_data_conclusao"] ?? null;
-		if ($porcentagem >= 100 && !$concluido) {
+		if ($porcentagem >= 100 && !$concluido && $episodioId <= 0) {
 			$concluido = 1;
 			$dataConclusao = date("Y-m-d H:i:s");
 		}
+
+		$whereEpiProg = $episodioId > 0 ? " AND trepr_nb_episodio_id = ?" : " AND trepr_nb_episodio_id IS NULL";
+		$valsEpiProg = $episodioId > 0 ? [$episodioId] : [];
+		$typesEpiProg = $episodioId > 0 ? "i" : "";
 
 		query(
 			"UPDATE treinamento_progresso SET
@@ -162,9 +189,9 @@
 				trepr_nb_porcentagem_assistida = ?,
 				trepr_nb_concluido = ?,
 				trepr_dt_data_conclusao = ?
-			WHERE trepr_nb_treinamento_id = ? AND trepr_nb_usuario_id = ?",
-			"diisii",
-			[$tempoAssistido, $porcentagem, $concluido, $dataConclusao, $treinamentoId, $usuarioId]
+			WHERE trepr_nb_treinamento_id = ? AND trepr_nb_usuario_id = ?{$whereEpiProg}",
+			"diisii" . $typesEpiProg,
+			array_merge([$tempoAssistido, $porcentagem, $concluido, $dataConclusao, $treinamentoId, $usuarioId], $valsEpiProg)
 		);
 
 		echo json_encode(["success" => true, "tempo" => $tempoAssistido, "porcentagem" => $porcentagem, "concluido" => $concluido]);
@@ -179,26 +206,41 @@
 		header('Content-Type: application/json');
 
 		$treinamentoId = (int)($_POST["treinamento_id"] ?? 0);
+		$episodioId = (int)($_POST["episodio_id"] ?? 0);
 		$respostas = $_POST["respostas"] ?? [];
 
 		$treinamento = carregar("treinamento", $treinamentoId);
-		$progresso = obterOuCriarProgresso($treinamentoId, $usuarioId);
+		$ehSerie = ($treinamento["trei_tx_serie"] ?? "nao") === "sim";
+		$progresso = obterOuCriarProgresso($treinamentoId, $usuarioId, $episodioId);
 
 		// Verificar tentativas
 		$tentativas = (int)($progresso["trepr_nb_avaliacao_tentativas"] ?? 0);
 		if ($tentativas >= 2) {
-			echo json_encode(["success" => false, "message" => "Número máximo de tentativas atingido. Reinicie o treinamento."]);
+			echo json_encode(["success" => false, "message" => "Número máximo de tentativas atingido. Reassista o vídeo para tentar novamente."]);
 			exit;
 		}
 
-		// Buscar questões embaralhadas
-		$qtdQuestoes = (int)($treinamento["trei_nb_quantidade_questoes_prova"] ?? 5);
+		// Buscar questões (banco do treinamento OU do episódio quando série)
+		$notaMinima = (int)($treinamento["trei_nb_nota_minima_aprovacao"] ?? 70);
 		$questoes = [];
-		$rsQuestoes = query(
-			"SELECT * FROM treinamento_questao WHERE treq_nb_treinamento_id = ? AND treq_tx_status = 'ativo' ORDER BY RAND() LIMIT ?",
-			"ii",
-			[$treinamentoId, $qtdQuestoes]
-		);
+		if ($ehSerie && $episodioId > 0) {
+			$episodioAtualAval = carregar("treinamento_episodio", $episodioId);
+			if (!empty($episodioAtualAval) && !empty($episodioAtualAval["trepi_nb_nota_minima_aprovacao"])) {
+				$notaMinima = (int)$episodioAtualAval["trepi_nb_nota_minima_aprovacao"];
+			}
+			$rsQuestoes = query(
+				"SELECT * FROM treinamento_episodio_questao WHERE trepq_nb_episodio_id = ? AND trepq_tx_status = 'ativo' ORDER BY RAND()",
+				"i",
+				[$episodioId]
+			);
+		} else {
+			$qtdQuestoes = (int)($treinamento["trei_nb_quantidade_questoes_prova"] ?? 5);
+			$rsQuestoes = query(
+				"SELECT * FROM treinamento_questao WHERE treq_nb_treinamento_id = ? AND treq_tx_status = 'ativo' ORDER BY RAND() LIMIT ?",
+				"ii",
+				[$treinamentoId, $qtdQuestoes]
+			);
+		}
 		if ($rsQuestoes) {
 			while ($row = mysqli_fetch_assoc($rsQuestoes)) {
 				$questoes[] = $row;
@@ -214,13 +256,15 @@
 		$acertos = 0;
 		$respostasDetalhadas = [];
 		foreach ($questoes as $idx => $q) {
-			$respostaUsuario = (int)($respostas[$q["treq_nb_id"]] ?? -1);
-			$respostaCorreta = (int)$q["treq_nb_resposta_correta"];
+			$idQuestao = $q["treq_nb_id"] ?? $q["trepq_nb_id"];
+			$campoCorreta = $q["treq_nb_resposta_correta"] ?? $q["trepq_nb_resposta_correta"];
+			$respostaUsuario = (int)($respostas[$idQuestao] ?? -1);
+			$respostaCorreta = (int)$campoCorreta;
 			$acertou = ($respostaUsuario === $respostaCorreta);
 			if ($acertou) $acertos++;
 
 			$respostasDetalhadas[] = [
-				"questao_id" => $q["treq_nb_id"],
+				"questao_id" => $idQuestao,
 				"resposta_usuario" => $respostaUsuario,
 				"resposta_correta" => $respostaCorreta,
 				"acertou" => $acertou
@@ -228,13 +272,15 @@
 		}
 
 		$nota = round(($acertos / count($questoes)) * 100, 2);
-		$notaMinima = (int)($treinamento["trei_nb_nota_minima_aprovacao"] ?? 70);
 		$aprovado = ($nota >= $notaMinima);
 
 		// Atualizar progresso
 		$novaTentativa = $tentativas + 1;
-		$concluido = $aprovado ? 1 : 0;
 		$dataConclusao = $aprovado ? date("Y-m-d H:i:s") : null;
+
+		$whereEpiAval = $episodioId > 0 ? " AND trepr_nb_episodio_id = ?" : " AND trepr_nb_episodio_id IS NULL";
+		$valsEpiAval = $episodioId > 0 ? [$episodioId] : [];
+		$typesEpiAval = $episodioId > 0 ? "i" : "";
 
 		query(
 			"UPDATE treinamento_progresso SET
@@ -242,28 +288,79 @@
 				trepr_tx_avaliacao_respostas_json = ?,
 				trepr_nb_avaliacao_nota = ?,
 				trepr_nb_avaliacao_aprovada = ?,
-				trepr_nb_concluido = ?,
 				trepr_dt_data_conclusao = ?
-			WHERE trepr_nb_treinamento_id = ? AND trepr_nb_usuario_id = ?",
-			"isiiissi",
-			[$novaTentativa, json_encode($respostasDetalhadas), $nota, $aprovado ? 1 : 0, $concluido, $dataConclusao, $treinamentoId, $usuarioId]
+			WHERE trepr_nb_treinamento_id = ? AND trepr_nb_usuario_id = ?{$whereEpiAval}",
+			"isdisii" . $typesEpiAval,
+			array_merge([$novaTentativa, json_encode($respostasDetalhadas), $nota, $aprovado ? 1 : 0, $dataConclusao, $treinamentoId, $usuarioId], $valsEpiAval)
 		);
 
-		// Se reprovado e última tentativa, resetar progresso
+		// Se reprovado e última tentativa, resetar progresso (reassistir)
 		if (!$aprovado && $novaTentativa >= 2) {
+			$whereEpiReset = $episodioId > 0 ? " AND trepr_nb_episodio_id = ?" : " AND trepr_nb_episodio_id IS NULL";
+			$valsEpiReset = $episodioId > 0 ? [$episodioId] : [];
+			$typesEpiReset = $episodioId > 0 ? "i" : "";
 			query(
 				"UPDATE treinamento_progresso SET
 					trepr_nb_tempo_assistido = 0,
 					trepr_nb_porcentagem_assistida = 0,
 					trepr_nb_avaliacao_aprovada = 0,
+					trepr_nb_avaliacao_tentativas = 0,
 					trepr_nb_concluido = 0
-				WHERE trepr_nb_treinamento_id = ? AND trepr_nb_usuario_id = ?",
-				"ii",
-				[$treinamentoId, $usuarioId]
+				WHERE trepr_nb_treinamento_id = ? AND trepr_nb_usuario_id = ?{$whereEpiReset}",
+				"ii" . $typesEpiReset,
+				array_merge([$treinamentoId, $usuarioId], $valsEpiReset)
 			);
 		}
 
-		registrarLogTreinamento($treinamentoId, $usuarioId, "avaliacao", "Nota: {$nota}% | Aprovado: " . ($aprovado ? "Sim" : "Não") . " | Tentativa: {$novaTentativa}");
+		// Conclusão do treinamento: não-série conclui ao aprovar; série conclui quando TODOS os episódios aprovados
+		$concluidoGeral = 0;
+		if ($aprovado) {
+			if ($ehSerie) {
+				$todosAprovados = true;
+				$rsEpiCheck = query("SELECT trepi_nb_id FROM treinamento_episodio WHERE trepi_nb_treinamento_id = ? AND trepi_tx_status = 'ativo'", "i", [$treinamentoId]);
+				while ($rsEpiCheck && ($rEpi = mysqli_fetch_assoc($rsEpiCheck))) {
+					$progEpi = obterOuCriarProgresso($treinamentoId, $usuarioId, (int)$rEpi["trepi_nb_id"]);
+					if (((int)($progEpi["trepr_nb_avaliacao_aprovada"] ?? 0)) !== 1) {
+						$todosAprovados = false;
+						break;
+					}
+				}
+				if ($todosAprovados) {
+					$concluidoGeral = 1;
+					$progGeral = obterOuCriarProgresso($treinamentoId, $usuarioId);
+					query(
+						"UPDATE treinamento_progresso SET trepr_nb_concluido = 1, trepr_dt_data_conclusao = ? WHERE trepr_nb_id = ?",
+						"si",
+						[date("Y-m-d H:i:s"), $progGeral["trepr_nb_id"]]
+					);
+				}
+			} else {
+				$concluidoGeral = 1;
+				query(
+					"UPDATE treinamento_progresso SET trepr_nb_concluido = 1, trepr_dt_data_conclusao = ? WHERE trepr_nb_treinamento_id = ? AND trepr_nb_usuario_id = ? AND trepr_nb_episodio_id IS NULL",
+					"sii",
+					[date("Y-m-d H:i:s"), $treinamentoId, $usuarioId]
+				);
+			}
+		}
+
+		registrarLogTreinamento($treinamentoId, $usuarioId, "avaliacao", "Nota: {$nota}% | Aprovado: " . ($aprovado ? "Sim" : "Não") . " | Tentativa: {$novaTentativa}" . ($episodioId > 0 ? " | Episódio: {$episodioId}" : ""));
+
+		// Próximo episódio (série): retornar para o JS oferecer navegação
+		$proximoEpiAval = 0;
+		if ($ehSerie && $aprovado && $episodioId > 0) {
+			$rsEpiProx = query(
+				"SELECT trepi_nb_id FROM treinamento_episodio
+				 WHERE trepi_nb_treinamento_id = ? AND trepi_tx_status = 'ativo'
+				   AND trepi_nb_ordem > (SELECT trepi_nb_ordem FROM treinamento_episodio WHERE trepi_nb_id = ?)
+				 ORDER BY trepi_nb_ordem LIMIT 1",
+				"ii",
+				[$treinamentoId, $episodioId]
+			);
+			if ($rsEpiProx && ($rEpiProx = mysqli_fetch_assoc($rsEpiProx))) {
+				$proximoEpiAval = (int)$rEpiProx["trepi_nb_id"];
+			}
+		}
 
 		echo json_encode([
 			"success" => true,
@@ -274,16 +371,21 @@
 			"total" => count($questoes),
 			"tentativa" => $novaTentativa,
 			"max_tentativas" => 2,
+			"proximo_episodio" => $proximoEpiAval,
 			"respostas" => $respostasDetalhadas,
 			"questoes" => array_map(function($q) {
+				$campoId = $q["treq_nb_id"] ?? $q["trepq_nb_id"];
+				$campoPergunta = $q["treq_tx_pergunta"] ?? $q["trepq_tx_pergunta"];
+				$campoOpcoes = $q["treq_tx_opcoes"] ?? $q["trepq_tx_opcoes"];
+				$campoCorreta = $q["treq_nb_resposta_correta"] ?? $q["trepq_nb_resposta_correta"];
 				return [
-					"id" => $q["treq_nb_id"],
-					"pergunta" => $q["treq_tx_pergunta"],
-					"opcoes" => json_decode($q["treq_tx_opcoes"], true),
-					"resposta_correta" => (int)$q["treq_nb_resposta_correta"]
+					"id" => $campoId,
+					"pergunta" => $campoPergunta,
+					"opcoes" => json_decode($campoOpcoes, true),
+					"resposta_correta" => (int)$campoCorreta
 				];
 			}, $questoes),
-			"concluido" => $aprovado
+			"concluido" => $concluidoGeral
 		]);
 		exit;
 	}
@@ -377,7 +479,72 @@
 
 	// Buscar dados do treinamento
 	$treinamento = carregar("treinamento", $treinamentoId);
-	$progresso = obterOuCriarProgresso($treinamentoId, $usuarioId);
+	$ehSerie = ($treinamento["trei_tx_serie"] ?? "nao") === "sim";
+	$episodioId = (int)($_GET["episodio"] ?? $_POST["episodio_id"] ?? 0);
+	$episodiosSerie = [];
+	$episodioAtual = null;
+	$episodioIndex = 0;
+	$notaMinimaVigente = (int)($treinamento["trei_nb_nota_minima_aprovacao"] ?? 70);
+
+	if ($ehSerie) {
+		$rsEpiLista = query(
+			"SELECT * FROM treinamento_episodio WHERE trepi_nb_treinamento_id = ? AND trepi_tx_status = 'ativo' ORDER BY trepi_nb_ordem, trepi_nb_id",
+			"i", [$treinamentoId]
+		);
+		while ($rsEpiLista && ($rEpi = mysqli_fetch_assoc($rsEpiLista))) {
+			$episodiosSerie[] = $rEpi;
+		}
+		if (empty($episodiosSerie)) {
+			header("Location: treinamento_assistir.php");
+			exit;
+		}
+
+		// Escolher o episódio: se não informado, o primeiro não aprovado
+		if ($episodioId <= 0) {
+			foreach ($episodiosSerie as $idx => $ep) {
+				$progEpi = obterOuCriarProgresso($treinamentoId, $usuarioId, (int)$ep["trepi_nb_id"]);
+				if (((int)($progEpi["trepr_nb_avaliacao_aprovada"] ?? 0)) !== 1) {
+					$episodioAtual = $ep;
+					$episodioIndex = $idx;
+					break;
+				}
+			}
+			if (empty($episodioAtual)) {
+				$episodioAtual = $episodiosSerie[0];
+				$episodioIndex = 0;
+			}
+		} else {
+			foreach ($episodiosSerie as $idx => $ep) {
+				if ((int)$ep["trepi_nb_id"] === $episodioId) {
+					$episodioAtual = $ep;
+					$episodioIndex = $idx;
+					break;
+				}
+			}
+			if (empty($episodioAtual)) {
+				header("Location: treinamento_assistir.php");
+				exit;
+			}
+		}
+
+		// Desbloqueio sequencial: todos os episódios anteriores devem estar aprovados
+		for ($i = 0; $i < $episodioIndex; $i++) {
+			$progAnt = obterOuCriarProgresso($treinamentoId, $usuarioId, (int)$episodiosSerie[$i]["trepi_nb_id"]);
+			if (((int)($progAnt["trepr_nb_avaliacao_aprovada"] ?? 0)) !== 1) {
+				$episodioAtual = $episodiosSerie[$i];
+				$episodioIndex = $i;
+				break;
+			}
+		}
+
+		$episodioId = (int)$episodioAtual["trepi_nb_id"];
+		if (!empty($episodioAtual["trepi_nb_nota_minima_aprovacao"])) {
+			$notaMinimaVigente = (int)$episodioAtual["trepi_nb_nota_minima_aprovacao"];
+		}
+		$progresso = obterOuCriarProgresso($treinamentoId, $usuarioId, $episodioId);
+	} else {
+		$progresso = obterOuCriarProgresso($treinamentoId, $usuarioId);
+	}
 
 	// Buscar materiais
 	$materiais = [];
@@ -406,13 +573,21 @@
 	}
 	$ultimoIdChat = !empty($mensagensChat) ? (int)end($mensagensChat)["trem_nb_id"] : 0;
 
-	// Buscar questões para avaliação
+	// Buscar questões para avaliação (banco do treinamento OU do episódio quando série)
 	$questoes = [];
-	$rsQuestoes = query(
-		"SELECT * FROM treinamento_questao WHERE treq_nb_treinamento_id = ? AND treq_tx_status = 'ativo' ORDER BY RAND()",
-		"i",
-		[$treinamentoId]
-	);
+	if ($ehSerie && $episodioId > 0) {
+		$rsQuestoes = query(
+			"SELECT * FROM treinamento_episodio_questao WHERE trepq_nb_episodio_id = ? AND trepq_tx_status = 'ativo' ORDER BY trepq_nb_ordem, trepq_nb_id",
+			"i",
+			[$episodioId]
+		);
+	} else {
+		$rsQuestoes = query(
+			"SELECT * FROM treinamento_questao WHERE treq_nb_treinamento_id = ? AND treq_tx_status = 'ativo' ORDER BY RAND()",
+			"i",
+			[$treinamentoId]
+		);
+	}
 	if ($rsQuestoes) {
 		while ($row = mysqli_fetch_assoc($rsQuestoes)) {
 			$questoes[] = $row;
@@ -420,12 +595,21 @@
 	}
 
 	// Variáveis para o template
-	$titulo = htmlspecialchars($treinamento["trei_tx_titulo"]);
-	$descricao = htmlspecialchars($treinamento["trei_tx_descricao"] ?? "");
-	$conteudoProgramatico = htmlspecialchars($treinamento["trei_tx_conteudo_programatico"] ?? "");
-	$urlVideo = $treinamento["trei_tx_url_video"] ?? "";
-	$tipoVideo = $treinamento["trei_tx_tipo_video"] ?? "youtube";
-	$cargaHoraria = $treinamento["trei_nb_carga_horaria"] ?? 0;
+	if ($ehSerie) {
+		$titulo = htmlspecialchars($episodioAtual["trepi_tx_titulo"]);
+		$descricao = htmlspecialchars($episodioAtual["trepi_tx_descricao"] ?? "");
+		$conteudoProgramatico = "";
+		$urlVideo = $episodioAtual["trepi_tx_url_video"] ?? "";
+		$tipoVideo = $episodioAtual["trepi_tx_tipo_video"] ?? "youtube";
+		$cargaHoraria = (int)($episodioAtual["trepi_nb_carga_horaria"] ?? 0);
+	} else {
+		$titulo = htmlspecialchars($treinamento["trei_tx_titulo"]);
+		$descricao = htmlspecialchars($treinamento["trei_tx_descricao"] ?? "");
+		$conteudoProgramatico = htmlspecialchars($treinamento["trei_tx_conteudo_programatico"] ?? "");
+		$urlVideo = $treinamento["trei_tx_url_video"] ?? "";
+		$tipoVideo = $treinamento["trei_tx_tipo_video"] ?? "youtube";
+		$cargaHoraria = $treinamento["trei_nb_carga_horaria"] ?? 0;
+	}
 	$obrigatorio = ($treinamento["trei_nb_obrigatorio"] ?? 0) == 1;
 	$porcentagem = round($progresso["trepr_nb_porcentagem_assistida"] ?? 0, 1);
 	$tempoAssistido = (int)($progresso["trepr_nb_tempo_assistido"] ?? 0);
@@ -441,6 +625,50 @@
 		$videoIdYoutube = $m[1] ?? "";
 	}
 
+	// Navegação de episódios (série)
+	$totalEpisodios = count($episodiosSerie);
+	$proximoEpisodio = null;
+	$episodioLiberado = true; // se há episódio anterior não aprovado, o atual foi forçado para o anterior (bloqueio)
+	if ($ehSerie && $episodioIndex + 1 < $totalEpisodios) {
+		$proximoEpisodio = $episodiosSerie[$episodioIndex + 1];
+	}
+	// O episódio atual está "bloqueado" se existe anterior não aprovado (redirecionado pelo desbloqueio)
+	if ($ehSerie && $episodioIndex > 0) {
+		$progAnterior = obterOuCriarProgresso($treinamentoId, $usuarioId, (int)$episodiosSerie[$episodioIndex - 1]["trepi_nb_id"]);
+		if (((int)($progAnterior["trepr_nb_avaliacao_aprovada"] ?? 0)) !== 1) {
+			$episodioLiberado = false;
+		}
+	}
+
+	// Instrutor responsável (visível para o usuário)
+	$instrutorLabel = "Não informado";
+	if (($treinamento["trei_tx_instrutor_tipo"] ?? "funcionario") === "externo") {
+		$instrutorLabel = !empty($treinamento["trei_tx_instrutor_nome"]) ? $treinamento["trei_tx_instrutor_nome"] : "Não informado";
+		if (!empty($treinamento["trei_tx_instrutor_capacitacao"])) {
+			$instrutorLabel .= " — " . $treinamento["trei_tx_instrutor_capacitacao"];
+		}
+		if (!empty($treinamento["trei_tx_instrutor_cpf"])) {
+			$instrutorLabel .= " (CPF: " . $treinamento["trei_tx_instrutor_cpf"] . ")";
+		}
+	} elseif (!empty($treinamento["trei_nb_instrutor_entidade_id"])) {
+		$entiInstr = carregar("entidade", (int)$treinamento["trei_nb_instrutor_entidade_id"]);
+		if (!empty($entiInstr["enti_tx_nome"])) {
+			$instrutorLabel = $entiInstr["enti_tx_nome"];
+		}
+	}
+
+	// Criador do treinamento (quem cadastrou)
+	$criadorLabel = "";
+	$criadorPartes = [];
+	if (!empty($treinamento["trei_tx_criador_nome"])) $criadorPartes[] = $treinamento["trei_tx_criador_nome"];
+	if (!empty($treinamento["trei_tx_criador_cargo"])) $criadorPartes[] = $treinamento["trei_tx_criador_cargo"];
+	if (!empty($treinamento["trei_tx_criador_setor"])) $criadorPartes[] = $treinamento["trei_tx_criador_setor"];
+	if (!empty($criadorPartes)) {
+		$criadorLabel = implode(" — ", $criadorPartes);
+	} else {
+		$criadorLabel = "Não informado";
+	}
+
 	// Log de acesso
 	registrarLogTreinamento($treinamentoId, $usuarioId, "acesso", "Acesso ao player");
 
@@ -449,6 +677,38 @@
 	// =====================================================
 
 	cabecalho("Treinamento: " . $titulo);
+
+	if ($ehSerie) {
+		echo "
+	<div class='container-fluid' style='margin-bottom:10px;'>
+		<div class='info-card'>
+			<div class='row'>
+				<div class='col-md-12'>
+					<strong><i class='fa fa-video-camera'></i> Série: " . htmlspecialchars($treinamento["trei_tx_titulo"]) . "</strong>
+					<span class='text-muted'> — Episódio " . ($episodioIndex + 1) . " de {$totalEpisodios}</span>
+					<div class='episodios-navegacao' style='margin-top:10px; display:flex; flex-wrap:wrap; gap:6px;'>";
+					foreach ($episodiosSerie as $idx => $ep) {
+						$progEpi = obterOuCriarProgresso($treinamentoId, $usuarioId, (int)$ep["trepi_nb_id"]);
+						$aprovEpi = ((int)($progEpi["trepr_nb_avaliacao_aprovada"] ?? 0)) === 1;
+						$ativo = ((int)$ep["trepi_nb_id"] === $episodioId);
+						$cls = $ativo ? "episodio-item ativo" : ($aprovEpi ? "episodio-item aprovado" : "episodio-item");
+						$icone = $aprovEpi ? "<i class='fa fa-check'></i>" : ($ativo ? "<i class='fa fa-play'></i>" : "<i class='fa fa-lock'></i>");
+						$link = ($aprovEpi || $ativo) ? "treinamento_player.php?id={$treinamentoId}&episodio={$ep["trepi_nb_id"]}" : "#";
+						echo "<a href='{$link}' class='{$cls}' title='" . htmlspecialchars($ep["trepi_tx_titulo"]) . "'>{$icone} #" . ($idx + 1) . " " . htmlspecialchars($ep["trepi_tx_titulo"]) . "</a>";
+					}
+					echo "
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<style>
+		.episodio-item { display:inline-block; padding:6px 12px; border-radius:15px; border:1px solid #ccc; color:#555; background:#fff; font-size:12px; text-decoration:none; }
+		.episodio-item:hover { text-decoration:none; background:#f0f0f0; }
+		.episodio-item.ativo { background:#3c8dbc; border-color:#3c8dbc; color:#fff; font-weight:bold; }
+		.episodio-item.aprovado { background:#d4edda; border-color:#27ae60; color:#155724; }
+	</style>";
+	}
 
 	echo "
 	<style>
@@ -645,6 +905,10 @@
 								<div class='col-md-6'><strong>Carga Horária:</strong> " . sprintf("%02dm:%02ds", floor($cargaHoraria / 60), $cargaHoraria % 60) . "</div>
 								<div class='col-md-6'><strong>Obrigatório:</strong> " . ($obrigatorio ? "Sim" : "Não") . "</div>
 							</div>
+							<div class='row' style='margin-top:8px;'>
+								<div class='col-md-6'><strong><i class='fa fa-user-tie'></i> Instrutor:</strong> " . htmlspecialchars($instrutorLabel) . "</div>
+								<div class='col-md-6'><strong><i class='fa fa-user'></i> Cadastrado por:</strong> " . htmlspecialchars($criadorLabel) . "</div>
+							</div>
 						</div>";
 
 				// ABA: MATERIAIS
@@ -670,49 +934,69 @@
 				}
 
 				// ABA: AVALIAÇÃO
-				if ($podeAvaliar || $tentativas > 0) {
+				if ($podeAvaliar || $tentativas > 0 || $aprovado) {
 					echo "
 						<div class='tab-pane' id='tab_avaliacao'>";
 
-					if ($concluido && $aprovado) {
-						echo "
+					if ($aprovado) {
+						if ($ehSerie) {
+							if (!empty($proximoEpisodio)) {
+								echo "
 							<div class='alert alert-success'>
 								<i class='fa fa-check-circle'></i> <strong>Avaliação Aprovada!</strong><br>
+								Nota: <strong>{$notaAtual}%</strong> — Episódio " . ($episodioIndex + 1) . " concluído. <br><br>
+								<a href='treinamento_player.php?id={$treinamentoId}&episodio={$proximoEpisodio["trepi_nb_id"]}' class='btn btn-success'><i class='fa fa-play'></i> Assistir Próximo Episódio (#" . ($episodioIndex + 2) . ")</a>
+							</div>";
+							} else {
+								echo "
+							<div class='alert alert-success'>
+								<i class='fa fa-trophy'></i> <strong>Parabéns! Você concluiu todos os episódios da série!</strong><br>
+								Nota final do último episódio: <strong>{$notaAtual}%</strong>
+							</div>";
+							}
+						} else {
+							echo "
+							<div class='alert alert-success'>
+								<i class='fa fa-check-circle'></i> <strong>Treinamento Concluído!</strong><br>
 								Nota: <strong>{$notaAtual}%</strong>
 							</div>";
+						}
 					} elseif ($tentativas >= 2 && !$aprovado) {
 						echo "
 							<div class='alert alert-danger'>
 								<i class='fa fa-times-circle'></i> <strong>Número máximo de tentativas atingido (2).</strong><br>
-								É necessário reassistir o treinamento para tentar novamente.
+								É necessário reassistir o vídeo para tentar novamente.
 							</div>";
 					} elseif (!$podeAvaliar && $tentativas > 0) {
 						echo "
 							<div class='alert alert-warning'>
-								<i class='fa fa-exclamation-triangle'></i> Você precisa assistir pelo menos 99% do treinamento para realizar a avaliação.
+								<i class='fa fa-exclamation-triangle'></i> Você precisa assistir pelo menos 99% do vídeo para realizar a avaliação.
 							</div>";
 					} else {
 						echo "
 							<div class='alert alert-info'>
-								<i class='fa fa-info-circle'></i> <strong>Avaliação:</strong> Responda as questões abaixo. Nota mínima para aprovação: <strong>{$treinamento["trei_nb_nota_minima_aprovacao"]}%</strong>.
-								<br><small>Tentativa {$tentativas} de 2. Em caso de reprovação na 2ª tentativa, o progresso será resetado.</small>
+								<i class='fa fa-info-circle'></i> <strong>Avaliação:</strong> Responda as questões abaixo. Nota mínima para aprovação: <strong>{$notaMinimaVigente}%</strong>.
+								<br><small>Tentativa {$tentativas} de 2. Em caso de reprovação na 2ª tentativa, o progresso será resetado e você precisará reassistir o vídeo.</small>
 							</div>
 							<form id='formAvaliacao'>";
 
 						if (!empty($questoes)) {
 							$idx = 1;
 							foreach ($questoes as $q) {
-								$opcoes = json_decode($q["treq_tx_opcoes"], true);
+								$qId = $q["treq_nb_id"] ?? $q["trepq_nb_id"];
+								$qPergunta = $q["treq_tx_pergunta"] ?? $q["trepq_tx_pergunta"];
+								$qOpcoesJson = $q["treq_tx_opcoes"] ?? $q["trepq_tx_opcoes"];
+								$opcoes = json_decode($qOpcoesJson, true);
 								echo "
 								<div class='questao-card'>
-									<h4>Questão {$idx}: " . htmlspecialchars($q["treq_tx_pergunta"]) . "</h4>";
+									<h4>Questão {$idx}: " . htmlspecialchars($qPergunta) . "</h4>";
 								if ($opcoes) {
 									$opIdx = 0;
 									foreach ($opcoes as $op) {
 										if (!empty(trim($op))) {
 											echo "
 										<label class='opcao-label'>
-											<input type='radio' name='resposta[{$q["treq_nb_id"]}]' value='{$opIdx}'> " . htmlspecialchars($op) . "
+											<input type='radio' name='resposta[{$qId}]' value='{$opIdx}'> " . htmlspecialchars($op) . "
 										</label>";
 										}
 										$opIdx++;
@@ -758,11 +1042,16 @@
 												$corpo = "<audio controls preload='none' style='max-width:280px;'><source src='" . $chatBase . $msg["trem_tx_arquivo"] . "'></audio>";
 											}
 											$nomeAutor = htmlspecialchars($msg["trem_tx_usuario_nome"] ?? "Usuário");
+											$nivelAutor = $msg["trem_tx_usuario_nivel"] ?? "";
+											$ehAutorAdmin = (strpos($nivelAutor, "Administrador") !== false);
+											$badgeAutor = $ehAutorAdmin
+												? "<span class='label label-primary' style='font-size:10px;margin-left:4px;'>Gestor</span>"
+												: (!empty($nivelAutor) ? "<span class='label label-default' style='font-size:10px;margin-left:4px;'>" . htmlspecialchars($nivelAutor) . "</span>" : "");
 											$dataMsg = date("d/m/Y H:i", strtotime($msg["trem_dt_data_cadastro"] ?? "now"));
 											echo "
 									<div class='chat-msg " . ($ehMeu ? "chat-msg-meu" : "chat-msg-outro") . "'>
 										<div class='chat-msg-cabecalho'>
-											<i class='fa fa-user-circle'></i> <strong>{$nomeAutor}</strong>
+											<i class='fa fa-user-circle'></i> <strong>{$nomeAutor}</strong>{$badgeAutor}
 											<span class='text-muted' style='font-size:11px;'> - {$dataMsg}</span>
 										</div>
 										<div class='chat-msg-corpo'>{$corpo}</div>
@@ -855,6 +1144,7 @@
 		// CONFIGURAÇÃO
 		// =====================================================
 		var treinamentoId = {$treinamentoId};
+		var episodioId = {$episodioId};
 		var tipoVideo = '{$tipoVideo}';
 		var cargaHoraria = {$cargaHoraria};
 		var referenceDuration = Math.max(1, cargaHoraria);
@@ -890,6 +1180,7 @@
 			$.post(window.location.pathname, {
 				acao_player: 'atualizarProgresso',
 				treinamento_id: treinamentoId,
+				episodio_id: episodioId,
 				tempo_assistido: obterProgressoAtual(),
 				porcentagem: Math.floor(percent)
 			}, function(data) {
@@ -907,6 +1198,7 @@
 			var dados = new URLSearchParams();
 			dados.append('acao_player', 'atualizarProgresso');
 			dados.append('treinamento_id', treinamentoId);
+			dados.append('episodio_id', episodioId);
 			dados.append('tempo_assistido', segundos);
 			dados.append('porcentagem', percent);
 			try {
@@ -1282,6 +1574,7 @@
 					$.post(window.location.pathname, {
 						acao_player: 'submeterAvaliacao',
 						treinamento_id: treinamentoId,
+						episodio_id: episodioId,
 						respostas: respostas
 					}, function(data) {
 						if(data.success) {
@@ -1293,6 +1586,10 @@
 								'<p>Nota mínima: ' + data.nota_minima + '%</p>' +
 								'<p>Tentativa: ' + data.tentativa + '/' + data.max_tentativas + '</p>' +
 								'</div>';
+
+							if(data.aprovado && data.proximo_episodio) {
+								html += '<br><a href=\"treinamento_player.php?id=' + treinamentoId + '&episodio=' + data.proximo_episodio + '\" class=\"btn btn-success\"><i class=\"fa fa-play\"></i> Assistir Próximo Episódio</a>';
+							}
 
 							Swal.fire({
 								icon: icon,
@@ -1334,13 +1631,21 @@
 			}
 			var ehMeu = (parseInt(m.trem_nb_usuario_id) === {$usuarioId});
 			var nome = $('<span>').text(m.trem_tx_usuario_nome || 'Usuário').html();
+			var nivel = m.trem_tx_usuario_nivel || '';
+			var ehAdmin = (nivel.indexOf('Administrador') !== -1);
+			var badgeNivel = '';
+			if(ehAdmin) {
+				badgeNivel = '<span class=\"label label-primary\" style=\"font-size:10px;margin-left:4px;\">Gestor</span>';
+			} else if(nivel) {
+				badgeNivel = '<span class=\"label label-default\" style=\"font-size:10px;margin-left:4px;\">' + $('<span>').text(nivel).html() + '</span>';
+			}
 			var data = new Date(m.trem_dt_data_cadastro);
 			var dataLabel = '';
 			if(!isNaN(data)) {
 				dataLabel = String(data.getDate()).padStart(2,'0') + '/' + String(data.getMonth()+1).padStart(2,'0') + '/' + data.getFullYear() + ' ' + String(data.getHours()).padStart(2,'0') + ':' + String(data.getMinutes()).padStart(2,'0');
 			}
 			return '<div class=\"chat-msg ' + (ehMeu ? 'chat-msg-meu' : 'chat-msg-outro') + '\">' +
-				'<div class=\"chat-msg-cabecalho\"><i class=\"fa fa-user-circle\"></i> <strong>' + nome + '</strong>' +
+				'<div class=\"chat-msg-cabecalho\"><i class=\"fa fa-user-circle\"></i> <strong>' + nome + '</strong>' + badgeNivel +
 				'<span class=\"text-muted\" style=\"font-size:11px;\"> - ' + dataLabel + '</span></div>' +
 				'<div class=\"chat-msg-corpo\">' + corpo + '</div></div>';
 		}

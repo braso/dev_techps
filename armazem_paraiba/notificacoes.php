@@ -268,6 +268,7 @@ function notificacao_calcular(array $categoriasAtivas): array {
             $rsPerfil = query("SELECT perfil_nb_id FROM usuario_perfil WHERE ativo = 1 AND user_nb_id = ? LIMIT 1", "i", [$usuarioId]);
             $rowPerfil = torre_fetch_assoc($rsPerfil);
             if (!empty($rowPerfil)) $perfilUsuario = intval($rowPerfil["perfil_nb_id"] ?? 0);
+            $empresaUsuario = intval($_SESSION["user_nb_empresa"] ?? 0);
 
             $totalTreinamentos = intval(torre_fetch_assoc(query(
                 "SELECT COUNT(*) AS c FROM treinamento t
@@ -285,13 +286,19 @@ function notificacao_calcular(array $categoriasAtivas): array {
                          AND tp.trepr_nb_usuario_id = ?
                    )
                    AND (
+                       t.trei_tx_empresas_habilitadas IS NULL
+                       OR t.trei_tx_empresas_habilitadas = ''
+                       OR JSON_CONTAINS(t.trei_tx_empresas_habilitadas, ?)
+                       OR JSON_CONTAINS(t.trei_tx_empresas_habilitadas, ?)
+                   )
+                   AND (
                        t.trei_tx_tipo_usuario_permitido IS NULL
                        OR t.trei_tx_tipo_usuario_permitido = ''
                        OR JSON_CONTAINS(t.trei_tx_tipo_usuario_permitido, ?)
                        OR JSON_CONTAINS(t.trei_tx_tipo_usuario_permitido, ?)
                    )",
-                "iiss",
-                [$usuarioId, $usuarioId, '"' . $perfilUsuario . '"', $perfilUsuario]
+                "iissss",
+                [$usuarioId, $usuarioId, '"' . $empresaUsuario . '"', $empresaUsuario, '"' . $perfilUsuario . '"', $perfilUsuario]
             ))["c"] ?? 0);
 
             if ($totalTreinamentos > 0) {

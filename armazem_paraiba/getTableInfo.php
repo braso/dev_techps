@@ -207,6 +207,15 @@ if (!empty($queryResult)) {
                 }
             }
 
+            if ($key === 'conversas_pendentes') {
+                // Coluna CONVERSAS (CHAT): ícone + badge de mensagens novas do gestor logado
+                $pendentes = (int)$data;
+                $badge = $pendentes > 0
+                    ? '<span class="badge" style="background:#d9534f;color:#fff;margin-left:4px;" title="' . $pendentes . ' mensagem(ns) nova(s)">' . $pendentes . '</span>'
+                    : '';
+                $data = '<span class="btn-conversa-treinamento" style="cursor:pointer;color:#f39c12;" title="Conversas (Chat)"><i class="fa fa-comments"></i>' . $badge . '</span>';
+            }
+
             if ($key === 'ss_e_tx_status') {
                 $isEntrega = (strpos($queryBase, 'ss_epi_entrega') !== false);
                 if ($isEntrega) {
