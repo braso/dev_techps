@@ -307,6 +307,10 @@ if(function_exists("index")){
         if($tabela === 'usuario_perfil'){ $tab = 'uperf'; }
         if($tabela === 'perfil_acesso'){ $tab = 'perfil'; }
         if($tabela === 'rfids'){ $tab = 'rfids'; }
+        if($tabela === 'treinamento_episodio'){ $tab = 'trepi'; }
+        if($tabela === 'treinamento_episodio_questao'){ $tab = 'trepq'; }
+        if($tabela === 'treinamento_questao'){ $tab = 'treq'; }
+        if($tabela === 'treinamento_material'){ $tab = 'tram'; }
         $camposString = "";
 		for($i=0;$i<count($campos);$i++){
 			$camposString .= ", ".$campos[$i]." = ";
@@ -338,6 +342,11 @@ if(function_exists("index")){
         $tab = substr($tabela,0,4);
         if($tabela === 'usuario_perfil'){ $tab = 'uperf'; }
         if($tabela === 'perfil_acesso'){ $tab = 'perfil'; }
+        if($tabela === 'rfids'){ $tab = 'rfids'; }
+        if($tabela === 'treinamento_episodio'){ $tab = 'trepi'; }
+        if($tabela === 'treinamento_episodio_questao'){ $tab = 'trepq'; }
+        if($tabela === 'treinamento_questao'){ $tab = 'treq'; }
+        if($tabela === 'treinamento_material'){ $tab = 'tram'; }
         query("UPDATE {$tabela} SET {$tab}_tx_status = 'inativo' WHERE {$tab}_nb_id = {$id} LIMIT 1;");
         return $id;
     }
@@ -381,6 +390,10 @@ if(function_exists("index")){
         $prefixId = substr($tabela,0,4);
         if($tabela === 'usuario_perfil'){ $prefixId = 'uperf'; }
         if($tabela === 'perfil_acesso'){ $prefixId = 'perfil'; }
+        if($tabela === 'treinamento_episodio'){ $prefixId = 'trepi'; }
+        if($tabela === 'treinamento_episodio_questao'){ $prefixId = 'trepq'; }
+        if($tabela === 'treinamento_questao'){ $prefixId = 'treq'; }
+        if($tabela === 'treinamento_material'){ $prefixId = 'tram'; }
         $extra_id = "";
 		if($id !== "" && is_numeric($id) && intval($id) > 0){
 			$extra_id = " AND ".$prefixId."_nb_id = ? ";

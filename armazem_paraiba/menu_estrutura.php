@@ -127,6 +127,7 @@
 				"treinamento" => [
 					"/treinamento/cadastro_treinamento.php" => "Gerenciar Treinamentos",
 					"/treinamento/treinamento_assistir.php" => "Meus Treinamentos",
+					"/treinamento/treinamento_chat_gestao.php" => "Conversas de Treinamentos",
 				],
 			];
 			$path = strtolower($_SERVER['REQUEST_URI']);

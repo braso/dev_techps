@@ -420,11 +420,15 @@
 							$__nivelAtual = strval($_SESSION["user_tx_nivel"] ?? "");
 							$__ehOperacional = in_array($__nivelAtual, ["Motorista", "Ajudante", "Funcionário", "Terceirizado"], true);
 							$__caminhoNotificacoes = $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/notificacoes.php";
-							if(!$__ehOperacional && $connLocal && file_exists($__caminhoNotificacoes)){
+							if($connLocal && file_exists($__caminhoNotificacoes)){
 								include_once $__caminhoNotificacoes;
 								if(function_exists("notificacao_carregar_preferencia")){
 									$__usuarioIdSessao = intval($_SESSION["user_nb_id"] ?? 0);
 									$__notifPref = notificacao_carregar_preferencia($__usuarioIdSessao);
+									// Funcionários (operacionais) sempre recebem avisos de treinamento
+									if($__ehOperacional && !in_array("treinamento", $__notifPref["categorias"], true)){
+										$__notifPref["categorias"][] = "treinamento";
+									}
 									$__notifCategorias = notificacao_categorias_disponiveis();
 									$__notifItens = notificacao_calcular($__notifPref["categorias"]);
 								}
@@ -435,7 +439,7 @@
 							<li class="droddown dropdown-separator">
 
 							</li>
-							<?php if(!$__ehOperacional && !empty($__notifCategorias)): ?>
+							<?php if(!empty($__notifCategorias)): ?>
 							<!-- INICIO SINO DE NOTIFICAÇÕES (gestão) -->
 							<li class="dropdown dropdown-separator">
 								<a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true" style="text-decoration: none; margin: 0px 5px; display: flex; align-items: center; justify-content: center; position: relative;" title="Notificações">

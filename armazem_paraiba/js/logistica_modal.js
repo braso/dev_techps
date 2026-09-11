@@ -31,10 +31,34 @@ document.getElementById("toggleFormBtn").addEventListener("click", function () {
         var motoristaValue = motoristaSelect.value; // Obtém o valor selecionado
         document.getElementById("motorista").value = motoristaValue; // Define o valor no formulário de ajuste
 
-        // Preenche o campo de data no formulário de ajuste com a data selecionada
-        var dataValue = dataInput.value; // Obtém o valor selecionado
-        var formattedDate = dataValue.split('T')[0]; // Formata a data para "yyyy-MM-dd"
-        document.getElementById("data").value = formattedDate; // Define o valor no formulário de ajuste
+        // Converte dd/mm/yyyy para yyyy-mm-dd (se ainda estiver no formato brasileiro)
+        var converterDataBR = function(d) {
+            if (!d) return "";
+            var valor = String(d).trim();
+            if (valor.indexOf("-") >= 0) return valor; // já está em yyyy-mm-dd
+            var p = valor.split("/");
+            if (p.length !== 3) return "";
+            return p[2] + "-" + p[1] + "-" + p[0];
+        };
+
+        // Preenche o campo de data com a data da LINHA selecionada (se houver).
+        // Se nenhuma linha foi selecionada, usa a data do campo "Data e Hora Início".
+        var dataLinha = converterDataBR(window.logisticaLinhaData || "");
+        if (dataLinha) {
+            document.getElementById("data").value = dataLinha;
+        } else {
+            var dataValue = dataInput.value; // Obtém o valor selecionado
+            var formattedDate = dataValue.split('T')[0]; // Formata a data para "yyyy-MM-dd"
+            document.getElementById("data").value = formattedDate; // Define o valor no formulário de ajuste
+        }
+
+        // Preenche as horas do ajuste com a hora de início/fim da linha selecionada, se houver
+        if (window.logisticaLinhaStart) {
+            document.getElementById("hora").value = window.logisticaLinhaStart.substring(0, 5);
+        }
+        if (window.logisticaLinhaEnd) {
+            document.getElementById("horaFim").value = window.logisticaLinhaEnd.substring(0, 5);
+        }
 
         formContainer.classList.add("show");
     }

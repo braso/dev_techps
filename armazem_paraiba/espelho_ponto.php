@@ -266,8 +266,8 @@
 		$rotulos = getRotulosEspelho();
 		include_once "check_permission.php";
 		$temPermissao = temPermissaoMenu('/espelho_ponto.php');
-		if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário", "Terceirizado", "Tercerizado"]) && !$temPermissao){
-			[$_POST["busca_motorista"], $_POST["busca_empresa"]] = [$_SESSION["user_nb_entidade"], $_SESSION["user_nb_empresa"]];
+if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário", "Terceirizado", "Tercerizado"]) && !$temPermissao){
+            [$_POST["busca_motorista"], $_POST["busca_empresa"]] = [$_SESSION["user_nb_entidade"], (string)$_SESSION["user_nb_empresa"]];
 		}
 		
 		//Confere se há algum erro na pesquisa{
@@ -278,7 +278,7 @@
 					unset($_POST["periodo_abono"]);
 				}
 				if(empty($_POST["busca_empresa"]) && !empty($_SESSION["user_nb_empresa"])){
-					$_POST["busca_empresa"] = $_SESSION["user_nb_empresa"];
+					$_POST["busca_empresa"] = (string)$_SESSION["user_nb_empresa"];
 				}
 				$empresasSelecionadas = normalizarFiltroArray($_POST["busca_empresa"] ?? "");
 				$empresasIds = array_map('intval', $empresasSelecionadas);
@@ -376,6 +376,19 @@
 
 		echo "<style>";
 		include "css/espelho_ponto.css";
+		echo "
+			.js-filtro-toggle { max-width: 100%; white-space: nowrap; }
+			.js-filtro-toggle .js-filtro-label {
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+				flex: 1 1 auto;
+				min-width: 0;
+				display: block;
+			}
+			.js-filtro-toggle .caret { flex-shrink: 0; margin-left: 6px; }
+			.js-filtro-item { max-width: 100%; overflow-wrap: break-word; }
+		";
 		echo "</style>";
 
 		//CAMPOS DE CONSULTA{
@@ -383,7 +396,7 @@
 			$condBuscaEmpresa = "AND empr_tx_status = 'ativo'";
 
 			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário", "Terceirizado", "Tercerizado"]) && !$temPermissao){
-                [$_POST["busca_motorista"], $_POST["busca_empresa"]] = [$_SESSION["user_nb_entidade"], $_SESSION["user_nb_empresa"]];
+                [$_POST["busca_motorista"], $_POST["busca_empresa"]] = [$_SESSION["user_nb_entidade"], (string)$_SESSION["user_nb_empresa"]];
                 $condBuscaMotorista .= " AND enti_nb_id = '".$_SESSION["user_nb_entidade"]."'";
 				
 				$motoristaLogado = mysqli_fetch_assoc(query("SELECT enti_tx_nome FROM entidade WHERE enti_nb_id = ".$_SESSION["user_nb_entidade"]." LIMIT 1"));
@@ -394,7 +407,7 @@
 
 			}else{
 				if(empty($_POST["busca_empresa"]) && !empty($_SESSION["user_nb_empresa"])){
-					$_POST["busca_empresa"] = $_SESSION["user_nb_empresa"];
+					$_POST["busca_empresa"] = (string)$_SESSION["user_nb_empresa"];
 				}
 				$empresasSelecionadas = normalizarFiltroArray($_POST["busca_empresa"] ?? "");
 
@@ -465,7 +478,7 @@
                 }
 
                 $searchFields = [
-					renderFiltroCheckboxGroup("Empresa*", "busca_empresa", $empresasOpcoes, $_POST["busca_empresa"] ?? "", 3),
+					renderFiltroCheckboxGroup("Empresa*", "busca_empresa", $empresasOpcoes, (string)($_POST["busca_empresa"] ?? ""), 3),
 					renderFiltroCheckboxGroup("{$rotulos["funcionario"]}*", "busca_motorista", $funcionariosOpcoes, $_POST["busca_motorista"] ?? "", 4),
                     combo_bd("!Cargo", "busca_operacao", (!empty($_POST["busca_operacao"]) ? $_POST["busca_operacao"] : ""), 2, "operacao", "onchange='this.form.submit()'"),
                     combo_bd("!Setor", "busca_setor", (!empty($_POST["busca_setor"]) ? $_POST["busca_setor"] : ""), 2, "grupos_documentos", "onchange='this.form.submit()'"),

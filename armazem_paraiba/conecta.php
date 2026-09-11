@@ -238,6 +238,12 @@
         trei_dt_data_atualiza DATETIME
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
+    // Campo de notificação de novo treinamento (migração segura para tabelas existentes)
+    $__checkGerarNotif = mysqli_query($conn, "SHOW COLUMNS FROM treinamento LIKE 'trei_tx_gerar_notificacao'");
+    if ($__checkGerarNotif && mysqli_num_rows($__checkGerarNotif) === 0) {
+        mysqli_query($conn, "ALTER TABLE treinamento ADD COLUMN trei_tx_gerar_notificacao ENUM('sim','nao') NOT NULL DEFAULT 'nao' AFTER trei_tx_status");
+    }
+
     // Tabela de materiais de apoio
     mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_material (
         tram_nb_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -289,6 +295,75 @@
         FOREIGN KEY (trepr_nb_treinamento_id) REFERENCES treinamento(trei_nb_id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
+    // Migração: progresso por episódio (séries)
+    $__checkEpiProg = mysqli_query($conn, "SHOW COLUMNS FROM treinamento_progresso LIKE 'trepr_nb_episodio_id'");
+    if ($__checkEpiProg && mysqli_num_rows($__checkEpiProg) === 0) {
+        mysqli_query($conn, "ALTER TABLE treinamento_progresso ADD COLUMN trepr_nb_episodio_id INT NULL AFTER trepr_nb_treinamento_id, ADD UNIQUE KEY uk_usuario_episodio (trepr_nb_usuario_id, trepr_nb_treinamento_id, trepr_nb_episodio_id)");
+    }
+    // Remover a unique antiga que impede múltiplos registros por treinamento (necessário para séries)
+    $__checkUkAntiga = mysqli_query($conn, "SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'treinamento_progresso' AND INDEX_NAME = 'uk_usuario_treinamento'");
+    if ($__checkUkAntiga && mysqli_num_rows($__checkUkAntiga) > 0) {
+        mysqli_query($conn, "ALTER TABLE treinamento_progresso DROP INDEX uk_usuario_treinamento");
+    }
+
+    // Migração: campo série no treinamento
+    $__checkSerie = mysqli_query($conn, "SHOW COLUMNS FROM treinamento LIKE 'trei_tx_serie'");
+    if ($__checkSerie && mysqli_num_rows($__checkSerie) === 0) {
+        mysqli_query($conn, "ALTER TABLE treinamento ADD COLUMN trei_tx_serie ENUM('sim','nao') NOT NULL DEFAULT 'nao' AFTER trei_tx_status");
+    }
+
+    // Migração: empresas habilitadas por treinamento (JSON de ids; NULL/vazio = todas)
+    $__checkEmpHab = mysqli_query($conn, "SHOW COLUMNS FROM treinamento LIKE 'trei_tx_empresas_habilitadas'");
+    if ($__checkEmpHab && mysqli_num_rows($__checkEmpHab) === 0) {
+        mysqli_query($conn, "ALTER TABLE treinamento ADD COLUMN trei_tx_empresas_habilitadas TEXT NULL AFTER trei_tx_tipo_usuario_permitido");
+    }
+
+    // Migração: instrutor responsável e criador do treinamento
+    $__checkInstrutor = mysqli_query($conn, "SHOW COLUMNS FROM treinamento LIKE 'trei_tx_instrutor_tipo'");
+    if ($__checkInstrutor && mysqli_num_rows($__checkInstrutor) === 0) {
+        mysqli_query($conn, "ALTER TABLE treinamento
+            ADD COLUMN trei_tx_instrutor_tipo ENUM('funcionario','externo') NOT NULL DEFAULT 'funcionario' AFTER trei_nb_obrigatorio,
+            ADD COLUMN trei_nb_instrutor_entidade_id INT NULL AFTER trei_tx_instrutor_tipo,
+            ADD COLUMN trei_tx_instrutor_nome VARCHAR(200) NULL AFTER trei_nb_instrutor_entidade_id,
+            ADD COLUMN trei_tx_instrutor_cpf VARCHAR(20) NULL AFTER trei_tx_instrutor_nome,
+            ADD COLUMN trei_tx_instrutor_capacitacao VARCHAR(255) NULL AFTER trei_tx_instrutor_cpf,
+            ADD COLUMN trei_nb_user_cadastro INT NULL AFTER trei_tx_instrutor_capacitacao,
+            ADD COLUMN trei_tx_criador_nome VARCHAR(200) NULL AFTER trei_nb_user_cadastro,
+            ADD COLUMN trei_tx_criador_cargo VARCHAR(200) NULL AFTER trei_tx_criador_nome,
+            ADD COLUMN trei_tx_criador_setor VARCHAR(200) NULL AFTER trei_tx_criador_cargo");
+    }
+
+    // Tabela de episódios (séries de vídeos)
+    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_episodio (
+        trepi_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        trepi_nb_treinamento_id INT NOT NULL,
+        trepi_nb_ordem INT NOT NULL DEFAULT 1,
+        trepi_tx_titulo VARCHAR(255) NOT NULL,
+        trepi_tx_descricao TEXT,
+        trepi_tx_url_video VARCHAR(500),
+        trepi_tx_tipo_video ENUM('youtube','vimeo','upload') DEFAULT 'youtube',
+        trepi_nb_carga_horaria INT DEFAULT 0,
+        trepi_nb_nota_minima_aprovacao INT DEFAULT NULL,
+        trepi_tx_status ENUM('ativo','inativo') DEFAULT 'ativo',
+        trepi_dt_data_cadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_treinamento (trepi_nb_treinamento_id),
+        FOREIGN KEY (trepi_nb_treinamento_id) REFERENCES treinamento(trei_nb_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+    // Tabela de questões por episódio
+    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_episodio_questao (
+        trepq_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        trepq_nb_episodio_id INT NOT NULL,
+        trepq_tx_pergunta TEXT NOT NULL,
+        trepq_tx_opcoes JSON NOT NULL,
+        trepq_nb_resposta_correta INT NOT NULL,
+        trepq_nb_ordem INT DEFAULT 0,
+        trepq_tx_status ENUM('ativo','inativo') DEFAULT 'ativo',
+        trepq_dt_data_cadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_episodio (trepq_nb_episodio_id),
+        FOREIGN KEY (trepq_nb_episodio_id) REFERENCES treinamento_episodio(trepi_nb_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
     // Tabela de atribuições (treinamento x usuário)
     mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_atribuicao (
         treate_nb_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -329,7 +404,107 @@
         FOREIGN KEY (trebl_nb_usuario_id) REFERENCES user(user_nb_id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
+    // Tabela de mensagens da conversa do treinamento (chat + auditoria)
+    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_mensagem (
+        trem_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        trem_nb_treinamento_id INT NOT NULL,
+        trem_nb_usuario_id INT NOT NULL,
+        trem_tx_usuario_nome VARCHAR(200),
+        trem_tx_usuario_login VARCHAR(100),
+        trem_tx_usuario_nivel VARCHAR(50),
+        trem_tx_tipo ENUM('texto','audio','imagem') DEFAULT 'texto',
+        trem_tx_mensagem TEXT,
+        trem_tx_arquivo VARCHAR(300),
+        trem_dt_data_cadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_treinamento (trem_nb_treinamento_id),
+        FOREIGN KEY (trem_nb_treinamento_id) REFERENCES treinamento(trei_nb_id) ON DELETE CASCADE,
+        FOREIGN KEY (trem_nb_usuario_id) REFERENCES user(user_nb_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+    // Controle de leitura da conversa por gestor (marca até onde cada gestor visualizou)
+    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_mensagem_leitura (
+        trei_nb_id INT NOT NULL,
+        user_nb_id INT NOT NULL,
+        trel_nb_ultimo_id_lido INT NOT NULL DEFAULT 0,
+        trel_dt_data_leitura DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (trei_nb_id, user_nb_id),
+        FOREIGN KEY (trei_nb_id) REFERENCES treinamento(trei_nb_id) ON DELETE CASCADE,
+        FOREIGN KEY (user_nb_id) REFERENCES user(user_nb_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
     // =====================================================
+
+    // =====================================================
+    // PADRÕES DE GRID (3 por usuário, aplicados em todos os grids)
+    // =====================================================
+
+    function grid_ensure_padroes(int $userId): void {
+        global $conn;
+        if ($userId <= 0) return;
+        $existe = mysqli_query($conn, "SHOW TABLES LIKE 'grid_user_padrao'");
+        if (mysqli_num_rows($existe) == 0) {
+            mysqli_query($conn, "CREATE TABLE IF NOT EXISTS grid_user_padrao (
+                gup_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+                gup_nb_user INT NOT NULL,
+                gup_nb_ordem TINYINT NOT NULL DEFAULT 1,
+                gup_tx_nome VARCHAR(100) NOT NULL,
+                gup_tx_configs LONGTEXT NOT NULL,
+                gup_tx_ativo ENUM('sim','nao') NOT NULL DEFAULT 'nao',
+                gup_dt_dataAtualiza DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_user_ordem (gup_nb_user, gup_nb_ordem)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        }
+        $cnt = mysqli_fetch_assoc(query("SELECT COUNT(*) AS c FROM grid_user_padrao WHERE gup_nb_user = ?", "i", [$userId]));
+        if ((int)($cnt["c"] ?? 0) < 3) {
+            for ($ordem = 1; $ordem <= 3; $ordem++) {
+                $exists = mysqli_fetch_assoc(query("SELECT 1 AS ok FROM grid_user_padrao WHERE gup_nb_user = ? AND gup_nb_ordem = ?", "ii", [$userId, $ordem]));
+                if (empty($exists)) {
+                    query(
+                        "INSERT INTO grid_user_padrao (gup_nb_user, gup_nb_ordem, gup_tx_nome, gup_tx_configs, gup_tx_ativo) VALUES (?, ?, ?, ?, ?)",
+                        "iisss",
+                        [$userId, $ordem, "Padrão {$ordem}", "{}", $ordem === 1 ? "sim" : "nao"]
+                    );
+                }
+            }
+        }
+        // Migra configurações antigas (grid_user_config) para o padrão ativo, somente na primeira vez (padrão recém-criado e vazio)
+        $ativo = mysqli_fetch_assoc(query("SELECT gup_nb_id, gup_tx_configs FROM grid_user_padrao WHERE gup_nb_user = ? AND gup_tx_ativo = 'sim' LIMIT 1", "i", [$userId]));
+        if (!empty($ativo) && trim(strval($ativo["gup_tx_configs"] ?? "")) === "{}") {
+            $configs = json_decode(strval($ativo["gup_tx_configs"] ?? "{}"), true);
+            if (!is_array($configs)) $configs = [];
+            $rsLegado = query("SELECT guc_tx_grid, guc_tx_columns FROM grid_user_config WHERE guc_nb_user = ?", "i", [$userId]);
+            while ($rsLegado && ($r = mysqli_fetch_assoc($rsLegado))) {
+                $grid = strval($r["guc_tx_grid"] ?? "");
+                if ($grid !== "" && !isset($configs[$grid])) {
+                    $configs[$grid] = json_decode(strval($r["guc_tx_columns"] ?? "[]"), true);
+                }
+            }
+            query("UPDATE grid_user_padrao SET gup_tx_configs = ? WHERE gup_nb_id = ?", "si", [json_encode($configs), $ativo["gup_nb_id"]]);
+        }
+    }
+
+    function grid_padrao_ativo(int $userId): ?array {
+        if ($userId <= 0) return null;
+        grid_ensure_padroes($userId);
+        $rs = query("SELECT * FROM grid_user_padrao WHERE gup_nb_user = ? AND gup_tx_ativo = 'sim' LIMIT 1", "i", [$userId]);
+        $padrao = ($rs) ? mysqli_fetch_assoc($rs) : null;
+        return $padrao ?: null;
+    }
+
+    function grid_padroes_usuario(int $userId): array {
+        if ($userId <= 0) return [];
+        grid_ensure_padroes($userId);
+        $padroes = [];
+        $rs = query("SELECT gup_nb_id, gup_nb_ordem, gup_tx_nome, gup_tx_ativo FROM grid_user_padrao WHERE gup_nb_user = ? ORDER BY gup_nb_ordem ASC", "i", [$userId]);
+        while ($rs && ($r = mysqli_fetch_assoc($rs))) {
+            $padroes[] = [
+                "ordem" => (int)$r["gup_nb_ordem"],
+                "nome"  => strval($r["gup_tx_nome"]),
+                "ativo" => strval($r["gup_tx_ativo"]) === "sim",
+            ];
+        }
+        return $padroes;
+    }
 
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_grid.php";
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";

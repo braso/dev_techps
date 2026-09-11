@@ -234,6 +234,9 @@ document.addEventListener("DOMContentLoaded", () => {
       // "Diferença KM" da nova busca compara com a busca passada).
       previousHodometro = null;
 
+      // Atualiza o card "Ver Ponto registrado pelo colaborador" com o período consultado
+      try { carregarPontosColaborador(true); } catch (e) { console.error(e); }
+
       // Botão de Busca Manual
       const btnBuscar = document.createElement("button");
       btnBuscar.id = "btnBuscarEnderecos";
@@ -526,6 +529,73 @@ document.addEventListener("DOMContentLoaded", () => {
       addRowClickListeners();
       buscarEnderecosFaltantes();
     };
+
+    // ============================================================
+    // CARD: Ver Ponto registrado pelo colaborador (dinâmico)
+    // ============================================================
+    var mostrarTodosDiasPontos = false;
+
+    function carregarPontosColaborador(somentePrimeiroDia) {
+      var tbody = document.getElementById("tbodyPontosColaborador");
+      if (!tbody) return;
+      var matricula = document.getElementById("id") ? document.getElementById("id").value : "";
+      var dataInicio = document.getElementById("date_start") ? document.getElementById("date_start").value : "";
+      var dataFim = document.getElementById("date_end") ? document.getElementById("date_end").value : "";
+      if (!matricula || !dataInicio) return;
+
+      var url = window.location.pathname +
+        "?pontos_json=1&matricula=" + encodeURIComponent(matricula) +
+        "&data_inicio=" + encodeURIComponent(dataInicio.split("T")[0]) +
+        "&data_fim=" + encodeURIComponent((dataFim || dataInicio).split("T")[0]) +
+        "&somente_primeiro_dia=" + (somentePrimeiroDia ? "1" : "0");
+
+      fetch(url)
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (!data.success) return;
+          tbody.innerHTML = "";
+          if (!data.pontos || data.pontos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum ponto registrado no período.</td></tr>';
+          } else {
+            data.pontos.forEach(function (p) {
+              var local = (p.pont_tx_latitude && p.pont_tx_longitude)
+                ? '<a href="https://www.google.com/maps?q=' + p.pont_tx_latitude + ',' + p.pont_tx_longitude + '" target="_blank" title="Ver no Google Maps"><i class="fa fa-map" style="color:#183153; font-size:1.5em;"></i></a>'
+                : '<span>Sem localização</span>';
+              var tr = document.createElement("tr");
+              tr.innerHTML = "<td>" + $('<span>').text(p.pont_tx_data || "").html() + "</td>" +
+                "<td>" + $('<span>').text(p.macr_tx_nome || "").html() + "</td>" +
+                "<td>" + $('<span>').text(p.pont_tx_placa || "").html() + "</td>" +
+                "<td>" + $('<span>').text(p.moti_tx_legenda || "").html() + "</td>" +
+                "<td>" + local + "</td>";
+              tbody.appendChild(tr);
+            });
+          }
+          var info = document.getElementById("pontosResumoInfo");
+          if (info) {
+            var totalPeriodo = data.total_periodo || data.pontos.length;
+            if (somentePrimeiroDia) {
+              info.textContent = "Mostrando apenas o 1º dia (" + data.pontos.length + " registro(s)). " +
+                (totalPeriodo > data.pontos.length ? "Há registros em outros dias (" + totalPeriodo + " no total)." : "");
+            } else {
+              info.textContent = "Mostrando todos os dias do período (" + totalPeriodo + " registro(s)).";
+            }
+          }
+        })
+        .catch(function (e) {
+          console.error("Erro ao carregar pontos do colaborador:", e);
+        });
+    }
+
+    var btnTodosDias = document.getElementById("btnMostrarTodosDias");
+    if (btnTodosDias) {
+      btnTodosDias.addEventListener("click", function () {
+        mostrarTodosDiasPontos = !mostrarTodosDiasPontos;
+        btnTodosDias.innerHTML = mostrarTodosDiasPontos
+          ? '<i class="fa-solid fa-calendar-day"></i> Mostrar apenas o primeiro dia'
+          : '<i class="fa-solid fa-calendar-days"></i> Mostrar todos os dias do período';
+        carregarPontosColaborador(!mostrarTodosDiasPontos);
+      });
+    }
   
     let startTime = null;
     let startRow = null;
@@ -552,6 +622,24 @@ document.addEventListener("DOMContentLoaded", () => {
           const latitude = cells[6].innerText.trim();
           const longitude = cells[7].innerText.trim();
           const ignition = cells[8].innerText.trim();
+
+          // Guarda a data da linha selecionada (usada pelo formulário de ajuste)
+          // Prioridade: data-attribute ISO da linha → cabeçalho "Resultados para DD/MM/YYYY" → célula da data
+          var dataLinhaSelecionada = row.dataset.date || "";
+          if (!dataLinhaSelecionada) {
+            var tblSelecionada = row.closest("table");
+            var containerSelecionada = tblSelecionada ? tblSelecionada.parentNode : null;
+            if (containerSelecionada) {
+              var h3Selecionada = containerSelecionada.querySelector("h3");
+              if (h3Selecionada) {
+                var matchData = (h3Selecionada.textContent || "").match(/(\d{2})\/(\d{2})\/(\d{4})/);
+                if (matchData) dataLinhaSelecionada = matchData[3] + "-" + matchData[2] + "-" + matchData[1];
+              }
+            }
+          }
+          window.logisticaLinhaData = dataLinhaSelecionada;
+          window.logisticaLinhaStart = start;
+          window.logisticaLinhaEnd = end;
   
           const plate = document.getElementById("plate").value.trim();
           const comment = document.getElementById("coment").value.trim();
@@ -1048,6 +1136,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const moduleDateTime = new Date(row.moduleTime);
       const moduleDate = moduleDateTime.toLocaleDateString();
       const moduleTime = moduleDateTime.toLocaleTimeString();
+      tr.dataset.date = isNaN(moduleDateTime) ? "" : moduleDateTime.toISOString().slice(0, 10);
     
       let currentHodometro = parseFloat(row.hodometro);
       let hodometroDifference = previousHodometro !== null ? currentHodometro - previousHodometro : null;
@@ -1243,6 +1332,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const tr = document.createElement("tr");
+      tr.dataset.date = isNaN(stopStart) ? "" : stopStart.toISOString().slice(0, 10);
 
       if (ignition === "true") {
         tr.classList.add("high-speed");
