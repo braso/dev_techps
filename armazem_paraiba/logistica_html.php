@@ -57,6 +57,38 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<script>
+    // Ajuste automático: a data de início nunca deve ficar maior que a data de fim.
+    // Se o início mudar para uma data maior que o fim, o fim assume a mesma data às 23:59:59.
+    $(function() {
+        var campoInicio = document.getElementById('date_start');
+        var campoFim = document.getElementById('date_end');
+        if (!campoInicio) return;
+
+        campoInicio.addEventListener('change', function() {
+            var inicio = campoInicio.value;
+            if (!inicio) return;
+            var dataInicio = inicio.substring(0, 10);
+            var fim = campoFim ? campoFim.value : '';
+            var dataFim = fim ? fim.substring(0, 10) : '';
+            if (!fim || dataInicio > dataFim) {
+                if (campoFim) campoFim.value = dataInicio + 'T23:59:59';
+            }
+        });
+
+        if (campoFim) {
+            campoFim.addEventListener('change', function() {
+                var fim = campoFim.value;
+                var inicio = campoInicio.value;
+                if (!fim || !inicio) return;
+                if (fim.substring(0, 10) < inicio.substring(0, 10)) {
+                    campoFim.value = inicio.substring(0, 10) + 'T23:59:59';
+                }
+            });
+        }
+    });
+</script>
+
 
 
 <!DOCTYPE html>
@@ -404,6 +436,10 @@ function salvarNovoTipoPoi(){
                 <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne"
                     data-bs-parent="#accordionExample">
                     <div class="accordion-body">
+                        <button type="button" class="btn btn-sm btn-info" id="btnMostrarTodosDias" style="margin-bottom:8px;">
+                            <i class="fa-solid fa-calendar-days"></i> Mostrar todos os dias do período
+                        </button>
+                        <span class="text-muted" id="pontosResumoInfo" style="font-size:12px;"></span>
                         <table class="table table-striped table-bordered">
                             <thead>
                                 <tr>
@@ -414,7 +450,7 @@ function salvarNovoTipoPoi(){
                                     <th>Local</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="tbodyPontosColaborador">
                                 <?=$htmls["pontos"]?>
                             </tbody>
                         </table>

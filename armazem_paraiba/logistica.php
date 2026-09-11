@@ -8,6 +8,44 @@
     include_once "funcoes_ponto.php";
     include_once "conecta.php"; // Incluindo a conexão
 
+    // =====================================================
+    // AJAX: LISTAR PONTOS DO COLABORADOR (período) - atualização dinâmica do card
+    // (colocado antes da validação de parâmetros da URL para não ser bloqueado)
+    // =====================================================
+
+    if (isset($_GET["pontos_json"])) {
+        if (empty($_SESSION["user_nb_id"])) {
+            echo json_encode(["success" => false, "pontos" => []]);
+            exit;
+        }
+        header('Content-Type: application/json');
+        $matriculaJson = $_GET["matricula"] ?? "";
+        $dataInicioJson = $_GET["data_inicio"] ?? "";
+        $dataFimJson = $_GET["data_fim"] ?? "";
+        $somentePrimeiroDia = ($_GET["somente_primeiro_dia"] ?? "0") === "1";
+
+        if (empty($matriculaJson) || empty($dataInicioJson)) {
+            echo json_encode(["success" => false, "pontos" => []]);
+            exit;
+        }
+
+        $dataFimJson = !empty($dataFimJson) ? $dataFimJson : $dataInicioJson;
+
+        // Buscar todos os pontos do período
+        $todosPontos = buscarPontos($matriculaJson, $dataInicioJson, $dataFimJson);
+
+        $pontosRetorno = $todosPontos;
+        if ($somentePrimeiroDia) {
+            $diaInicio = date("d/m/Y", strtotime($dataInicioJson));
+            $pontosRetorno = array_values(array_filter($todosPontos, function($p) use ($diaInicio) {
+                return strpos($p["pont_tx_data"], $diaInicio) === 0;
+            }));
+        }
+
+        echo json_encode(["success" => true, "pontos" => $pontosRetorno, "total_periodo" => count($todosPontos)]);
+        exit;
+    }
+
 
 
     // Verifica se os parâmetros obrigatórios estão presentes na URL
@@ -71,13 +109,18 @@
     while($rsTipos && ($r = mysqli_fetch_assoc($rsTipos))){ $tiposPoi[] = $r; }
 
 
-    // Função para buscar pontos
-    function buscarPontos($matricula, $data) {
+    // Função para buscar pontos (período ou dia único)
+    function buscarPontos($matricula, $data, $dataFimPeriodo = null) {
         global $conn;
         
-        // Definir o intervalo de datas para o dia inteiro
-        $dataInicio = $data." 00:00:00";
-        $dataFim = $data." 23:59:59";
+        // Definir o intervalo: se houver data fim (período), usa-o; senão, apenas o dia
+        if (!empty($dataFimPeriodo)) {
+            $dataInicio = $data." 00:00:00";
+            $dataFim = $dataFimPeriodo." 23:59:59";
+        } else {
+            $dataInicio = $data." 00:00:00";
+            $dataFim = $data." 23:59:59";
+        }
         
         // Prepare a consulta SQL
         $sql = "SELECT pont_nb_id, pont_tx_data, macr_tx_nome, moti_tx_nome, moti_tx_legenda, pont_tx_justificativa, user_tx_login, pont_tx_dataCadastro, pont_tx_latitude, pont_tx_longitude,pont_tx_placa FROM ponto
@@ -141,9 +184,10 @@
     // Recuperar os parâmetros da URL
     $matricula = isset($_GET["matricula"]) ? $_GET["matricula"] : "";
     $data = isset($_GET["data"]) ? $_GET["data"] : "";
+    $dataFimPeriodo = isset($_GET["data_fim"]) ? $_GET["data_fim"] : "";
 
     // Buscar pontos com os parâmetros fornecidos
-    $pontos = buscarPontos($matricula, $data);
+    $pontos = buscarPontos($matricula, $data, $dataFimPeriodo);
 
         
         
