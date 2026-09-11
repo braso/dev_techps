@@ -1,16 +1,44 @@
 <?php
 $interno = true;
 
-// Descobre o diretório do cliente (tenant) com base na URL de origem
+// Garante a sessão ativa (pode vir de um AJAX sem passar pelo conecta.php ainda)
+if (empty(session_id())) {
+    session_start();
+}
+
+// Descobre o diretório do cliente (tenant) com base na sessão, no referer ou no path atual
 $baseDir = dirname(__DIR__); // .../gestaodeponto
 $tenantDir = null;
 
-if (!empty($_SERVER['HTTP_REFERER'])) {
+// 1º: sessão (mais confiável) — domain = APP_PATH/CONTEX_PATH, ex: /braso/armazem_paraiba
+$domainSess = trim(strval($_SESSION["domain"] ?? ""));
+if ($domainSess !== "") {
+    $partsS = explode('/', trim($domainSess, '/'));
+    $candidato = end($partsS);
+    if (is_string($candidato) && $candidato !== '' && $candidato !== 'contex20'
+        && is_dir($baseDir . '/' . $candidato)) {
+        $tenantDir = $candidato;
+    }
+}
+
+// 2º: HTTP_REFERER — ex: 'gestaodeponto/braso/cadastro_funcionario.php' (índice 1 = tenant)
+if (empty($tenantDir) && !empty($_SERVER['HTTP_REFERER'])) {
     $refPath = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_PATH);
     $parts = explode('/', trim($refPath, '/')); // ex: 'gestaodeponto/braso/cadastro_funcionario.php'
-    // Índice 0 deve ser 'gestaodeponto', índice 1 o tenant (braso, comav, etc.)
-    if (isset($parts[1]) && $parts[1] !== 'contex20') {
+    if (isset($parts[1]) && $parts[1] !== 'contex20'
+        && is_dir($baseDir . '/' . $parts[1])) {
         $tenantDir = $parts[1];
+    }
+}
+
+// 3º: path da requisição atual — segmento imediatamente anterior a 'contex20'
+if (empty($tenantDir)) {
+    $scriptPath = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+    $parts = explode('/', trim(strval($scriptPath), '/'));
+    $idxContex = array_search('contex20', $parts, true);
+    if ($idxContex !== false && $idxContex > 0
+        && is_dir($baseDir . '/' . $parts[$idxContex - 1])) {
+        $tenantDir = $parts[$idxContex - 1];
     }
 }
 
