@@ -54,14 +54,107 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
         }
     }
 
+    if(empty($user_id)){
+        $user_id = 0;
+    }
+
+    // ============================================================
+    // PADRÕES DE GRID (3 por usuário, globais em todos os grids)
+    // ============================================================
+    $gucAcao = $_POST['guc_acao'] ?? ($_GET['guc_acao'] ?? '');
+
+    if($gucAcao === 'listar_padroes'){
+        grid_ensure_padroes((int)$user_id);
+        echo json_encode(['success' => true, 'padroes' => grid_padroes_usuario((int)$user_id)]);
+        exit;
+    }
+
+    if($gucAcao === 'salvar_padrao'){
+        $ordem = (int)($_POST['ordem'] ?? 1);
+        if($ordem < 1 || $ordem > 3 || $grid_name === '' || $columns === ''){
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing parameters']);
+            exit;
+        }
+        grid_ensure_padroes((int)$user_id);
+        $padrao = mysqli_fetch_assoc(query("SELECT gup_nb_id, gup_tx_configs FROM grid_user_padrao WHERE gup_nb_user = ? AND gup_nb_ordem = ?", "ii", [(int)$user_id, $ordem]));
+        if(empty($padrao)){
+            http_response_code(400);
+            echo json_encode(['error' => 'Padrão não encontrado']);
+            exit;
+        }
+        $configs = json_decode(strval($padrao["gup_tx_configs"] ?? "{}"), true);
+        if(!is_array($configs)) $configs = [];
+        $configs[$grid_name] = json_decode($columns, true);
+        query("UPDATE grid_user_padrao SET gup_tx_configs = ? WHERE gup_nb_id = ?", "si", [json_encode($configs), $padrao["gup_nb_id"]]);
+
+        // Mantém a config ativa sincronizada (compatibilidade)
+        $stmt = $conn->prepare("INSERT INTO grid_user_config (guc_nb_user, guc_tx_grid, guc_tx_columns) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE guc_tx_columns = VALUES(guc_tx_columns)");
+        $stmt->bind_param("iss", $user_id, $grid_name, $columns);
+        $stmt->execute();
+
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
+    if($gucAcao === 'renomear_padrao'){
+        $ordem = (int)($_POST['ordem'] ?? 1);
+        $nome = trim(strval($_POST['nome'] ?? ''));
+        if($ordem < 1 || $ordem > 3 || $nome === ''){
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing parameters']);
+            exit;
+        }
+        grid_ensure_padroes((int)$user_id);
+        query("UPDATE grid_user_padrao SET gup_tx_nome = ? WHERE gup_nb_user = ? AND gup_nb_ordem = ?", "sii", [$nome, (int)$user_id, $ordem]);
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
+    if($gucAcao === 'ativar_padrao'){
+        $ordem = (int)($_POST['ordem'] ?? 1);
+        if($ordem < 1 || $ordem > 3){
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing parameters']);
+            exit;
+        }
+        grid_ensure_padroes((int)$user_id);
+        query("UPDATE grid_user_padrao SET gup_tx_ativo = 'nao' WHERE gup_nb_user = ?", "i", [(int)$user_id]);
+        query("UPDATE grid_user_padrao SET gup_tx_ativo = 'sim' WHERE gup_nb_user = ? AND gup_nb_ordem = ?", "ii", [(int)$user_id, $ordem]);
+
+        // Sincroniza as configs do padrão ativado com a config ativa (todos os grids)
+        $padrao = mysqli_fetch_assoc(query("SELECT gup_tx_configs FROM grid_user_padrao WHERE gup_nb_user = ? AND gup_nb_ordem = ?", "ii", [(int)$user_id, $ordem]));
+        if(!empty($padrao)){
+            $configs = json_decode(strval($padrao["gup_tx_configs"] ?? "{}"), true);
+            if(is_array($configs)){
+                foreach($configs as $grid => $colunas){
+                    if(is_string($grid) && $grid !== ''){
+                        $colJson = json_encode($colunas);
+                        $stmt = $conn->prepare("INSERT INTO grid_user_config (guc_nb_user, guc_tx_grid, guc_tx_columns) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE guc_tx_columns = VALUES(guc_tx_columns)");
+                        $stmt->bind_param("iss", $user_id, $grid, $colJson);
+                        $stmt->execute();
+                    }
+                }
+            }
+        }
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
     if($grid_name === '' || $columns === ''){
         http_response_code(400);
         echo json_encode(['error' => 'Missing parameters']);
         exit;
     }
 
-    if(empty($user_id)){
-        $user_id = 0;
+    // Salvar no padrão ativo (comportamento padrão ao configurar colunas)
+    grid_ensure_padroes((int)$user_id);
+    $padraoAtivo = grid_padrao_ativo((int)$user_id);
+    if(!empty($padraoAtivo)){
+        $configs = json_decode(strval($padraoAtivo["gup_tx_configs"] ?? "{}"), true);
+        if(!is_array($configs)) $configs = [];
+        $configs[$grid_name] = json_decode($columns, true);
+        query("UPDATE grid_user_padrao SET gup_tx_configs = ? WHERE gup_nb_id = ?", "si", [json_encode($configs), $padraoAtivo["gup_nb_id"]]);
     }
 
     $stmt = $conn->prepare("INSERT INTO grid_user_config (guc_nb_user, guc_tx_grid, guc_tx_columns) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE guc_tx_columns = VALUES(guc_tx_columns)");

@@ -354,6 +354,78 @@
 
     // =====================================================
 
+    // =====================================================
+    // PADRÕES DE GRID (3 por usuário, aplicados em todos os grids)
+    // =====================================================
+
+    function grid_ensure_padroes(int $userId): void {
+        global $conn;
+        if ($userId <= 0) return;
+        $existe = mysqli_query($conn, "SHOW TABLES LIKE 'grid_user_padrao'");
+        if (mysqli_num_rows($existe) == 0) {
+            mysqli_query($conn, "CREATE TABLE IF NOT EXISTS grid_user_padrao (
+                gup_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+                gup_nb_user INT NOT NULL,
+                gup_nb_ordem TINYINT NOT NULL DEFAULT 1,
+                gup_tx_nome VARCHAR(100) NOT NULL,
+                gup_tx_configs LONGTEXT NOT NULL,
+                gup_tx_ativo ENUM('sim','nao') NOT NULL DEFAULT 'nao',
+                gup_dt_dataAtualiza DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_user_ordem (gup_nb_user, gup_nb_ordem)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        }
+        $cnt = mysqli_fetch_assoc(query("SELECT COUNT(*) AS c FROM grid_user_padrao WHERE gup_nb_user = ?", "i", [$userId]));
+        if ((int)($cnt["c"] ?? 0) < 3) {
+            for ($ordem = 1; $ordem <= 3; $ordem++) {
+                $exists = mysqli_fetch_assoc(query("SELECT 1 AS ok FROM grid_user_padrao WHERE gup_nb_user = ? AND gup_nb_ordem = ?", "ii", [$userId, $ordem]));
+                if (empty($exists)) {
+                    query(
+                        "INSERT INTO grid_user_padrao (gup_nb_user, gup_nb_ordem, gup_tx_nome, gup_tx_configs, gup_tx_ativo) VALUES (?, ?, ?, ?, ?)",
+                        "iisss",
+                        [$userId, $ordem, "Padrão {$ordem}", "{}", $ordem === 1 ? "sim" : "nao"]
+                    );
+                }
+            }
+        }
+        // Migra configurações antigas (grid_user_config) para o padrão ativo, somente na primeira vez (padrão recém-criado e vazio)
+        $ativo = mysqli_fetch_assoc(query("SELECT gup_nb_id, gup_tx_configs FROM grid_user_padrao WHERE gup_nb_user = ? AND gup_tx_ativo = 'sim' LIMIT 1", "i", [$userId]));
+        if (!empty($ativo) && trim(strval($ativo["gup_tx_configs"] ?? "")) === "{}") {
+            $configs = json_decode(strval($ativo["gup_tx_configs"] ?? "{}"), true);
+            if (!is_array($configs)) $configs = [];
+            $rsLegado = query("SELECT guc_tx_grid, guc_tx_columns FROM grid_user_config WHERE guc_nb_user = ?", "i", [$userId]);
+            while ($rsLegado && ($r = mysqli_fetch_assoc($rsLegado))) {
+                $grid = strval($r["guc_tx_grid"] ?? "");
+                if ($grid !== "" && !isset($configs[$grid])) {
+                    $configs[$grid] = json_decode(strval($r["guc_tx_columns"] ?? "[]"), true);
+                }
+            }
+            query("UPDATE grid_user_padrao SET gup_tx_configs = ? WHERE gup_nb_id = ?", "si", [json_encode($configs), $ativo["gup_nb_id"]]);
+        }
+    }
+
+    function grid_padrao_ativo(int $userId): ?array {
+        if ($userId <= 0) return null;
+        grid_ensure_padroes($userId);
+        $rs = query("SELECT * FROM grid_user_padrao WHERE gup_nb_user = ? AND gup_tx_ativo = 'sim' LIMIT 1", "i", [$userId]);
+        $padrao = ($rs) ? mysqli_fetch_assoc($rs) : null;
+        return $padrao ?: null;
+    }
+
+    function grid_padroes_usuario(int $userId): array {
+        if ($userId <= 0) return [];
+        grid_ensure_padroes($userId);
+        $padroes = [];
+        $rs = query("SELECT gup_nb_id, gup_nb_ordem, gup_tx_nome, gup_tx_ativo FROM grid_user_padrao WHERE gup_nb_user = ? ORDER BY gup_nb_ordem ASC", "i", [$userId]);
+        while ($rs && ($r = mysqli_fetch_assoc($rs))) {
+            $padroes[] = [
+                "ordem" => (int)$r["gup_nb_ordem"],
+                "nome"  => strval($r["gup_tx_nome"]),
+                "ativo" => strval($r["gup_tx_ativo"]) === "sim",
+            ];
+        }
+        return $padroes;
+    }
+
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_grid.php";
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes.php";

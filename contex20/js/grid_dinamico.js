@@ -668,10 +668,125 @@ function imprimirTabelaCompleta() {
 }
 
 /* Configuração de Colunas */
+
+// ============================================================
+// PADRÕES DE GRID (3 por usuário, globais em todos os grids)
+// ============================================================
+
+function montarSelectPadraoGrid(){
+    const sel = document.getElementById('selectPadraoGrid');
+    if(!sel) return;
+    sel.innerHTML = '';
+    const lista = (typeof padroesGrid !== 'undefined') ? padroesGrid : [];
+    if(!lista.length){
+        const opt = document.createElement('option');
+        opt.value = 1;
+        opt.text = 'Padrão 1';
+        sel.appendChild(opt);
+        return;
+    }
+    lista.forEach(function(p){
+        const opt = document.createElement('option');
+        opt.value = p.ordem;
+        opt.text = p.nome;
+        if(p.ativo) opt.selected = true;
+        sel.appendChild(opt);
+    });
+}
+
+function padraoAtualGrid(){
+    const sel = document.getElementById('selectPadraoGrid');
+    return sel ? parseInt(sel.value || '1') : (typeof padraoAtivoGrid !== 'undefined' ? parseInt(padraoAtivoGrid) : 1);
+}
+
+function mudarPadraoGrid(ordem){
+    if(!ordem) return;
+    $.ajax({
+        url: (typeof urlGridConfig !== 'undefined' ? urlGridConfig : '../contex20/grid_config_controller.php'),
+        method: 'POST',
+        data: { guc_acao: 'ativar_padrao', ordem: ordem },
+        dataType: 'json',
+        success: function(r){
+            if(r.success){
+                location.reload();
+            } else {
+                alert('Erro ao ativar padrão: ' + (r.error || ''));
+            }
+        },
+        error: function(xhr){ console.error(xhr.responseText); alert('Erro ao conectar com o servidor.'); }
+    });
+}
+
+function renomearPadraoGrid(){
+    const ordem = padraoAtualGrid();
+    let atual = 'Padrão ' + ordem;
+    const lista = (typeof padroesGrid !== 'undefined') ? padroesGrid : [];
+    lista.forEach(function(p){ if(p.ordem === ordem) atual = p.nome; });
+    const nome = prompt('Digite o novo nome do padrão:', atual);
+    if(nome === null) return;
+    const novoNome = nome.trim();
+    if(!novoNome){ alert('O nome não pode ficar vazio.'); return; }
+    $.ajax({
+        url: (typeof urlGridConfig !== 'undefined' ? urlGridConfig : '../contex20/grid_config_controller.php'),
+        method: 'POST',
+        data: { guc_acao: 'renomear_padrao', ordem: ordem, nome: novoNome },
+        dataType: 'json',
+        success: function(r){
+            if(r.success){ location.reload(); }
+            else { alert('Erro ao renomear padrão: ' + (r.error || '')); }
+        },
+        error: function(xhr){ console.error(xhr.responseText); alert('Erro ao conectar com o servidor.'); }
+    });
+}
+
+$(function(){
+    montarSelectPadraoGrid();
+});
+
 function openColumnConfig(){
     const container = document.getElementById('listaColunas');
     container.innerHTML = '';
-    
+
+    // Botões: marcar / desmarcar todas as opções
+    const btnGroup = document.createElement('div');
+    btnGroup.style.marginBottom = '10px';
+    btnGroup.style.display = 'flex';
+    btnGroup.style.gap = '8px';
+
+    const btnMarcar = document.createElement('button');
+    btnMarcar.type = 'button';
+    btnMarcar.className = 'btn btn-xs btn-success';
+    btnMarcar.innerHTML = '<span class="glyphicon glyphicon-ok fa fa-check"></span> Marcar todos';
+    btnMarcar.onclick = function(){
+        document.querySelectorAll('.column-config-check').forEach(function(cb){ cb.checked = true; });
+    };
+
+    const btnDesmarcar = document.createElement('button');
+    btnDesmarcar.type = 'button';
+    btnDesmarcar.className = 'btn btn-xs btn-default';
+    btnDesmarcar.innerHTML = '<span class="glyphicon glyphicon-remove fa fa-times"></span> Desmarcar todos';
+    btnDesmarcar.onclick = function(){
+        document.querySelectorAll('.column-config-check').forEach(function(cb){ cb.checked = false; });
+    };
+
+    btnGroup.appendChild(btnMarcar);
+    btnGroup.appendChild(btnDesmarcar);
+    container.appendChild(btnGroup);
+
+    // Exibe o padrão ativo no modal
+    const labelPadrao = document.getElementById('padraoAtivoLabel');
+    if(labelPadrao){
+        const selPadrao = document.getElementById('selectPadraoGrid');
+        if(selPadrao && selPadrao.selectedOptions.length){
+            labelPadrao.textContent = selPadrao.selectedOptions[0].text;
+        }
+    }
+
+    // Primary key fixa: não aparece nas opções (sempre visível e em primeiro lugar)
+    const primaryKeyGrid = (typeof allFields !== 'undefined')
+        ? (Object.keys(allFields).find(k => k !== 'actions') || null)
+        : null;
+
     let displayOrder = [];
     let hiddenFields = [];
     
@@ -679,12 +794,14 @@ function openColumnConfig(){
     const currentKeys = Object.keys(fields);
     
     currentKeys.forEach(key => {
+        if(key === primaryKeyGrid) return;
         displayOrder.push({key: key, label: key, visible: true});
     });
     
     // Get hidden fields from 'allFields'
     if(typeof allFields !== 'undefined'){
         Object.keys(allFields).forEach(key => {
+            if(key === primaryKeyGrid) return;
             if(!fields[key]){
                 hiddenFields.push({key: key, label: key, visible: false});
             }
@@ -692,17 +809,47 @@ function openColumnConfig(){
     }
     
     const fullList = displayOrder.concat(hiddenFields);
-    
+
+    // ============================================================
+    // DRAG AND DROP: arrastar para reordenar
+    // ============================================================
+    let dragItem = null;
+
+    function reordenarDrag(alvo){
+        if(!dragItem || dragItem === alvo) return;
+        const lista = alvo.parentNode;
+        const items = Array.from(lista.children);
+        const idxAlvo = items.indexOf(alvo);
+        const idxDrag = items.indexOf(dragItem);
+        if(idxDrag < idxAlvo){
+            lista.insertBefore(dragItem, alvo.nextSibling);
+        } else {
+            lista.insertBefore(dragItem, alvo);
+        }
+    }
+
     fullList.forEach((item, index) => {
         const div = document.createElement('div');
-        // div.className = 'checkbox'; // Removido para evitar conflito com Bootstrap
+        div.draggable = true;
         div.style.padding = '10px';
         div.style.borderBottom = '1px solid #eee';
         div.style.display = 'flex';
         div.style.justifyContent = 'space-between';
         div.style.alignItems = 'center';
         div.style.width = '100%';
-        
+        div.style.cursor = 'grab';
+        div.style.userSelect = 'none';
+        div.style.background = '#fff';
+        div.style.transition = 'opacity .15s ease';
+
+        // Ícone de arrastar (punho)
+        const dragHandle = document.createElement('span');
+        dragHandle.className = 'glyphicon glyphicon-move fa fa-arrows';
+        dragHandle.style.color = '#aaa';
+        dragHandle.style.margin = '0 10px 0 0';
+        dragHandle.style.fontSize = '14px';
+        dragHandle.title = 'Arraste para reordenar';
+
         const label = document.createElement('label');
         label.style.cursor = 'pointer';
         label.style.flexGrow = '1';
@@ -710,6 +857,7 @@ function openColumnConfig(){
         label.style.display = 'flex';
         label.style.alignItems = 'center';
         label.style.fontWeight = 'normal';
+        label.style.overflow = 'hidden';
         
         const input = document.createElement('input');
         input.type = 'checkbox';
@@ -729,40 +877,38 @@ function openColumnConfig(){
         label.appendChild(input);
         label.appendChild(spanText);
         
+        // Eventos de arrastar
+        div.addEventListener('dragstart', function(e){
+            dragItem = this;
+            this.style.opacity = '0.45';
+            e.dataTransfer && e.dataTransfer.setData('text/plain', '');
+        });
+        div.addEventListener('dragend', function(){
+            this.style.opacity = '';
+            dragItem = null;
+        });
+        div.addEventListener('dragover', function(e){
+            e.preventDefault();
+            if(dragItem && dragItem !== this){
+                this.style.borderTop = '2px solid #3c8dbc';
+            }
+        });
+        div.addEventListener('dragleave', function(){
+            this.style.borderTop = '';
+        });
+        div.addEventListener('drop', function(e){
+            e.preventDefault();
+            this.style.borderTop = '';
+            reordenarDrag(this);
+        });
+        
+        div.appendChild(dragHandle);
         div.appendChild(label);
-        
-        // Add Up/Down buttons
-        const btnGroup = document.createElement('div');
-        
-        const btnUp = document.createElement('button');
-        btnUp.className = 'btn btn-xs btn-default';
-        btnUp.innerHTML = '<span class="glyphicon glyphicon-chevron-up fa fa-chevron-up"></span>';
-        btnUp.style.marginRight = '5px';
-        btnUp.onclick = function(e){ e.preventDefault(); moveItem(div, -1); };
-        
-        const btnDown = document.createElement('button');
-        btnDown.className = 'btn btn-xs btn-default';
-        btnDown.innerHTML = '<span class="glyphicon glyphicon-chevron-down fa fa-chevron-down"></span>';
-        btnDown.onclick = function(e){ e.preventDefault(); moveItem(div, 1); };
-        
-        btnGroup.appendChild(btnUp);
-        btnGroup.appendChild(btnDown);
-        
-        div.appendChild(btnGroup);
         
         container.appendChild(div);
     });
     
     $('#modalConfigGrid').modal('show');
-}
-
-function moveItem(element, direction){
-    const parent = element.parentNode;
-    if(direction === -1 && element.previousElementSibling){
-        parent.insertBefore(element, element.previousElementSibling);
-    } else if(direction === 1 && element.nextElementSibling){
-        parent.insertBefore(element.nextElementSibling, element);
-    }
 }
 
 function saveColumnConfig(){
@@ -785,6 +931,8 @@ function saveColumnConfig(){
         url: (typeof urlGridConfig !== 'undefined' ? urlGridConfig : '../contex20/grid_config_controller.php'),
         method: 'POST',
         data: {
+            guc_acao: 'salvar_padrao',
+            ordem: padraoAtualGrid(),
             grid_name: gridName,
             columns: JSON.stringify(config)
         },

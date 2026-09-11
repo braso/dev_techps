@@ -264,6 +264,38 @@
 					}
 				}
 			}
+
+			// PADRÕES DE GRID: o padrão ativo do usuário define as colunas (aplicação global em todos os grids)
+			$padroesGrid = [];
+			$padraoAtivoGrid = 1;
+			if(function_exists("grid_padrao_ativo") && function_exists("grid_padroes_usuario")){
+				$padraoAtivo = grid_padrao_ativo((int)$userId);
+				if(!empty($padraoAtivo)){
+					$padraoAtivoGrid = (int)($padraoAtivo["gup_nb_ordem"] ?? 1);
+					$configsPadrao = json_decode(strval($padraoAtivo["gup_tx_configs"] ?? "{}"), true);
+					if(is_array($configsPadrao) && isset($configsPadrao[$nomeTabela]) && is_array($configsPadrao[$nomeTabela]) && count($configsPadrao[$nomeTabela]) > 0){
+						$newCampos = [];
+						$processedKeys = [];
+						foreach($configsPadrao[$nomeTabela] as $col){
+							$key = $col['key'];
+							$visible = isset($col['visible']) ? $col['visible'] : true;
+							if(isset($allFields[$key])){
+								if($visible){
+									$newCampos[$key] = $allFields[$key];
+								}
+								$processedKeys[] = $key;
+							}
+						}
+						foreach($allFields as $key => $val){
+							if(!in_array($key, $processedKeys)){
+								$newCampos[$key] = $val;
+							}
+						}
+						$campos = $newCampos;
+					}
+				}
+				$padroesGrid = grid_padroes_usuario((int)$userId);
+			}
 		}
 
 		$primaryKey = null;
@@ -297,6 +329,15 @@
                     <div class='grid-header' style='width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;'>
                         <div class='botao-csv'></div>
                         <div style='display: flex; align-items: flex-end;'>
+							<div class='padrao-grid-wrap' style='margin-right:15px; margin-bottom: 5px;'>
+								<label style='font-size:11px; display:block;'>Padrão</label>
+								<div style='display:flex; align-items:center;'>
+									<select id='selectPadraoGrid' class='form-control input-sm' style='min-width:140px; width:auto;' onchange='mudarPadraoGrid(this.value)'></select>
+									<button type='button' class='btn btn-xs btn-default' style='margin-left:4px;' onclick='renomearPadraoGrid()' title='Renomear padrão atual'>
+										<span class='glyphicon glyphicon-pencil fa fa-pencil'></span>
+									</button>
+								</div>
+							</div>
 							<div class='gear-icon' onclick='openColumnConfig()' title='Configurar Colunas' style='margin-right:15px; margin-bottom: 5px; cursor:pointer; font-size: 16px; color: #666;'>
 								<span class='glyphicon glyphicon-cog fa fa-cog'></span>
 							</div>
@@ -353,6 +394,8 @@
 				const allFields = ".json_encode($allFields).";
 				const gridName = '$nomeTabela';
 				const queryBase = '".base64_encode($queryBase." WHERE 1")."';
+				const padroesGrid = ".json_encode($padroesGrid ?? []).";
+				const padraoAtivoGrid = ".((int)($padraoAtivoGrid ?? 1)).";
 			</script>
 			<script>
 				{$jsFunctions}
@@ -368,7 +411,10 @@
 					<h4 class='modal-title'>Configurar Colunas</h4>
 				  </div>
 				  <div class='modal-body'>
-					<p class='text-muted small'>Arraste para reordenar (em breve) ou marque para exibir.</p>
+					<p class='text-muted small'>Arraste para reordenar ou marque para exibir.</p>
+					<div class='alert alert-info' style='padding:8px 12px; font-size:12px;'>
+						<i class='fa fa-save'></i> A configuração será salva no padrão: <strong id='padraoAtivoLabel'>Padrão 1</strong>
+					</div>
 					<div id='listaColunas' style='max-height: 400px; overflow-y: auto;'></div>
 				  </div>
 				  <div class='modal-footer'>
