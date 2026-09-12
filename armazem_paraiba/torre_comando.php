@@ -27,6 +27,14 @@ function torre_horas_fmt(float $horas, int $casas = 0): string {
     return $sinal . number_format(abs($horas), $casas, ",", ".");
 }
 
+// Horas decimais no formato do banco de horas (HH:MM). Positivo leva "+" por padrão, para
+// não se confundir com um total qualquer de horas.
+function torre_horas_hhmm(float $horas, bool $sinalPositivo = true): string {
+    $minutos = (int) round(abs($horas) * 60);
+    $sinal = ($horas < 0 && $minutos > 0) ? "-" : (($sinalPositivo && $minutos > 0) ? "+" : "");
+    return $sinal . sprintf("%02d:%02d", intdiv($minutos, 60), $minutos % 60);
+}
+
 function torre_moeda_fmt(float $valor): string {
     return "R$ " . number_format($valor, 0, ",", ".");
 }
@@ -116,6 +124,8 @@ function torre_manifesto(): array {
                 "tile_espera"     => "Cartão: espera indenizada",
                 "tile_custo"      => "Cartão: custo estimado",
                 "tile_saldo"      => "Cartão: saldo final",
+                "tile_saldo_positivo"  => "Cartão: banco de horas positivo do período",
+                "lista_saldo_positivo" => "Lista: maiores saldos positivos do período",
                 "tile_diarias_acumulado"    => "Cartão: diárias — total acumulado",
                 "tile_diarias_30dias"       => "Cartão: diárias — últimos 30 dias",
                 "tile_diarias_estimado_mes" => "Cartão: diárias — estimado do mês",
@@ -141,6 +151,21 @@ function torre_manifesto(): array {
                 "tile_c_assinenv"    => "Cartão: assinaturas enviadas",
                 "tile_c_assinpend"   => "Cartão: assinaturas pendentes",
                 "tile_c_assinconc"   => "Cartão: assinaturas concluídas",
+            ],
+        ],
+        "treinamentos" => [
+            "titulo" => "Treinamentos & capacitação",
+            "itens" => [
+                "tile_trei_ativos"       => "Cartão: treinamentos ativos",
+                "tile_trei_conclusao"    => "Cartão: taxa de conclusão",
+                "tile_trei_obrigatorios" => "Cartão: obrigatórios pendentes",
+                "tile_trei_andamento"    => "Cartão: treinamentos em andamento",
+                "tile_trei_horas"        => "Cartão: horas de capacitação (30 dias)",
+                "tile_trei_duvidas"      => "Cartão: dúvidas aguardando resposta",
+                "painel_trei_status"     => "Gráfico: situação das atribuições",
+                "painel_trei_adesao"     => "Ranking: adesão por treinamento",
+                "painel_trei_tendencia"  => "Gráfico: conclusões por mês",
+                "lista_trei_pendentes"   => "Lista: obrigatórios pendentes por pessoa",
             ],
         ],
     ];
@@ -182,7 +207,7 @@ function torre_link(string $href, string $texto = "Ver tela completa"): string {
 
 // Ordem padrão das seções (usada quando o usuário nunca reordenou nada).
 function torre_ordem_secoes_padrao(): array {
-    return ["operacao", "frota", "pessoas", "turnover", "custo", "cadastros"];
+    return ["operacao", "frota", "pessoas", "turnover", "custo", "treinamentos", "cadastros"];
 }
 
 // Decodifica o JSON salvo em torr_tx_ocultos — aceita tanto o formato antigo (lista simples de
@@ -404,6 +429,46 @@ function torre_saldo_totais(array $empresasAlvo, string $mes): array {
     $out["_periodoFim"] = $periodoFim;
     $out["_qtdMotoristas"] = $qtdMotoristas;
     return $out;
+}
+
+// Banco de horas positivo do período (cache de paineis/saldo.php): lê a apuração de cada pessoa e
+// separa quem terminou o período com horas a favor. Usa o saldo DO PERÍODO (só o resultado deste
+// fechamento) — o acumulado, com o que já vinha de antes, é o do cartão "Saldo final do período".
+// Quem ficou negativo não abate o total positivo; aparece à parte, só como contexto.
+function torre_banco_horas_positivo(array $empresasAlvo, string $mes, int $limite = 6, ?string $baseDir = null): array {
+    $base = $baseDir ?? (__DIR__ . "/paineis/arquivos/saldos");
+    $r = [
+        "pessoas_apuradas" => 0, "pessoas_positivo" => 0, "horas_positivo" => 0.0,
+        "pessoas_negativo" => 0, "horas_negativo" => 0.0, "ranking" => [],
+    ];
+    $positivos = [];
+    foreach ($empresasAlvo as $empId) {
+        $dir = "{$base}/{$mes}/" . intval($empId);
+        if (!is_dir($dir)) continue;
+        foreach (scandir($dir) as $arq) {
+            if (!preg_match('/^\d+\.json$/', $arq)) continue; // ignora empresa_*.json
+            $dados = json_decode((string) file_get_contents("{$dir}/{$arq}"), true);
+            if (!is_array($dados)) continue;
+            $r["pessoas_apuradas"]++;
+            $periodo = torre_hhmm_para_horas(strval($dados["saldoPeriodo"] ?? "00:00"));
+            if ($periodo > 0) {
+                $r["pessoas_positivo"]++;
+                $r["horas_positivo"] += $periodo;
+                $positivos[] = [
+                    "nome" => strval($dados["nome"] ?? ""),
+                    "ocupacao" => strval($dados["ocupacao"] ?? ""),
+                    "periodo" => $periodo,
+                    "final" => torre_hhmm_para_horas(strval($dados["saldoFinal"] ?? "00:00")),
+                ];
+            } elseif ($periodo < 0) {
+                $r["pessoas_negativo"]++;
+                $r["horas_negativo"] += $periodo;
+            }
+        }
+    }
+    usort($positivos, fn($a, $b) => [$b["periodo"], $a["nome"]] <=> [$a["periodo"], $b["nome"]]);
+    $r["ranking"] = array_slice($positivos, 0, $limite);
+    return $r;
 }
 
 function torre_custo_he(array $empresasAlvo, string $mes): array {
@@ -775,6 +840,197 @@ function torre_calcular_nota_gestao(int $empresaFiltro, string $condEmpresa, int
 // este arquivo decide isso (dashboard.php é uma tela própria com
 // permissão de menu; index.php::showWelcome() já está dentro do shell
 // da página de boas-vindas pós-login).
+
+// ── Treinamentos (módulo treinamento/) ──────────────────────────────
+
+// Lista de perfis/empresas gravada em JSON no treinamento. null = sem restrição (todos);
+// array (mesmo vazio) = só quem está nele. Aceita número ou texto, como o próprio módulo.
+function torre_treinamento_lista_json($valor): ?array {
+    $texto = trim(strval($valor ?? ""));
+    if ($texto === "") return null;
+    $dados = json_decode($texto, true);
+    if (!is_array($dados)) return [];
+    return array_values(array_unique(array_map("intval", $dados)));
+}
+
+// Consolida o módulo de treinamentos para a Torre. Função pura (recebe as linhas já lidas),
+// para a regra poder ser conferida sem banco.
+// Público de cada treinamento = mesma regra de "Meus Treinamentos": pessoa ativa, não
+// administradora, da empresa habilitada (vazio = todas) e com perfil entre os permitidos
+// (vazio = todos) — ou com atribuição individual. Bloqueio individual tira a pessoa da conta.
+// Situação por pessoa: concluído = linha geral do treinamento (sem episódio) marcada como
+// concluída — numa série o player só grava essa linha quando todos os episódios foram
+// aprovados; em andamento = abriu o player em qualquer episódio; senão, não iniciado.
+function torre_treinamentos_calcular(array $treinamentos, array $usuarios, array $bloqueios, array $atribuicoes, array $progresso, ?int $agora = null, int $limite = 6): array {
+    $agora = $agora ?? time();
+    $mesAtual = (int) date("Y", $agora) * 12 + (int) date("n", $agora) - 1;
+    $tendencia = [];
+    for ($i = 5; $i >= 0; $i--) {
+        $m = $mesAtual - $i;
+        $tendencia[sprintf("%04d-%02d", intdiv($m, 12), $m % 12 + 1)] = 0;
+    }
+
+    $chave = fn($t, $u) => intval($t) . ":" . intval($u);
+    $bloqueado = [];
+    foreach ($bloqueios as $b) { $bloqueado[$chave($b["t"], $b["u"])] = true; }
+    $atribuido = [];
+    foreach ($atribuicoes as $a) { $atribuido[$chave($a["t"], $a["u"])] = true; }
+    $prog = [];
+    foreach ($progresso as $p) { $prog[$chave($p["t"], $p["u"])] = $p; }
+
+    $r = [
+        "ativos" => count($treinamentos), "obrigatorios" => 0, "series" => 0,
+        "atribuicoes" => 0, "concluidos" => 0, "andamento" => 0, "nao_iniciados" => 0, "bloqueados" => 0,
+        "taxa" => null, "obrig_pendentes" => 0, "pessoas_obrig_pendentes" => 0,
+        "conclusoes_30d" => 0, "horas_30d" => 0.0, "horas_total" => 0.0,
+        "adesao" => [], "pendentes_lista" => [], "tendencia" => $tendencia,
+        "duvidas_mensagens" => 0, "duvidas_conversas" => 0,
+    ];
+    $pendentesPorPessoa = [];
+    $inicio30d = $agora - 30 * 86400;
+
+    foreach ($treinamentos as $t) {
+        $tid = intval($t["trei_nb_id"]);
+        $obrigatorio = intval($t["trei_nb_obrigatorio"] ?? 0) === 1;
+        if ($obrigatorio) $r["obrigatorios"]++;
+        if (strval($t["trei_tx_serie"] ?? "nao") === "sim") $r["series"]++;
+        $perfis = torre_treinamento_lista_json($t["trei_tx_tipo_usuario_permitido"] ?? null);
+        $empresas = torre_treinamento_lista_json($t["trei_tx_empresas_habilitadas"] ?? null);
+        $horasCarga = intval($t["carga_segundos"] ?? 0) / 3600;
+        $elegiveis = 0;
+        $concluidosTreinamento = 0;
+
+        foreach ($usuarios as $u) {
+            $uid = intval($u["user_nb_id"]);
+            if ($empresas !== null && !in_array(intval($u["user_nb_empresa"] ?? 0), $empresas, true)) continue;
+            $k = $chave($tid, $uid);
+            $perfilPermitido = $perfis === null || in_array(intval($u["perfil_nb_id"] ?? 0), $perfis, true);
+            if (!$perfilPermitido && empty($atribuido[$k])) continue;
+            if (!empty($bloqueado[$k])) { $r["bloqueados"]++; continue; }
+
+            $elegiveis++;
+            $p = $prog[$k] ?? null;
+            if ($p && intval($p["concluido"] ?? 0) === 1) {
+                $concluidosTreinamento++;
+                $r["concluidos"]++;
+                $r["horas_total"] += $horasCarga;
+                $ts = !empty($p["data_conclusao"]) ? strtotime(strval($p["data_conclusao"])) : false;
+                if ($ts !== false) {
+                    $mes = date("Y-m", $ts);
+                    if (isset($r["tendencia"][$mes])) $r["tendencia"][$mes]++;
+                    if ($ts >= $inicio30d && $ts <= $agora) { $r["conclusoes_30d"]++; $r["horas_30d"] += $horasCarga; }
+                }
+                continue;
+            }
+            if ($p && intval($p["iniciou"] ?? 0) === 1) { $r["andamento"]++; } else { $r["nao_iniciados"]++; }
+            if ($obrigatorio) {
+                $r["obrig_pendentes"]++;
+                if (!isset($pendentesPorPessoa[$uid])) {
+                    $pendentesPorPessoa[$uid] = ["nome" => strval($u["user_tx_nome"] ?? ""), "qtd" => 0, "titulos" => []];
+                }
+                $pendentesPorPessoa[$uid]["qtd"]++;
+                $pendentesPorPessoa[$uid]["titulos"][] = strval($t["trei_tx_titulo"] ?? "");
+            }
+        }
+
+        $r["atribuicoes"] += $elegiveis;
+        if ($elegiveis > 0) {
+            $r["adesao"][] = [
+                "id" => $tid, "titulo" => strval($t["trei_tx_titulo"] ?? ""), "obrigatorio" => $obrigatorio,
+                "elegiveis" => $elegiveis, "concluidos" => $concluidosTreinamento,
+                "pct" => round($concluidosTreinamento / $elegiveis * 100, 1),
+            ];
+        }
+    }
+
+    $r["taxa"] = $r["atribuicoes"] > 0 ? round($r["concluidos"] / $r["atribuicoes"] * 100, 1) : null;
+    $r["pessoas_obrig_pendentes"] = count($pendentesPorPessoa);
+
+    // Menor adesão primeiro (é onde a gestão precisa agir); obrigatório e público maior desempatam.
+    usort($r["adesao"], fn($a, $b) => [$a["pct"], !$a["obrigatorio"], -$a["elegiveis"]] <=> [$b["pct"], !$b["obrigatorio"], -$b["elegiveis"]]);
+    $r["adesao"] = array_slice($r["adesao"], 0, $limite);
+
+    $pendentes = array_values($pendentesPorPessoa);
+    usort($pendentes, fn($a, $b) => [$b["qtd"], $a["nome"]] <=> [$a["qtd"], $b["nome"]]);
+    $r["pendentes_lista"] = array_slice($pendentes, 0, $limite);
+
+    return $r;
+}
+
+// Linhas cruas do módulo para um conjunto de treinamentos. Separado do carregamento para que
+// todos os SQLs possam ser conferidos contra o banco mesmo quando ainda não há treinamento.
+function torre_treinamentos_ler(array $idsTreinamentos, int $empresaFiltro, int $usuarioId): array {
+    $ids = implode(",", array_map("intval", $idsTreinamentos)) ?: "0";
+    $condEmpresa = $empresaFiltro > 0 ? " AND u.user_nb_empresa = " . intval($empresaFiltro) . " " : "";
+
+    $usuarios = torre_fetch_all(query(
+        "SELECT u.user_nb_id, u.user_tx_nome, u.user_nb_empresa,
+                (SELECT up.perfil_nb_id FROM usuario_perfil up
+                  WHERE up.ativo = 1 AND up.user_nb_id = u.user_nb_id LIMIT 1) AS perfil_nb_id
+         FROM user u
+         WHERE u.user_tx_status = 'ativo' AND COALESCE(u.user_tx_nivel, '') NOT LIKE '%Administrador%' {$condEmpresa}"
+    ));
+    $bloqueios = torre_fetch_all(query(
+        "SELECT trebl_nb_treinamento_id AS t, trebl_nb_usuario_id AS u FROM treinamento_bloqueio WHERE trebl_nb_treinamento_id IN ({$ids})"
+    ));
+    $atribuicoes = torre_fetch_all(query(
+        "SELECT treate_nb_treinamento_id AS t, treate_nb_usuario_id AS u FROM treinamento_atribuicao WHERE treate_nb_treinamento_id IN ({$ids})"
+    ));
+    $progresso = torre_fetch_all(query(
+        "SELECT trepr_nb_treinamento_id AS t, trepr_nb_usuario_id AS u,
+                MAX(CASE WHEN trepr_nb_episodio_id IS NULL AND trepr_nb_concluido = 1 THEN 1 ELSE 0 END) AS concluido,
+                MAX(CASE WHEN trepr_dt_data_inicio IS NOT NULL THEN 1 ELSE 0 END) AS iniciou,
+                MAX(CASE WHEN trepr_nb_episodio_id IS NULL AND trepr_nb_concluido = 1 THEN trepr_dt_data_conclusao END) AS data_conclusao
+         FROM treinamento_progresso
+         WHERE trepr_nb_treinamento_id IN ({$ids})
+         GROUP BY trepr_nb_treinamento_id, trepr_nb_usuario_id"
+    ));
+    // Dúvidas sem resposta: mesma contagem da tela "Conversas de Treinamentos" — mensagens de quem
+    // não é administrador depois da última resposta da gestão ou da última leitura de quem está vendo.
+    $duvidas = torre_fetch_assoc(query(
+        "SELECT COUNT(*) AS conversas, COALESCE(SUM(p.pendentes), 0) AS mensagens FROM (
+            SELECT (SELECT COUNT(*) FROM treinamento_mensagem m
+                     WHERE m.trem_nb_treinamento_id = t.trei_nb_id
+                       AND m.trem_tx_usuario_nivel NOT LIKE '%Administrador%'
+                       AND m.trem_nb_id > COALESCE(GREATEST(
+                            (SELECT MAX(m2.trem_nb_id) FROM treinamento_mensagem m2
+                              WHERE m2.trem_nb_treinamento_id = t.trei_nb_id AND m2.trem_tx_usuario_nivel LIKE '%Administrador%'),
+                            (SELECT tl.trel_nb_ultimo_id_lido FROM treinamento_mensagem_leitura tl
+                              WHERE tl.trei_nb_id = t.trei_nb_id AND tl.user_nb_id = ?)
+                       ), 0)) AS pendentes
+            FROM treinamento t
+            WHERE t.trei_tx_status = 'ativo' AND t.trei_nb_id IN ({$ids})
+         ) p WHERE p.pendentes > 0",
+        "i", [$usuarioId]
+    ));
+
+    return ["usuarios" => $usuarios, "bloqueios" => $bloqueios, "atribuicoes" => $atribuicoes, "progresso" => $progresso, "duvidas" => $duvidas];
+}
+
+// Carrega e consolida o módulo para a Torre. Banco sem o módulo instalado cai nas proteções
+// torre_fetch_* e a seção mostra o estado vazio, sem quebrar o painel.
+function torre_treinamentos_carregar(int $empresaFiltro, int $usuarioId): array {
+    $treinamentos = torre_fetch_all(query(
+        "SELECT t.trei_nb_id, t.trei_tx_titulo, t.trei_nb_obrigatorio, t.trei_tx_serie,
+                t.trei_tx_tipo_usuario_permitido, t.trei_tx_empresas_habilitadas,
+                COALESCE(NULLIF(t.trei_nb_carga_horaria, 0),
+                    (SELECT SUM(ep.trepi_nb_carga_horaria) FROM treinamento_episodio ep
+                      WHERE ep.trepi_nb_treinamento_id = t.trei_nb_id AND ep.trepi_tx_status = 'ativo'), 0) AS carga_segundos
+         FROM treinamento t
+         WHERE t.trei_tx_status = 'ativo'
+           AND (t.trei_dt_data_liberacao IS NULL OR t.trei_dt_data_liberacao <= NOW())
+         ORDER BY t.trei_nb_id"
+    ));
+    if (empty($treinamentos)) {
+        return torre_treinamentos_calcular([], [], [], [], []);
+    }
+
+    $l = torre_treinamentos_ler(array_column($treinamentos, "trei_nb_id"), $empresaFiltro, $usuarioId);
+    $dados = torre_treinamentos_calcular($treinamentos, $l["usuarios"], $l["bloqueios"], $l["atribuicoes"], $l["progresso"]);
+    $dados["duvidas_conversas"] = intval($l["duvidas"]["conversas"] ?? 0);
+    $dados["duvidas_mensagens"] = intval($l["duvidas"]["mensagens"] ?? 0);
+    return $dados;
+}
 
 function renderTorreDeComando(): void {
 
@@ -1161,6 +1417,7 @@ $faltasTotal = $faltasTratativa["pendente"] + $faltasTratativa["tratada"];
 $saldoRef = torre_mes_mais_recente_saldo($empresasAlvo);
 $saldoTotais = $saldoRef ? torre_saldo_totais($saldoRef["empresas"], $saldoRef["mes"]) : null;
 $custoRef = $saldoRef ? torre_custo_he($saldoRef["empresas"], $saldoRef["mes"]) : null;
+$bancoPositivo = $saldoRef ? torre_banco_horas_positivo($saldoRef["empresas"], $saldoRef["mes"]) : null;
 $tendenciaHE = torre_tendencia_he($empresasAlvo);
 $diariasTotais = torre_diarias_totais($empresasAlvo);
 $temMovimentoNoPeriodo = $saldoTotais && (
@@ -1194,6 +1451,9 @@ $qtdDiarias = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM diaria_d
 $qtdAssinEnviadas = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM solicitacoes_assinatura WHERE 1=1 {$condEmpresaAssinatura}"))["c"] ?? 0);
 $qtdAssinPendentes = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM solicitacoes_assinatura WHERE status IN ('pendente','em_progresso') {$condEmpresaAssinatura}"))["c"] ?? 0);
 $qtdAssinConcluidas = (int) (torre_fetch_assoc(query("SELECT COUNT(*) AS c FROM solicitacoes_assinatura WHERE status IN ('concluido','assinado') {$condEmpresaAssinatura}"))["c"] ?? 0);
+
+// ── Treinamentos (módulo treinamento/) — respeita o filtro de empresa pela empresa do usuário ─
+$treinamentosDados = torre_treinamentos_carregar($empresaFiltro, $usuarioId);
 
 // ── Nota de qualidade de gestão ────────────────────────────────────────
 $notaGestao = torre_calcular_nota_gestao($empresaFiltro, $condEmpresa, $ativos, $jornadasCriticas, $emAtividade, $emPausa, floatval($gravAlta), floatval($gravMedia), floatval($gravBaixa));
@@ -1334,6 +1594,13 @@ $notaGestao = torre_calcular_nota_gestao($empresaFiltro, $condEmpresa, $ativos, 
   .tc-list-meta{ flex:none; }
   .tc-list-meta{ font-size:11.5px; color:var(--tc-ink-mute); }
   .tc-list-empty{ font-size:12.5px; color:var(--tc-ink-mute); padding:14px; text-align:center; }
+  /* Treinamentos: linha com barra de adesão embaixo e etiqueta de obrigatório. */
+  .tc-list-row-bloco{ flex-direction:column; align-items:stretch; gap:0; }
+  .tc-list-linha{ display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; }
+  .tc-barra{ height:6px; border-radius:4px; background:#eef1f5; overflow:hidden; margin-top:7px; }
+  .tc-barra-fill{ height:100%; border-radius:4px; }
+  .tc-tag{ display:inline-block; font-size:10px; font-weight:600; padding:1px 6px; border-radius:6px; margin-left:6px; vertical-align:1px; }
+  .tc-tag.bad{ background:var(--tc-bad-soft); color:var(--tc-bad); }
 
   .tc-trio{ display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; margin-bottom:14px; }
   @media (max-width:900px){ .tc-trio{ grid-template-columns:1fr; } }
@@ -1928,6 +2195,7 @@ $notaGestao = torre_calcular_nota_gestao($empresaFiltro, $condEmpresa, $ativos, 
         torre_visivel("tile_he50", $ocultos) || torre_visivel("tile_he100", $ocultos) ||
         torre_visivel("tile_noturno", $ocultos) || torre_visivel("tile_espera", $ocultos) ||
         torre_visivel("tile_custo", $ocultos) || torre_visivel("tile_saldo", $ocultos) ||
+        torre_visivel("tile_saldo_positivo", $ocultos) || torre_visivel("lista_saldo_positivo", $ocultos) ||
         torre_visivel("tile_diarias_acumulado", $ocultos) || torre_visivel("tile_diarias_30dias", $ocultos) ||
         torre_visivel("tile_diarias_estimado_mes", $ocultos) ||
         torre_visivel("painel_tendencia", $ocultos);
@@ -2039,7 +2307,38 @@ $notaGestao = torre_calcular_nota_gestao($empresaFiltro, $condEmpresa, $ativos, 
           <?= torre_link("paineis/saldo.php") ?>
         </div>
         <?php endif; ?>
+        <?php if (torre_visivel("tile_saldo_positivo", $ocultos) && $bancoPositivo): ?>
+        <div class="tc-card tc-tile"<?= torre_estilo_ordem($ordemItens["custo"] ?? [], "tile_saldo_positivo", 9) ?>>
+          <div class="tc-tile-top"><span class="tc-tile-label">Banco de horas positivo<?= torre_info("Soma do saldo do período de quem terminou a apuração com horas a favor — só o resultado deste período, sem o que já vinha de antes. Quem ficou negativo não abate esse total.") ?></span><div class="tc-tile-icon good"><i data-lucide="piggy-bank" style="width:16px;height:16px;"></i></div></div>
+          <span class="tc-tile-value good"><?= torre_horas_hhmm($bancoPositivo["horas_positivo"]) ?></span>
+          <span class="tc-tile-foot"><?= $bancoPositivo["pessoas_positivo"] ?> de <?= $bancoPositivo["pessoas_apuradas"] ?> pessoas com saldo positivo<?php if ($bancoPositivo["pessoas_negativo"] > 0): ?> · <?= $bancoPositivo["pessoas_negativo"] ?> negativas (<?= torre_horas_hhmm($bancoPositivo["horas_negativo"]) ?>)<?php endif; ?></span>
+          <?= torre_link("paineis/saldo.php") ?>
+        </div>
+        <?php endif; ?>
       </div>
+
+      <?php if (torre_visivel("lista_saldo_positivo", $ocultos) && $bancoPositivo): ?>
+      <div class="tc-panel-row" style="grid-template-columns:1fr; margin-bottom:14px;">
+        <div class="tc-panel">
+          <h3><i data-lucide="piggy-bank" style="width:15px;height:15px;"></i> Maiores saldos positivos do período<?= torre_info("Quem mais acumulou horas a favor neste período apurado — candidatos a compensação ou pagamento. Ao lado, o saldo acumulado, somando o que já vinha de antes.") ?>
+            <span class="tc-ref">· <?= torre_mes_label($saldoRef["mes"]) ?></span>
+          </h3>
+          <?php if (!empty($bancoPositivo["ranking"])): ?>
+            <div class="tc-list" style="max-height:none;">
+              <?php foreach ($bancoPositivo["ranking"] as $__bpPosicao => $__bp): ?>
+              <div class="tc-list-row">
+                <span class="tc-list-name">#<?= $__bpPosicao + 1 ?> · <?= htmlspecialchars($__bp["nome"]) ?><?php if ($__bp["ocupacao"] !== ""): ?> <span style="font-weight:400; color:var(--tc-ink-mute);">· <?= htmlspecialchars($__bp["ocupacao"]) ?></span><?php endif; ?></span>
+                <span class="tc-list-meta"><strong style="color:var(--tc-good);"><?= torre_horas_hhmm($__bp["periodo"]) ?></strong> no período · acumulado <span style="color:<?= $__bp["final"] >= 0 ? "var(--tc-good)" : "var(--tc-bad)" ?>;"><?= torre_horas_hhmm($__bp["final"]) ?></span></span>
+              </div>
+              <?php endforeach; ?>
+            </div>
+          <?php else: ?>
+            <div class="tc-empty-state"><i data-lucide="piggy-bank" style="width:26px;height:26px;"></i>Ninguém terminou este período com saldo positivo.</div>
+          <?php endif; ?>
+          <?= torre_link("paineis/saldo.php", "Ver saldos") ?>
+        </div>
+      </div>
+      <?php endif; ?>
 
       <?php if (torre_visivel("painel_tendencia", $ocultos)): ?>
       <div class="tc-panel-row" style="grid-template-columns:1fr;">
@@ -2194,6 +2493,175 @@ $notaGestao = torre_calcular_nota_gestao($empresaFiltro, $condEmpresa, $ativos, 
     </div>
   </div>
   <?php endif; ?>
+
+  <!-- ══ TREINAMENTOS & CAPACITAÇÃO ═══════════════════════════════ -->
+  <?php
+    $__tr = $treinamentosDados;
+    $__trOrd = $ordemItens["treinamentos"] ?? [];
+    $__trAlgoVisivel = false;
+    foreach (array_keys($manifesto["treinamentos"]["itens"]) as $__trChave) {
+        if (torre_visivel($__trChave, $ocultos)) { $__trAlgoVisivel = true; break; }
+    }
+    $__trFmt = fn($n) => number_format((float) $n, 0, ",", ".");
+    // Base dos percentuais = público do treinamento. Quem foi bloqueado individualmente não vê o
+    // treinamento (regra do módulo), então fica fora da rosca, assim como já fica fora da taxa de conclusão.
+    $__trTotalPessoas = $__tr["atribuicoes"];
+    $__trPct = fn($n) => $__trTotalPessoas > 0 ? torre_horas_fmt($n / $__trTotalPessoas * 100, 0) . "%" : "0%";
+    // Faixas de adesão: 80%+ em dia, 50%+ atenção, abaixo disso crítico.
+    $__trClasse = fn($pct) => $pct === null ? "" : ($pct >= 80 ? "good" : ($pct >= 50 ? "warn" : "bad"));
+    $__trCor = fn($pct) => ["good" => "var(--tc-good)", "warn" => "var(--tc-warn)", "bad" => "var(--tc-bad)", "" => "var(--tc-ink)"][$__trClasse($pct)];
+  ?>
+  <?php if ($__trAlgoVisivel): ?>
+  <div class="tc-section"<?= torre_estilo_ordem($ordemSecoes, "treinamentos", 6) ?>>
+    <div class="tc-section-head"><span class="tc-dot"></span><h2>Treinamentos &amp; capacitação</h2></div>
+
+    <?php if ($__tr["ativos"] === 0): ?>
+    <div class="tc-panel">
+      <div class="tc-empty-state">
+        <i data-lucide="graduation-cap" style="width:26px;height:26px;"></i>
+        Nenhum treinamento ativo e liberado ainda. Assim que houver, a adesão da equipe aparece aqui.
+        <?= torre_link("treinamento/cadastro_treinamento.php", "Cadastrar treinamento") ?>
+      </div>
+    </div>
+    <?php else: ?>
+
+    <div class="tc-grid" style="margin-bottom:14px;">
+      <?php if (torre_visivel("tile_trei_ativos", $ocultos)): ?>
+      <div class="tc-card tc-tile"<?= torre_estilo_ordem($__trOrd, "tile_trei_ativos", 0) ?>>
+        <div class="tc-tile-top"><span class="tc-tile-label">Treinamentos ativos<?= torre_info("Treinamentos com status ativo e já liberados (sem data de liberação ou com a data já alcançada).") ?></span><div class="tc-tile-icon acc"><i data-lucide="graduation-cap" style="width:16px;height:16px;"></i></div></div>
+        <span class="tc-tile-value"><?= $__trFmt($__tr["ativos"]) ?></span>
+        <span class="tc-tile-foot"><?= $__trFmt($__tr["obrigatorios"]) ?> obrigatórios · <?= $__trFmt($__tr["series"]) ?> em série</span>
+        <?= torre_link("treinamento/cadastro_treinamento.php") ?>
+      </div>
+      <?php endif; ?>
+      <?php if (torre_visivel("tile_trei_conclusao", $ocultos)): ?>
+      <div class="tc-card tc-tile"<?= torre_estilo_ordem($__trOrd, "tile_trei_conclusao", 1) ?>>
+        <div class="tc-tile-top"><span class="tc-tile-label">Taxa de conclusão<?= torre_info("Atribuições concluídas ÷ todas as atribuições (pessoa × treinamento ativo), sem contar bloqueios individuais. O público segue a regra de Meus Treinamentos: perfil permitido, empresa habilitada ou atribuição individual; administradores não entram na conta.") ?></span><div class="tc-tile-icon <?= $__trClasse($__tr["taxa"]) ?: "acc" ?>"><i data-lucide="badge-check" style="width:16px;height:16px;"></i></div></div>
+        <span class="tc-tile-value <?= $__trClasse($__tr["taxa"]) ?>"><?= $__tr["taxa"] === null ? "—" : torre_horas_fmt($__tr["taxa"], 0) . "%" ?></span>
+        <span class="tc-tile-foot"><?= $__trFmt($__tr["concluidos"]) ?> de <?= $__trFmt($__tr["atribuicoes"]) ?> atribuições concluídas</span>
+        <?= torre_link("treinamento/cadastro_treinamento.php") ?>
+      </div>
+      <?php endif; ?>
+      <?php if (torre_visivel("tile_trei_obrigatorios", $ocultos)): ?>
+      <div class="tc-card tc-tile"<?= torre_estilo_ordem($__trOrd, "tile_trei_obrigatorios", 2) ?>>
+        <div class="tc-tile-top"><span class="tc-tile-label">Obrigatórios pendentes<?= torre_info("Atribuições de treinamentos marcados como obrigatórios que ainda não foram concluídas — em andamento ou nem iniciadas.") ?></span><div class="tc-tile-icon <?= $__tr["obrig_pendentes"] > 0 ? "bad" : "good" ?>"><i data-lucide="alert-triangle" style="width:16px;height:16px;"></i></div></div>
+        <span class="tc-tile-value <?= $__tr["obrig_pendentes"] > 0 ? "bad" : "good" ?>"><?= $__trFmt($__tr["obrig_pendentes"]) ?></span>
+        <span class="tc-tile-foot"><?= $__trFmt($__tr["pessoas_obrig_pendentes"]) ?> <?= $__tr["pessoas_obrig_pendentes"] === 1 ? "pessoa" : "pessoas" ?> com obrigatório em aberto</span>
+        <?= torre_link("treinamento/cadastro_treinamento.php") ?>
+      </div>
+      <?php endif; ?>
+      <?php if (torre_visivel("tile_trei_andamento", $ocultos)): ?>
+      <div class="tc-card tc-tile"<?= torre_estilo_ordem($__trOrd, "tile_trei_andamento", 3) ?>>
+        <div class="tc-tile-top"><span class="tc-tile-label">Em andamento<?= torre_info("Atribuições em que a pessoa já abriu o player (em qualquer episódio) mas ainda não concluiu o treinamento.") ?></span><div class="tc-tile-icon warn"><i data-lucide="play" style="width:16px;height:16px;"></i></div></div>
+        <span class="tc-tile-value warn"><?= $__trFmt($__tr["andamento"]) ?></span>
+        <span class="tc-tile-foot"><?= $__trFmt($__tr["nao_iniciados"]) ?> não iniciados · <?= $__trFmt($__tr["bloqueados"]) ?> bloqueados</span>
+        <?= torre_link("treinamento/cadastro_treinamento.php") ?>
+      </div>
+      <?php endif; ?>
+      <?php if (torre_visivel("tile_trei_horas", $ocultos)): ?>
+      <div class="tc-card tc-tile"<?= torre_estilo_ordem($__trOrd, "tile_trei_horas", 4) ?>>
+        <div class="tc-tile-top"><span class="tc-tile-label">Capacitação · 30 dias<?= torre_info("Soma da carga horária dos treinamentos concluídos nos últimos 30 dias. Série sem carga própria cadastrada usa a soma da carga dos episódios.") ?></span><div class="tc-tile-icon good"><i data-lucide="clock-3" style="width:16px;height:16px;"></i></div></div>
+        <span class="tc-tile-value good"><?= torre_horas_fmt($__tr["horas_30d"], 1) ?>h</span>
+        <span class="tc-tile-foot"><?= $__trFmt($__tr["conclusoes_30d"]) ?> conclusões no período · <?= torre_horas_fmt($__tr["horas_total"], 1) ?>h no total</span>
+        <?= torre_link("treinamento/cadastro_treinamento.php") ?>
+      </div>
+      <?php endif; ?>
+      <?php if (torre_visivel("tile_trei_duvidas", $ocultos)): ?>
+      <div class="tc-card tc-tile"<?= torre_estilo_ordem($__trOrd, "tile_trei_duvidas", 5) ?>>
+        <div class="tc-tile-top"><span class="tc-tile-label">Dúvidas sem resposta<?= torre_info("Mensagens das conversas dos treinamentos que ainda não tiveram resposta da gestão nem foram lidas por você — mesma contagem da tela Conversas de Treinamentos.") ?></span><div class="tc-tile-icon <?= $__tr["duvidas_mensagens"] > 0 ? "warn" : "acc" ?>"><i data-lucide="message-circle" style="width:16px;height:16px;"></i></div></div>
+        <span class="tc-tile-value <?= $__tr["duvidas_mensagens"] > 0 ? "warn" : "" ?>"><?= $__trFmt($__tr["duvidas_mensagens"]) ?></span>
+        <span class="tc-tile-foot">em <?= $__trFmt($__tr["duvidas_conversas"]) ?> <?= $__tr["duvidas_conversas"] === 1 ? "conversa" : "conversas" ?></span>
+        <?= torre_link("treinamento/treinamento_chat_gestao.php", "Responder") ?>
+      </div>
+      <?php endif; ?>
+    </div>
+
+    <?php $__trVerStatus = torre_visivel("painel_trei_status", $ocultos); $__trVerAdesao = torre_visivel("painel_trei_adesao", $ocultos); ?>
+    <?php if ($__trVerStatus || $__trVerAdesao): ?>
+    <div class="tc-panel-row" style="grid-template-columns:<?= ($__trVerStatus && $__trVerAdesao) ? "1fr 1fr" : "1fr" ?>;">
+      <?php if ($__trVerStatus): ?>
+      <div class="tc-panel">
+        <h3><i data-lucide="pie-chart" style="width:15px;height:15px;"></i> Situação das atribuições<?= torre_info("Cada pessoa × treinamento ativo do público, pela situação atual no player — mesma base da taxa de conclusão. Quem foi desmarcado individualmente na aba Atribuições não vê o treinamento e fica fora da conta.") ?></h3>
+        <?php if ($__trTotalPessoas > 0): ?>
+        <div class="tc-status-geral">
+          <div class="tc-chart-wrap tc-chart-hero" style="width:200px;height:200px;"><canvas id="chartTreiStatus"></canvas></div>
+          <div class="tc-status-legenda">
+            <div class="tc-status-item"><span class="tc-swatch" style="background:#16a34a;"></span><span class="tc-status-label">Concluído · <?= $__trPct($__tr["concluidos"]) ?></span><span class="tc-status-valor"><?= $__trFmt($__tr["concluidos"]) ?></span></div>
+            <div class="tc-status-item"><span class="tc-swatch" style="background:#f59e0b;"></span><span class="tc-status-label">Em andamento · <?= $__trPct($__tr["andamento"]) ?></span><span class="tc-status-valor"><?= $__trFmt($__tr["andamento"]) ?></span></div>
+            <div class="tc-status-item"><span class="tc-swatch" style="background:#94a3b8;"></span><span class="tc-status-label">Não iniciado · <?= $__trPct($__tr["nao_iniciados"]) ?></span><span class="tc-status-valor"><?= $__trFmt($__tr["nao_iniciados"]) ?></span></div>
+            <?php if ($__tr["bloqueados"] > 0): ?>
+            <span class="tc-ref">+<?= $__trFmt($__tr["bloqueados"]) ?> <?= $__tr["bloqueados"] === 1 ? "bloqueado" : "bloqueados" ?> individualmente, fora da conta</span>
+            <?php endif; ?>
+          </div>
+        </div>
+        <?php else: ?>
+        <div class="tc-empty-state"><i data-lucide="users" style="width:26px;height:26px;"></i>Nenhuma pessoa no público dos treinamentos ativos para este recorte.</div>
+        <?php endif; ?>
+        <?= torre_link("treinamento/cadastro_treinamento.php") ?>
+      </div>
+      <?php endif; ?>
+      <?php if ($__trVerAdesao): ?>
+      <div class="tc-panel">
+        <h3><i data-lucide="list-checks" style="width:15px;height:15px;"></i> Adesão por treinamento<?= torre_info("Percentual do público que já concluiu cada treinamento. Os de menor adesão aparecem primeiro — é onde vale cobrar a equipe.") ?></h3>
+        <?php if (!empty($__tr["adesao"])): ?>
+        <div class="tc-list" style="max-height:none;">
+          <?php foreach ($__tr["adesao"] as $__trA): ?>
+          <div class="tc-list-row tc-list-row-bloco">
+            <div class="tc-list-linha">
+              <span class="tc-list-name"><?= htmlspecialchars($__trA["titulo"]) ?><?php if ($__trA["obrigatorio"]): ?><span class="tc-tag bad">obrigatório</span><?php endif; ?></span>
+              <span class="tc-list-meta"><?= $__trFmt($__trA["concluidos"]) ?>/<?= $__trFmt($__trA["elegiveis"]) ?> · <strong style="color:<?= $__trCor($__trA["pct"]) ?>;"><?= torre_horas_fmt($__trA["pct"], 0) ?>%</strong></span>
+            </div>
+            <div class="tc-barra"><div class="tc-barra-fill" style="width:<?= min(100, max(0, $__trA["pct"])) ?>%;background:<?= $__trCor($__trA["pct"]) ?>;"></div></div>
+          </div>
+          <?php endforeach; ?>
+        </div>
+        <?php else: ?>
+        <div class="tc-empty-state"><i data-lucide="list-checks" style="width:26px;height:26px;"></i>Nenhum treinamento com público neste recorte.</div>
+        <?php endif; ?>
+        <?= torre_link("treinamento/cadastro_treinamento.php", "Ver acompanhamento") ?>
+      </div>
+      <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
+    <?php $__trVerTend = torre_visivel("painel_trei_tendencia", $ocultos); $__trVerLista = torre_visivel("lista_trei_pendentes", $ocultos); ?>
+    <?php if ($__trVerTend || $__trVerLista): ?>
+    <div class="tc-panel-row" style="margin-top:14px; grid-template-columns:<?= ($__trVerTend && $__trVerLista) ? "1.1fr .9fr" : "1fr" ?>;">
+      <?php if ($__trVerTend): ?>
+      <div class="tc-panel">
+        <h3><i data-lucide="trending-up" style="width:15px;height:15px;"></i> Conclusões por mês<?= torre_info("Treinamentos concluídos pelo público atual em cada um dos últimos 6 meses, pela data de conclusão.") ?></h3>
+        <?php if (array_sum($__tr["tendencia"]) > 0): ?>
+          <div class="tc-chart-wrap" style="height:190px;"><canvas id="chartTreiTendencia"></canvas></div>
+        <?php else: ?>
+          <div class="tc-empty-state"><i data-lucide="trending-up" style="width:26px;height:26px;"></i>Nenhuma conclusão nos últimos 6 meses.</div>
+        <?php endif; ?>
+        <?= torre_link("treinamento/cadastro_treinamento.php") ?>
+      </div>
+      <?php endif; ?>
+      <?php if ($__trVerLista): ?>
+      <div class="tc-panel">
+        <h3><i data-lucide="user-x" style="width:15px;height:15px;"></i> Obrigatórios pendentes por pessoa<?= torre_info("Pessoas com mais treinamentos obrigatórios ainda não concluídos. Passe o mouse sobre o nome para ver quais.") ?></h3>
+        <?php if (!empty($__tr["pendentes_lista"])): ?>
+          <div class="tc-list">
+            <?php foreach ($__tr["pendentes_lista"] as $__trP): ?>
+            <div class="tc-list-row" title="<?= htmlspecialchars(implode(" · ", $__trP["titulos"])) ?>">
+              <span class="tc-list-name"><?= htmlspecialchars($__trP["nome"]) ?></span>
+              <span class="tc-list-meta" style="color:var(--tc-bad); font-weight:600;"><?= $__trFmt($__trP["qtd"]) ?> <?= $__trP["qtd"] === 1 ? "obrigatório" : "obrigatórios" ?></span>
+            </div>
+            <?php endforeach; ?>
+          </div>
+        <?php else: ?>
+          <div class="tc-empty-state"><i data-lucide="check-circle-2" style="width:26px;height:26px;"></i>Todo o público está em dia com os treinamentos obrigatórios.</div>
+        <?php endif; ?>
+      </div>
+      <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
+    <?php endif; ?>
+  </div>
+  <?php endif; ?>
+  <!-- /secao treinamentos -->
 
   </div><!-- /tc-secoes -->
 
@@ -2818,6 +3286,26 @@ $notaGestao = torre_calcular_nota_gestao($empresaFiltro, $condEmpresa, $ativos, 
   <?php if (count($tendenciaAbonos) >= 2): ?>
   criarGraficoTendencia('chartTendenciaAbonos', <?= json_encode($tendenciaAbonos, JSON_UNESCAPED_UNICODE) ?>, '#f59e0b');
   <?php endif; ?>
+
+  // ── Treinamentos: gráficos ──────────────────────────────────────
+  <?php if ($treinamentosDados["atribuicoes"] > 0): ?>
+  var ctxTreiStatus = document.getElementById('chartTreiStatus');
+  if (ctxTreiStatus) {
+    new Chart(ctxTreiStatus, {
+      type: 'doughnut',
+      data: {
+        labels: ['Concluído', 'Em andamento', 'Não iniciado'],
+        datasets: [{ data: <?= json_encode([(int) $treinamentosDados["concluidos"], (int) $treinamentosDados["andamento"], (int) $treinamentosDados["nao_iniciados"]]) ?>,
+          backgroundColor: ['#16a34a', '#f59e0b', '#94a3b8'], borderColor: '#fff', borderWidth: 2 }]
+      },
+      options: { responsive:true, maintainAspectRatio:false, cutout:'64%', plugins:{ legend:{ display:false } } }
+    });
+  }
+  <?php endif; ?>
+  <?php if (array_sum($treinamentosDados["tendencia"]) > 0): ?>
+  criarGraficoTendencia('chartTreiTendencia', <?= json_encode($treinamentosDados["tendencia"], JSON_UNESCAPED_UNICODE) ?>, '#16a34a');
+  <?php endif; ?>
+  // ── /Treinamentos ──────────────────────────────────────────────
 
   <?php if (!empty($pontosMapa)): ?>
   var pontos = <?= json_encode($pontosMapa, JSON_UNESCAPED_UNICODE) ?>;

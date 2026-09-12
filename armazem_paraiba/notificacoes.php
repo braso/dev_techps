@@ -59,6 +59,7 @@ function notificacao_categorias_disponiveis(): array {
         "abonos_mes"         => "Abonos lançados no mês",
         "frota_indisponivel" => "Motoristas indisponíveis agora",
         "saldo_negativo"     => "Banco de horas do período negativo",
+        "saldo_positivo"     => "Banco de horas do período positivo",
         "treinamento"        => "Treinamentos novos para assistir",
     ];
 }
@@ -254,6 +255,25 @@ function notificacao_calcular(array $categoriasAtivas): array {
                     "icone" => "fa-line-chart", "cor" => "#d9534f",
                     "titulo" => "Banco de horas negativo",
                     "texto" => torre_horas_fmt($saldoTotais["saldoFinal"]) . "h — ref. " . torre_mes_label($saldoRef["mes"]),
+                    "link" => "paineis/saldo.php",
+                ];
+            }
+        }
+    }
+
+    if (in_array("saldo_positivo", $categoriasAtivas, true)) {
+        include_once __DIR__ . "/torre_comando.php";
+        $empresas = torre_fetch_all(query("SELECT empr_nb_id FROM empresa WHERE empr_tx_status = 'ativo'"), MYSQLI_ASSOC) ?: [];
+        $idsEmpresas = array_map("intval", array_column($empresas, "empr_nb_id"));
+        $saldoRef = torre_mes_mais_recente_saldo($idsEmpresas);
+        if ($saldoRef) {
+            // Quem terminou o período apurado com horas a favor (saldo do período, mesma regra do cartão da Torre).
+            $banco = torre_banco_horas_positivo($saldoRef["empresas"], $saldoRef["mes"]);
+            if ($banco["pessoas_positivo"] > 0) {
+                $itens[] = [
+                    "icone" => "fa-line-chart", "cor" => "#1f9d64",
+                    "titulo" => "Banco de horas positivo",
+                    "texto" => torre_horas_hhmm($banco["horas_positivo"]) . " em " . $banco["pessoas_positivo"] . " pessoa(s) — ref. " . torre_mes_label($saldoRef["mes"]),
                     "link" => "paineis/saldo.php",
                 ];
             }
