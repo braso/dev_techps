@@ -293,7 +293,6 @@ function notificacao_calcular(array $categoriasAtivas): array {
             $totalTreinamentos = intval(torre_fetch_assoc(query(
                 "SELECT COUNT(*) AS c FROM treinamento t
                  WHERE t.trei_tx_status = 'ativo'
-                   AND t.trei_tx_gerar_notificacao = 'sim'
                    AND (t.trei_dt_data_liberacao IS NULL OR t.trei_dt_data_liberacao <= NOW())
                    AND NOT EXISTS (
                        SELECT 1 FROM treinamento_bloqueio tb

@@ -69,7 +69,9 @@
 			"trei_tx_conteudo_programatico" => $_POST["conteudo_programatico"] ?? null,
 			"trei_tx_tipo" => $_POST["tipo"] ?? "treinamento",
 			"trei_tx_tipo_treinamento" => $_POST["tipo_treinamento"] ?? "eventual",
-			"trei_tx_url_video" => $_POST["url_video"] ?? null,
+			// Regra: ao ativar série, o link do vídeo geral é desconsiderado (vídeos ficam nos episódios)
+			"trei_tx_serie" => isset($_POST["serie_videos"]) ? "sim" : "nao",
+			"trei_tx_url_video" => isset($_POST["serie_videos"]) ? null : ($_POST["url_video"] ?? null),
 			"trei_tx_tipo_video" => $_POST["tipo_video"] ?? "youtube",
 			"trei_nb_carga_horaria" => (function() {
 				$segundos = 0;
@@ -81,10 +83,10 @@
 			})(),
 			"trei_nb_dias_validade" => (int)($_POST["dias_validade"] ?? 365),
 			"trei_tx_status" => $_POST["status"] ?? "ativo",
-			"trei_tx_serie" => isset($_POST["serie_videos"]) ? "sim" : "nao",
 			"trei_tx_gerar_notificacao" => isset($_POST["gerar_notificacao"]) ? "sim" : "nao",
 			"trei_nb_obrigatorio" => isset($_POST["obrigatorio"]) ? 1 : 0,
 			"trei_nb_nota_minima_aprovacao" => (int)($_POST["nota_minima_aprovacao"] ?? 70),
+			"trei_nb_max_tentativas" => max(0, (int)($_POST["max_tentativas"] ?? 2)),
 			"trei_nb_quantidade_questoes_prova" => (int)($_POST["quantidade_questoes_prova"] ?? 5),
 			"trei_dt_data_atualiza" => date("Y-m-d H:i:s")
 		];
@@ -148,28 +150,112 @@
 			set_status("Treinamento cadastrado com sucesso!");
 		}
 
-		// Upload do material de apoio (substitui o thumbnail)
-		if (!empty($_FILES["material_arquivo"]["name"])) {
+		// Upload do material de apoio (aceita múltiplos arquivos)
+		if (!empty($_FILES["material_arquivo"]) && !empty($_FILES["material_arquivo"]["name"][0])) {
 			$materialDir = __DIR__ . "/uploads/materiais/" . $treinamentoId . "/";
 			if (!is_dir($materialDir)) {
 				mkdir($materialDir, 0755, true);
 			}
-			$nomeOriginal = $_FILES["material_arquivo"]["name"];
-			$ext = strtolower(pathinfo($nomeOriginal, PATHINFO_EXTENSION));
+			$cnt = mysqli_fetch_assoc(query(
+				"SELECT COUNT(*) as total FROM treinamento_material WHERE tram_nb_treinamento_id = ?",
+				"i", [$treinamentoId]
+			));
+			$ordem = (int)($cnt["total"] ?? 0) + 1;
+			$nomes = is_array($_FILES["material_arquivo"]["name"]) ? $_FILES["material_arquivo"]["name"] : [$_FILES["material_arquivo"]["name"]];
+			$tmpNames = is_array($_FILES["material_arquivo"]["tmp_name"]) ? $_FILES["material_arquivo"]["tmp_name"] : [$_FILES["material_arquivo"]["tmp_name"]];
+			$errors = is_array($_FILES["material_arquivo"]["error"]) ? $_FILES["material_arquivo"]["error"] : [$_FILES["material_arquivo"]["error"]];
+			$sizes = is_array($_FILES["material_arquivo"]["size"]) ? $_FILES["material_arquivo"]["size"] : [$_FILES["material_arquivo"]["size"]];
 			$permitidos = ["pdf", "jpg", "jpeg", "png", "gif", "webp"];
-			if (in_array($ext, $permitidos)) {
-				$tamanho = $_FILES["material_arquivo"]["size"];
+			foreach ($nomes as $idx => $nomeOriginal) {
+				if (empty($nomeOriginal) || ($errors[$idx] ?? 1) !== UPLOAD_ERR_OK) continue;
+				$ext = strtolower(pathinfo($nomeOriginal, PATHINFO_EXTENSION));
+				if (!in_array($ext, $permitidos)) continue;
+				$tamanho = $sizes[$idx] ?? 0;
 				$nomeSalvo = "mat_" . time() . "_" . rand(1000, 9999) . "." . $ext;
-				if (move_uploaded_file($_FILES["material_arquivo"]["tmp_name"], $materialDir . $nomeSalvo)) {
-					$cnt = mysqli_fetch_assoc(query(
-						"SELECT COUNT(*) as total FROM treinamento_material WHERE tram_nb_treinamento_id = ?",
-						"i", [$treinamentoId]
-					));
-					$ordem = ($cnt["total"] ?? 0) + 1;
+				if (move_uploaded_file($tmpNames[$idx], $materialDir . $nomeSalvo)) {
 					inserir("treinamento_material",
 						["tram_nb_treinamento_id", "tram_tx_nome", "tram_tx_descricao", "tram_tx_arquivo", "tram_tx_tipo_arquivo", "tram_nb_tamanho", "tram_nb_ordem"],
-						[$treinamentoId, $nomeOriginal, "", "materiais/" . $treinamentoId . "/" . $nomeSalvo, $ext, $tamanho, $ordem]
+						[$treinamentoId, $nomeOriginal, "", "materiais/" . $treinamentoId . "/" . $nomeSalvo, $ext, $tamanho, $ordem++]
 					);
+					registrarLogTreinamento($treinamentoId, $_SESSION["user_nb_id"], "material_upload", "Material '$nomeOriginal' adicionado");
+				}
+			}
+		}
+
+		// Questões da avaliação cadastradas junto com o treinamento (lote)
+		if (!empty($_POST["q_avaliacao"]["pergunta"]) && is_array($_POST["q_avaliacao"]["pergunta"])) {
+			$cntQ = mysqli_fetch_assoc(query(
+				"SELECT COUNT(*) as total FROM treinamento_questao WHERE treq_nb_treinamento_id = ?",
+				"i", [$treinamentoId]
+			));
+			$ordemQ = (int)($cntQ["total"] ?? 0) + 1;
+			foreach ($_POST["q_avaliacao"]["pergunta"] as $i => $perguntaQ) {
+				$perguntaQ = trim((string)$perguntaQ);
+				if ($perguntaQ === "" || $ordemQ > 10) continue;
+				$corretaQ = $_POST["q_avaliacao"]["correta"][$i] ?? null;
+				if ($corretaQ === null) continue; // sem opção correta marcada
+				$opcoesQ = [
+					$_POST["q_avaliacao"]["opcao_1"][$i] ?? "",
+					$_POST["q_avaliacao"]["opcao_2"][$i] ?? "",
+					$_POST["q_avaliacao"]["opcao_3"][$i] ?? "",
+					$_POST["q_avaliacao"]["opcao_4"][$i] ?? ""
+				];
+				$corretaQ = (int)$corretaQ;
+				inserir("treinamento_questao",
+					["treq_nb_treinamento_id", "treq_tx_pergunta", "treq_tx_opcoes", "treq_nb_resposta_correta", "treq_nb_ordem"],
+					[$treinamentoId, $perguntaQ, json_encode($opcoesQ), $corretaQ, $ordemQ]
+				);
+				registrarLogTreinamento($treinamentoId, $_SESSION["user_nb_id"], "questao_criada", "Questão #$ordemQ adicionada junto ao salvamento");
+				$ordemQ++;
+			}
+		}
+
+		// Episódios da série cadastrados junto (cadastro novo)
+		if (isset($_POST["serie_videos"]) && !empty($_POST["novo_epi"]) && is_array($_POST["novo_epi"])) {
+			$cntEp = mysqli_fetch_assoc(query(
+				"SELECT COUNT(*) as total FROM treinamento_episodio WHERE trepi_nb_treinamento_id = ?",
+				"i", [$treinamentoId]
+			));
+			$ordemEp = (int)($cntEp["total"] ?? 0) + 1;
+			foreach ($_POST["novo_epi"] as $idxEp => $epDados) {
+				$tituloEp = trim((string)($epDados["titulo"] ?? ""));
+				if ($tituloEp === "") continue;
+				$cargaEp = 0;
+				if (!empty($epDados["carga_horaria"])) {
+					$partesEp = array_map('intval', explode(":", (string)$epDados["carga_horaria"]));
+					$cargaEp = (int)($partesEp[0] ?? 0) * 3600 + (int)($partesEp[1] ?? 0) * 60 + (int)($partesEp[2] ?? 0);
+				}
+				$notaEp = ((string)($epDados["nota_minima"] ?? "") !== "") ? (int)$epDados["nota_minima"] : null;
+				$retInsEp = inserir("treinamento_episodio",
+					["trepi_nb_treinamento_id", "trepi_tx_titulo", "trepi_tx_descricao", "trepi_tx_url_video", "trepi_tx_tipo_video", "trepi_nb_carga_horaria", "trepi_nb_nota_minima_aprovacao", "trepi_nb_ordem", "trepi_tx_status"],
+					[$treinamentoId, $tituloEp, ($epDados["descricao"] ?? "") ?: null, ($epDados["url_video"] ?? "") ?: null, $epDados["tipo_video"] ?? "youtube", $cargaEp, $notaEp, $ordemEp, "ativo"]
+				);
+				$episodioNovoId = (int)($retInsEp[0] ?? 0);
+				if ($episodioNovoId > 0) {
+					registrarLogTreinamento($treinamentoId, $_SESSION["user_nb_id"], "episodio_salvo", "Episódio #$episodioNovoId: $tituloEp (junto ao salvamento)");
+					$ordemEp++;
+					// Questões da avaliação deste episódio (cadastradas junto)
+					if (!empty($epDados["questoes"]["pergunta"]) && is_array($epDados["questoes"]["pergunta"])) {
+						$ordemQE = 1;
+						foreach ($epDados["questoes"]["pergunta"] as $qi => $perguntaQE) {
+							$perguntaQE = trim((string)$perguntaQE);
+							if ($perguntaQE === "" || $ordemQE > 10) continue;
+							$corretaQE = $epDados["questoes"]["correta"][$qi] ?? null;
+							if ($corretaQE === null) continue; // sem opção correta marcada
+							$opcoesQE = [
+								$epDados["questoes"]["opcao_1"][$qi] ?? "",
+								$epDados["questoes"]["opcao_2"][$qi] ?? "",
+								$epDados["questoes"]["opcao_3"][$qi] ?? "",
+								$epDados["questoes"]["opcao_4"][$qi] ?? ""
+							];
+							$corretaQE = (int)$corretaQE;
+							inserir("treinamento_episodio_questao",
+								["trepq_nb_episodio_id", "trepq_tx_pergunta", "trepq_tx_opcoes", "trepq_nb_resposta_correta", "trepq_nb_ordem"],
+								[$episodioNovoId, $perguntaQE, json_encode($opcoesQE), $corretaQE, $ordemQE]
+							);
+							$ordemQE++;
+						}
+					}
 				}
 			}
 		}
@@ -192,7 +278,7 @@
 			}
 		}
 
-		// Limpar para voltar à listagem mantendo a mensagem de status
+		// Limpar para voltar Ã  listagem mantendo a mensagem de status
 		unset($_POST["id"], $_POST["_novo"], $_POST["salvar"]);
 		index();
 		exit;
@@ -229,10 +315,17 @@
 			$_POST["qtd_opcao_3"] ?? "",
 			$_POST["qtd_opcao_4"] ?? ""
 		];
-		$respostaCorreta = (int)($_POST["qtd_resposta_correta"] ?? 0);
+		$respostaCorreta = isset($_POST["qtd_resposta_correta"]) ? (int)$_POST["qtd_resposta_correta"] : null;
 
 		if ($treinamentoId <= 0 || empty($pergunta)) {
 			set_status("ERRO: Preencha a pergunta!");
+			$_POST["aba_avaliacao"] = 1;
+			editarForm();
+			exit;
+		}
+
+		if ($respostaCorreta === null) {
+			set_status("ERRO: Marque a opção correta da questão!");
 			$_POST["aba_avaliacao"] = 1;
 			editarForm();
 			exit;
@@ -332,6 +425,35 @@ if (!empty($_POST["epi_carga_horaria"])) {
 		}
 
 		registrarLogTreinamento($treinamentoId, $_SESSION["user_nb_id"], "episodio_salvo", "Episódio #$episodioId: $titulo");
+
+		// Questões da avaliação do episódio cadastradas junto (lote)
+		if (!empty($_POST["epi_q_avaliacao"]["pergunta"]) && is_array($_POST["epi_q_avaliacao"]["pergunta"])) {
+			$cntQE = mysqli_fetch_assoc(query(
+				"SELECT COUNT(*) as total FROM treinamento_episodio_questao WHERE trepq_nb_episodio_id = ?",
+				"i", [$episodioId]
+			));
+			$ordemQE = (int)($cntQE["total"] ?? 0) + 1;
+			foreach ($_POST["epi_q_avaliacao"]["pergunta"] as $i => $perguntaQE) {
+				$perguntaQE = trim((string)$perguntaQE);
+				if ($perguntaQE === "" || $ordemQE > 10) continue;
+				$corretaQE = $_POST["epi_q_avaliacao"]["correta"][$i] ?? null;
+				if ($corretaQE === null) continue; // sem opção correta marcada
+				$opcoesQE = [
+					$_POST["epi_q_avaliacao"]["opcao_1"][$i] ?? "",
+					$_POST["epi_q_avaliacao"]["opcao_2"][$i] ?? "",
+					$_POST["epi_q_avaliacao"]["opcao_3"][$i] ?? "",
+					$_POST["epi_q_avaliacao"]["opcao_4"][$i] ?? ""
+				];
+				$corretaQE = (int)$corretaQE;
+				inserir("treinamento_episodio_questao",
+					["trepq_nb_episodio_id", "trepq_tx_pergunta", "trepq_tx_opcoes", "trepq_nb_resposta_correta", "trepq_nb_ordem"],
+					[$episodioId, $perguntaQE, json_encode($opcoesQE), $corretaQE, $ordemQE]
+				);
+				registrarLogTreinamento($treinamentoId, $_SESSION["user_nb_id"], "questao_episodio_criada", "Questão #$ordemQE do episódio #$episodioId (junto ao salvamento)");
+				$ordemQE++;
+			}
+		}
+
 		$_POST["treinamento_id"] = $treinamentoId;
 		$_POST["aba_episodios"] = 1;
 		// Mantém o episódio em edição para cadastrar as questões da avaliação na sequência
@@ -369,10 +491,17 @@ if (!empty($_POST["epi_carga_horaria"])) {
 			$_POST["epi_qtd_opcao_3"] ?? "",
 			$_POST["epi_qtd_opcao_4"] ?? ""
 		];
-		$respostaCorreta = (int)($_POST["epi_qtd_resposta_correta"] ?? 0);
+		$respostaCorreta = isset($_POST["epi_qtd_resposta_correta"]) ? (int)$_POST["epi_qtd_resposta_correta"] : null;
 
 		if ($episodioId <= 0 || empty($pergunta)) {
 			set_status("ERRO: Preencha a pergunta da questão do episódio!");
+			$_POST["episodio_edit"] = $episodioId;
+			editarForm();
+			exit;
+		}
+
+		if ($respostaCorreta === null) {
+			set_status("ERRO: Marque a opção correta da questão do episódio!");
 			$_POST["episodio_edit"] = $episodioId;
 			editarForm();
 			exit;
@@ -575,6 +704,7 @@ if (!empty($_POST["epi_carga_horaria"])) {
 		}
 		$status = $dados["trei_tx_status"] ?? "ativo";
 		$notaMinima = $dados["trei_nb_nota_minima_aprovacao"] ?? 70;
+		$maxTentativas = $dados["trei_nb_max_tentativas"] ?? 2;
 		$qtdQuestoes = $dados["trei_nb_quantidade_questoes_prova"] ?? 5;
 		$perfisPermitidos = !empty($dados["trei_tx_tipo_usuario_permitido"]) ? json_decode($dados["trei_tx_tipo_usuario_permitido"], true) : [];
 
@@ -670,6 +800,105 @@ if (!empty($_POST["epi_carga_horaria"])) {
 			.video-preview { max-width: 400px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; }
 			.questao-item { background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin-bottom: 10px; }
 			.questao-item .opcoes { margin-left: 20px; }
+			/* ===== QUESTÕES DINÂMICAS (componente moderno) ===== */
+			.questao-dinamica {
+				background: linear-gradient(180deg, #ffffff, #f7fafc);
+				border: 1px solid #e2e8f0;
+				border-left: 4px solid #3c8dbc;
+				border-radius: 10px;
+				padding: 14px 16px;
+				margin-bottom: 14px;
+				box-shadow: 0 3px 10px rgba(15, 40, 80, 0.07);
+				transition: box-shadow 0.2s ease, border-color 0.2s ease;
+			}
+			.questao-dinamica:hover {
+				box-shadow: 0 6px 18px rgba(15, 40, 80, 0.13);
+				border-color: #b9d4e8;
+			}
+			.questao-dinamica .qd-header {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				margin-bottom: 12px;
+			}
+			.questao-dinamica .qd-numero {
+				display: inline-flex;
+				align-items: center;
+				gap: 8px;
+				background: linear-gradient(135deg, #3c8dbc, #2c6a86);
+				color: #fff;
+				border-radius: 20px;
+				padding: 4px 16px;
+				font-size: 13px;
+				font-weight: 600;
+				letter-spacing: 0.3px;
+				box-shadow: 0 2px 8px rgba(60, 141, 188, 0.35);
+			}
+			.questao-dinamica label { font-weight: 600; color: #33475b; font-size: 13px; }
+			.questao-dinamica textarea.qd-pergunta {
+				min-height: 72px;
+				resize: vertical;
+				border: 1px solid #d1d9e6;
+				border-radius: 8px;
+				font-size: 14px;
+				padding: 10px 12px;
+				transition: border-color 0.2s, box-shadow 0.2s;
+			}
+			.questao-dinamica textarea.qd-pergunta:focus {
+				border-color: #3c8dbc;
+				box-shadow: 0 0 0 3px rgba(60, 141, 188, 0.15);
+			}
+			.questao-dinamica .qd-opcao { position: relative; margin-bottom: 10px; }
+			.questao-dinamica .qd-opcao input[type=\"text\"] {
+				width: 100%;
+				min-height: 48px;
+				font-size: 14px;
+				padding: 11px 14px 11px 46px;
+				border: 1px solid #d1d9e6;
+				border-radius: 8px;
+				transition: border-color 0.2s, box-shadow 0.2s;
+			}
+			.questao-dinamica .qd-opcao input[type=\"text\"]:focus {
+				border-color: #3c8dbc;
+				box-shadow: 0 0 0 3px rgba(60, 141, 188, 0.15);
+			}
+			.questao-dinamica .qd-radio {
+				position: absolute;
+				left: 12px;
+				top: 50%;
+				transform: translateY(-50%);
+				z-index: 2;
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				width: 26px;
+				height: 26px;
+				background: #fff;
+				border: 1px solid #cbd5e1;
+				border-radius: 50%;
+				cursor: pointer;
+				transition: border-color 0.2s, background 0.2s;
+			}
+			.questao-dinamica .qd-radio:hover { border-color: #27ae60; background: #f0fdf4; }
+			.questao-dinamica .qd-radio input[type=\"radio\"] {
+				width: 15px;
+				height: 15px;
+				margin: 0;
+				cursor: pointer;
+				accent-color: #27ae60;
+			}
+			.questao-dinamica .qd-legenda {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				flex-wrap: wrap;
+				gap: 8px;
+				margin-top: 8px;
+				padding-top: 10px;
+				border-top: 1px dashed #e2e8f0;
+			}
+			.opcao-radio { cursor: pointer; font-weight: normal; }
+			.opcao-radio input[type=\"radio\"] { accent-color: #27ae60; margin-right: 3px; }
 			.material-item { display: flex; align-items: center; justify-content: space-between; padding: 8px; background: #f5f5f5; border-radius: 4px; margin-bottom: 5px; }
 			.perfil-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
 			.perfil-card-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 10px; }
@@ -693,8 +922,8 @@ if (!empty($_POST["epi_carga_horaria"])) {
 					<ul class='nav nav-tabs'>
 						<li class='" . ($abaAtiva === "dados" ? "active" : "") . "'><a href='#tab_dados' data-toggle='tab'>Dados Gerais</a></li>" .
 						($isEdicao ? "<li class='" . ($abaAtiva === "atribuicao" ? "active" : "") . "'><a href='#tab_atribuicao' data-toggle='tab'>Atribuições</a></li>" : "") .
-						($isEdicao && $ehSerie ? "<li class='" . ($abaAtiva === "episodios" ? "active" : "") . "'><a href='#tab_episodios' data-toggle='tab'>Episódios</a></li>" : "") .
-						($isEdicao && !$ehSerie ? "<li class='" . ($abaAtiva === "avaliacao" ? "active" : "") . "'><a href='#tab_avaliacao' data-toggle='tab'>Avaliação</a></li>" : "") .
+						($isEdicao && $ehSerie ? "<li class='" . ($abaAtiva === "episodios" ? "active" : "") . "'><a href='#tab_episodios' data-toggle='tab'>Episódios</a></li>" : ($isEdicao ? "" : "<li style='display:none;'><a href='#tab_episodios' data-toggle='tab'>Episódios</a></li>")) .
+						(!$ehSerie ? "<li class='" . ($abaAtiva === "avaliacao" ? "active" : "") . "'><a href='#tab_avaliacao' data-toggle='tab'>Avaliação</a></li>" : "") .
 					"</ul>
 					<div class='tab-content'>
 						<div class='tab-pane " . ($abaAtiva === "dados" ? "active" : "") . "' id='tab_dados'>
@@ -724,16 +953,21 @@ if (!empty($_POST["epi_carga_horaria"])) {
 								<div class='col-md-2'>
 									" . campo("Nota Mínima (%)", "nota_minima_aprovacao", $notaMinima, "col-md-12", "70") . "
 								</div>
-								<div class='col-md-7' style='margin-top:25px;'>
-									<small class='text-muted'>Nota mínima para aprovação na avaliação. Para séries, cada episódio pode ter sua própria nota (aba Episódios).</small>
+								<div class='col-md-2'>
+									" . campo("Tentativas Avaliação", "max_tentativas", $maxTentativas, "col-md-12", "2") . "
+								</div>
+								<div class='col-md-5' style='margin-top:25px;'>
+									<small class='text-muted'>
+										<i class='fa fa-info-circle'></i> Tentativas da avaliação: <strong>2</strong> (padrão) - se errar todas, precisa <strong>reassistir o vídeo</strong>.
+										Se informar <strong>0</strong>: 10 tentativas, bloqueio de <strong>1 hora</strong> e repete o ciclo.
+										Para séries, vale para <strong>todos os episódios</strong>.
+									</small>
+									" . ($isEdicao && !$ehSerie ? "<a href='#tab_avaliacao' onclick=\"abrirAbaAvaliacao(); return false;\" class='btn btn-xs btn-info' style='margin-left:8px;'><i class='fa fa-clipboard-list'></i> Gerenciar Avaliação</a>" : "") . "
 								</div>
 							</div>
 							<div class='row'>
 								<div class='col-md-4'>
 									" . campo("Dias de Validade", "dias_validade", $diasValidade, "col-md-12", "999") . "
-								</div>
-								<div class='col-md-4'>
-									" . campo_data("Data Publicação", "data_publicacao", $dataPublicacao, "col-md-12") . "
 								</div>
 								<div class='col-md-4'>
 									" . campo_data("Data Liberação", "data_liberacao", $dataLiberacao, "col-md-12") . "
@@ -765,11 +999,6 @@ if (!empty($_POST["epi_carga_horaria"])) {
 								<div class='col-md-4' style='margin-top:25px;'>
 									<label>
 										<input type='checkbox' name='serie_videos' value='1' " . ($ehSerie ? "checked" : "") . "> <i class='fa fa-video-camera'></i> Série de vídeos (múltiplos episódios)
-									</label>
-								</div>
-								<div class='col-md-4' style='margin-top:25px;'>
-									<label>
-										<input type='checkbox' name='gerar_notificacao' value='1' " . ($gerarNotificacao ? "checked" : "") . "> <i class='fa fa-bell'></i> Gerar notificação de novo treinamento
 									</label>
 								</div>
 							</div>
@@ -811,14 +1040,18 @@ if (!empty($_POST["epi_carga_horaria"])) {
 										<button type='button' class='btn btn-xs btn-success btn-marcar-empresas' data-marcar='1'><i class='fa fa-check'></i> Marcar todas</button>
 										<button type='button' class='btn btn-xs btn-default btn-marcar-empresas' data-marcar='0'><i class='fa fa-times'></i> Desmarcar todas</button>
 									</div>
-									<small class='text-muted'>Todas marcadas por padrão. Desmarque uma empresa para que seus funcionários NÃO recebam este treinamento (mesmo com o perfil habilitado).</small>
+									<small class='text-muted'>Todas marcadas por padrão. Desmarque uma empresa para que seus funcionários NÃƒO recebam este treinamento (mesmo com o perfil habilitado).</small>
 								</div>
 							</div>
 							<div class='row'>
 								<div class='col-md-12'>
 									<label>Material de Apoio (PDF ou Imagem):</label>
-									<input type='file' name='material_arquivo' accept='.pdf,.jpg,.jpeg,.png,.gif,.webp' class='form-control'>
-									<small class='text-muted'>Envie um arquivo de apoio (PDF ou imagem) que será exibido junto ao treinamento.</small>";
+									<input type='file' name='material_arquivo[]' id='materialArquivo' multiple accept='.pdf,.jpg,.jpeg,.png,.gif,.webp' class='form-control'>
+									<small class='text-muted'>" . ($isEdicao ? "Selecione um ou mais arquivos e clique em <strong>Enviar materiais</strong>." : "Selecione um ou mais arquivos - serão enviados ao <strong>salvar</strong> o treinamento.") . "</small>
+									" . ($isEdicao ? "<div style='margin-top:6px;'>
+										<button type='button' class='btn btn-sm btn-info' id='btnEnviarMateriais'><i class='fa fa-upload'></i> Enviar materiais</button>
+									</div>" : "") . "
+									<div id='filaMateriais' style='margin-top:8px;'></div>";
 									if ($isEdicao) {
 										$materiais = [];
 										$rsMateriais = query(
@@ -828,8 +1061,11 @@ if (!empty($_POST["epi_carga_horaria"])) {
 										while ($row = mysqli_fetch_assoc($rsMateriais)) {
 											$materiais[] = $row;
 										}
-										if (!empty($materiais)) {
-											echo "<br><strong>Materiais já enviados:</strong><br>";
+										echo "<div id='listaMateriaisExistentes' style='margin-top:10px;'>";
+										if (empty($materiais)) {
+											echo "<p class='text-muted' style='margin:0;'><i class='fa fa-file-o'></i> Nenhum material enviado ainda.</p>";
+										} else {
+											echo "<strong>Materiais já enviados:</strong><br>";
 											foreach ($materiais as $m) {
 												$tamanhoKB = round(($m["tram_nb_tamanho"] ?? 0) / 1024, 1);
 												echo "<div class='material-item'>";
@@ -838,6 +1074,7 @@ if (!empty($_POST["epi_carga_horaria"])) {
 												echo "</div>";
 											}
 										}
+										echo "</div>";
 									}
 									echo "
 								</div>
@@ -944,75 +1181,78 @@ if (!empty($_POST["epi_carga_horaria"])) {
 						</div>";
 						}
 
-						if ($isEdicao && !$ehSerie) {
+						if (!$ehSerie) {
 							echo "
 						<div class='tab-pane " . ($abaAtiva === "avaliacao" ? "active" : "") . "' id='tab_avaliacao'>
 							<div class='row'>
 								<div class='col-md-12'>
 									<p class='text-muted'><i class='fa fa-clipboard-list'></i> Avaliação do treinamento: o usuário só pode realizar a avaliação após <strong>assistir 100% do vídeo</strong>. Nota mínima para aprovação: <strong>{$notaMinima}%</strong> (configurada nos Dados Gerais). Máximo de <strong>10 questões</strong>, cada uma com até 4 opções.</p>
 
-									<div class='row' style='margin-bottom:10px;'>
-										<div class='col-md-8'><h4 style='margin:0;'><i class='fa fa-question-circle'></i> Questões da Avaliação (" . count($questoesTreinamento) . "/10)</h4></div>
-									</div>";
-
-									if (count($questoesTreinamento) >= 10) {
-										echo "<div class='alert alert-warning'><i class='fa fa-exclamation-triangle'></i> Máximo de 10 questões atingido.</div>";
-									}
-
-									echo "
-									<div class='box box-info box-solid' style='margin-top:10px;'>
-										<div class='box-header with-border'><h3 class='box-title'>Cadastrar Nova Questão</h3></div>
+									<div class='box box-success box-solid' style='margin-top:10px;'>
+										<div class='box-header with-border'><h3 class='box-title'><i class='fa fa-plus-circle'></i> Cadastrar Questões da Avaliação</h3></div>
 										<div class='box-body'>
-											<div class='row'>
-												<div class='col-md-12'>" . textarea("Pergunta *", "qtd_pergunta", "", "col-md-12") . "</div>
-											</div>
-											<div class='row'>
-												<div class='col-md-6'>" . campo("Opção 1", "qtd_opcao_1", "", "col-md-12") . "</div>
-												<div class='col-md-6'>" . campo("Opção 2", "qtd_opcao_2", "", "col-md-12") . "</div>
-											</div>
-											<div class='row'>
-												<div class='col-md-6'>" . campo("Opção 3", "qtd_opcao_3", "", "col-md-12") . "</div>
-												<div class='col-md-6'>" . campo("Opção 4", "qtd_opcao_4", "", "col-md-12") . "</div>
-											</div>
-											<div class='row'>
-												<div class='col-md-4'>" . combo("Resposta Correta", "qtd_resposta_correta", "0", "col-md-12", ["0" => "Opção 1", "1" => "Opção 2", "2" => "Opção 3", "3" => "Opção 4"]) . "</div>
-												<div class='col-md-4' style='margin-top:25px;'>
-													<button type='button' name='salvar_questao' value='1' class='btn btn-info' onclick=\"return submitForm('salvar_questao');\"><i class='fa fa-plus'></i> Adicionar Questão</button>
-												</div>
-											</div>
+											<p class='text-muted'>Cadastre uma ou mais questões - elas serão salvas <strong>junto com o treinamento</strong>.</p>
+											<button type='button' class='btn btn-sm btn-info' onclick=\"adicionarQuestaoDinamica('q_avaliacao', 'novasQuestoesTreinamento');\"><i class='fa fa-plus'></i> Adicionar Questão</button>
+											<div id='novasQuestoesTreinamento' style='margin-top:10px;'></div>
 										</div>
 									</div>";
 
-									if (empty($questoesTreinamento)) {
-										echo "<p class='text-muted' style='margin-top:10px;'>Nenhuma questão cadastrada. A avaliação ficará indisponível até cadastrar pelo menos 1 questão.</p>";
-									} else {
-										echo "<h5 style='margin-top:15px;'>Questões Cadastradas</h5>";
-										foreach ($questoesTreinamento as $qi => $q) {
-											$opcoesQ = json_decode($q["treq_tx_opcoes"], true);
-											$corretaQ = (int)$q["treq_nb_resposta_correta"];
-											echo "
-										<div class='questao-item'>
-											<div style='display:flex; justify-content:space-between;'>
-												<strong>Q" . ($qi + 1) . ": " . htmlspecialchars($q["treq_tx_pergunta"]) . "</strong>
-												<a href='cadastro_treinamento.php?acao_excluir_questao={$q["treq_nb_id"]}&treinamento_id={$dados["trei_nb_id"]}' class='btn btn-danger btn-xs' onclick=\"return confirm('Excluir esta questão?');\"><i class='fa fa-trash'></i></a>
-											</div>
-											<div class='opcoes'>";
-											foreach ($opcoesQ as $oi => $op) {
-												$icon = ($oi === $corretaQ) ? "fa-check-circle text-green" : "fa-circle-o text-muted";
-												echo "<i class='fa {$icon}'></i> " . htmlspecialchars($op) . "<br>";
-											}
-											echo "</div></div>";
+									if ($isEdicao) {
+										if (count($questoesTreinamento) >= 10) {
+											echo "<div class='alert alert-warning'><i class='fa fa-exclamation-triangle'></i> Máximo de 10 questões atingido.</div>";
 										}
-									}
-									echo "
+
+										if (empty($questoesTreinamento)) {
+											echo "<p class='text-muted' style='margin-top:10px;'>Nenhuma questão cadastrada. Use o bloco <strong>Cadastrar Questões da Avaliação</strong> acima para adicionar.</p>";
+										} else {
+											echo "<h5 style='margin-top:15px;'><i class='fa fa-list-ol'></i> Questões Cadastradas</h5>";
+											foreach ($questoesTreinamento as $qi => $q) {
+												$opcoesQ = json_decode($q["treq_tx_opcoes"], true);
+												$corretaQ = (int)$q["treq_nb_resposta_correta"];
+												echo "
+											<div class='questao-item'>
+												<div style='display:flex; justify-content:space-between;'>
+													<strong>Q" . ($qi + 1) . ": " . htmlspecialchars($q["treq_tx_pergunta"]) . "</strong>
+													<a href='cadastro_treinamento.php?acao_excluir_questao={$q["treq_nb_id"]}&treinamento_id={$dados["trei_nb_id"]}' class='btn btn-danger btn-xs' onclick=\"return confirm('Excluir esta questão?');\"><i class='fa fa-trash'></i></a>
+												</div>
+												<div class='opcoes'>";
+												foreach ($opcoesQ as $oi => $op) {
+													$icon = ($oi === $corretaQ) ? "fa-check-circle text-green" : "fa-circle-o text-muted";
+													echo "<i class='fa {$icon}'></i> " . htmlspecialchars($op) . "<br>";
+												}
+												echo "</div></div>";
+											}
+										}
+										}
+
+										echo "
 								</div>
 							</div>
 						</div>";
 						}
 
-						if ($isEdicao && $ehSerie) {
+						if ($ehSerie || !$isEdicao) {
 							echo "
-						<div class='tab-pane " . ($abaAtiva === "episodios" ? "active" : "") . "' id='tab_episodios'>
+						<div class='tab-pane " . ($abaAtiva === "episodios" ? "active" : "") . "' id='tab_episodios'>";
+
+							if (!$isEdicao) {
+								// CADASTRO NOVO DE SÉRIE: episódios dinâmicos salvos junto
+								echo "
+							<div class='row'>
+								<div class='col-md-12'>
+									<p class='text-muted'><i class='fa fa-video-camera'></i> Série de vídeos: o usuário só assiste o próximo episódio após <strong>concluir o vídeo</strong> e <strong>ser aprovado na avaliação</strong> do anterior. Cadastre abaixo os episódios da série - todos serão salvos <strong>junto com o treinamento</strong>.</p>
+
+									<div class='box box-success box-solid'>
+										<div class='box-header with-border'><h3 class='box-title'><i class='fa fa-plus-circle'></i> Cadastrar Episódios da Série</h3></div>
+										<div class='box-body'>
+											<button type='button' class='btn btn-sm btn-success' onclick=\"adicionarEpisodioSerie();\"><i class='fa fa-plus'></i> Adicionar Episódio</button>
+											<div id='novosEpisodiosSerie' style='margin-top:12px;'></div>
+										</div>
+									</div>
+								</div>
+							</div>";
+							} else {
+							echo "
 							<div class='row'>
 								<div class='col-md-12'>
 									<p class='text-muted'><i class='fa fa-video-camera'></i> Série de vídeos: o usuário só assiste o próximo episódio após <strong>concluir o vídeo</strong> e <strong>ser aprovado na avaliação</strong> do anterior. Aprovação: nota mínima configurada (individual ou geral da série).</p>
@@ -1081,6 +1321,13 @@ if (!empty($_POST["epi_carga_horaria"])) {
 										<div class='box-body'>
 											<input type='hidden' name='episodio_id' value='" . ($episodioEditId > 0 ? $episodioEdit["trepi_nb_id"] : "") . "'>
 											<input type='hidden' name='episodio_edit' value='{$episodioEditId}'>
+											<div class='alert alert-warning' style='padding:10px 14px;'>
+												<i class='fa fa-exclamation-triangle'></i> <strong>Como salvar este episódio:</strong><br>
+												Preencha os campos e clique em <strong>Salvar Episódio</strong> (botão abaixo) para gravar tudo junto
+												(episódio + questões da avaliação).<br>
+												<span class='text-danger'><i class='fa fa-times-circle'></i> O botão <strong>Salvar</strong> do final da página grava
+												apenas os dados gerais do treinamento e <strong>descartará as alterações deste episódio</strong>.</span>
+											</div>
 											<div class='row'>
 												<div class='col-md-6'>" . campo("Título do Episódio *", "epi_titulo", $epiTitulo, "col-md-12") . "</div>
 												<div class='col-md-2'>" . combo("Tipo Vídeo", "epi_tipo_video", $epiTipoVideo, "col-md-12", ["youtube" => "YouTube", "vimeo" => "Vimeo", "upload" => "Upload Local"]) . "</div>
@@ -1089,18 +1336,29 @@ if (!empty($_POST["epi_carga_horaria"])) {
 											</div>
 											<div class='row'>
 												<div class='col-md-8'>" . campo("URL do Vídeo", "epi_url_video", $epiUrl, "col-md-12") . "</div>
-												<div class='col-md-4' style='margin-top:25px;'>
-													<button type='button' name='salvar_episodio' value='1' class='btn btn-success' onclick=\"return submitForm('salvar_episodio');\"><i class='fa fa-save'></i> Salvar Episódio</button>
-													<a href='cadastro_treinamento.php?id={$dados["trei_nb_id"]}&aba_episodios=1' class='btn btn-default'>Voltar à lista</a>
-												</div>
 											</div>
 											<div class='row'>
 												<div class='col-md-12'>" . textarea("Descrição do Episódio", "epi_descricao", $epiDescricao, "col-md-12") . "</div>
 											</div>
+											<div class='box box-success box-solid' style='margin-top:10px;'>
+												<div class='box-header with-border'><h3 class='box-title'><i class='fa fa-plus-circle'></i> Cadastrar Questões da Avaliação do Episódio</h3></div>
+												<div class='box-body'>
+													<p class='text-muted'>Cadastre uma ou mais questões - elas serão salvas <strong>junto com o episódio</strong>.</p>
+													<button type='button' class='btn btn-sm btn-info' onclick=\"adicionarQuestaoDinamica('epi_q_avaliacao', 'novasQuestoesEpisodio');\"><i class='fa fa-plus'></i> Adicionar Questão</button>
+													<div id='novasQuestoesEpisodio' style='margin-top:10px;'></div>
+												</div>
+											</div>
 											<small class='text-muted'>
 												<i class='fa fa-info-circle'></i> Deixe a Nota Mínima em branco para usar a nota geral da série (" . $dados["trei_nb_nota_minima_aprovacao"] . "%).
-												" . ($episodioEditId < 0 ? "Ao salvar, o episódio é criado e você poderá cadastrar a <strong>avaliação (questões)</strong> logo abaixo." : "Após salvar, continue cadastrando as <strong>questões da avaliação</strong> logo abaixo.") . "
 											</small>
+											<hr>
+											<div style='display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;'>
+												<div>
+													<button type='button' name='salvar_episodio' value='1' class='btn btn-success btn-lg' onclick=\"return submitForm('salvar_episodio');\"><i class='fa fa-save'></i> Salvar Episódio</button>
+													<a href='cadastro_treinamento.php?id={$dados["trei_nb_id"]}&aba_episodios=1' class='btn btn-default btn-lg'><i class='fa fa-arrow-left'></i> Cancelar e voltar à lista</a>
+												</div>
+												<small class='text-muted'><i class='fa fa-info-circle'></i> Use <strong>Salvar Episódio</strong> para não perder estas alterações.</small>
+											</div>
 										</div>
 									</div>";
 									}
@@ -1110,30 +1368,11 @@ if (!empty($_POST["epi_carga_horaria"])) {
 										$epiIdAtual = (int)$episodioEdit["trepi_nb_id"];
 										echo "
 									<div class='box box-success box-solid' style='margin-top:15px;'>
-										<div class='box-header with-border'><h3 class='box-title'><i class='fa fa-clipboard-list'></i> Questões do Episódio (" . count($episodioQuestoes) . "/10)</h3></div>
-										<div class='box-body'>
-											<h5>Cadastrar Nova Questão</h5>
-											<div class='row'>
-												<div class='col-md-12'>" . textarea("Pergunta *", "epi_qtd_pergunta", "", "col-md-12") . "</div>
-											</div>
-											<div class='row'>
-												<div class='col-md-6'>" . campo("Opção 1", "epi_qtd_opcao_1", "", "col-md-12") . "</div>
-												<div class='col-md-6'>" . campo("Opção 2", "epi_qtd_opcao_2", "", "col-md-12") . "</div>
-											</div>
-											<div class='row'>
-												<div class='col-md-6'>" . campo("Opção 3", "epi_qtd_opcao_3", "", "col-md-12") . "</div>
-												<div class='col-md-6'>" . campo("Opção 4", "epi_qtd_opcao_4", "", "col-md-12") . "</div>
-											</div>
-											<div class='row'>
-												<div class='col-md-4'>" . combo("Resposta Correta", "epi_qtd_resposta_correta", "0", "col-md-12", ["0" => "Opção 1", "1" => "Opção 2", "2" => "Opção 3", "3" => "Opção 4"]) . "</div>
-												<div class='col-md-4' style='margin-top:25px;'>
-													<button type='button' name='salvar_questao_episodio' value='1' class='btn btn-info' onclick=\"return submitForm('salvar_questao_episodio');\"><i class='fa fa-plus'></i> Adicionar Questão</button>
-												</div>
-											</div>";
+										<div class='box-header with-border'><h3 class='box-title'><i class='fa fa-list-ol'></i> Questões Cadastradas do Episódio (" . count($episodioQuestoes) . "/10)</h3></div>
+										<div class='box-body'>";
 											if (empty($episodioQuestoes)) {
-												echo "<p class='text-muted' style='margin-top:10px;'>Nenhuma questão cadastrada para este episódio.</p>";
+												echo "<p class='text-muted' style='margin-top:10px;'>Nenhuma questão cadastrada para este episódio. Use o bloco <strong>Cadastrar Questões da Avaliação do Episódio</strong> acima para adicionar.</p>";
 											} else {
-												echo "<h5 style='margin-top:15px;'>Questões Cadastradas</h5>";
 												foreach ($episodioQuestoes as $qi => $q) {
 													$opcoesQ = json_decode($q["trepq_tx_opcoes"], true);
 													$corretaQ = (int)$q["trepq_nb_resposta_correta"];
@@ -1155,6 +1394,7 @@ if (!empty($_POST["epi_carga_horaria"])) {
 										</div>
 									</div>";
 									}
+									} // fim do else (conteúdo da edição da série)
 									echo "
 								</div>
 							</div>
@@ -1167,6 +1407,12 @@ if (!empty($_POST["epi_carga_horaria"])) {
 				<div class='box-footer'>
 					" . ($isEdicao ? "<input type='hidden' name='id' value='{$dados["trei_nb_id"]}'>
 					<input type='hidden' name='treinamento_id' value='{$dados["trei_nb_id"]}'>" : "") . "
+					" . ($isEdicao && $ehSerie && $episodioEditId !== 0 ? "
+					<div class='alert alert-warning' style='padding:8px 12px; margin-bottom:10px;'>
+						<i class='fa fa-exclamation-triangle'></i> <strong>Você está editando um episódio.</strong>
+						O botão <strong>Salvar</strong> grava apenas os dados do treinamento e <strong>descarta as alterações do episódio</strong>.
+						Clique em <strong>Salvar Episódio</strong> (na aba Episódios) para gravar o episódio antes de salvar o treinamento.
+					</div>" : "") . "
 					<button type='button' name='salvar' value='1' class='btn btn-primary' onclick=\"return submitForm('salvar');\"><i class='fa fa-save'></i> Salvar</button>
 					<a href='cadastro_treinamento.php' class='btn btn-default'><i class='fa fa-arrow-left'></i> Voltar</a>
 				</div>
@@ -1174,7 +1420,45 @@ if (!empty($_POST["epi_carga_horaria"])) {
 		</div>
 
 		<script>
+			var episodioEditAtivo = " . (($isEdicao && $ehSerie && $episodioEditId !== 0) ? "true" : "false") . ";
 			function submitForm(acao){
+				// Proteção: se há episódio em edição e o usuário clica em Salvar (treinamento),
+				// avisa que as alterações do episódio serão descartadas
+				if(acao === 'salvar' && episodioEditAtivo) {
+					Swal.fire({
+						icon: 'warning',
+						title: 'Atenção!',
+						html: 'Você está <strong>editando um episódio</strong>.<br><br>O botão <strong>Salvar</strong> grava apenas os dados do treinamento e <strong>descartará as alterações do episódio</strong>.<br><br>Clique em <strong>Salvar Episódio</strong> (aba Episódios) para gravar o episódio.',
+						showCancelButton: true,
+						confirmButtonColor: '#3c8dbc',
+						cancelButtonColor: '#d9534f',
+						confirmButtonText: '<i class=\"fa fa-check\"></i> Entendi, salvar apenas o treinamento',
+						cancelButtonText: '<i class=\"fa fa-times\"></i> Cancelar'
+					}).then((result) => {
+						if(result.isConfirmed) {
+							executarSubmitForm(acao);
+						}
+					});
+					return false;
+				}
+				return executarSubmitForm(acao);
+			}
+			function executarSubmitForm(acao){
+				if(acao === 'salvar' || acao === 'salvar_episodio') {
+					var problemas = validarQuestoesDinamicas();
+					if(problemas.length > 0) {
+						var lista = problemas.map(function(p){
+							return '<div style=\"text-align:left;\"><i class=\"fa fa-circle-o text-danger\"></i> ' + jQuery('<span>').text(p).html() + '</div>';
+						}).join('');
+						Swal.fire({
+							icon: 'warning',
+							title: 'Atenção!',
+							html: 'Marque a <strong>opção correta</strong> nas questões abaixo:<br><br>' + lista,
+							confirmButtonColor: '#3c8dbc'
+						});
+						return false;
+					}
+				}
 				var f = document.getElementById('formTreinamento');
 				if(!f) return false;
 				var h = document.createElement('input');
@@ -1185,9 +1469,202 @@ if (!empty($_POST["epi_carga_horaria"])) {
 				f.submit();
 				return false;
 			}
-			// Máscara de duração: preenche hh:mm:ss automaticamente à medida que digita.
+			// Abre a aba Avaliação (treinamento único)
+			function abrirAbaAvaliacao(){
+				var el = document.querySelector('a[href=\"#tab_avaliacao\"]');
+				if(el && window.jQuery && jQuery.fn.tab) {
+					jQuery(el).tab('show');
+				}
+			}
+
+			// ===== QUESTÕES DINÂMICAS (cadastro junto com o salvamento) =====
+			var contadorQuestaoDinamica = 0;
+
+			function htmlQuestaoDinamica(prefixo) {
+				var idx = contadorQuestaoDinamica++;
+				var num = contadorQuestaoDinamica;
+				var h = '<div class=\"questao-dinamica\" data-qd-idx=\"' + idx + '\">';
+				h += '<div class=\"qd-header\">';
+				h += '<span class=\"qd-numero\"><i class=\"fa fa-question-circle\"></i> Questão ' + num + '</span>';
+				h += '<button type=\"button\" class=\"btn btn-danger btn-xs\" onclick=\"removerQuestaoDinamica(this)\"><i class=\"fa fa-trash\"></i> Remover</button>';
+				h += '</div>';
+				h += '<div class=\"row\"><div class=\"col-md-12\"><label>Pergunta *</label>';
+				h += '<textarea name=\"' + prefixo + '[pergunta][' + idx + ']\" class=\"form-control qd-pergunta\" rows=\"2\"></textarea>';
+				h += '</div></div>';
+				h += '<div class=\"row\" style=\"margin-top:10px;\">';
+				for(var i = 0; i < 4; i++) {
+					h += '<div class=\"col-md-6\"><div class=\"qd-opcao\">';
+					h += '<span class=\"qd-radio\" title=\"Marcar como correta\"><input type=\"radio\" name=\"' + prefixo + '[correta][' + idx + ']\" value=\"' + i + '\"></span>';
+					h += '<input type=\"text\" name=\"' + prefixo + '[opcao_' + (i + 1) + '][' + idx + ']\" class=\"form-control\" placeholder=\"Opção ' + (i + 1) + '\">';
+					h += '</div></div>';
+				}
+				h += '</div>';
+				h += '<div class=\"qd-legenda\">';
+				h += '<small class=\"text-muted\"><i class=\"fa fa-check-circle text-green\"></i> Marque <strong>1 (uma) opção</strong> como correta em cada questão.</small>';
+				h += '</div></div>';
+				return h;
+			}
+
+			function adicionarQuestaoDinamica(prefixo, containerId) {
+				var container = document.getElementById(containerId);
+				if(!container) return;
+				container.insertAdjacentHTML('beforeend', htmlQuestaoDinamica(prefixo));
+			}
+
+			function renumerarQuestoesDinamicas() {
+				var blocos = document.querySelectorAll('.questao-dinamica');
+				Array.prototype.forEach.call(blocos, function(b, i) {
+					var num = b.querySelector('.qd-numero');
+					if(num) num.innerHTML = '<i class=\"fa fa-question-circle\"></i> Questão ' + (i + 1);
+				});
+			}
+
+			function removerQuestaoDinamica(btn) {
+				var bloco = btn.closest('.questao-dinamica');
+				if(bloco) bloco.remove();
+				renumerarQuestoesDinamicas();
+			}
+
+			// Valida se toda questão com pergunta preenchida tem a opção correta marcada
+			function validarQuestoesDinamicas() {
+				var problemas = [];
+				jQuery('.questao-dinamica').each(function() {
+					var bloco = jQuery(this);
+					var pergunta = bloco.find('textarea').val().trim();
+					if(pergunta === '') return;
+					if(bloco.find('input[type=radio]:checked').length === 0) {
+						problemas.push(pergunta.length > 60 ? pergunta.substring(0, 60) + '...' : pergunta);
+					}
+				});
+				return problemas;
+			}
+
+			// ===== EPISÓDIOS DINÂMICOS (série cadastrada de uma vez) =====
+			var contadorEpisodioSerie = 0;
+
+			function adicionarQuestaoEpisodioSerie(idx) {
+				var container = document.getElementById('questoesEpisodio_' + idx);
+				if(!container) return;
+				container.insertAdjacentHTML('beforeend', htmlQuestaoDinamica('novo_epi[' + idx + '][questoes]'));
+			}
+
+			function htmlEpisodioSerie(idx) {
+				var h = '<div class=\"episodio-serie-dinamico\" style=\"border:1px solid #ddd;border-radius:6px;padding:10px;margin-bottom:12px;background:#fcfcfc;\">';
+				h += '<div class=\"row\"><div class=\"col-md-12\"><strong><i class=\"fa fa-video-camera\"></i> Episódio #' + (idx + 1) + '</strong> ';
+				h += '<button type=\"button\" class=\"btn btn-danger btn-xs\" onclick=\"removerEpisodioSerie(this)\"><i class=\"fa fa-trash\"></i> Remover episódio</button></div></div>';
+				h += '<div class=\"row\" style=\"margin-top:6px;\">';
+				h += '<div class=\"col-md-4\"><label>Título do Episódio *</label><input type=\"text\" name=\"novo_epi[' + idx + '][titulo]\" class=\"form-control input-sm\"></div>';
+				h += '<div class=\"col-md-2\"><label>Tipo Vídeo</label><select name=\"novo_epi[' + idx + '][tipo_video]\" class=\"form-control input-sm\"><option value=\"youtube\">YouTube</option><option value=\"vimeo\">Vimeo</option><option value=\"upload\">Upload Local</option></select></div>';
+				h += '<div class=\"col-md-2\"><label>Duração (hh:mm:ss)</label><input type=\"text\" name=\"novo_epi[' + idx + '][carga_horaria]\" class=\"form-control input-sm\" placeholder=\"00:00:00\" oninput=\"mascaraDuracao(this)\"></div>';
+				h += '<div class=\"col-md-2\"><label>Nota Mínima (%)</label><input type=\"number\" name=\"novo_epi[' + idx + '][nota_minima]\" class=\"form-control input-sm\" placeholder=\"70\"></div>';
+				h += '</div>';
+				h += '<div class=\"row\" style=\"margin-top:6px;\"><div class=\"col-md-12\"><label>URL do Vídeo</label><input type=\"text\" name=\"novo_epi[' + idx + '][url_video]\" class=\"form-control input-sm\"></div></div>';
+				h += '<div class=\"row\" style=\"margin-top:6px;\"><div class=\"col-md-12\"><label>Descrição</label><textarea name=\"novo_epi[' + idx + '][descricao]\" class=\"form-control input-sm\" rows=\"2\"></textarea></div></div>';
+				h += '<div style=\"margin-top:10px;border-top:1px dashed #ccc;padding-top:8px;\">';
+				h += '<button type=\"button\" class=\"btn btn-xs btn-info\" onclick=\"adicionarQuestaoEpisodioSerie(' + idx + ')\"><i class=\"fa fa-plus\"></i> Adicionar Questão deste Episódio</button>';
+				h += '<div id=\"questoesEpisodio_' + idx + '\" style=\"margin-top:8px;\"></div>';
+				h += '</div></div>';
+				return h;
+			}
+
+			function adicionarEpisodioSerie() {
+				var container = document.getElementById('novosEpisodiosSerie');
+				if(!container) return;
+				var idx = contadorEpisodioSerie++;
+				container.insertAdjacentHTML('beforeend', htmlEpisodioSerie(idx));
+			}
+
+			function removerEpisodioSerie(btn) {
+				var bloco = btn.closest('.episodio-serie-dinamico');
+				if(bloco) bloco.remove();
+			}
+
+			// ===== MATERIAL DE APOIO (upload múltiplo) =====
+			var treinamentoIdForm = jQuery('input[name=treinamento_id]').val() || jQuery('input[name=id]').val() || '';
+
+			function renderFilaMateriais() {
+				var input = document.getElementById('materialArquivo');
+				var container = jQuery('#filaMateriais');
+				if(!input || !input.files || !input.files.length) { container.html(''); return; }
+				var html = '<strong>Arquivos selecionados:</strong><br>';
+				Array.from(input.files).forEach(function(f, i) {
+					var nome = jQuery('<span>').text(f.name).html();
+					var kb = Math.round(f.size / 1024);
+					html += '<div class=\"material-item\" style=\"margin-bottom:4px;\">' +
+						'<span><i class=\"fa fa-file\"></i> ' + nome + ' (' + kb + ' KB)</span>' +
+						'<button type=\"button\" class=\"btn btn-danger btn-xs\" onclick=\"removerArquivoFila(' + i + ')\"><i class=\"fa fa-trash\"></i></button>' +
+					'</div>';
+				});
+				container.html(html);
+			}
+
+			function removerArquivoFila(idx) {
+				var input = document.getElementById('materialArquivo');
+				if(!input || !input.files) return;
+				var arquivos = Array.from(input.files);
+				arquivos.splice(idx, 1);
+				if(window.DataTransfer) {
+					var dt = new DataTransfer();
+					arquivos.forEach(function(f){ dt.items.add(f); });
+					input.files = dt.files;
+				}
+				renderFilaMateriais();
+			}
+
+			function adicionarMaterialLista(m) {
+				var container = jQuery('#listaMateriaisExistentes');
+				if(!container.length) return;
+				if(container.find('.material-item').length === 0) container.html('');
+				var nome = jQuery('<span>').text(m.nome).html();
+				container.append('<div class=\"material-item\">' +
+					'<span><i class=\"fa fa-file\"></i> ' + nome + ' (' + m.tamanho_kb + ' KB)</span>' +
+					'<a href=\"cadastro_treinamento.php?acao_excluir_material=' + m.id + '&treinamento_id=' + treinamentoIdForm + '\" class=\"btn btn-danger btn-xs\" onclick=\"return confirm(\'Excluir este material?\');\"><i class=\"fa fa-trash\"></i></a>' +
+				'</div>');
+			}
+
+			function enviarMateriaisAjax() {
+				var input = document.getElementById('materialArquivo');
+				if(!input || !input.files || !input.files.length) return;
+				var formData = new FormData();
+				formData.append('acao_material_upload', '1');
+				formData.append('treinamento_id', treinamentoIdForm);
+				Array.from(input.files).forEach(function(f){ formData.append('material_arquivo[]', f); });
+				jQuery.ajax({
+					url: window.location.pathname,
+					method: 'POST',
+					data: formData,
+					processData: false,
+					contentType: false,
+					dataType: 'json',
+					success: function(data) {
+						if(!data.success) {
+							Swal.fire({ icon: 'error', title: 'Erro', text: data.message || 'Não foi possível enviar.' });
+							return;
+						}
+						(data.resultados || []).forEach(function(m) {
+							if(m.success) adicionarMaterialLista(m);
+							else Swal.fire({ icon: 'warning', title: 'Atenção', text: m.nome + ': ' + m.message });
+						});
+						input.value = '';
+						renderFilaMateriais();
+					},
+					error: function() {
+						Swal.fire({ icon: 'error', title: 'Erro', text: 'Erro ao conectar com o servidor.' });
+					}
+				});
+			}
+
+			jQuery('#btnEnviarMateriais').on('click', function() {
+				if(treinamentoIdForm) {
+					enviarMateriaisAjax();
+				}
+			});
+			jQuery('#materialArquivo').on('change', function() {
+				if(!treinamentoIdForm) renderFilaMateriais();
+			});
+			// Máscara de duração: preenche hh:mm:ss automaticamente Ã  medida que digita.
 			// Os dígitos são lidos do FINAL (o último digitado é o de segundos):
-			// 1 dígito → 00:00:0X | 2 → 00:00:XX | 4 → 00:XX:XX | 6 → XX:XX:XX
+			// 1 dígito â†’ 00:00:0X | 2 â†’ 00:00:XX | 4 â†’ 00:XX:XX | 6 â†’ XX:XX:XX
 			function mascaraDuracao(el) {
 				var digitos = el.value.replace(/[^\d]/g, '').slice(-6);
 				var arr = [];
@@ -1264,8 +1741,33 @@ if (!empty($_POST["epi_carga_horaria"])) {
 				var ehSerie = $('input[name=serie_videos]').is(':checked');
 				$('#div_campos_video').toggle(!ehSerie);
 				$('#div_aviso_serie').toggle(ehSerie);
+				// No cadastro novo, as abas aparecem conforme a flag de série
+				if(!treinamentoIdForm) {
+					jQuery('a[href=\"#tab_avaliacao\"]').closest('li').toggle(!ehSerie);
+					jQuery('a[href=\"#tab_episodios\"]').closest('li').toggle(ehSerie);
+				}
 			}
-			$('input[name=serie_videos]').on('change', alternarCamposSerie);
+			$('input[name=serie_videos]').on('change', function() {
+				var ehSerie = $(this).is(':checked');
+				var urlVideo = $('input[name=url_video]').val().trim();
+				if(ehSerie && urlVideo !== '') {
+					Swal.fire({
+						title: 'Atenção!',
+						html: 'O link do vídeo informado será <strong>desconsiderado</strong>.<br><br>Os vídeos da série devem ser cadastrados como <strong>episódios</strong> na aba <strong>Episódios</strong> (após salvar o treinamento).',
+						icon: 'warning',
+						confirmButtonColor: '#3c8dbc',
+						confirmButtonText: '<i class=\"fa fa-check\"></i> Entendi'
+					}).then(() => {
+						// Regra: ao ativar série, o link do vídeo geral é desconsiderado
+						$('input[name=url_video]').val('');
+						$('#div_preview_video').hide();
+						$('#video_preview_container').html('');
+						alternarCamposSerie();
+					});
+				} else {
+					alternarCamposSerie();
+				}
+			});
 			alternarCamposSerie();
 
 			// Carregar funcionários dos perfis selecionados (aba Atribuições)
@@ -1541,6 +2043,55 @@ if (!empty($_POST["epi_carga_horaria"])) {
 			}
 
 			echo json_encode(["perfis" => array_values($perfisComUsuarios), "usuarios" => $usuarios, "bloqueados" => $bloqueados]);
+			exit;
+		}
+
+		// AJAX: upload de material de apoio (1 arquivo por requisição, aceita múltiplos no frontend)
+		if ($_SERVER["REQUEST_METHOD"] === "POST" && !empty($_POST["acao_material_upload"])) {
+			header('Content-Type: application/json');
+			$treinamentoId = (int)($_POST["treinamento_id"] ?? 0);
+			if ($treinamentoId <= 0 || empty($_FILES["material_arquivo"]["name"]) || !is_array($_FILES["material_arquivo"]["name"])) {
+				echo json_encode(["success" => false, "message" => "Arquivo não informado."]);
+				exit;
+			}
+			$materialDir = __DIR__ . "/uploads/materiais/" . $treinamentoId . "/";
+			if (!is_dir($materialDir)) {
+				mkdir($materialDir, 0755, true);
+			}
+			$permitidos = ["pdf", "jpg", "jpeg", "png", "gif", "webp"];
+			$resultados = [];
+			foreach ($_FILES["material_arquivo"]["name"] as $idx => $nomeOriginal) {
+				if (empty($nomeOriginal) || ($_FILES["material_arquivo"]["error"][$idx] ?? 1) !== UPLOAD_ERR_OK) continue;
+				$ext = strtolower(pathinfo($nomeOriginal, PATHINFO_EXTENSION));
+				if (!in_array($ext, $permitidos)) {
+					$resultados[] = ["success" => false, "nome" => $nomeOriginal, "message" => "Formato não permitido."];
+					continue;
+				}
+				$tamanho = $_FILES["material_arquivo"]["size"][$idx] ?? 0;
+				$nomeSalvo = "mat_" . time() . "_" . rand(1000, 9999) . "." . $ext;
+				if (move_uploaded_file($_FILES["material_arquivo"]["tmp_name"][$idx], $materialDir . $nomeSalvo)) {
+					$cnt = mysqli_fetch_assoc(query(
+						"SELECT COUNT(*) as total FROM treinamento_material WHERE tram_nb_treinamento_id = ?",
+						"i", [$treinamentoId]
+					));
+					$ordem = (int)($cnt["total"] ?? 0) + 1;
+					$retIns = inserir("treinamento_material",
+						["tram_nb_treinamento_id", "tram_tx_nome", "tram_tx_descricao", "tram_tx_arquivo", "tram_tx_tipo_arquivo", "tram_nb_tamanho", "tram_nb_ordem"],
+						[$treinamentoId, $nomeOriginal, "", "materiais/" . $treinamentoId . "/" . $nomeSalvo, $ext, $tamanho, $ordem]
+					);
+					$novoId = (int)($retIns[0] ?? 0);
+					registrarLogTreinamento($treinamentoId, $_SESSION["user_nb_id"], "material_upload", "Material '$nomeOriginal' adicionado");
+					$resultados[] = [
+						"success" => true,
+						"nome" => $nomeOriginal,
+						"id" => (int)$novoId,
+						"tamanho_kb" => round($tamanho / 1024, 1)
+					];
+				} else {
+					$resultados[] = ["success" => false, "nome" => $nomeOriginal, "message" => "Falha ao salvar o arquivo."];
+				}
+			}
+			echo json_encode(["success" => true, "resultados" => $resultados]);
 			exit;
 		}
 

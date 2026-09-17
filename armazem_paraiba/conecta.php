@@ -244,6 +244,18 @@
         mysqli_query($conn, "ALTER TABLE treinamento ADD COLUMN trei_tx_gerar_notificacao ENUM('sim','nao') NOT NULL DEFAULT 'nao' AFTER trei_tx_status");
     }
 
+    // Máximo de tentativas da avaliação (0 = ilimitado com segurança: 10 tentativas + bloqueio de 1h)
+    $__checkMaxTent = mysqli_query($conn, "SHOW COLUMNS FROM treinamento LIKE 'trei_nb_max_tentativas'");
+    if ($__checkMaxTent && mysqli_num_rows($__checkMaxTent) === 0) {
+        mysqli_query($conn, "ALTER TABLE treinamento ADD COLUMN trei_nb_max_tentativas INT NOT NULL DEFAULT 2 AFTER trei_nb_nota_minima_aprovacao");
+    }
+
+    // Data da última tentativa de avaliação (para o bloqueio de 1h no modo 0)
+    $__checkUltTent = mysqli_query($conn, "SHOW COLUMNS FROM treinamento_progresso LIKE 'trepr_dt_data_ultima_avaliacao'");
+    if ($__checkUltTent && mysqli_num_rows($__checkUltTent) === 0) {
+        mysqli_query($conn, "ALTER TABLE treinamento_progresso ADD COLUMN trepr_dt_data_ultima_avaliacao DATETIME NULL AFTER trepr_nb_avaliacao_nota");
+    }
+
     // Tabela de materiais de apoio
     mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_material (
         tram_nb_id INT AUTO_INCREMENT PRIMARY KEY,

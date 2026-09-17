@@ -178,7 +178,10 @@
 			<div class='col-md-12'>
 				<div class='info-card'>
 					<h4><i class='fa fa-comments'></i> Gestão de Conversas</h4>
-					<p class='text-muted'>Acompanhe as dúvidas dos usuários nos treinamentos e responda diretamente. Mensagens sem resposta do gestor aparecem em <strong>vermelho</strong>.</p>
+					<p class='text-muted'>
+						<i class='fa fa-info-circle'></i> Acompanhe as dúvidas dos usuários nos treinamentos e responda diretamente. Mensagens sem resposta do gestor aparecem em <strong>vermelho</strong>.
+						<br><small><i class='fa fa-bell'></i> <strong>Dica:</strong> os contadores de <strong>\"sem resposta\"</strong> (e as notificações) saem da tela automaticamente assim que o gestor <strong>responde</strong> a conversa.</small>
+					</p>
 				</div>
 			</div>
 		</div>
