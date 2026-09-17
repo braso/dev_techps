@@ -295,13 +295,63 @@
 			exit;
 		}
 		$treinamento = carregar("treinamento", $id);
+		if (empty($treinamento)) {
+			header("Location: cadastro_treinamento.php");
+			exit;
+		}
+
+		// Se algum usuário já iniciou (existe progresso), NÃO pode excluir - máximo permitido é inativar
+		$progressoExistente = mysqli_fetch_assoc(query(
+			"SELECT COUNT(*) AS c FROM treinamento_progresso WHERE trepr_nb_treinamento_id = ?",
+			"i", [$id]
+		));
+		if ((int)($progressoExistente["c"] ?? 0) > 0) {
+			atualizar("treinamento", ["trei_tx_status"], ["inativo"], $id);
+			registrarLogTreinamento($id, $_SESSION["user_nb_id"], "exclusao", "Tentativa de exclusão: treinamento inativado pois possui registros de usuários");
+			set_status("Treinamento INATIVADO! Não é possível excluir porque já existem usuários que iniciaram este treinamento. O máximo permitido é desativá-lo.");
+			header("Location: cadastro_treinamento.php");
+			exit;
+		}
+
+		// Sem registros de usuários: exclui fisicamente (FKs com CASCADE removem dependências)
 		if (!empty($treinamento["trei_tx_thumbnail"])) {
 			$caminho = $uploadDir . $treinamento["trei_tx_thumbnail"];
 			if (file_exists($caminho)) unlink($caminho);
 		}
+		query("DELETE FROM treinamento WHERE trei_nb_id = ?", "i", [$id]);
+		set_status("Treinamento excluído com sucesso!");
+		header("Location: cadastro_treinamento.php");
+		exit;
+	}
+
+	function inativarTreinamento($id = null) {
+		if ($id === null) {
+			$id = $_POST["id"] ?? $_GET["id"] ?? 0;
+		}
+		$id = (int)$id;
+		if ($id <= 0) {
+			header("Location: cadastro_treinamento.php");
+			exit;
+		}
 		atualizar("treinamento", ["trei_tx_status"], ["inativo"], $id);
-		registrarLogTreinamento($id, $_SESSION["user_nb_id"], "exclusao", "Treinamento desativado");
-		set_status("Treinamento removido com sucesso!");
+		registrarLogTreinamento($id, $_SESSION["user_nb_id"], "inativacao", "Treinamento inativado");
+		set_status("Treinamento inativado com sucesso!");
+		header("Location: cadastro_treinamento.php");
+		exit;
+	}
+
+	function reativarTreinamento($id = null) {
+		if ($id === null) {
+			$id = $_POST["id"] ?? $_GET["id"] ?? 0;
+		}
+		$id = (int)$id;
+		if ($id <= 0) {
+			header("Location: cadastro_treinamento.php");
+			exit;
+		}
+		atualizar("treinamento", ["trei_tx_status"], ["ativo"], $id);
+		registrarLogTreinamento($id, $_SESSION["user_nb_id"], "reativacao", "Treinamento reativado");
+		set_status("Treinamento reativado com sucesso!");
 		header("Location: cadastro_treinamento.php");
 		exit;
 	}
@@ -1931,7 +1981,7 @@ if (!empty($_POST["epi_carga_horaria"])) {
 				if(!id) return;
 				Swal.fire({
 					title: 'Tem certeza?',
-					text: 'Este treinamento será desativado!',
+					html: 'Este treinamento será <strong>excluído</strong>.<br><br><small>Se já existirem usuários que iniciaram, ele será <strong>inativado</strong> (não pode ser excluído).</small>',
 					icon: 'warning',
 					showCancelButton: true,
 					confirmButtonColor: '#d33',
@@ -1944,6 +1994,68 @@ if (!empty($_POST["epi_carga_horaria"])) {
 					}
 				});
 			});
+			$(document).on('click', '.btn-inativar-treinamento', function(event){
+				event.preventDefault();
+				var row = $(this).closest('tr');
+				var id = row.attr('data-row-id');
+				if(!id){
+					id = row.find('td').first().text().trim();
+				}
+				if(!id) return;
+				Swal.fire({
+					title: 'Inativar treinamento?',
+					text: 'O treinamento ficará indisponível para os usuários. Você poderá reativá-lo depois.',
+					icon: 'warning',
+					showCancelButton: true,
+					confirmButtonColor: '#f0ad4e',
+					cancelButtonColor: '#3085d6',
+					confirmButtonText: 'Sim, inativar!',
+					cancelButtonText: 'Cancelar'
+				}).then((result) => {
+					if (result.isConfirmed) {
+						window.location.href = 'cadastro_treinamento.php?acao_inativar=' + id;
+					}
+				});
+			});
+			$(document).on('click', '.btn-reativar-treinamento', function(event){
+				event.preventDefault();
+				var row = $(this).closest('tr');
+				var id = row.attr('data-row-id');
+				if(!id){
+					id = row.find('td').first().text().trim();
+				}
+				if(!id) return;
+				Swal.fire({
+					title: 'Reativar treinamento?',
+					text: 'O treinamento voltará a ficar disponível para os usuários.',
+					icon: 'question',
+					showCancelButton: true,
+					confirmButtonColor: '#27ae60',
+					cancelButtonColor: '#3085d6',
+					confirmButtonText: 'Sim, reativar!',
+					cancelButtonText: 'Cancelar'
+				}).then((result) => {
+					if (result.isConfirmed) {
+						window.location.href = 'cadastro_treinamento.php?acao_reativar=' + id;
+					}
+				});
+			});
+			// Mostra/oculta os botões Inativar e Reativar conforme o status da linha
+			function ajustarBotoesStatusGrid() {
+				var ths = $('#result thead th');
+				var idxStatus = -1;
+				for(var i = 0; i < ths.length; i++) {
+					if($(ths[i]).text().trim().toUpperCase() === 'STATUS') { idxStatus = i; break; }
+				}
+				if(idxStatus < 0) return;
+				$('#result tbody tr').each(function() {
+					var txt = $(this).find('td').eq(idxStatus).text().trim().toLowerCase();
+					var ativo = (txt.indexOf('inativo') === -1);
+					$(this).find('.btn-inativar-treinamento').toggle(ativo);
+					$(this).find('.btn-reativar-treinamento').toggle(!ativo);
+				});
+			}
+			setInterval(ajustarBotoesStatusGrid, 1000);
 			$(document).on('click', '.btn-acompanhar-treinamento', function(event){
 				event.preventDefault();
 				var row = $(this).closest('tr');
@@ -1967,6 +2079,8 @@ if (!empty($_POST["epi_carga_horaria"])) {
 
 		$gridFields["actions"] = [
 			"<spam class='btn-acompanhar-treinamento' style='cursor:pointer;color:#27ae60;margin-right:5px;' title='Acompanhamento'><i class='fa fa-users'></i></spam>",
+			"<spam class='btn-inativar-treinamento' style='cursor:pointer;color:#f0ad4e;margin-right:5px;' title='Inativar'><i class='fa fa-power-off'></i></spam>",
+			"<spam class='btn-reativar-treinamento' style='cursor:pointer;color:#5cb85c;margin-right:5px;display:none;' title='Reativar'><i class='fa fa-play-circle'></i></spam>",
 			"<spam class='btn-editar-treinamento' style='cursor:pointer;color:#337ab7;margin-right:5px;' title='Alterar'><i class='fa fa-pencil'></i></spam>",
 			"<spam class='btn-excluir-treinamento' style='cursor:pointer;color:#d9534f;' title='Excluir'><i class='fa fa-trash'></i></spam>"
 		];
@@ -2116,6 +2230,14 @@ if (!empty($_POST["epi_carga_horaria"])) {
 		// Exclusões via GET (contorna o dispatcher do funcoes.php)
 		if (isset($_GET["acao_excluir"]) && is_numeric($_GET["acao_excluir"])) {
 			excluirTreinamento((int)$_GET["acao_excluir"]);
+			return;
+		}
+		if (isset($_GET["acao_inativar"]) && is_numeric($_GET["acao_inativar"])) {
+			inativarTreinamento((int)$_GET["acao_inativar"]);
+			return;
+		}
+		if (isset($_GET["acao_reativar"]) && is_numeric($_GET["acao_reativar"])) {
+			reativarTreinamento((int)$_GET["acao_reativar"]);
 			return;
 		}
 		if (isset($_GET["acao_excluir_material"]) && is_numeric($_GET["acao_excluir_material"])) {
