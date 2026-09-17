@@ -175,6 +175,14 @@
                 "autor"   => $__gestorNome,
             ]);
             $__msg = $res["ok"] ? strval($res["dados"]["msg"] ?? "Tipo do chamado atualizado.") : "Erro ao alterar o tipo. " . ($res["dados"]["msg"] ?? "");
+        } elseif ($acao === "transferir" && $id > 0) {
+            // Setor obrigatório; atendente 0 = fica em aberto no setor.
+            $res = gestao_requisitar("POST", "/suporte/tickets/{$id}/transferir", [], [
+                "setor_id"     => (int) ($_POST["setor_id"] ?? 0),
+                "atendente_id" => (int) ($_POST["atendente_id"] ?? 0),
+                "autor"        => $__gestorNome,
+            ]);
+            $__msg = $res["ok"] ? strval($res["dados"]["msg"] ?? "Chamado transferido.") : "Erro ao transferir o chamado. " . ($res["dados"]["msg"] ?? "");
         } elseif ($acao === "prioridade" && $id > 0) {
             // Independente do status/tipo — pode ser trocada a qualquer momento do fluxo.
             $prioridade = $_POST["prioridade"] ?? "";
@@ -205,8 +213,9 @@
             $__msg = $__sync["ok"] ? $__sync["msg"] : "Erro ao sincronizar os funcionários. " . $__sync["msg"];
         } elseif ($acao === "config") {
             $post = [
-                "emails_notificacao" => trim(strval($_POST["emails_notificacao"] ?? "")),
-                "atualizado_por"     => $__gestorNome,
+                "emails_notificacao"  => trim(strval($_POST["emails_notificacao"] ?? "")),
+                "atendente_padrao_id" => (int) ($_POST["atendente_padrao_id"] ?? 0),
+                "atualizado_por"      => $__gestorNome,
             ];
             foreach (["sla_baixa_horas", "sla_media_horas", "sla_alta_horas", "sla_urgente_horas"] as $__campoSla) {
                 $post[$__campoSla] = trim(strval($_POST[$__campoSla] ?? ""));
@@ -426,12 +435,32 @@
                 <hr style="margin:24px 0 18px;">
                 <form method="post">
                     <input type="hidden" name="sup_acao" value="config" />
+                    <?php $__padraoAtual = (int) ($__configAtual["atendente_padrao_id"] ?? 0); ?>
+                    <div class="form-group">
+                        <label><i class="fa fa-user-plus"></i> Responsável pela triagem</label>
+                        <select name="atendente_padrao_id" class="form-control" style="max-width:520px;">
+                            <option value="0">— ninguém: o chamado novo vai direto ao setor do tipo —</option>
+                            <?php foreach ($__atendentes as $__a): ?>
+                                <option value="<?= (int) ($__a["id"] ?? 0) ?>" <?= $__padraoAtual === (int) ($__a["id"] ?? 0) ? "selected" : "" ?>>
+                                    <?= htmlspecialchars(strval($__a["nome"] ?? "")) ?><?= trim(strval($__a["setor_nome"] ?? "")) !== "" ? " — " . htmlspecialchars(strval($__a["setor_nome"])) : "" ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <span class="help-block">
+                            Todo chamado aberto já nasce com essa pessoa como responsável, e só ela recebe o aviso.
+                            No chamado, ela usa <strong>Transferir</strong> para mandar ao setor ou ao atendente certo.
+                            <?php if ($__padraoAtual > 0 && !in_array($__padraoAtual, array_map(fn($a) => (int) ($a["id"] ?? 0), $__atendentes), true)): ?>
+                                <br><span class="text-warning"><i class="fa fa-exclamation-triangle"></i> O responsável configurado não está mais ativo: os chamados estão indo direto ao setor do tipo.</span>
+                            <?php endif; ?>
+                        </span>
+                    </div>
+
                     <div class="form-group">
                         <label><i class="fa fa-envelope"></i> E-mail(s) que recebem todo chamado novo</label>
                         <input type="text" name="emails_notificacao" class="form-control" style="max-width:520px;"
                                value="<?= htmlspecialchars($__emailsAtuais) ?>"
                                placeholder="suporte@techps.com.br, outro@techps.com.br" />
-                        <span class="help-block">Separe vários e-mails por vírgula. Recebem todos os chamados, de qualquer tipo — além dos funcionários do setor.</span>
+                        <span class="help-block">Separe vários e-mails por vírgula. Recebem todos os chamados, de qualquer tipo — além do responsável pela triagem ou dos funcionários do setor.</span>
                     </div>
 
                     <h4 style="margin-top:20px;"><i class="fa fa-clock-o"></i> SLA por prioridade</h4>
@@ -575,6 +604,79 @@
                     <?php endforeach; ?>
                 </form>
             </div>
+
+            <?php if ($__status !== "fechado"):
+                $__setorAtualId = (int) ($__ticket["setor_id"] ?? 0);
+                $__atendenteAtualId = (int) ($__ticket["atendente_id"] ?? 0);
+            ?>
+            <!-- Transferir: escolhe o setor e depois quem, dentro dele, fica com o chamado (ou deixa em aberto no setor). -->
+            <div class="sup-atend-secao sup-classif">
+                <p class="sup-atend-titulo">Transferir chamado</p>
+                <form method="post" id="formTransferir" class="row" style="margin-bottom:0;">
+                    <input type="hidden" name="sup_acao" value="transferir" />
+                    <input type="hidden" name="id" value="<?= $__verId ?>" />
+                    <div class="col-sm-5">
+                        <div class="form-group">
+                            <label><i class="fa fa-sitemap"></i> Setor</label>
+                            <select name="setor_id" id="transferirSetor" class="form-control input-sm" required>
+                                <option value="">Selecione o setor...</option>
+                                <?php foreach ($__setores as $__st): ?>
+                                    <option value="<?= (int) ($__st["id"] ?? 0) ?>" <?= $__setorAtualId === (int) ($__st["id"] ?? 0) ? "selected" : "" ?>><?= htmlspecialchars(strval($__st["nome"] ?? "")) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-sm-5">
+                        <div class="form-group">
+                            <label><i class="fa fa-user"></i> Atribuir para</label>
+                            <select name="atendente_id" id="transferirAtendente" class="form-control input-sm">
+                                <option value="0">Em aberto no setor (qualquer um assume)</option>
+                                <?php foreach ($__atendentes as $__a): ?>
+                                    <option value="<?= (int) ($__a["id"] ?? 0) ?>" data-setor="<?= (int) ($__a["setor_id"] ?? 0) ?>" <?= $__atendenteAtualId === (int) ($__a["id"] ?? 0) ? "selected" : "" ?>><?= htmlspecialchars(strval($__a["nome"] ?? "")) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <small class="text-muted" id="transferirVazio" style="display:none;"><i class="fa fa-exclamation-triangle text-warning"></i> Ninguém ativo nesse setor: o chamado fica em aberto.</small>
+                        </div>
+                    </div>
+                    <div class="col-sm-2">
+                        <div class="form-group">
+                            <label class="hidden-xs" style="display:block;">&nbsp;</label>
+                            <button type="submit" class="btn blue btn-sm btn-block"><i class="fa fa-share"></i> Transferir</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <script>
+            (function () {
+                var setor = document.getElementById('transferirSetor');
+                var atendente = document.getElementById('transferirAtendente');
+                var aviso = document.getElementById('transferirVazio');
+                // A lista de atendentes mostra só quem é do setor escolhido.
+                function filtrar() {
+                    var visiveis = 0;
+                    Array.prototype.forEach.call(atendente.options, function (op) {
+                        if (op.value === '0') return;
+                        var doSetor = setor.value !== '' && op.getAttribute('data-setor') === setor.value;
+                        op.hidden = !doSetor;
+                        op.disabled = !doSetor;
+                        if (doSetor) visiveis++;
+                    });
+                    var atual = atendente.options[atendente.selectedIndex];
+                    if (!atual || atual.disabled) atendente.value = '0';
+                    atendente.disabled = setor.value === '';
+                    aviso.style.display = setor.value !== '' && visiveis === 0 ? 'block' : 'none';
+                }
+                setor.addEventListener('change', filtrar);
+                document.getElementById('formTransferir').addEventListener('submit', function (e) {
+                    var destino = atendente.value !== '0'
+                        ? atendente.options[atendente.selectedIndex].text
+                        : 'em aberto no setor ' + setor.options[setor.selectedIndex].text;
+                    if (!confirm('Transferir o chamado para ' + destino + '?')) e.preventDefault();
+                });
+                filtrar();
+            })();
+            </script>
+            <?php endif; ?>
 
             <div class="sup-atend-secao sup-classif">
                 <div class="row">

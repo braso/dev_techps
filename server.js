@@ -20,20 +20,35 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.static("public"));
 
-// Conexão com o banco
-const db = mysql.createConnection({
+// Conexão com o banco (pool: uma conexão derrubada pelo MySQL não derruba mais o processo)
+const db = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE,
+    connectionLimit: Number(process.env.DB_POOL_LIMIT) || 10,
+    waitForConnections: true,
+    queueLimit: 0,
 });
 
-db.connect((err) => {
+// Sem estes tratamentos, um ECONNRESET numa conexão ociosa virava "Unhandled 'error' event" e matava o app.
+db.on("connection", (conn) => {
+    conn.on("error", (err) => {
+        console.error("Conexão do banco caiu (o pool abre outra):", err.code || err.message);
+    });
+});
+db.on("error", (err) => {
+    console.error("Erro no pool do banco:", err.code || err.message);
+});
+
+db.getConnection((err, conn) => {
     if (err) {
-        console.error("Erro ao conectar no banco:", err);
-        process.exit(1); // encerra a aplicação
+        // Não encerra: o pool tenta de novo a cada consulta.
+        console.error("Erro ao conectar no banco:", err.code || err.message);
+        return;
     }
     console.log("Conectado ao banco de dados.");
+    conn.release();
 });
 
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -736,6 +751,112 @@ const values = [
 
 /*
 ==================================================
+POSIÇÕES EM LOTE (integrações de rastreadores)
+Recebe um array de posições já no formato da tabela
+TECHPS_LOGISTICA_POS, ignora as que já existem
+(mesma placa + moduleTime + empresaApi) e registra
+a execução em TECHPS_LOGISTICA_LOG.
+Body: { "ciclo": "inova-1min", "posicoes": [ {...}, {...} ] }
+      ou diretamente o array [ {...}, {...} ]
+==================================================
+*/
+const COLUNAS_POS = [
+    "vehicle_plate", "longitude", "latitude", "speed", "ignition", "moduleTime",
+    "hodometro", "endereco", "nomeMotorista", "cnpj", "cliente", "empresaApi"
+];
+
+function dbQuery(sql, params) {
+    return new Promise((resolve, reject) => {
+        db.query(sql, params, (err, result) => (err ? reject(err) : resolve(result)));
+    });
+}
+
+function normalizarPosicao(p) {
+    const str = (v) => (v === undefined || v === null || String(v).trim() === "" || String(v).trim().toUpperCase() === "NULL")
+        ? null : String(v).trim();
+    let ignition = p.ignition;
+    if (typeof ignition === "boolean") ignition = ignition ? "true" : "false";
+    else if (ignition !== undefined && ignition !== null) {
+        const v = String(ignition).trim().toLowerCase();
+        ignition = ["true", "1", "on", "ligada", "sim"].includes(v) ? "true"
+            : ["false", "0", "off", "desligada", "nao", "não"].includes(v) ? "false" : null;
+    } else ignition = null;
+
+    return {
+        vehicle_plate: str(p.vehicle_plate),
+        longitude: str(p.longitude),
+        latitude: str(p.latitude),
+        speed: str(p.speed),
+        ignition,
+        moduleTime: str(p.moduleTime),
+        hodometro: str(p.hodometro),
+        endereco: str(p.endereco),
+        nomeMotorista: str(p.nomeMotorista),
+        cnpj: str(p.cnpj),
+        cliente: str(p.cliente),
+        empresaApi: str(p.empresaApi),
+    };
+}
+
+app.post("/posicoes/lote", async (req, res) => {
+    const posicoes = Array.isArray(req.body) ? req.body : req.body && req.body.posicoes;
+    const cicloBruto = (req.body && !Array.isArray(req.body)) ? req.body.ciclo : null;
+    const ciclo = Number.isFinite(parseInt(cicloBruto)) ? parseInt(cicloBruto) : null; // coluna numérica
+
+    if (!Array.isArray(posicoes) || posicoes.length === 0) {
+        return res.status(400).json({ ok: false, msg: "Envie um array em 'posicoes' com ao menos uma posição." });
+    }
+
+    let inseridas = 0, duplicadas = 0;
+    const invalidas = [];
+
+    try {
+        for (let i = 0; i < posicoes.length; i++) {
+            const p = normalizarPosicao(posicoes[i]);
+            if (!p.vehicle_plate || !p.moduleTime || !p.cnpj) {
+                invalidas.push({ indice: i, motivo: "vehicle_plate, moduleTime e cnpj são obrigatórios" });
+                continue;
+            }
+            // INSERT ... SELECT ... WHERE NOT EXISTS: não duplica a mesma posição da mesma placa/empresa
+            const sql = `
+                INSERT INTO TECHPS_LOGISTICA_POS (${COLUNAS_POS.join(", ")})
+                SELECT ${COLUNAS_POS.map(() => "?").join(", ")}
+                FROM DUAL
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM TECHPS_LOGISTICA_POS
+                    WHERE vehicle_plate = ? AND moduleTime = ? AND (empresaApi <=> ?)
+                )
+            `;
+            const params = [...COLUNAS_POS.map((c) => p[c]), p.vehicle_plate, p.moduleTime, p.empresaApi];
+            const r = await dbQuery(sql, params);
+            if (r.affectedRows > 0) inseridas++; else duplicadas++;
+        }
+
+        // Registra a execução (uma linha por empresa/cliente do lote)
+        const grupos = {};
+        for (const raw of posicoes) {
+            const p = normalizarPosicao(raw);
+            const k = `${p.empresaApi}|${p.cliente}|${p.cnpj}`;
+            grupos[k] = grupos[k] || { empresaApi: p.empresaApi, cliente: p.cliente, cnpj: p.cnpj };
+        }
+        for (const g of Object.values(grupos)) {
+            await dbQuery(
+                "INSERT INTO TECHPS_LOGISTICA_LOG (data_hora, empresa_api, cliente, cnpj, quantidade_posicoes, ciclo) VALUES (NOW(), ?, ?, ?, ?, ?)",
+                [g.empresaApi, g.cliente, g.cnpj, inseridas, ciclo]
+            ).catch((e) => console.error("[POSICOES/LOTE] Falha ao gravar log:", e.message));
+        }
+
+        console.log(`[POSICOES/LOTE] ${ciclo || ""} recebidas=${posicoes.length} inseridas=${inseridas} duplicadas=${duplicadas} invalidas=${invalidas.length}`);
+        res.json({ ok: true, recebidas: posicoes.length, inseridas, duplicadas, invalidas });
+    } catch (err) {
+        console.error("[POSICOES/LOTE] Erro:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao inserir posições.", erro: err.message, inseridas, duplicadas });
+    }
+});
+
+
+/*
+==================================================
 LOG DE EXECUÇÕES (TECHPS_LOGISTICA_LOG)
 ==================================================
 */
@@ -1106,6 +1227,25 @@ async function vincularChamadosPorNome() {
     }
 }
 
+// Atendente ativo pelo id (triagem e transferência). null se não existir ou estiver inativo.
+async function atendenteAtivo(atendenteId) {
+    const id = parseInt(atendenteId, 10);
+    if (!id || id < 1) return null;
+    const linhas = await suporteQuery(
+        "SELECT a.id, a.nome, a.email, a.setor_id, s.nome AS setor_nome FROM suporte_atendente a " +
+        "LEFT JOIN suporte_setor s ON s.id = a.setor_id WHERE a.id = ? AND a.status = 'ativo'",
+        [id]
+    );
+    return linhas.length ? linhas[0] : null;
+}
+
+// Avisa por e-mail um atendente específico (triagem ou transferência direta).
+function notificarAtendente(atendente, ticket, assunto, chamada) {
+    if (!atendente || !atendente.email) return 0;
+    enviarEmailSuporte(atendente.email, assunto, htmlEmailSetor(ticket, chamada));
+    return 1;
+}
+
 // Avisa por e-mail todos os funcionários do setor do chamado que têm e-mail cadastrado.
 async function notificarSetor(ticket, assunto, chamada) {
     const membros = await membrosDoSetor(ticket.setor_id);
@@ -1183,23 +1323,31 @@ function conectarSuporte() {
         console.error("[SUPORTE] Banco externo não configurado no .env (SUPORTE_DB_*).");
         return;
     }
-    SUPORTE.db = mysql.createConnection({
+    SUPORTE.db = mysql.createPool({
         host: host,
         user: user,
         password: process.env.SUPORTE_DB_PASSWORD,
-        database: database
+        database: database,
+        connectionLimit: Number(process.env.SUPORTE_DB_POOL_LIMIT) || 5,
+        waitForConnections: true,
+        queueLimit: 0
+    });
+    // O pool refaz a conexão sozinho, por isso não zera mais SUPORTE.db (senão criaria um pool novo a cada erro).
+    SUPORTE.db.on("connection", (conn) => {
+        conn.on("error", (err) => {
+            console.error("[SUPORTE] Conexão do banco caiu (o pool abre outra):", err.code || err.message);
+        });
     });
     SUPORTE.db.on("error", (err) => {
-        console.error("[SUPORTE] Erro na conexão do banco:", err.message);
-        SUPORTE.db = null;
+        console.error("[SUPORTE] Erro no pool do banco:", err.code || err.message);
     });
-    SUPORTE.db.connect((err) => {
+    SUPORTE.db.getConnection((err, conn) => {
         if (err) {
-            console.error("[SUPORTE] Erro ao conectar no banco externo:", err.message);
-            SUPORTE.db = null;
+            console.error("[SUPORTE] Erro ao conectar no banco externo:", err.code || err.message);
             return;
         }
         console.log("[SUPORTE] Conectado ao banco externo de suporte.");
+        conn.release();
     });
 }
 
@@ -1726,9 +1874,13 @@ app.post("/suporte/tickets", uploadSuporte.array("anexos", SUPORTE.maxArquivos),
             return res.status(429).json({ ok: false, msg: "Limite diário de chamados atingido. Tente novamente amanhã." });
         }
 
+        // Triagem: com responsável configurado (Gestão de Suporte → Configurações), todo chamado novo
+        // já nasce atribuído a ele; o setor do tipo fica registrado para a transferência depois.
+        const triagem = await atendenteAtivo(await obterConfigSuporte("atendente_padrao_id"));
+
         const ins = await suporteQuery(
-            "INSERT INTO suporte_ticket (empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, responsavel_nome, responsavel_email, pagina_url, descricao, tipo_id, tipo_nome, setor_id, setor_nome) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [empresa, empresaNome, uid, ulogin, unome, uemailValido, respNome, respEmailValido, paginaUrl, descricao, tipoId, tipoNome, setorId, setorNome]
+            "INSERT INTO suporte_ticket (empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, responsavel_nome, responsavel_email, pagina_url, descricao, tipo_id, tipo_nome, setor_id, setor_nome, atendente_id, atendente_nome) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [empresa, empresaNome, uid, ulogin, unome, uemailValido, respNome, respEmailValido, paginaUrl, descricao, tipoId, tipoNome, setorId, setorNome, triagem ? triagem.id : null, triagem ? triagem.nome : null]
         );
         const ticketId = ins.insertId;
 
@@ -1770,21 +1922,25 @@ app.post("/suporte/tickets", uploadSuporte.array("anexos", SUPORTE.maxArquivos),
             );
         }
 
-        // Aviso para os funcionários do setor que recebe esse tipo de chamado.
-        await notificarSetor(
-            {
-                id: ticketId,
-                empresa_key: empresa,
-                empresa_nome: empresaNome,
-                tipo_nome: tipoNome,
-                setor_id: setorId,
-                setor_nome: setorNome,
-                user_nome: unome,
-                user_login: ulogin,
-                descricao: descricao
-            },
-            "Novo chamado #" + ticketId + (tipoNome ? " - " + tipoNome : "") + " - TechPS"
-        );
+        // Aviso de chamado novo: só o responsável pela triagem, quando configurado; senão, o setor do tipo.
+        const ticketAviso = {
+            id: ticketId,
+            empresa_key: empresa,
+            empresa_nome: empresaNome,
+            tipo_nome: tipoNome,
+            setor_id: setorId,
+            setor_nome: setorNome,
+            user_nome: unome,
+            user_login: ulogin,
+            descricao: descricao
+        };
+        const assuntoNovo = "Novo chamado #" + ticketId + (tipoNome ? " - " + tipoNome : "") + " - TechPS";
+        if (triagem) {
+            registrarEventoSuporte(ticketId, "atribuido", "Direcionado para triagem com " + triagem.nome, "Sistema");
+            notificarAtendente(triagem, ticketAviso, assuntoNovo, "Você é o responsável pela triagem: analise o chamado e transfira para o setor ou atendente adequado.");
+        } else {
+            await notificarSetor(ticketAviso, assuntoNovo);
+        }
 
         // Aviso interno: e-mail(s) cadastrados em Gestão de Suporte → Configurações.
         const emailsNotificacao = await obterConfigSuporte("emails_notificacao");
@@ -2280,7 +2436,10 @@ async function salvarConfigSuporte(chave, valor, atualizadoPor) {
 // Lê as configurações gerais do suporte (e-mails de aviso de chamado novo + SLA por prioridade).
 app.get("/suporte/config", exigirAdminSuporte, async (req, res) => {
     try {
-        const config = { emails_notificacao: await obterConfigSuporte("emails_notificacao") };
+        const config = {
+            emails_notificacao: await obterConfigSuporte("emails_notificacao"),
+            atendente_padrao_id: await obterConfigSuporte("atendente_padrao_id")
+        };
         for (const campo of SUPORTE_SLA_CAMPOS) {
             config[campo] = await obterConfigSuporte(campo);
         }
@@ -2316,12 +2475,23 @@ app.post("/suporte/config", exigirAdminSuporte, async (req, res) => {
             slaValores[campo] = bruto;
         }
 
+        // Responsável pela triagem: vazio/0 desliga (chamado novo vai direto ao setor do tipo).
+        const padraoBruto = parseInt(req.body.atendente_padrao_id, 10) || 0;
+        let atendentePadrao = "";
+        if (padraoBruto > 0) {
+            if (!(await atendenteAtivo(padraoBruto))) {
+                return res.status(400).json({ ok: false, msg: "O responsável pela triagem escolhido não está ativo." });
+            }
+            atendentePadrao = String(padraoBruto);
+        }
+
         await salvarConfigSuporte("emails_notificacao", emails, atualizadoPor);
+        await salvarConfigSuporte("atendente_padrao_id", atendentePadrao, atualizadoPor);
         for (const campo of SUPORTE_SLA_CAMPOS) {
             await salvarConfigSuporte(campo, slaValores[campo], atualizadoPor);
         }
 
-        res.json({ ok: true, msg: "Configurações salvas.", config: { emails_notificacao: emails, ...slaValores } });
+        res.json({ ok: true, msg: "Configurações salvas.", config: { emails_notificacao: emails, atendente_padrao_id: atendentePadrao, ...slaValores } });
     } catch (err) {
         console.error("[SUPORTE] Erro ao salvar configurações:", err);
         res.status(500).json({ ok: false, msg: "Erro ao salvar configurações." });
@@ -2557,6 +2727,61 @@ app.post("/suporte/tickets/:id/tipo", exigirAdminSuporte, async (req, res) => {
     } catch (err) {
         console.error("[SUPORTE] Erro ao reclassificar chamado:", err);
         res.status(500).json({ ok: false, msg: "Erro ao alterar o tipo do chamado." });
+    }
+});
+
+// Transfere o chamado: escolhe o setor e, opcionalmente, o atendente desse setor.
+// Sem atendente, o chamado fica em aberto no setor (todos do setor são avisados e qualquer um pode assumir).
+app.post("/suporte/tickets/:id/transferir", exigirAdminSuporte, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        const setorIdInformado = parseInt(req.body.setor_id, 10) || 0;
+        const atendenteIdInformado = parseInt(req.body.atendente_id, 10) || 0;
+        const autor = String(req.body.autor || "Gestão TechPS").slice(0, 150);
+        if (!id || id < 1) return res.status(400).json({ ok: false, msg: "ID inválido." });
+        if (setorIdInformado < 1) return res.status(400).json({ ok: false, msg: "Selecione o setor." });
+
+        const chk = await suporteQuery("SELECT * FROM suporte_ticket WHERE id = ?", [id]);
+        if (!chk.length) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
+        if (chk[0].status === "fechado") {
+            return res.status(400).json({ ok: false, msg: "Chamado fechado não pode ser transferido. Reabra o chamado antes." });
+        }
+
+        const setor = await suporteQuery("SELECT id, nome FROM suporte_setor WHERE id = ? AND status = 'ativo'", [setorIdInformado]);
+        if (!setor.length) return res.status(400).json({ ok: false, msg: "Setor inválido ou inativo." });
+
+        let atendente = null;
+        if (atendenteIdInformado > 0) {
+            atendente = await atendenteAtivo(atendenteIdInformado);
+            if (!atendente || Number(atendente.setor_id) !== Number(setor[0].id)) {
+                return res.status(400).json({ ok: false, msg: "O atendente escolhido não está ativo nesse setor." });
+            }
+        }
+
+        if (Number(chk[0].setor_id || 0) === Number(setor[0].id) && Number(chk[0].atendente_id || 0) === Number(atendente ? atendente.id : 0)) {
+            return res.json({ ok: true, msg: "O chamado já está com esse setor e responsável." });
+        }
+
+        await suporteQuery(
+            "UPDATE suporte_ticket SET setor_id = ?, setor_nome = ?, atendente_id = ?, atendente_nome = ? WHERE id = ?",
+            [setor[0].id, setor[0].nome, atendente ? atendente.id : null, atendente ? atendente.nome : null, id]
+        );
+
+        const destino = atendente ? atendente.nome + " (setor " + setor[0].nome + ")" : "setor " + setor[0].nome + ", em aberto";
+        registrarEventoSuporte(id, "transferido", "Transferido para " + destino, autor);
+
+        const ticketAviso = { ...chk[0], setor_id: setor[0].id, setor_nome: setor[0].nome };
+        const assunto = "Chamado #" + id + " transferido para você - TechPS";
+        if (atendente) {
+            notificarAtendente(atendente, ticketAviso, assunto, autor + " transferiu este chamado para você.");
+        } else {
+            notificarSetor(ticketAviso, "Chamado #" + id + " transferido para o seu setor - TechPS", autor + " transferiu este chamado para o seu setor. Acesse a Gestão de Suporte para assumir.");
+        }
+
+        res.json({ ok: true, msg: "Chamado transferido para " + destino + "." });
+    } catch (err) {
+        console.error("[SUPORTE] Erro ao transferir chamado:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao transferir o chamado." });
     }
 });
 
