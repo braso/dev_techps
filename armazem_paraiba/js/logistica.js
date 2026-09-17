@@ -730,6 +730,12 @@ document.addEventListener("DOMContentLoaded", () => {
   
             const firstStartTime = selectedRows[0].getElementsByTagName("td")[1].innerText.trim();
             const lastEndTime = selectedRows[selectedRows.length - 1].getElementsByTagName("td")[2].innerText.trim();
+
+            // Ao selecionar várias linhas, o formulário de ajuste deve usar os
+            // dados da PRIMEIRA linha selecionada (data e início de parada).
+            window.logisticaLinhaStart = firstStartTime;
+            window.logisticaLinhaEnd = lastEndTime;
+            window.logisticaLinhaData = selectedRows[0].dataset.date || window.logisticaLinhaData;
   
             const totalParada = timeToMinutes(lastEndTime) - timeToMinutes(firstStartTime);
   
@@ -1129,6 +1135,14 @@ document.addEventListener("DOMContentLoaded", () => {
         maximumFractionDigits: 2,
       });
     }
+
+    // Converte a data para YYYY-MM-DD no fuso local (toISOString usa UTC e
+    // pode "pular" um dia em registros próximos da meia-noite).
+    function toLocalISODate(d) {
+      if (isNaN(d)) return "";
+      const pad = (n) => String(n).padStart(2, "0");
+      return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+    }
     
     function appendRow(tbody, row) {
       const tr = document.createElement("tr");
@@ -1136,7 +1150,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const moduleDateTime = new Date(row.moduleTime);
       const moduleDate = moduleDateTime.toLocaleDateString();
       const moduleTime = moduleDateTime.toLocaleTimeString();
-      tr.dataset.date = isNaN(moduleDateTime) ? "" : moduleDateTime.toISOString().slice(0, 10);
+      tr.dataset.date = isNaN(moduleDateTime) ? "" : toLocalISODate(moduleDateTime);
     
       let currentHodometro = parseFloat(row.hodometro);
       let hodometroDifference = previousHodometro !== null ? currentHodometro - previousHodometro : null;
@@ -1332,7 +1346,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const tr = document.createElement("tr");
-      tr.dataset.date = isNaN(stopStart) ? "" : stopStart.toISOString().slice(0, 10);
+      tr.dataset.date = isNaN(stopStart) ? "" : toLocalISODate(stopStart);
 
       if (ignition === "true") {
         tr.classList.add("high-speed");
