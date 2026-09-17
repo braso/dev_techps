@@ -157,16 +157,29 @@
 		$episodioId = (int)($_POST["episodio_id"] ?? 0);
 		$tempoAssistido = (int)($_POST["tempo_assistido"] ?? 0);
 		$porcentagem = (float)($_POST["porcentagem"] ?? 0);
+		$duracaoRef = (float)($_POST["duracao_referencia"] ?? 0);
 		if ($porcentagem > 100) $porcentagem = 100;
 
 		$progresso = obterOuCriarProgresso($treinamentoId, $usuarioId, $episodioId);
 		$tempoAnterior = (int)($progresso["trepr_nb_tempo_assistido"] ?? 0);
 
-		// Anti-fraude: limitar avanço a 10s por request, exceto quando o vídeo foi concluído (100%)
-		if ($porcentagem < 100) {
-			$tempoMaximo = $tempoAnterior + 10;
-			if ($tempoAssistido > $tempoMaximo) {
-				$tempoAssistido = $tempoMaximo;
+		// Anti-fraude 1: o tempo só avança 15s por request (sempre - inclusive com 100%).
+		// Impede que um salvamento "restaure" o progresso após o reset de tentativas.
+		$tempoMaximo = $tempoAnterior + 15;
+		if ($tempoAssistido > $tempoMaximo) {
+			$tempoAssistido = $tempoMaximo;
+		}
+
+		// Anti-fraude 2: a porcentagem não pode exceder o que o tempo assistido justifica.
+		// Referência = duração real do vídeo (enviada pelo player), limitada pela carga horária.
+		$treinamentoProg = carregar("treinamento", $treinamentoId);
+		$cargaRef = (int)($treinamentoProg["trei_nb_carga_horaria"] ?? 0);
+		if ($duracaoRef <= 0) $duracaoRef = $cargaRef;
+		if ($cargaRef > 0 && $duracaoRef > $cargaRef) $duracaoRef = $cargaRef;
+		if ($duracaoRef > 0) {
+			$porcentagemMaximaTempo = min(100, ($tempoAssistido / $duracaoRef) * 100) + 3; // tolerância de 3%
+			if ($porcentagem > $porcentagemMaximaTempo) {
+				$porcentagem = round($porcentagemMaximaTempo, 2);
 			}
 		}
 
@@ -213,11 +226,33 @@
 		$ehSerie = ($treinamento["trei_tx_serie"] ?? "nao") === "sim";
 		$progresso = obterOuCriarProgresso($treinamentoId, $usuarioId, $episodioId);
 
-		// Verificar tentativas
+		// Verificar tentativas (máximo configurável no treinamento)
+		// Regra: N > 0 = N tentativas; ao errar todas, precisa reassistir o vídeo.
+		// N = 0 (segurança): 10 tentativas, bloqueio de 1 hora, repetindo o ciclo.
+		$maxTentativasConfig = (int)($treinamento["trei_nb_max_tentativas"] ?? 2);
 		$tentativas = (int)($progresso["trepr_nb_avaliacao_tentativas"] ?? 0);
-		if ($tentativas >= 2) {
-			echo json_encode(["success" => false, "message" => "Número máximo de tentativas atingido. Reassista o vídeo para tentar novamente."]);
-			exit;
+		$ultimaTentativa = $progresso["trepr_dt_data_ultima_avaliacao"] ?? null;
+		$limiteTentativas = ($maxTentativasConfig > 0) ? $maxTentativasConfig : 10;
+
+		if ($tentativas >= $limiteTentativas) {
+			if ($maxTentativasConfig <= 0) {
+				// Modo segurança: bloqueio de 1h após 10 tentativas
+				$bloqueadoAte = !empty($ultimaTentativa) ? strtotime($ultimaTentativa) + 3600 : 0;
+				if ($bloqueadoAte > time()) {
+					$restante = $bloqueadoAte - time();
+					echo json_encode(["success" => false, "message" => "Limite de 10 tentativas atingido. Aguarde " . sprintf("%02d:%02d", floor($restante / 60), $restante % 60) . " para tentar novamente."]);
+					exit;
+				}
+				// Passou 1 hora: libera novo ciclo de tentativas
+				$tentativas = 0;
+				query(
+					"UPDATE treinamento_progresso SET trepr_nb_avaliacao_tentativas = 0 WHERE trepr_nb_id = ?",
+					"i", [(int)$progresso["trepr_nb_id"]]
+				);
+			} else {
+				echo json_encode(["success" => false, "message" => "Número máximo de tentativas atingido. Reassista o vídeo para tentar novamente."]);
+				exit;
+			}
 		}
 
 		// Buscar questões (banco do treinamento OU do episódio quando série)
@@ -288,14 +323,15 @@
 				trepr_tx_avaliacao_respostas_json = ?,
 				trepr_nb_avaliacao_nota = ?,
 				trepr_nb_avaliacao_aprovada = ?,
-				trepr_dt_data_conclusao = ?
+				trepr_dt_data_conclusao = ?,
+				trepr_dt_data_ultima_avaliacao = ?
 			WHERE trepr_nb_treinamento_id = ? AND trepr_nb_usuario_id = ?{$whereEpiAval}",
-			"isdisii" . $typesEpiAval,
-			array_merge([$novaTentativa, json_encode($respostasDetalhadas), $nota, $aprovado ? 1 : 0, $dataConclusao, $treinamentoId, $usuarioId], $valsEpiAval)
+			"isdissii" . $typesEpiAval,
+			array_merge([$novaTentativa, json_encode($respostasDetalhadas), $nota, $aprovado ? 1 : 0, $dataConclusao, date("Y-m-d H:i:s"), $treinamentoId, $usuarioId], $valsEpiAval)
 		);
 
-		// Se reprovado e última tentativa, resetar progresso (reassistir)
-		if (!$aprovado && $novaTentativa >= 2) {
+		// Se reprovado e atingiu o limite (modo N > 0), resetar progresso (precisa reassistir)
+		if (!$aprovado && $maxTentativasConfig > 0 && $novaTentativa >= $limiteTentativas) {
 			$whereEpiReset = $episodioId > 0 ? " AND trepr_nb_episodio_id = ?" : " AND trepr_nb_episodio_id IS NULL";
 			$valsEpiReset = $episodioId > 0 ? [$episodioId] : [];
 			$typesEpiReset = $episodioId > 0 ? "i" : "";
@@ -370,7 +406,8 @@
 			"acertos" => $acertos,
 			"total" => count($questoes),
 			"tentativa" => $novaTentativa,
-			"max_tentativas" => 2,
+			"max_tentativas" => $limiteTentativas,
+			"modo_seguranca" => ($maxTentativasConfig <= 0),
 			"proximo_episodio" => $proximoEpiAval,
 			"respostas" => $respostasDetalhadas,
 			"questoes" => array_map(function($q) {
@@ -617,7 +654,19 @@
 	$aprovado = ($progresso["trepr_nb_avaliacao_aprovada"] ?? 0) == 1;
 	$tentativas = (int)($progresso["trepr_nb_avaliacao_tentativas"] ?? 0);
 	$notaAtual = $progresso["trepr_nb_avaliacao_nota"] ?? null;
-	$podeAvaliar = ($porcentagem >= 99 && !$aprovado && $tentativas < 2);
+	// Máximo de tentativas configurado no treinamento (0 = 10 tentativas + bloqueio de 1h)
+	$maxTentativasConfig = (int)($treinamento["trei_nb_max_tentativas"] ?? 2);
+	$limiteTentativas = ($maxTentativasConfig > 0) ? $maxTentativasConfig : 10;
+	$podeAvaliar = ($porcentagem >= 99 && !$aprovado && $tentativas < $limiteTentativas);
+	// Modo segurança (0): calcular bloqueio de 1h
+	$avaliacaoBloqueadaAte = 0;
+	if ($maxTentativasConfig <= 0 && !$aprovado && $tentativas >= $limiteTentativas) {
+		$ultimaTent = $progresso["trepr_dt_data_ultima_avaliacao"] ?? null;
+		$bloqueadoAte = !empty($ultimaTent) ? strtotime($ultimaTent) + 3600 : 0;
+		if ($bloqueadoAte > time()) {
+			$avaliacaoBloqueadaAte = $bloqueadoAte;
+		}
+	}
 	$embedUrl = gerarEmbedVideo($urlVideo, $tipoVideo);
 	$videoIdYoutube = "";
 	if ($tipoVideo === 'youtube') {
@@ -687,14 +736,46 @@
 					<strong><i class='fa fa-video-camera'></i> Série: " . htmlspecialchars($treinamento["trei_tx_titulo"]) . "</strong>
 					<span class='text-muted'> — Episódio " . ($episodioIndex + 1) . " de {$totalEpisodios}</span>
 					<div class='episodios-navegacao' style='margin-top:10px; display:flex; flex-wrap:wrap; gap:6px;'>";
+					// Um episódio fica acessível quando todos os anteriores estão aprovados
+					// (ou é o episódio atual), permitindo navegar pelos já liberados
+					$liberadoAte = true;
 					foreach ($episodiosSerie as $idx => $ep) {
 						$progEpi = obterOuCriarProgresso($treinamentoId, $usuarioId, (int)$ep["trepi_nb_id"]);
 						$aprovEpi = ((int)($progEpi["trepr_nb_avaliacao_aprovada"] ?? 0)) === 1;
 						$ativo = ((int)$ep["trepi_nb_id"] === $episodioId);
-						$cls = $ativo ? "episodio-item ativo" : ($aprovEpi ? "episodio-item aprovado" : "episodio-item");
-						$icone = $aprovEpi ? "<i class='fa fa-check'></i>" : ($ativo ? "<i class='fa fa-play'></i>" : "<i class='fa fa-lock'></i>");
-						$link = ($aprovEpi || $ativo) ? "treinamento_player.php?id={$treinamentoId}&episodio={$ep["trepi_nb_id"]}" : "#";
-						echo "<a href='{$link}' class='{$cls}' title='" . htmlspecialchars($ep["trepi_tx_titulo"]) . "'>{$icone} #" . ($idx + 1) . " " . htmlspecialchars($ep["trepi_tx_titulo"]) . "</a>";
+						$acessivel = ($aprovEpi || $ativo || $liberadoAte);
+
+						if ($ativo) {
+							$cls = "episodio-item ativo";
+						} elseif ($aprovEpi) {
+							$cls = "episodio-item aprovado";
+						} elseif ($acessivel) {
+							$cls = "episodio-item liberado";
+						} else {
+							$cls = "episodio-item";
+						}
+
+						if ($aprovEpi) {
+							$icone = "<i class='fa fa-check'></i>";
+						} elseif ($acessivel) {
+							$icone = "<i class='fa fa-play'></i>";
+						} else {
+							$icone = "<i class='fa fa-lock'></i>";
+						}
+
+						$link = $acessivel ? "treinamento_player.php?id={$treinamentoId}&episodio={$ep["trepi_nb_id"]}" : "#";
+						$tituloItem = htmlspecialchars($ep["trepi_tx_titulo"]);
+						if (!$acessivel) {
+							$tituloItem .= " (bloqueado - conclua e seja aprovado no episódio anterior)";
+						} elseif (!$aprovEpi && !$ativo) {
+							$tituloItem .= " (liberado)";
+						}
+						echo "<a href='{$link}' class='{$cls}' title='{$tituloItem}'>{$icone} #" . ($idx + 1) . " " . htmlspecialchars($ep["trepi_tx_titulo"]) . "</a>";
+
+						// A partir do primeiro episódio não aprovado, os seguintes ficam bloqueados
+						if (!$aprovEpi) {
+							$liberadoAte = false;
+						}
 					}
 					echo "
 					</div>
@@ -707,6 +788,8 @@
 		.episodio-item:hover { text-decoration:none; background:#f0f0f0; }
 		.episodio-item.ativo { background:#3c8dbc; border-color:#3c8dbc; color:#fff; font-weight:bold; }
 		.episodio-item.aprovado { background:#d4edda; border-color:#27ae60; color:#155724; }
+		.episodio-item.liberado { background:#fff8e1; border-color:#f0ad4e; color:#8a6d3b; }
+		.episodio-item.liberado:hover { background:#ffefc2; }
 	</style>";
 	}
 
@@ -961,22 +1044,45 @@
 								Nota: <strong>{$notaAtual}%</strong>
 							</div>";
 						}
-					} elseif ($tentativas >= 2 && !$aprovado) {
+					} elseif ($tentativas >= $limiteTentativas && !$aprovado && $maxTentativasConfig > 0) {
 						echo "
 							<div class='alert alert-danger'>
-								<i class='fa fa-times-circle'></i> <strong>Número máximo de tentativas atingido (2).</strong><br>
+								<i class='fa fa-times-circle'></i> <strong>Número máximo de tentativas atingido ({$limiteTentativas}).</strong><br>
 								É necessário reassistir o vídeo para tentar novamente.
 							</div>";
+					} elseif ($avaliacaoBloqueadaAte > 0 && !$aprovado) {
+						$restanteSeg = $avaliacaoBloqueadaAte - time();
+						echo "
+							<div class='alert alert-danger'>
+								<i class='fa fa-clock-o'></i> <strong>Limite de {$limiteTentativas} tentativas atingido.</strong><br>
+								Por segurança, aguarde <strong id='tempoBloqueioAvaliacao'>" . sprintf("%02d:%02d", floor($restanteSeg / 60), $restanteSeg % 60) . "</strong> para tentar novamente.
+							</div>
+							<script>
+								(function(){
+									var restante = " . (int)$restanteSeg . ";
+									var el = document.getElementById('tempoBloqueioAvaliacao');
+									if(!el) return;
+									var t = setInterval(function(){
+										restante--;
+										if(restante <= 0){ clearInterval(t); location.reload(); return; }
+										var m = Math.floor(restante / 60), s = restante % 60;
+										el.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+									}, 1000);
+								})();
+							</script>";
 					} elseif (!$podeAvaliar && $tentativas > 0) {
 						echo "
 							<div class='alert alert-warning'>
 								<i class='fa fa-exclamation-triangle'></i> Você precisa assistir pelo menos 99% do vídeo para realizar a avaliação.
 							</div>";
 					} else {
+						$avisoTentativas = ($maxTentativasConfig > 0)
+							? "Tentativa " . ($tentativas + 1) . " de {$limiteTentativas}. Em caso de reprovação em todas as tentativas, o progresso será resetado e você precisará reassistir o vídeo."
+							: "Tentativa " . ($tentativas + 1) . " de {$limiteTentativas}. Se errar todas, haverá bloqueio de 1 hora (segurança).";
 						echo "
 							<div class='alert alert-info'>
 								<i class='fa fa-info-circle'></i> <strong>Avaliação:</strong> Responda as questões abaixo. Nota mínima para aprovação: <strong>{$notaMinimaVigente}%</strong>.
-								<br><small>Tentativa {$tentativas} de 2. Em caso de reprovação na 2ª tentativa, o progresso será resetado e você precisará reassistir o vídeo.</small>
+								<br><small>{$avisoTentativas}</small>
 							</div>
 							<form id='formAvaliacao'>";
 
@@ -1141,6 +1247,11 @@
 
 	<script>
 		// =====================================================
+		// TUDO dentro de um IIFE: impede acesso via console (F12)
+		// às variáveis de controle (ultimoTempo, timers, etc.)
+		// =====================================================
+		(function() {
+		// =====================================================
 		// CONFIGURAÇÃO
 		// =====================================================
 		var treinamentoId = {$treinamentoId};
@@ -1153,7 +1264,7 @@
 		var concluido = " . ($concluido ? "true" : "false") . ";
 		var hasReallyStartedPlayback = false;
 		var ultimoEnvio = 0;
-		var AVANCO_MAXIMO = 2;
+		var AVANCO_MAXIMO = 1.5;
 		var youtubePlayer = null;
 		var vimeoPlayer = null;
 		var youtubeTrackingTimer = null;
@@ -1163,6 +1274,7 @@
 		var youtubeBlockSeeking = false;
 		var vimeoBlockSeeking = false;
 		var blockSeeking = false;
+		var avaliacaoResetada = false;
 
 		function formatarTempo(segundos) {
 			var total = Math.floor(segundos);
@@ -1177,12 +1289,14 @@
 		}
 
 		function salvarProgresso(percent) {
+			if(avaliacaoResetada) return;
 			$.post(window.location.pathname, {
 				acao_player: 'atualizarProgresso',
 				treinamento_id: treinamentoId,
 				episodio_id: episodioId,
 				tempo_assistido: obterProgressoAtual(),
-				porcentagem: Math.floor(percent)
+				porcentagem: Math.floor(percent),
+				duracao_referencia: Math.round(referenceDuration)
 			}, function(data) {
 				if(data.success) {
 					ultimoTempo = Math.max(ultimoTempo, data.tempo);
@@ -1192,6 +1306,7 @@
 
 		// Salvar progresso quando o usuário sair da página (fechar aba, navegar, etc.)
 		function salvarProgressoFinal() {
+			if(avaliacaoResetada) return;
 			var segundos = obterProgressoAtual();
 			if(segundos <= 0 && !hasReallyStartedPlayback) return;
 			var percent = Math.min(100, Math.floor((segundos / referenceDuration) * 100));
@@ -1201,6 +1316,7 @@
 			dados.append('episodio_id', episodioId);
 			dados.append('tempo_assistido', segundos);
 			dados.append('porcentagem', percent);
+			dados.append('duracao_referencia', Math.round(referenceDuration));
 			try {
 				if(navigator.sendBeacon) {
 					navigator.sendBeacon(window.location.pathname, dados);
@@ -1297,18 +1413,37 @@
 				});
 
 				// BLOQUEIO DE VELOCIDADE - não pode ser contornado nem via console
-				Object.defineProperty(video, 'playbackRate', {
-					get: function() { return 1.0; },
-					set: function(value) { return 1.0; },
-					configurable: false
-				});
+				try {
+					Object.defineProperty(video, 'playbackRate', {
+						get: function() { return 1.0; },
+						set: function(value) { return 1.0; },
+						configurable: false
+					});
+					Object.defineProperty(video, 'defaultPlaybackRate', {
+						get: function() { return 1.0; },
+						set: function(value) { return 1.0; },
+						configurable: false
+					});
+				} catch(e) {}
 				video.addEventListener('ratechange', function() {
-					try { video.playbackRate = 1.0; } catch(e) {}
+					try { video.playbackRate = 1.0; video.defaultPlaybackRate = 1.0; } catch(e) {}
 				});
 				var observer = new MutationObserver(function() {
-					try { video.playbackRate = 1.0; } catch(e) {}
+					try { video.playbackRate = 1.0; video.defaultPlaybackRate = 1.0; } catch(e) {}
 				});
-				observer.observe(video, { attributes: true, attributeFilter: ['playbackRate'] });
+				observer.observe(video, { attributes: true, attributeFilter: ['playbackRate', 'defaultPlaybackRate'] });
+
+				// Re-assert periódico: mesmo que o usuário manipule o elemento via F12
+				// (document.getElementById), a posição e a velocidade são corrigidas
+				setInterval(function() {
+					try {
+						if(video.currentTime > ultimoTempo + 0.6) {
+							video.currentTime = ultimoTempo;
+						}
+						if(video.playbackRate !== 1.0) { video.playbackRate = 1.0; }
+						if(video.defaultPlaybackRate !== 1.0) { video.defaultPlaybackRate = 1.0; }
+					} catch(e) {}
+				}, 400);
 
 				$('#btnPlay').on('click', function() { video.play(); });
 				$('#btnPause').on('click', function() { video.pause(); });
@@ -1385,7 +1520,7 @@
 										if(!youtubePlayer || typeof youtubePlayer.getCurrentTime !== 'function') return;
 										var t = youtubePlayer.getCurrentTime();
 										var delta = t - youtubeLastTempo;
-										// Detectou pulo > 2s: bloqueia e reverte
+										// Detectou pulo > tolerância: bloqueia e reverte
 										if(delta > AVANCO_MAXIMO && !youtubeBlockSeeking) {
 											youtubeBlockSeeking = true;
 											var maxPermitido = youtubeLastTempo + AVANCO_MAXIMO;
@@ -1401,7 +1536,7 @@
 										atualizarDisplay(percent);
 										var agora = Date.now();
 										if(agora - ultimoEnvio > 5000) { salvarProgresso(percent); ultimoEnvio = agora; }
-									}, 1000);
+									}, 500);
 								}
 							}
 							if(e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) {
@@ -1424,14 +1559,16 @@
 				});
 			}
 
-			// Bloqueio de velocidade do YouTube (verificação periódica)
+			// Bloqueio de velocidade do YouTube (verificação periódica agressiva)
 			setInterval(function() {
-				if(youtubePlayer && typeof youtubePlayer.getPlaybackRate === 'function') {
-					if(youtubePlayer.getPlaybackRate() !== 1.0) {
-						youtubePlayer.setPlaybackRate(1.0);
+				try {
+					if(youtubePlayer && typeof youtubePlayer.getPlaybackRate === 'function') {
+						if(youtubePlayer.getPlaybackRate() !== 1.0) {
+							youtubePlayer.setPlaybackRate(1.0);
+						}
 					}
-				}
-			}, 500);
+				} catch(e) {}
+			}, 250);
 
 			carregarYouTubeApi();
 		}
@@ -1482,7 +1619,7 @@
 								var agora = Date.now();
 								if(agora - ultimoEnvio > 5000) { salvarProgresso(percent); ultimoEnvio = agora; }
 							}).catch(function() {});
-						}, 1000);
+						}, 500);
 					}
 				});
 
@@ -1506,14 +1643,16 @@
 
 				// Bloqueio de velocidade do Vimeo
 				setInterval(function() {
-					if(vimeoPlayer && typeof vimeoPlayer.getPlaybackRate === 'function') {
-						vimeoPlayer.getPlaybackRate().then(function(rate) {
-							if(rate !== 1.0) {
-								vimeoPlayer.setPlaybackRate(1.0).catch(function() {});
-							}
-						}).catch(function() {});
-					}
-				}, 500);
+					try {
+						if(vimeoPlayer && typeof vimeoPlayer.getPlaybackRate === 'function') {
+							vimeoPlayer.getPlaybackRate().then(function(rate) {
+								if(rate !== 1.0) {
+									vimeoPlayer.setPlaybackRate(1.0).catch(function() {});
+								}
+							}).catch(function() {});
+						}
+					} catch(e) {}
+				}, 250);
 			}
 
 			carregarVimeoApi();
@@ -1562,7 +1701,9 @@
 
 			Swal.fire({
 				title: 'Confirmar envio?',
-				text: 'Você terá no máximo 2 tentativas.',
+				text: " . ($maxTentativasConfig <= 0
+					? "'Tentativa ' + (" . ($tentativas + 1) . ") + ' de {$limiteTentativas}. Se errar todas, haverá bloqueio de 1 hora (segurança).'"
+					: "'Tentativa ' + (" . ($tentativas + 1) . ") + ' de {$limiteTentativas}. Se errar todas, será necessário reassistir o vídeo.'") . ",
 				icon: 'question',
 				showCancelButton: true,
 				confirmButtonColor: '#3085d6',
@@ -1578,6 +1719,11 @@
 						respostas: respostas
 					}, function(data) {
 						if(data.success) {
+							// Reprovou na última tentativa: o backend resetou o progresso.
+							// Bloqueia novos salvamentos para não restaurar a porcentagem antes do reload.
+							if(!data.aprovado && !data.modo_seguranca && data.tentativa >= data.max_tentativas) {
+								avaliacaoResetada = true;
+							}
 							var icon = data.aprovado ? 'success' : 'error';
 							var title = data.aprovado ? 'Parabéns! Aprovado!' : 'Reprovado';
 							var html = '<div style=\"text-align:center;\">' +
@@ -1774,6 +1920,10 @@
 			var container = $('#chatContainer');
 			if(container.length) container.scrollTop(container[0].scrollHeight);
 		}, 300);
+
+		// Única exposição global necessária (botão Enviar Respostas usa onclick inline)
+		window.submeterAvaliacao = submeterAvaliacao;
+		})();
 	</script>";
 
 	rodape();

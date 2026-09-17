@@ -216,6 +216,12 @@ if (!empty($queryResult)) {
                 $data = '<span class="btn-conversa-treinamento" style="cursor:pointer;color:#f39c12;" title="Conversas (Chat)"><i class="fa fa-comments"></i>' . $badge . '</span>';
             }
 
+            if ($key === 'trei_nb_carga_horaria') {
+                // Carga horária em segundos -> exibe como hh:mm:ss (Duração cadastrada)
+                $seg = max(0, (int)$data);
+                $data = sprintf("%02d:%02d:%02d", floor($seg / 3600), floor(($seg % 3600) / 60), $seg % 60);
+            }
+
             if ($key === 'ss_e_tx_status') {
                 $isEntrega = (strpos($queryBase, 'ss_epi_entrega') !== false);
                 if ($isEntrega) {

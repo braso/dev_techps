@@ -736,6 +736,12 @@ document.addEventListener("DOMContentLoaded", () => {
   
             const firstStartTime = selectedRows[0].getElementsByTagName("td")[1].innerText.trim();
             const lastEndTime = selectedRows[selectedRows.length - 1].getElementsByTagName("td")[2].innerText.trim();
+
+            // Ao selecionar várias linhas, o formulário de ajuste deve usar os
+            // dados da PRIMEIRA linha selecionada (data e início de parada).
+            window.logisticaLinhaStart = firstStartTime;
+            window.logisticaLinhaEnd = lastEndTime;
+            window.logisticaLinhaData = selectedRows[0].dataset.date || window.logisticaLinhaData;
   
             const totalParada = timeToMinutes(lastEndTime) - timeToMinutes(firstStartTime);
   
@@ -748,11 +754,6 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("hora").value = formatTime(firstStartTime);
             document.getElementById("horaFim").value = formatTime(lastEndTime);
 
-            // O formulário lateral relê estes valores ao abrir (logistica_modal.js). Sem
-            // atualizar aqui, ele voltava a mostrar os horários só da última linha clicada.
-            window.logisticaLinhaStart = firstStartTime;
-            window.logisticaLinhaEnd = lastEndTime;
-  
             var _poiComentarios = [];
             var _poisData = window.pois || [];
             if (_poisData.length > 0 && coordinates.length > 0) {
@@ -1143,21 +1144,22 @@ document.addEventListener("DOMContentLoaded", () => {
         maximumFractionDigits: 2,
       });
     }
-    
-    // Data yyyy-mm-dd no fuso LOCAL. toISOString() converte para UTC: no Brasil (UTC-3)
-    // tudo a partir das 21:00 caía no dia seguinte e o ajuste abria com a data errada.
-    function dataLocalISO(d) {
-      if (!(d instanceof Date) || isNaN(d)) return "";
-      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-    }
 
+    // Converte a data para YYYY-MM-DD no fuso local (toISOString usa UTC e
+    // pode "pular" um dia em registros próximos da meia-noite).
+    function toLocalISODate(d) {
+      if (isNaN(d)) return "";
+      const pad = (n) => String(n).padStart(2, "0");
+      return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+    }
+    
     function appendRow(tbody, row) {
       const tr = document.createElement("tr");
     
       const moduleDateTime = new Date(row.moduleTime);
       const moduleDate = moduleDateTime.toLocaleDateString();
       const moduleTime = moduleDateTime.toLocaleTimeString();
-      tr.dataset.date = dataLocalISO(moduleDateTime);
+      tr.dataset.date = isNaN(moduleDateTime) ? "" : toLocalISODate(moduleDateTime);
     
       let currentHodometro = parseFloat(row.hodometro);
       let hodometroDifference = previousHodometro !== null ? currentHodometro - previousHodometro : null;
@@ -1353,7 +1355,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const tr = document.createElement("tr");
-      tr.dataset.date = dataLocalISO(stopStart);
+      tr.dataset.date = isNaN(stopStart) ? "" : toLocalISODate(stopStart);
 
       if (ignition === "true") {
         tr.classList.add("high-speed");
