@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 $interno = true;
 include_once "../conecta.php";
 include_once __DIR__."/helpers_troca_turno.php";
