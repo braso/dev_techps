@@ -342,6 +342,27 @@ h2 {
     background: linear-gradient(to right, #0056b3, #87CEFA); /* Escurece os tons ao passar o mouse */
 }
 
+/*ESTILO BOTAÃO CONFIGURAR DESTAQUES*/
+#configDestaqueBtn {
+    background: linear-gradient(to right, #0a6e96, #063747);
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background 0.3s ease;
+}
+
+#configDestaqueBtn:hover {
+    background: linear-gradient(to right, #0056b3, #87CEFA);
+}
+
+/* Destaque de linhas iguais (POI + Ação Esperada) */
+#results table tbody tr.destaque-linha td {
+    box-shadow: inset 0 0 0 2px var(--destaque-cor, #ff0000);
+}
+
 
 
 

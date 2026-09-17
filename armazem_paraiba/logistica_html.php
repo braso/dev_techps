@@ -410,6 +410,7 @@ function salvarNovoTipoPoi(){
             <div class="form-group text-end button-search">
                 <div class="btn-group">
                     <button type="submit" id="consultarBtn" class="btn btn-dark button-consulta">Consultar</button>
+                    <button type="button" id="configDestaqueBtn" class="btn btn-dark button-consulta" title="Configurar destaque de linhas por POI / Ação Esperada">⚙ Destaques</button>
                 </div>
             </div>
         </form>
@@ -597,9 +598,39 @@ function salvarNovoTipoPoi(){
     </div>
 
 
+    <!-- Modal Configuração de Destaques de Linhas -->
+    <div id="configDestaqueModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.5); z-index:99999; align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:12px; padding:24px; width:520px; max-width:95%; box-shadow:0 8px 30px rgba(0,0,0,.3);">
+            <h3 style="margin:0 0 6px 0; font-size:18px;">⚙ Configurar Destaque de Linhas</h3>
+            <p style="color:#666; font-size:13px; margin-bottom:14px;">Defina uma cor para cada <b>Ação Esperada</b>. As linhas do grid cuja Ação Esperada for <b>exatamente igual</b> à configurada terão as bordas destacadas na cor escolhida.</p>
+            <div style="margin-bottom:10px;">
+                <label style="display:block; font-weight:600; font-size:13px; margin-bottom:4px;">Ação Esperada <span style="color:red;">*</span></label>
+                <select id="destaqueAcao" class="form-control" style="width:100%; height:40px;">
+                    <option value="">Selecione a ação esperada</option>
+                </select>
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="display:block; font-weight:600; font-size:13px; margin-bottom:4px;">Cor da borda</label>
+                <input type="color" id="destaqueCor" class="form-control" value="#ff0000" style="height:40px; width:100%; padding:4px; cursor:pointer;">
+            </div>
+            <div style="margin-bottom:14px;">
+                <button type="button" id="addDestaqueBtn" style="width:100%; padding:9px; border:none; border-radius:6px; background:#004173; color:white; cursor:pointer; font-size:14px;">+ Adicionar Configuração</button>
+            </div>
+            <hr style="margin:6px 0 12px 0;">
+            <div style="font-weight:600; font-size:13px; margin-bottom:6px;">Configurações salvas</div>
+            <ul id="destaquesList" class="list-group" style="max-height:220px; overflow-y:auto; margin-bottom:14px; padding:0;"></ul>
+            <div style="display:flex; gap:10px;">
+                <button type="button" onclick="fecharModalDestaque()" style="flex:1; padding:10px; border:1px solid #ccc; border-radius:6px; background:#f5f5f5; cursor:pointer; font-size:14px;">Fechar</button>
+                <button type="button" id="aplicarDestaquesBtn" style="flex:1; padding:10px; border:none; border-radius:6px; background:#28a745; color:white; cursor:pointer; font-size:14px;">Aplicar Destaques</button>
+            </div>
+        </div>
+    </div>
+
+
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="js/logistica.js?v=<?=filemtime(__DIR__.'/js/logistica.js')?>"></script>
     <script src="js/logistica_modal.js"></script>
+    <script src="js/logistica_destaques.js?v=<?=filemtime(__DIR__.'/js/logistica_destaques.js')?>"></script>
 
 
 
@@ -737,6 +768,14 @@ document.addEventListener('DOMContentLoaded', function() {
             border-radius: 10px;
             width: 100px;
             text-alight: center;
+        }
+
+        #configDestaqueBtn {
+            margin-top: 2.6rem;
+            background: #35A3BC;
+            border-radius: 10px;
+            width: 120px;
+            text-align: center;
         }
 
         #toggleFormBtn {
