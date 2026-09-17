@@ -92,22 +92,15 @@
 
     $__status = $__ticket["status"] ?? "";
     $__statusMap = [
-        "aberto"             => '<span class="label label-warning">Aberto</span>',
-        "em_analise"         => '<span class="label label-default" style="background:#8e44ad;">Em Análise</span>',
-        "em_andamento"       => '<span class="label label-info">Em Andamento</span>',
-        "aguardando_cliente" => '<span class="label label-primary">Aguardando retorno do cliente</span>',
-        "resolvido"          => '<span class="label label-success">Concluído</span>',
-        "cancelado"          => '<span class="label label-default">Cancelado</span>',
-        "reaberto"           => '<span class="label label-warning">Reaberto</span>',
-        "encaminhado_ssi"    => '<span class="label label-danger">Encaminhado a SSI</span>',
-        "teste_interno"      => '<span class="label label-default" style="background:#16a085;">Teste Interno</span>',
-        "aguardando_atualizacao" => '<span class="label label-default" style="background:#e67e22;">Aguardando Atualização</span>',
+        "aberto"             => '<span class="label" style="background:#f39c12;">Aberto</span>',
+        "em_analise"         => '<span class="label" style="background:#8e44ad;">Em Análise</span>',
+        "em_desenvolvimento" => '<span class="label" style="background:#2980b9;">Em Desenvolvimento</span>',
+        "desenvolvimento_interno" => '<span class="label" style="background:#d35400;">Desenvolvimento Interno</span>',
+        "corrigido"          => '<span class="label" style="background:#16a085;">Corrigido</span>',
+        "fechado"            => '<span class="label" style="background:#27ae60;">Fechado</span>',
     ];
     $__badge = $__statusMap[$__status] ?? '<span class="label label-default">' . htmlspecialchars($__status) . '</span>';
-    $__tipoMap = ["duvida" => "Dúvida operacional", "sugestao" => "Sugestão", "bug" => "Bug de sistema"];
-    $__tipo = strval($__ticket["tipo"] ?? "");
-    $__ssiCodigo = strval($__ticket["ssi_codigo"] ?? "");
-    $__ssiPrioridade = strval($__ticket["ssi_prioridade"] ?? "");
+    $__tipo = trim(strval($__ticket["tipo_nome"] ?? ""));
 
     cabecalho("Chamado #" . $__id);
 ?>
@@ -140,10 +133,8 @@
                             <tr><th>Usuário</th><td><?= htmlspecialchars(strval($__ticket["user_nome"] ?? "")) ?> (<?= htmlspecialchars(strval($__ticket["user_login"] ?? "")) ?>)</td></tr>
                             <tr><th>Data de abertura</th><td><?= htmlspecialchars(suporte_fmt_data(strval($__ticket["created_at"] ?? ""))) ?></td></tr>
                             <tr><th>Status</th><td><?= $__badge ?></td></tr>
-                            <tr><th>Tipo</th><td><?= isset($__tipoMap[$__tipo]) ? htmlspecialchars($__tipoMap[$__tipo]) : '<span class="text-muted">Em análise</span>' ?></td></tr>
-                            <?php if ($__ssiCodigo !== ""): ?>
-                                <tr><th>SSI</th><td><span class="label label-danger"><?= htmlspecialchars($__ssiCodigo) ?></span> — <?= $__ssiPrioridade === "urgente" ? "Prioritária (urgente em produção)" : "Próxima atualização" ?></td></tr>
-                            <?php endif; ?>
+                            <tr><th>Tipo</th><td><?= $__tipo !== "" ? htmlspecialchars($__tipo) : '<span class="text-muted">Não classificado</span>' ?></td></tr>
+                            <tr><th>Responsável</th><td><?= htmlspecialchars(strval($__ticket["atendente_nome"] ?? "") ?: "Aguardando atendimento") ?></td></tr>
                             <tr><th>Página</th><td style="word-break:break-all;"><small><?= htmlspecialchars(strval($__ticket["pagina_url"] ?? "")) ?></small></td></tr>
                         </table>
                     </div>

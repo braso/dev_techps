@@ -52,7 +52,7 @@
         if ($acao === "status") {
             $id = (int) ($_POST["id"] ?? 0);
             $novoStatus = $_POST["status"] ?? "";
-            if ($id > 0 && ($novoStatus === "aberto" || $novoStatus === "resolvido")) {
+            if ($id > 0 && ($novoStatus === "aberto" || $novoStatus === "fechado")) {
                 $res = suporte_requisitar("POST", "/suporte/tickets/{$id}/status", [], ["status" => $novoStatus]);
                 $__msg = $res["ok"] ? "Status do chamado #{$id} atualizado." : "Erro ao atualizar o status. " . ($res["dados"]["msg"] ?? "");
             }
@@ -68,7 +68,7 @@
     $__fPagina  = max((int) ($_GET["pagina"] ?? 1), 1);
 
     $__queryFiltro = ["empresa" => $__fEmpresa, "pagina" => $__fPagina, "limit" => 25];
-    $__statusPermitidos = ["aberto", "em_analise", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi", "teste_interno", "aguardando_atualizacao"];
+    $__statusPermitidos = ["aberto", "em_analise", "em_desenvolvimento", "desenvolvimento_interno", "corrigido", "fechado"];
     if (in_array($__fStatus, $__statusPermitidos, true)) $__queryFiltro["status"] = $__fStatus;
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $__fInicio)) $__queryFiltro["data_inicio"] = $__fInicio;
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $__fFim)) $__queryFiltro["data_fim"] = $__fFim;
@@ -120,16 +120,9 @@
                         <label style="margin-right:5px;">Status</label>
                         <select name="status" class="form-control">
                             <option value="">Todos</option>
-                            <option value="aberto" <?= ($__fStatus === "aberto") ? "selected" : "" ?>>Aberto</option>
-                            <option value="em_analise" <?= ($__fStatus === "em_analise") ? "selected" : "" ?>>Em Análise</option>
-                            <option value="em_andamento" <?= ($__fStatus === "em_andamento") ? "selected" : "" ?>>Em Andamento</option>
-                            <option value="aguardando_cliente" <?= ($__fStatus === "aguardando_cliente") ? "selected" : "" ?>>Aguardando retorno do cliente</option>
-                            <option value="resolvido" <?= ($__fStatus === "resolvido") ? "selected" : "" ?>>Concluído</option>
-                            <option value="cancelado" <?= ($__fStatus === "cancelado") ? "selected" : "" ?>>Cancelado</option>
-                            <option value="reaberto" <?= ($__fStatus === "reaberto") ? "selected" : "" ?>>Reaberto</option>
-                            <option value="encaminhado_ssi" <?= ($__fStatus === "encaminhado_ssi") ? "selected" : "" ?>>Encaminhado a SSI</option>
-                            <option value="teste_interno" <?= ($__fStatus === "teste_interno") ? "selected" : "" ?>>Teste Interno</option>
-                            <option value="aguardando_atualizacao" <?= ($__fStatus === "aguardando_atualizacao") ? "selected" : "" ?>>Aguardando Atualização</option>
+                            <?php foreach (["aberto" => "Aberto", "em_analise" => "Em Análise", "em_desenvolvimento" => "Em Desenvolvimento", "desenvolvimento_interno" => "Desenvolvimento Interno", "corrigido" => "Corrigido", "fechado" => "Fechado"] as $__sk => $__sl): ?>
+                                <option value="<?= $__sk ?>" <?= ($__fStatus === $__sk) ? "selected" : "" ?>><?= $__sl ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="form-group" style="margin-right:10px;">
@@ -170,16 +163,12 @@
                                 $__descCurta = mb_strlen($__desc, "UTF-8") > 80 ? mb_substr($__desc, 0, 80, "UTF-8") . "…" : $__desc;
                                 $__status = strval($__t["status"] ?? "aberto");
                                 $__badgeMap = [
-                                    "aberto"             => '<span class="label label-warning">Aberto</span>',
-                                    "em_analise"         => '<span class="label label-default" style="background:#8e44ad;">Em Análise</span>',
-                                    "em_andamento"       => '<span class="label label-info">Em Andamento</span>',
-                                    "aguardando_cliente" => '<span class="label label-primary">Aguardando retorno</span>',
-                                    "resolvido"          => '<span class="label label-success">Concluído</span>',
-                                    "cancelado"          => '<span class="label label-default">Cancelado</span>',
-                                    "reaberto"           => '<span class="label label-warning">Reaberto</span>',
-                                    "encaminhado_ssi"    => '<span class="label label-danger">Encaminhado a SSI</span>',
-                                    "teste_interno"      => '<span class="label label-default" style="background:#16a085;">Teste Interno</span>',
-                                    "aguardando_atualizacao" => '<span class="label label-default" style="background:#e67e22;">Aguardando Atualização</span>',
+                                    "aberto"             => '<span class="label" style="background:#f39c12;">Aberto</span>',
+                                    "em_analise"         => '<span class="label" style="background:#8e44ad;">Em Análise</span>',
+                                    "em_desenvolvimento" => '<span class="label" style="background:#2980b9;">Em Desenvolvimento</span>',
+                                    "desenvolvimento_interno" => '<span class="label" style="background:#d35400;">Desenvolvimento Interno</span>',
+                                    "corrigido"          => '<span class="label" style="background:#16a085;">Corrigido</span>',
+                                    "fechado"            => '<span class="label" style="background:#27ae60;">Fechado</span>',
                                 ];
                                 $__badge = $__badgeMap[$__status] ?? '<span class="label label-default">' . htmlspecialchars($__status) . '</span>';
                             ?>

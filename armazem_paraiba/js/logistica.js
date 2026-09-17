@@ -227,6 +227,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const displayResults = (data, plate, dateStart, dateEnd, speed, motoristaNome) => {
       resultsDiv.innerHTML = "";
 
+      // Nova consulta: descarta a linha selecionada na busca anterior, senão o ajuste
+      // abriria com a data/horas dela em vez da data desta consulta.
+      window.logisticaLinhaData = "";
+      window.logisticaLinhaStart = "";
+      window.logisticaLinhaEnd = "";
+
       // A API pode devolver posições fora de ordem cronológica: garante a
       // ordenação por data/hora antes de detectar paradas e calcular KM.
       data = [...data].sort((a, b) => new Date(a.moduleTime) - new Date(b.moduleTime));
@@ -742,9 +748,12 @@ document.addEventListener("DOMContentLoaded", () => {
             row.style.backgroundColor = "#fcc7c7";
             row.style.color = "black";
   
-            document.getElementById("hora").value = formatTime(startTime);
-            document.getElementById("horaFim").value = formatTime(endTime);
-  
+            // O ajuste vale para o intervalo inteiro selecionado: hora de início da PRIMEIRA
+            // linha e hora de fim da ÚLTIMA. Usar o clique (startTime/endTime) pegava só a
+            // linha-âncora e a última clicada, ignorando o que ficou no meio.
+            document.getElementById("hora").value = formatTime(firstStartTime);
+            document.getElementById("horaFim").value = formatTime(lastEndTime);
+
             var _poiComentarios = [];
             var _poisData = window.pois || [];
             if (_poisData.length > 0 && coordinates.length > 0) {

@@ -1,8 +1,11 @@
 <?php
     /* ============================================================
-       Suporte — Gestão Central (apenas domínio TechPS)
-       Lista os chamados de TODAS as empresas, com filtros, troca de
-       status e comentários do gestor. Tudo via API externa.
+       Suporte — Gestão Central (domínios TechPS e Demo)
+       Lista os chamados de todas as empresas. Quem abre escolhe o
+       tipo; cada tipo aponta para um setor, e os funcionários desse
+       setor recebem. Quem clicar em Assumir vira o responsável.
+       Fluxo: Aberto → Em análise → Em desenvolvimento → Corrigido → Fechado.
+       Tudo via API do servidor central de suporte.
        ============================================================ */
     include __DIR__ . "/../load_env.php";
     include_once __DIR__ . "/../conecta.php";
@@ -10,6 +13,7 @@
     include_once __DIR__ . "/_timeline.php";
     include_once __DIR__ . "/_anexos.php";
     include_once __DIR__ . "/_datas.php";
+    include_once __DIR__ . "/_membros_sync.php";
 
     $__empresaAtual = trim(strval($_ENV["CONTEX_PATH"] ?? ""), "/");
     // Gestão central: domínios TechPS (produção) e Demo (desenvolvimento).
@@ -18,10 +22,11 @@
         exit;
     }
 
-    $__apiUrl   = rtrim(strval($_ENV["SUPORTE_API_URL"] ?? ""), "/");
-    $__adminKey = strval($_ENV["SUPORTE_ADMIN_KEY"] ?? "");
+    $__apiUrl      = rtrim(strval($_ENV["SUPORTE_API_URL"] ?? ""), "/");
+    $__adminKey    = strval($_ENV["SUPORTE_ADMIN_KEY"] ?? "");
     $__gestorNome  = trim(strval($_SESSION["user_tx_nome"] ?? "Gestor TechPS"));
     $__gestorLogin = trim(strval($_SESSION["user_tx_login"] ?? ""));
+    $__gestorEmail = strtolower(trim(strval($_SESSION["user_tx_email"] ?? "")));
 
     if (!function_exists("gestao_requisitar")) {
         function gestao_requisitar(string $metodo, string $rota, array $query = [], array $post = []): array {
@@ -54,6 +59,47 @@
         }
     }
 
+    // ── Chat interno (AJAX) ──────────────────────────────────────────────
+    // Responde JSON e sai antes das demais chamadas à API da página: a tela consulta a cada poucos segundos.
+    // Só existe aqui na gestão (domínio TechPS/Demo); detalhe.php da empresa nunca chama estas rotas.
+    $__chatAcao = strval($_POST["sup_acao"] ?? ($_GET["chat_interno"] ?? ""));
+    if ($__chatAcao === "chat_interno_listar" || ($__chatAcao === "chat_interno_enviar" && $_SERVER["REQUEST_METHOD"] === "POST")) {
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        header("Content-Type: application/json; charset=utf-8");
+        $__chatId = (int) ($_POST["id"] ?? ($_GET["id"] ?? 0));
+        if ($__chatId < 1) {
+            echo json_encode(["ok" => false, "msg" => "Chamado inválido."], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        if ($__chatAcao === "chat_interno_enviar") {
+            $res = gestao_requisitar("POST", "/suporte/tickets/{$__chatId}/chat-interno", [], [
+                "texto"       => trim(strval($_POST["texto"] ?? "")),
+                "autor"       => $__gestorNome,
+                "autor_login" => $__gestorLogin,
+            ]);
+        } else {
+            $res = gestao_requisitar("GET", "/suporte/tickets/{$__chatId}/chat-interno", ["depois" => max((int) ($_GET["depois"] ?? 0), 0)]);
+        }
+        if (!$res["ok"]) {
+            echo json_encode(["ok" => false, "msg" => strval($res["dados"]["msg"] ?? "Falha na API de suporte.")], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        $__saida = ["ok" => true];
+        foreach ($res["dados"]["mensagens"] ?? [] as $__m) {
+            $__saida["mensagens"][] = [
+                "id"     => (int) ($__m["id"] ?? 0),
+                "autor"  => strval($__m["autor"] ?? ""),
+                "eu"     => $__gestorLogin !== "" && strval($__m["autor_login"] ?? "") === $__gestorLogin,
+                "texto"  => strval($__m["texto"] ?? ""),
+                "quando" => suporte_fmt_data(strval($__m["created_at"] ?? "")),
+            ];
+        }
+        echo json_encode($__saida, JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     // SLA do chamado, a partir da prioridade + config (sla_<prioridade>_horas). Sem SLA
     // configurado para a prioridade, ou created_at inválido, cai em "Sem SLA".
     if (!function_exists("suporte_sla_status")) {
@@ -72,42 +118,69 @@
         }
     }
 
-    // ── Ações (aceitar / tipo / status / comentário) ───────────────────
+    // ── Fluxo do chamado (um lugar só para detalhe, listagem e filtros) ─────
+    $__fluxo = [
+        "aberto"                  => ["Aberto",                  "#f39c12", "fa-folder-open"],
+        "em_analise"              => ["Em Análise",              "#8e44ad", "fa-search"],
+        "em_desenvolvimento"      => ["Em Desenvolvimento",      "#2980b9", "fa-code"],
+        "desenvolvimento_interno" => ["Desenvolvimento Interno", "#d35400", "fa-cogs"],
+        "corrigido"               => ["Corrigido",               "#16a085", "fa-wrench"],
+        "fechado"                 => ["Fechado",                 "#27ae60", "fa-check"],
+    ];
+    // Próximo passo natural de cada status: destacado entre os botões de status no detalhe.
+    $__proximoPasso = [
+        "aberto"                  => "em_analise",
+        "em_analise"              => "em_desenvolvimento",
+        "em_desenvolvimento"      => "corrigido",
+        "desenvolvimento_interno" => "corrigido",
+        "corrigido"               => "fechado",
+        "fechado"                 => "aberto",
+    ];
+    $__prioridades = [
+        "baixa"   => ["Baixa",   "label-default"],
+        "media"   => ["Média",   "label-info"],
+        "alta"    => ["Alta",    "label-warning"],
+        "urgente" => ["Urgente", "label-danger"],
+    ];
+
+    if (!function_exists("gestao_badge_status")) {
+        function gestao_badge_status(array $fluxo, string $status): string {
+            [$rotulo, $cor] = $fluxo[$status] ?? [$status, "#95a5a6"];
+            return '<span class="label" style="background:' . $cor . ';">' . htmlspecialchars($rotulo) . '</span>';
+        }
+    }
+
+    // ── Ações ────────────────────────────────────────────────────────────
     // Campo "sup_acao" de propósito: o campo "acao" é interceptado pelo
     // dispatcher legado de contex20/funcoes.php (eval + exit).
     $__msg = "";
     if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $acao = $_POST["sup_acao"] ?? "";
         $id = (int) ($_POST["id"] ?? 0);
-        if ($acao === "aceitar" && $id > 0) {
+        if ($acao === "assumir" && $id > 0) {
             $res = gestao_requisitar("POST", "/suporte/tickets/{$id}/aceitar", [], [
                 "atendente"       => $__gestorNome,
                 "atendente_login" => $__gestorLogin,
             ]);
-            $__msg = $res["ok"] ? "Chamado #{$id} aceito — em atendimento." : "Erro ao aceitar o chamado. " . ($res["dados"]["msg"] ?? "");
-        } elseif ($acao === "tipo" && $id > 0) {
-            $tipo = $_POST["tipo"] ?? "";
-            if (in_array($tipo, ["duvida", "sugestao", "bug"], true)) {
-                $res = gestao_requisitar("POST", "/suporte/tickets/{$id}/tipo", [], ["tipo" => $tipo]);
-                $__msg = $res["ok"] ? "Tipo do chamado #{$id} atualizado." : "Erro ao classificar. " . ($res["dados"]["msg"] ?? "");
+            $__msg = $res["ok"] ? "Você assumiu o chamado #{$id}." : "Erro ao assumir o chamado. " . ($res["dados"]["msg"] ?? "");
+        } elseif ($acao === "status" && $id > 0) {
+            $novoStatus = strval($_POST["status"] ?? "");
+            if (isset($__fluxo[$novoStatus])) {
+                $res = gestao_requisitar("POST", "/suporte/tickets/{$id}/status", [], ["status" => $novoStatus, "autor" => $__gestorNome]);
+                $__msg = $res["ok"] ? strval($res["dados"]["msg"] ?? "Status atualizado.") : "Erro ao atualizar o status. " . ($res["dados"]["msg"] ?? "");
             }
+        } elseif ($acao === "tipo" && $id > 0) {
+            $res = gestao_requisitar("POST", "/suporte/tickets/{$id}/tipo", [], [
+                "tipo_id" => (int) ($_POST["tipo_id"] ?? 0),
+                "autor"   => $__gestorNome,
+            ]);
+            $__msg = $res["ok"] ? strval($res["dados"]["msg"] ?? "Tipo do chamado atualizado.") : "Erro ao alterar o tipo. " . ($res["dados"]["msg"] ?? "");
         } elseif ($acao === "prioridade" && $id > 0) {
             // Independente do status/tipo — pode ser trocada a qualquer momento do fluxo.
             $prioridade = $_POST["prioridade"] ?? "";
-            if (in_array($prioridade, ["baixa", "media", "alta", "urgente"], true)) {
+            if (isset($__prioridades[$prioridade])) {
                 $res = gestao_requisitar("POST", "/suporte/tickets/{$id}/prioridade", [], ["prioridade" => $prioridade]);
                 $__msg = $res["ok"] ? "Prioridade do chamado #{$id} atualizada." : "Erro ao alterar prioridade. " . ($res["dados"]["msg"] ?? "");
-            }
-        } elseif ($acao === "status" && $id > 0) {
-            $novoStatus = $_POST["status"] ?? "";
-            $statusPermitidos = ["aberto", "em_analise", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi", "teste_interno", "aguardando_atualizacao"];
-            if (in_array($novoStatus, $statusPermitidos, true)) {
-                $post = ["status" => $novoStatus];
-                if ($novoStatus === "encaminhado_ssi") {
-                    $post["ssi_prioridade"] = ($_POST["ssi_prioridade"] ?? "") === "urgente" ? "urgente" : "proxima_atualizacao";
-                }
-                $res = gestao_requisitar("POST", "/suporte/tickets/{$id}/status", [], $post);
-                $__msg = $res["ok"] ? "Status do chamado #{$id} atualizado." : "Erro ao atualizar o status. " . ($res["dados"]["msg"] ?? "");
             }
         } elseif ($acao === "comentario" && $id > 0) {
             $texto = trim(strval($_POST["texto"] ?? ""));
@@ -119,40 +192,20 @@
                 ]);
                 $__msg = $res["ok"] ? "Comentário adicionado ao chamado #{$id}." : "Erro ao adicionar comentário. " . ($res["dados"]["msg"] ?? "");
             }
-        } elseif ($acao === "atribuir" && $id > 0) {
-            $res = gestao_requisitar("POST", "/suporte/tickets/{$id}/atribuir", [], [
-                "atendente_id" => (int) ($_POST["atendente_id"] ?? 0),
-                "autor"        => $__gestorNome,
+        } elseif ($acao === "tipo_salvar") {
+            $res = gestao_requisitar("POST", "/suporte/tipos", [], [
+                "id"       => (int) ($_POST["tipo_id"] ?? 0),
+                "nome"     => trim(strval($_POST["tipo_nome"] ?? "")),
+                "setor_id" => (int) ($_POST["tipo_setor_id"] ?? 0),
+                "status"   => (($_POST["tipo_status"] ?? "ativo") === "inativo") ? "inativo" : "ativo",
             ]);
-            $__msg = $res["ok"]
-                ? strval($res["dados"]["msg"] ?? "Atendente do chamado #{$id} atualizado.")
-                : "Erro ao atribuir o chamado. " . ($res["dados"]["msg"] ?? "");
-        } elseif ($acao === "atendente_salvar") {
-            // Os vinculos vao como lista separada por virgula — a API regrava os dois
-            // escopos a partir do que chegar aqui (o que nao vier, e desvinculado).
-            $__paraLista = function ($valor): string {
-                return implode(",", array_map("intval", array_filter((array) $valor)));
-            };
-            $res = gestao_requisitar("POST", "/suporte/atendentes", [], [
-                "nome"                => trim(strval($_POST["at_nome"] ?? "")),
-                "email"               => trim(strval($_POST["at_email"] ?? "")),
-                "login"               => trim(strval($_POST["at_login"] ?? "")),
-                "origem_empresa"      => $__empresaAtual,
-                "status"              => (($_POST["at_status"] ?? "ativo") === "inativo") ? "inativo" : "ativo",
-                "setores_externo"     => $__paraLista($_POST["setores_externo"] ?? []),
-                "setores_interno_ssi" => $__paraLista($_POST["setores_interno_ssi"] ?? []),
-            ]);
-            $__msg = $res["ok"] ? "Atendente salvo." : "Erro ao salvar atendente. " . ($res["dados"]["msg"] ?? "");
-        } elseif ($acao === "atendente_remover") {
-            $__atId = (int) ($_POST["atendente_id"] ?? 0);
-            if ($__atId > 0) {
-                $res = gestao_requisitar("POST", "/suporte/atendentes/{$__atId}/remover");
-                $__msg = $res["ok"] ? "Atendente removido da equipe." : "Erro ao remover atendente. " . ($res["dados"]["msg"] ?? "");
-            }
+            $__msg = $res["ok"] ? strval($res["dados"]["msg"] ?? "Tipo de chamado salvo.") : "Erro ao salvar o tipo de chamado. " . ($res["dados"]["msg"] ?? "");
+        } elseif ($acao === "sincronizar_funcionarios") {
+            $__sync = suporte_sincronizar_membros(20);
+            $__msg = $__sync["ok"] ? $__sync["msg"] : "Erro ao sincronizar os funcionários. " . $__sync["msg"];
         } elseif ($acao === "config") {
-            $emails = trim(strval($_POST["emails_notificacao"] ?? ""));
             $post = [
-                "emails_notificacao" => $emails,
+                "emails_notificacao" => trim(strval($_POST["emails_notificacao"] ?? "")),
                 "atualizado_por"     => $__gestorNome,
             ];
             foreach (["sla_baixa_horas", "sla_media_horas", "sla_alta_horas", "sla_urgente_horas"] as $__campoSla) {
@@ -168,95 +221,36 @@
         }
     }
 
-    // ── Empresas e setores para o filtro (via API) ─────────────────────
+    // ── Dados comuns ─────────────────────────────────────────────────────
+    $__verId = (int) ($_GET["id"] ?? 0);
+    $__verConfig = $__verId === 0 && isset($_GET["config"]);
+
     $__resEmpresas = gestao_requisitar("GET", "/suporte/empresas");
     $__empresas = $__resEmpresas["ok"] ? ($__resEmpresas["dados"]["empresas"] ?? []) : [];
 
     $__resSetores = gestao_requisitar("GET", "/suporte/setores");
-    $__setoresFiltro = $__resSetores["ok"] ? ($__resSetores["dados"]["setores"] ?? []) : [];
+    $__setores = $__resSetores["ok"] ? ($__resSetores["dados"]["setores"] ?? []) : [];
 
-    // ── Configurações (e-mails de aviso + SLA por prioridade) — usadas na listagem e no
-    // detalhe (badge de SLA), além da própria tela de configurações. Uma requisição só.
+    // E-mails de aviso + SLA por prioridade (badge de SLA na lista/detalhe e a própria tela de configurações).
     $__resConfig = gestao_requisitar("GET", "/suporte/config");
     $__configAtual = $__resConfig["ok"] ? ($__resConfig["dados"]["config"] ?? []) : [];
 
-    // ── Equipe de atendimento (atendentes vinculados aos setores) ───────
-    // Atendentes ativos vinculados a um setor num escopo ("externo" | "interno_ssi").
-    if (!function_exists("suporte_equipe_do_setor")) {
-        function suporte_equipe_do_setor(array $atendentes, int $setorId, string $escopo): array {
-            if ($setorId < 1) {
-                return [];
-            }
-            $chave = $escopo === "interno_ssi" ? "setores_interno_ssi" : "setores_externo";
-            $equipe = [];
-            foreach ($atendentes as $a) {
-                if (strval($a["status"] ?? "") !== "ativo") {
-                    continue;
-                }
-                foreach ((array) ($a[$chave] ?? []) as $v) {
-                    if ((int) ($v["setor_id"] ?? 0) === $setorId) {
-                        $equipe[] = $a;
-                        break;
-                    }
-                }
-            }
-            return $equipe;
-        }
-    }
+    // Tipos de chamado: nas Configurações aparecem também os inativos, para poder reativar.
+    $__resTipos = gestao_requisitar("GET", "/suporte/tipos", $__verConfig ? ["todos" => 1] : []);
+    $__tipos = $__resTipos["ok"] ? ($__resTipos["dados"]["tipos"] ?? []) : [];
 
-    // ── Modo detalhe / configurações / equipe ───────────────────────────
-    $__verId = (int) ($_GET["id"] ?? 0);
-    $__verConfig = $__verId === 0 && isset($_GET["config"]);
-    $__verEquipe = $__verId === 0 && !$__verConfig && isset($_GET["equipe"]);
-
-    // A equipe alimenta o combo de responsavel (detalhe), o cadastro (tela da equipe)
-    // e o filtro por atendente (listagem) — ou seja, todas as telas menos a de config.
-    $__atendentes = [];
+    // Funcionários que recebem (espelho do cadastro do Demo): Configurações, filtro e "Meus atendimentos".
+    $__resAtendentes = gestao_requisitar("GET", "/suporte/atendentes");
+    $__atendentes = $__resAtendentes["ok"] ? ($__resAtendentes["dados"]["atendentes"] ?? []) : [];
     $__euAtendenteId = 0;
-    if (!$__verConfig) {
-        $__resAtendentes = gestao_requisitar("GET", "/suporte/atendentes");
-        $__atendentes = $__resAtendentes["ok"] ? ($__resAtendentes["dados"]["atendentes"] ?? []) : [];
-
-        // Quem esta logado faz parte da equipe? Casa por login, e-mail ou nome — nessa
-        // ordem — para o atalho "Meus atendimentos" saber qual fila e a dele.
-        $__meuEmail = strtolower(trim(strval($_SESSION["user_tx_email"] ?? "")));
-        foreach ($__atendentes as $__a) {
-            if (strval($__a["status"] ?? "") !== "ativo") {
-                continue;
-            }
-            $__mesmoLogin = $__gestorLogin !== "" && strval($__a["login"] ?? "") === $__gestorLogin;
-            $__mesmoEmail = $__meuEmail !== "" && strtolower(strval($__a["email"] ?? "")) === $__meuEmail;
-            $__mesmoNome  = strval($__a["nome"] ?? "") === $__gestorNome;
-            if ($__mesmoLogin || $__mesmoEmail || $__mesmoNome) {
-                $__euAtendenteId = (int) ($__a["id"] ?? 0);
-                break;
-            }
+    foreach ($__atendentes as $__a) {
+        $__mesmoLogin = $__gestorLogin !== "" && strval($__a["login"] ?? "") === $__gestorLogin;
+        $__mesmoEmail = $__gestorEmail !== "" && strtolower(strval($__a["email"] ?? "")) === $__gestorEmail;
+        $__mesmoNome  = strval($__a["nome"] ?? "") === $__gestorNome;
+        if ($__mesmoLogin || $__mesmoEmail || $__mesmoNome) {
+            $__euAtendenteId = (int) ($__a["id"] ?? 0);
+            break;
         }
-    }
-
-    if ($__verEquipe) {
-        // Fonte de nome/e-mail: usuarios ativos do proprio dominio TechPS. O vinculo
-        // com o setor mora no banco central do suporte, nao no cadastro da empresa.
-        $__usuariosDominio = [];
-        $__rsUsuarios = query(
-            "SELECT user_tx_nome, user_tx_email, user_tx_login
-             FROM user
-             WHERE user_tx_status = 'ativo' AND COALESCE(user_tx_email, '') <> ''
-             ORDER BY user_tx_nome ASC"
-        );
-        while ($__rsUsuarios && ($__u = mysqli_fetch_assoc($__rsUsuarios))) {
-            $__usuariosDominio[] = $__u;
-        }
-    }
-
-    if ($__verConfig) {
-        $__emailsAtuais = strval($__configAtual["emails_notificacao"] ?? "");
-        $__slaAtual = [
-            "baixa"   => strval($__configAtual["sla_baixa_horas"] ?? ""),
-            "media"   => strval($__configAtual["sla_media_horas"] ?? ""),
-            "alta"    => strval($__configAtual["sla_alta_horas"] ?? ""),
-            "urgente" => strval($__configAtual["sla_urgente_horas"] ?? ""),
-        ];
     }
 
     cabecalho("Gestão de Suporte");
@@ -268,15 +262,14 @@
             <div class="portlet-title">
                 <div class="caption">
                     <i class="fa fa-life-ring font-blue"></i>
-                    <span class="caption-subject bold uppercase"><?= $__verId > 0 ? "Chamado #" . $__verId : ($__verConfig ? "Configurações do Suporte" : ($__verEquipe ? "Equipe de Atendimento" : "Gestão de Suporte")) ?></span>
-                    <span class="caption-helper"><?= $__verId > 0 ? "Domínio TechPS" : ($__verConfig ? "Regras e aviso de chamado novo" : ($__verEquipe ? "Atendentes vinculados aos setores" : "Chamados de todas as empresas")) ?></span>
+                    <span class="caption-subject bold uppercase"><?= $__verId > 0 ? "Chamado #" . $__verId : ($__verConfig ? "Configurações do Suporte" : "Gestão de Suporte") ?></span>
+                    <span class="caption-helper"><?= $__verId > 0 ? "Domínio TechPS" : ($__verConfig ? "Tipos de chamado, setores e avisos" : "Chamados de todas as empresas") ?></span>
                 </div>
                 <div class="actions">
-                    <?php if ($__verId > 0 || $__verConfig || $__verEquipe): ?>
+                    <?php if ($__verId > 0 || $__verConfig): ?>
                         <a href="gestao.php" class="btn btn-default btn-sm"><i class="fa fa-arrow-left"></i> Voltar</a>
                     <?php else: ?>
                         <a href="dashboard.php" class="btn btn-default btn-sm"><i class="fa fa-bar-chart"></i> Dashboard</a>
-                        <a href="gestao.php?equipe=1" class="btn btn-default btn-sm"><i class="fa fa-users"></i> Equipe de atendimento</a>
                         <a href="gestao.php?config=1" class="btn btn-default btn-sm"><i class="fa fa-cog"></i> Configurações</a>
                     <?php endif; ?>
                 </div>
@@ -284,326 +277,220 @@
             <div class="portlet-body">
 
 <?php if ($__verConfig): ?>
+<?php
+    // Quem recebe, por setor.
+    $__recebemPorSetor = [];
+    foreach ($__atendentes as $__a) {
+        $__recebemPorSetor[(int) ($__a["setor_id"] ?? 0)][] = $__a;
+    }
+    $__setoresAtivosIds = array_map(fn($st) => (int) ($st["id"] ?? 0), $__setores);
+    $__ehDemo = suporte_dominio_mestre();
+    $__emailsAtuais = strval($__configAtual["emails_notificacao"] ?? "");
+    $__slaAtual = [
+        "baixa"   => strval($__configAtual["sla_baixa_horas"] ?? ""),
+        "media"   => strval($__configAtual["sla_media_horas"] ?? ""),
+        "alta"    => strval($__configAtual["sla_alta_horas"] ?? ""),
+        "urgente" => strval($__configAtual["sla_urgente_horas"] ?? ""),
+    ];
+?>
                 <div class="alert alert-info">
-                    <i class="fa fa-info-circle"></i> Todo chamado novo chega automaticamente com status <strong>Aberto</strong>. A partir daí o fluxo recomendado é
-                    <strong>Aberto → Em Análise → Em Andamento → Concluído</strong> (os status especiais — Aguardando cliente, Reaberto e Cancelado — continuam disponíveis para os casos que precisarem).
-                    <br><br>
-                    Chamados classificados como <strong>Bug de sistema</strong> e encaminhados à SSI seguem um fluxo próprio:
-                    <strong>Encaminhado a SSI → Em Andamento → Teste Interno → Aguardando Atualização → Concluído</strong>. Não existe uma "SSI" separada para fechar — o código SSI é só uma etiqueta gravada no próprio chamado, então concluir o chamado já encerra a SSI junto.
-                    <br><br>
-                    <strong>Aguardando Atualização</strong> indica que a correção/melhoria já foi desenvolvida, testada e aprovada, e está apenas esperando a próxima atualização do sistema subir para produção — os envolvidos são avisados por e-mail automaticamente.
-                    Procedimento de fechamento: quem finaliza o atendimento deve conferir tudo que está subindo na atualização de sistema e verificar se as correções/melhorias deste chamado realmente subiram, antes de marcar como <strong>Concluído</strong>.
+                    <i class="fa fa-info-circle"></i> <strong>Como funciona:</strong> quem abre o chamado escolhe o <strong>tipo</strong>.
+                    Cada tipo está ligado a um <strong>setor</strong>, e os funcionários desse setor recebem o chamado por e-mail e na lista.
+                    Quem clicar em <strong>Assumir</strong> vira o responsável.
+                    <br>Fluxo: <strong>Aberto → Em análise → Em desenvolvimento → Corrigido → Fechado</strong>.
                 </div>
 
+                <!-- Tipos de chamado -->
+                <h4 style="margin-top:0;"><i class="fa fa-tags"></i> Tipos de chamado</h4>
+                <p class="help-block" style="margin-top:-4px;">Escolha qual setor recebe cada tipo. O setor é o mesmo do cadastro de funcionários: quem está no setor, recebe.</p>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped" style="margin-bottom:6px;">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th style="width:240px;">Setor que recebe</th>
+                                <th style="width:120px;">Situação</th>
+                                <th>Quem recebe hoje</th>
+                                <th style="width:100px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php if (empty($__tipos)): ?>
+                            <tr><td colspan="5" class="text-center text-muted">Nenhum tipo de chamado cadastrado ainda.</td></tr>
+                        <?php endif; ?>
+                        <?php foreach ($__tipos as $__tp):
+                            $__formTipo = "form-tipo-" . (int) ($__tp["id"] ?? 0);
+                            $__tpSetor = (int) ($__tp["setor_id"] ?? 0);
+                            $__tpRecebem = $__recebemPorSetor[$__tpSetor] ?? [];
+                        ?>
+                            <tr>
+                                <td><input type="text" name="tipo_nome" form="<?= $__formTipo ?>" class="form-control input-sm" maxlength="150" required value="<?= htmlspecialchars(strval($__tp["nome"] ?? ""), ENT_QUOTES) ?>"></td>
+                                <td>
+                                    <select name="tipo_setor_id" form="<?= $__formTipo ?>" class="form-control input-sm">
+                                        <option value="0">— sem setor —</option>
+                                        <?php foreach ($__setores as $__st): ?>
+                                            <option value="<?= (int) ($__st["id"] ?? 0) ?>" <?= $__tpSetor === (int) ($__st["id"] ?? 0) ? "selected" : "" ?>><?= htmlspecialchars(strval($__st["nome"] ?? "")) ?></option>
+                                        <?php endforeach; ?>
+                                        <?php if ($__tpSetor > 0 && !in_array($__tpSetor, $__setoresAtivosIds, true)): ?>
+                                            <option value="<?= $__tpSetor ?>" selected><?= htmlspecialchars(strval($__tp["setor_nome"] ?? "Setor")) ?> (inativo)</option>
+                                        <?php endif; ?>
+                                    </select>
+                                </td>
+                                <td>
+                                    <select name="tipo_status" form="<?= $__formTipo ?>" class="form-control input-sm">
+                                        <option value="ativo" <?= strval($__tp["status"] ?? "ativo") === "ativo" ? "selected" : "" ?>>Ativo</option>
+                                        <option value="inativo" <?= strval($__tp["status"] ?? "") === "inativo" ? "selected" : "" ?>>Inativo</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <?php if ($__tpSetor < 1): ?>
+                                        <span class="text-muted">Sem setor: só os e-mails gerais abaixo recebem.</span>
+                                    <?php elseif (empty($__tpRecebem)): ?>
+                                        <span class="text-warning"><i class="fa fa-exclamation-triangle"></i> Ninguém nesse setor ainda.</span>
+                                    <?php else: ?>
+                                        <?= htmlspecialchars(implode(", ", array_map(fn($a) => strval($a["nome"] ?? ""), $__tpRecebem))) ?>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <form method="post" id="<?= $__formTipo ?>" style="margin:0;">
+                                        <input type="hidden" name="sup_acao" value="tipo_salvar">
+                                        <input type="hidden" name="tipo_id" value="<?= (int) ($__tp["id"] ?? 0) ?>">
+                                        <button type="submit" class="btn btn-sm blue"><i class="fa fa-save"></i> Salvar</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                            <tr>
+                                <td><input type="text" name="tipo_nome" form="form-tipo-novo" class="form-control input-sm" maxlength="150" required placeholder="Novo tipo (ex.: Financeiro)"></td>
+                                <td>
+                                    <select name="tipo_setor_id" form="form-tipo-novo" class="form-control input-sm">
+                                        <option value="0">— sem setor —</option>
+                                        <?php foreach ($__setores as $__st): ?>
+                                            <option value="<?= (int) ($__st["id"] ?? 0) ?>"><?= htmlspecialchars(strval($__st["nome"] ?? "")) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </td>
+                                <td><input type="hidden" name="tipo_status" value="ativo" form="form-tipo-novo"><span class="text-muted">Ativo</span></td>
+                                <td></td>
+                                <td>
+                                    <form method="post" id="form-tipo-novo" style="margin:0;">
+                                        <input type="hidden" name="sup_acao" value="tipo_salvar">
+                                        <input type="hidden" name="tipo_id" value="0">
+                                        <button type="submit" class="btn btn-sm btn-default"><i class="fa fa-plus"></i> Adicionar</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <?php if (empty($__setores)): ?>
+                    <p class="text-warning"><i class="fa fa-exclamation-triangle"></i> Nenhum setor disponível. Marque "Disponibilizar no módulo de suporte" no <strong>Cadastro de Setor</strong> do domínio Demo.</p>
+                <?php endif; ?>
+
+                <!-- Funcionários que recebem -->
+                <hr style="margin:24px 0 18px;">
+                <h4 style="margin-top:0;"><i class="fa fa-users"></i> Funcionários que recebem</h4>
+                <p class="help-block" style="margin-top:-4px;">
+                    Vem do <strong>cadastro de funcionários do domínio Demo</strong>: funcionário ativo, em setor marcado como
+                    "Disponibilizar no módulo de suporte". A lista se atualiza sozinha ao salvar um funcionário ou um setor no Demo.
+                </p>
+                <?php if ($__ehDemo): ?>
+                    <form method="post" style="margin-bottom:12px;">
+                        <input type="hidden" name="sup_acao" value="sincronizar_funcionarios">
+                        <button type="submit" class="btn btn-default btn-sm"><i class="fa fa-refresh"></i> Sincronizar agora</button>
+                    </form>
+                <?php else: ?>
+                    <p class="text-muted"><i class="fa fa-info-circle"></i> Para sincronizar manualmente, use esta mesma tela no domínio Demo.</p>
+                <?php endif; ?>
+                <?php if (empty($__atendentes)): ?>
+                    <p class="text-muted">Nenhum funcionário recebendo chamados ainda.</p>
+                <?php else: ?>
+                    <table class="table table-bordered table-condensed" style="max-width:820px;">
+                        <thead><tr><th style="width:240px;">Setor</th><th>Funcionários</th></tr></thead>
+                        <tbody>
+                        <?php foreach ($__recebemPorSetor as $__stId => $__lista): ?>
+                            <tr>
+                                <td><?= htmlspecialchars(strval($__lista[0]["setor_nome"] ?? "") ?: "Setor fora do suporte") ?></td>
+                                <td>
+                                    <?php foreach ($__lista as $__i => $__a): ?>
+                                        <?= $__i > 0 ? ", " : "" ?><?= htmlspecialchars(strval($__a["nome"] ?? "")) ?><?php if (trim(strval($__a["email"] ?? "")) === ""): ?> <small class="text-warning" title="Sem e-mail no cadastro: vê o chamado na lista, mas não recebe e-mail.">(sem e-mail)</small><?php endif; ?>
+                                    <?php endforeach; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+
+                <!-- Avisos gerais e SLA -->
+                <hr style="margin:24px 0 18px;">
                 <form method="post">
                     <input type="hidden" name="sup_acao" value="config" />
                     <div class="form-group">
-                        <label><i class="fa fa-envelope"></i> E-mail(s) de aviso de chamado novo</label>
+                        <label><i class="fa fa-envelope"></i> E-mail(s) que recebem todo chamado novo</label>
                         <input type="text" name="emails_notificacao" class="form-control" style="max-width:520px;"
                                value="<?= htmlspecialchars($__emailsAtuais) ?>"
                                placeholder="suporte@techps.com.br, outro@techps.com.br" />
-                        <span class="help-block">Separe vários e-mails por vírgula. Toda vez que um chamado novo chegar, um aviso é enviado automaticamente para esses endereços.</span>
+                        <span class="help-block">Separe vários e-mails por vírgula. Recebem todos os chamados, de qualquer tipo — além dos funcionários do setor.</span>
                     </div>
 
-                    <hr style="margin:24px 0 18px;">
-                    <h4 style="margin-top:0;"><i class="fa fa-clock-o"></i> SLA por prioridade</h4>
+                    <h4 style="margin-top:20px;"><i class="fa fa-clock-o"></i> SLA por prioridade</h4>
                     <p class="help-block" style="margin-top:-6px;">
-                        Prazo máximo, em horas corridas, contado da abertura até a conclusão do chamado, para cada nível de prioridade.
-                        Deixe em branco para não cobrar SLA nesse nível. O prazo é comparado com o momento em que o chamado foi
-                        <strong>Concluído</strong> — se ainda estiver em aberto, compara com agora, pra já sinalizar quem está estourando o prazo.
+                        Prazo máximo, em horas corridas, da abertura até o chamado ser <strong>Fechado</strong>. Deixe em branco para não cobrar SLA nesse nível.
+                        Chamado ainda aberto é comparado com agora, para já sinalizar quem está estourando o prazo.
                     </p>
                     <div class="row">
+                        <?php foreach (["baixa" => ["Baixa", "label-default", "72"], "media" => ["Média", "label-info", "48"], "alta" => ["Alta", "label-warning", "24"], "urgente" => ["Urgente", "label-danger", "4"]] as $__nivel => [$__rotuloNivel, $__classeNivel, $__exemplo]): ?>
                         <div class="col-md-3 col-sm-6">
                             <div class="form-group">
-                                <label><span class="label label-default">Baixa</span></label>
+                                <label><span class="label <?= $__classeNivel ?>"><?= $__rotuloNivel ?></span></label>
                                 <div class="input-group">
-                                    <input type="number" min="1" step="1" name="sla_baixa_horas" class="form-control" value="<?= htmlspecialchars($__slaAtual["baixa"]) ?>" placeholder="Ex.: 72" />
+                                    <input type="number" min="1" step="1" name="sla_<?= $__nivel ?>_horas" class="form-control" value="<?= htmlspecialchars($__slaAtual[$__nivel]) ?>" placeholder="Ex.: <?= $__exemplo ?>" />
                                     <span class="input-group-addon">horas</span>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="form-group">
-                                <label><span class="label label-info">Média</span></label>
-                                <div class="input-group">
-                                    <input type="number" min="1" step="1" name="sla_media_horas" class="form-control" value="<?= htmlspecialchars($__slaAtual["media"]) ?>" placeholder="Ex.: 48" />
-                                    <span class="input-group-addon">horas</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="form-group">
-                                <label><span class="label label-warning">Alta</span></label>
-                                <div class="input-group">
-                                    <input type="number" min="1" step="1" name="sla_alta_horas" class="form-control" value="<?= htmlspecialchars($__slaAtual["alta"]) ?>" placeholder="Ex.: 24" />
-                                    <span class="input-group-addon">horas</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="form-group">
-                                <label><span class="label label-danger">Urgente</span></label>
-                                <div class="input-group">
-                                    <input type="number" min="1" step="1" name="sla_urgente_horas" class="form-control" value="<?= htmlspecialchars($__slaAtual["urgente"]) ?>" placeholder="Ex.: 4" />
-                                    <span class="input-group-addon">horas</span>
-                                </div>
-                            </div>
-                        </div>
+                        <?php endforeach; ?>
                     </div>
 
                     <button type="submit" class="btn blue"><i class="fa fa-save"></i> Salvar configurações</button>
                 </form>
-<?php elseif ($__verEquipe): ?>
-                <div class="alert alert-info">
-                    <i class="fa fa-info-circle"></i> Cada atendente e vinculado aos setores que atende, em dois escopos:
-                    <br><strong>Atendimento externo</strong> — recebe o aviso assim que um chamado novo chega naquele setor. E quem fala com o cliente.
-                    <br><strong>Atendimento interno (SSI)</strong> — recebe o aviso quando o chamado do setor e classificado como bug e encaminhado a SSI. E quem desenvolve a correcao.
-                    <br><br>
-                    A mesma pessoa pode estar nos dois escopos, e em setores diferentes em cada um. Setor sem ninguem vinculado
-                    continua caindo apenas na lista geral de e-mails de <a href="gestao.php?config=1">Configurações</a>.
-                    <br>A distribuicao do chamado e manual: o gestor abre o chamado e escolhe o responsavel entre os atendentes daquele setor.
-                    <br><strong>Excecao:</strong> ao encaminhar um chamado a SSI, se o setor tiver <strong>exatamente um</strong>
-                    atendente interno, ele ja e atribuido automaticamente. Com dois ou mais, a escolha continua sendo do gestor.
-                </div>
 
-                <?php if (empty($__setoresFiltro)): ?>
-                    <div class="alert alert-warning">
-                        <i class="fa fa-exclamation-triangle"></i> Nenhum setor disponivel no modulo de suporte ainda.
-                        Marque "Disponibilizar no modulo de suporte" em <strong>Cadastro de Setor</strong> (dominio Demo) antes de montar a equipe.
-                    </div>
-                <?php endif; ?>
-
-                <table class="table table-striped table-bordered table-hover">
-                    <thead>
-                        <tr>
-                            <th>Atendente</th>
-                            <th>E-mail</th>
-                            <th>Setores — atendimento externo</th>
-                            <th>Setores — atendimento interno (SSI)</th>
-                            <th style="width:80px;">Status</th>
-                            <th style="width:150px;">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    <?php if (empty($__atendentes)): ?>
-                        <tr><td colspan="6" class="text-center text-muted">Nenhum atendente cadastrado. Use o formulário abaixo para montar a equipe.</td></tr>
-                    <?php else: foreach ($__atendentes as $__a):
-                        $__aExt = array_map(fn($v) => strval($v["setor_nome"] ?? ""), (array) ($__a["setores_externo"] ?? []));
-                        $__aSsi = array_map(fn($v) => strval($v["setor_nome"] ?? ""), (array) ($__a["setores_interno_ssi"] ?? []));
-                        $__aExtIds = implode(",", array_map(fn($v) => (int) ($v["setor_id"] ?? 0), (array) ($__a["setores_externo"] ?? [])));
-                        $__aSsiIds = implode(",", array_map(fn($v) => (int) ($v["setor_id"] ?? 0), (array) ($__a["setores_interno_ssi"] ?? [])));
-                        $__aAtivo = strval($__a["status"] ?? "ativo") === "ativo";
-                    ?>
-                        <tr<?= $__aAtivo ? "" : ' class="text-muted"' ?>>
-                            <td><?= htmlspecialchars(strval($__a["nome"] ?? "")) ?></td>
-                            <td><?= htmlspecialchars(strval($__a["email"] ?? "")) ?></td>
-                            <td><?= $__aExt ? htmlspecialchars(implode(", ", $__aExt)) : '<span class="text-muted">—</span>' ?></td>
-                            <td><?= $__aSsi ? htmlspecialchars(implode(", ", $__aSsi)) : '<span class="text-muted">—</span>' ?></td>
-                            <td><?= $__aAtivo ? '<span class="label label-success">Ativo</span>' : '<span class="label label-default">Inativo</span>' ?></td>
-                            <td>
-                                <button type="button" class="btn btn-default btn-xs"
-                                        onclick="editarAtendente(this)"
-                                        data-nome="<?= htmlspecialchars(strval($__a["nome"] ?? ""), ENT_QUOTES) ?>"
-                                        data-email="<?= htmlspecialchars(strval($__a["email"] ?? ""), ENT_QUOTES) ?>"
-                                        data-login="<?= htmlspecialchars(strval($__a["login"] ?? ""), ENT_QUOTES) ?>"
-                                        data-status="<?= $__aAtivo ? "ativo" : "inativo" ?>"
-                                        data-externo="<?= htmlspecialchars($__aExtIds, ENT_QUOTES) ?>"
-                                        data-ssi="<?= htmlspecialchars($__aSsiIds, ENT_QUOTES) ?>">
-                                    <i class="fa fa-pencil"></i> Editar
-                                </button>
-                                <form method="post" style="display:inline-block;">
-                                    <input type="hidden" name="sup_acao" value="atendente_remover" />
-                                    <input type="hidden" name="atendente_id" value="<?= (int) ($__a["id"] ?? 0) ?>" />
-                                    <button type="submit" class="btn btn-danger btn-xs"
-                                            onclick="return confirm('Remover este atendente da equipe de suporte?');">
-                                        <i class="fa fa-trash"></i>
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                    <?php endforeach; endif; ?>
-                    </tbody>
-                </table>
-
-                <hr style="margin:24px 0 18px;">
-                <h4 style="margin-top:0;" id="form-atendente"><i class="fa fa-user-plus"></i> Adicionar / editar atendente</h4>
-                <p class="help-block" style="margin-top:-6px;">
-                    O e-mail identifica o atendente: salvar com um e-mail que ja existe atualiza o cadastro e regrava os vinculos.
-                </p>
-
-                <form method="post">
-                    <input type="hidden" name="sup_acao" value="atendente_salvar" />
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label>Usuário do domínio TechPS</label>
-                                <select class="form-control" id="at_usuario" onchange="preencherAtendente(this)">
-                                    <option value="">— preencher manualmente —</option>
-                                    <?php foreach ($__usuariosDominio as $__u): ?>
-                                        <option value="<?= htmlspecialchars(strval($__u["user_tx_email"] ?? ""), ENT_QUOTES) ?>"
-                                                data-nome="<?= htmlspecialchars(strval($__u["user_tx_nome"] ?? ""), ENT_QUOTES) ?>"
-                                                data-login="<?= htmlspecialchars(strval($__u["user_tx_login"] ?? ""), ENT_QUOTES) ?>">
-                                            <?= htmlspecialchars(strval($__u["user_tx_nome"] ?? "")) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <span class="help-block">Atalho: puxa nome, e-mail e login do cadastro deste domínio.</span>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label>Nome <span style="color:#e74c3c;">*</span></label>
-                                <input type="text" name="at_nome" id="at_nome" class="form-control" maxlength="150" required />
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label>E-mail <span style="color:#e74c3c;">*</span></label>
-                                <input type="email" name="at_email" id="at_email" class="form-control" maxlength="190" required />
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="form-group">
-                                <label>Status</label>
-                                <select name="at_status" id="at_status" class="form-control">
-                                    <option value="ativo">Ativo</option>
-                                    <option value="inativo">Inativo</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <input type="hidden" name="at_login" id="at_login" value="" />
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label><i class="fa fa-headphones"></i> Setores — atendimento externo</label>
-                                <div style="border:1px solid #e5e5e5;border-radius:4px;padding:10px;max-height:220px;overflow-y:auto;">
-                                    <?php if (empty($__setoresFiltro)): ?>
-                                        <span class="text-muted">Nenhum setor disponível.</span>
-                                    <?php else: foreach ($__setoresFiltro as $__s): ?>
-                                        <label style="display:block;font-weight:400;">
-                                            <input type="checkbox" class="chk-externo" name="setores_externo[]" value="<?= (int) ($__s["id"] ?? 0) ?>" />
-                                            <?= htmlspecialchars(strval($__s["nome"] ?? "")) ?>
-                                        </label>
-                                    <?php endforeach; endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label><i class="fa fa-code"></i> Setores — atendimento interno (SSI)</label>
-                                <div style="border:1px solid #e5e5e5;border-radius:4px;padding:10px;max-height:220px;overflow-y:auto;">
-                                    <?php if (empty($__setoresFiltro)): ?>
-                                        <span class="text-muted">Nenhum setor disponível.</span>
-                                    <?php else: foreach ($__setoresFiltro as $__s): ?>
-                                        <label style="display:block;font-weight:400;">
-                                            <input type="checkbox" class="chk-ssi" name="setores_interno_ssi[]" value="<?= (int) ($__s["id"] ?? 0) ?>" />
-                                            <?= htmlspecialchars(strval($__s["nome"] ?? "")) ?>
-                                        </label>
-                                    <?php endforeach; endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn blue"><i class="fa fa-save"></i> Salvar atendente</button>
-                    <button type="reset" class="btn btn-default" onclick="limparVinculos()">Limpar</button>
-                </form>
-
-                <script>
-                    // Preenche o formulario a partir do usuario escolhido no combo do dominio.
-                    function preencherAtendente(sel) {
-                        var op = sel.options[sel.selectedIndex];
-                        if (!op || !op.value) { return; }
-                        document.getElementById('at_nome').value  = op.getAttribute('data-nome') || '';
-                        document.getElementById('at_email').value = op.value;
-                        document.getElementById('at_login').value = op.getAttribute('data-login') || '';
-                    }
-
-                    // Traz um atendente ja cadastrado para o formulario, com os vinculos marcados.
-                    function editarAtendente(btn) {
-                        document.getElementById('at_usuario').value = '';
-                        document.getElementById('at_nome').value   = btn.getAttribute('data-nome') || '';
-                        document.getElementById('at_email').value  = btn.getAttribute('data-email') || '';
-                        document.getElementById('at_login').value  = btn.getAttribute('data-login') || '';
-                        document.getElementById('at_status').value = btn.getAttribute('data-status') || 'ativo';
-                        marcar('chk-externo', (btn.getAttribute('data-externo') || '').split(','));
-                        marcar('chk-ssi', (btn.getAttribute('data-ssi') || '').split(','));
-                        document.getElementById('form-atendente').scrollIntoView({ behavior: 'smooth' });
-                    }
-
-                    function marcar(classe, ids) {
-                        var alvos = ids.filter(function (v) { return v !== ''; });
-                        Array.prototype.forEach.call(document.getElementsByClassName(classe), function (chk) {
-                            chk.checked = alvos.indexOf(chk.value) !== -1;
-                        });
-                    }
-
-                    function limparVinculos() {
-                        marcar('chk-externo', []);
-                        marcar('chk-ssi', []);
-                    }
-                </script>
-<?php else: ?>
-
-<?php if ($__verId > 0): ?>
+<?php elseif ($__verId > 0): ?>
 <?php
     $__res = gestao_requisitar("GET", "/suporte/tickets/{$__verId}");
     $__ticket = $__res["ok"] ? ($__res["dados"]["ticket"] ?? []) : [];
     $__arquivos = $__res["ok"] ? ($__res["dados"]["arquivos"] ?? []) : [];
     $__comentarios = $__res["ok"] ? ($__res["dados"]["comentarios"] ?? []) : [];
     $__eventos = $__res["ok"] ? ($__res["dados"]["eventos"] ?? []) : [];
-
-    if (empty($__ticket)): ?>
+    $__equipeSetor = $__res["ok"] ? ($__res["dados"]["equipe_setor"] ?? []) : [];
+?>
+    <?php if (empty($__ticket)): ?>
                 <div class="alert alert-danger">Chamado não encontrado ou falha na API de suporte.</div>
     <?php else: ?>
         <?php
             $__status = strval($__ticket["status"] ?? "aberto");
-            $__statusMap = [
-                "aberto"             => ['<span class="label label-warning">Aberto</span>'],
-                "em_analise"         => ['<span class="label label-default" style="background:#8e44ad;">Em Análise</span>'],
-                "em_andamento"       => ['<span class="label label-info">Em Andamento</span>'],
-                "aguardando_cliente" => ['<span class="label label-primary">Aguardando retorno do cliente</span>'],
-                "resolvido"          => ['<span class="label label-success">Concluído</span>'],
-                "cancelado"          => ['<span class="label label-default">Cancelado</span>'],
-                "reaberto"           => ['<span class="label label-warning">Reaberto</span>'],
-                "encaminhado_ssi"    => ['<span class="label label-danger">Encaminhado a SSI</span>'],
-                "teste_interno"      => ['<span class="label label-default" style="background:#16a085;">Teste Interno</span>'],
-                "aguardando_atualizacao" => ['<span class="label label-default" style="background:#e67e22;">Aguardando Atualização</span>'],
-            ];
-            $__badge = $__statusMap[$__status][0] ?? '<span class="label label-default">' . htmlspecialchars($__status) . '</span>';
-            $__tipoMap = ["duvida" => "Dúvida operacional", "sugestao" => "Sugestão", "bug" => "Bug de sistema"];
-            $__tipo = strval($__ticket["tipo"] ?? "");
-            $__ssiCodigo = strval($__ticket["ssi_codigo"] ?? "");
-            $__ssiPrioridade = strval($__ticket["ssi_prioridade"] ?? "");
-
             $__prioridade = strval($__ticket["prioridade"] ?? "media");
-            $__prioridadeMap = [
-                "baixa"   => ["Baixa", "label-default"],
-                "media"   => ["Média", "label-info"],
-                "alta"    => ["Alta", "label-warning"],
-                "urgente" => ["Urgente", "label-danger"],
-            ];
-            [$__prioridadeLabel, $__prioridadeClasse] = $__prioridadeMap[$__prioridade] ?? ["Média", "label-info"];
-            $__prioridadeBadge = '<span class="label ' . $__prioridadeClasse . '">' . htmlspecialchars($__prioridadeLabel) . '</span>';
-
+            [$__prioridadeLabel, $__prioridadeClasse] = $__prioridades[$__prioridade] ?? $__prioridades["media"];
             $__sla = suporte_sla_status($__prioridade, strval($__ticket["created_at"] ?? ""), strval($__ticket["fechado_em"] ?? ""), $__configAtual);
             $__slaBadge = '<span class="label label-' . $__sla["classe"] . '">SLA: ' . htmlspecialchars($__sla["label"]) . ($__sla["horas"] !== null ? " ({$__sla['horas']}h)" : "") . '</span>';
+            $__responsavel = trim(strval($__ticket["atendente_nome"] ?? ""));
+            $__tipoAtual = (int) ($__ticket["tipo_id"] ?? 0);
+            $__tipoNome = trim(strval($__ticket["tipo_nome"] ?? ""));
+            $__setorNome = trim(strval($__ticket["setor_nome"] ?? ""));
+            $__proxStatus = $__proximoPasso[$__status] ?? "em_analise";
+            $__tiposAtivosIds = array_map(fn($t) => (int) ($t["id"] ?? 0), $__tipos);
         ?>
         <table class="table table-striped table-bordered">
-            <tr><th style="width:140px;">Empresa</th><td><?= htmlspecialchars(strval($__ticket["empresa_key"] ?? "")) ?> — <?= htmlspecialchars(strval($__ticket["empresa_nome"] ?? "")) ?></td></tr>
-            <tr><th>Setor</th><td><?= htmlspecialchars(strval($__ticket["setor_nome"] ?? "") ?: "—") ?></td></tr>
-            <tr><th>Usuário</th><td><?= htmlspecialchars(strval($__ticket["user_nome"] ?? "")) ?> (<?= htmlspecialchars(strval($__ticket["user_login"] ?? "")) ?>)</td></tr>
+            <tr><th style="width:150px;">Empresa</th><td><?= htmlspecialchars(strval($__ticket["empresa_key"] ?? "")) ?> — <?= htmlspecialchars(strval($__ticket["empresa_nome"] ?? "")) ?></td></tr>
+            <tr><th>Tipo</th><td><?= $__tipoNome !== "" ? htmlspecialchars($__tipoNome) : '<span class="text-muted">Não classificado</span>' ?></td></tr>
+            <tr><th>Setor</th><td><?= $__setorNome !== "" ? htmlspecialchars($__setorNome) : '<span class="text-muted">Sem setor</span>' ?></td></tr>
+            <tr><th>Solicitante</th><td><?= htmlspecialchars(strval($__ticket["user_nome"] ?? "")) ?> (<?= htmlspecialchars(strval($__ticket["user_login"] ?? "")) ?>)</td></tr>
             <tr><th>E-mail</th><td><?= htmlspecialchars(strval($__ticket["user_email"] ?? "") ?: "—") ?></td></tr>
             <tr><th>Data de abertura</th><td><?= htmlspecialchars(suporte_fmt_data(strval($__ticket["created_at"] ?? ""))) ?></td></tr>
-            <tr><th>Status</th><td><?= $__badge ?></td></tr>
-            <tr><th>Prioridade</th><td><?= $__prioridadeBadge ?> <?= $__slaBadge ?></td></tr>
-            <tr><th>Tipo</th><td><?= isset($__tipoMap[$__tipo]) ? htmlspecialchars($__tipoMap[$__tipo]) : '<span class="text-muted">Não classificado</span>' ?></td></tr>
-            <tr><th>Atendente</th><td><?= htmlspecialchars(strval($__ticket["atendente_nome"] ?? "") ?: "—") ?></td></tr>
-            <?php if ($__ssiCodigo !== ""): ?>
-                <tr><th>SSI</th><td><span class="label label-danger"><?= htmlspecialchars($__ssiCodigo) ?></span> — <?= $__ssiPrioridade === "urgente" ? "Prioritária (urgente em produção)" : "Próxima atualização" ?></td></tr>
-            <?php endif; ?>
+            <tr><th>Status</th><td><?= gestao_badge_status($__fluxo, $__status) ?></td></tr>
+            <tr><th>Prioridade</th><td><span class="label <?= $__prioridadeClasse ?>"><?= htmlspecialchars($__prioridadeLabel) ?></span> <?= $__slaBadge ?></td></tr>
+            <tr><th>Responsável</th><td><?= $__responsavel !== "" ? htmlspecialchars($__responsavel) : '<span class="text-muted">Ninguém assumiu ainda</span>' ?></td></tr>
             <tr><th>Página</th><td style="word-break:break-all;"><?= htmlspecialchars(strval($__ticket["pagina_url"] ?? "")) ?></td></tr>
         </table>
 
@@ -612,188 +499,237 @@
             <p style="white-space:pre-wrap;"><?= htmlspecialchars(strval($__ticket["descricao"] ?? "")) ?></p>
         </div>
 
-        <?php
-            // Responsavel pelo chamado: escolhido a dedo entre os atendentes vinculados
-            // ao setor. Depois de encaminhado a SSI, a lista passa a ser a do time interno.
-            $__setorTicket     = (int) ($__ticket["setor_id"] ?? 0);
-            $__escopoAtual     = $__status === "encaminhado_ssi" ? "interno_ssi" : "externo";
-            $__equipeSetor     = suporte_equipe_do_setor($__atendentes, $__setorTicket, $__escopoAtual);
-            $__atendenteAtual  = (int) ($__ticket["atendente_id"] ?? 0);
-        ?>
-        <div style="border:1px solid #eee;border-radius:6px;padding:14px;margin-bottom:18px;background:#fcfcfc;">
-            <h4 style="margin-top:0;">
-                <i class="fa fa-user-circle-o"></i> Atendente responsável
-                <small class="text-muted"><?= $__escopoAtual === "interno_ssi" ? "atendimento interno (SSI)" : "atendimento externo" ?></small>
-            </h4>
-
-            <?php if ($__setorTicket < 1): ?>
-                <p class="text-muted" style="margin:0;">
-                    Este chamado foi aberto sem setor, então não há equipe vinculada para sugerir. Use o botão
-                    <strong>Iniciar atendimento</strong> abaixo para assumi-lo.
-                </p>
-            <?php elseif (empty($__equipeSetor)): ?>
-                <p class="text-muted" style="margin:0;">
-                    Nenhum atendente vinculado ao setor <strong><?= htmlspecialchars(strval($__ticket["setor_nome"] ?? "")) ?></strong>
-                    no escopo <strong><?= $__escopoAtual === "interno_ssi" ? "atendimento interno (SSI)" : "atendimento externo" ?></strong>.
-                    <a href="gestao.php?equipe=1">Montar a equipe deste setor</a>.
-                </p>
-            <?php else: ?>
-                <form method="post" class="form-inline">
-                    <input type="hidden" name="sup_acao" value="atribuir" />
-                    <input type="hidden" name="id" value="<?= $__verId ?>" />
-                    <div class="form-group" style="margin-right:8px;">
-                        <select name="atendente_id" class="form-control">
-                            <option value="0">— sem responsável —</option>
-                            <?php foreach ($__equipeSetor as $__at): ?>
-                                <option value="<?= (int) ($__at["id"] ?? 0) ?>" <?= $__atendenteAtual === (int) ($__at["id"] ?? 0) ? "selected" : "" ?>>
-                                    <?= htmlspecialchars(strval($__at["nome"] ?? "")) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+        <!-- Atendimento: responsável, status (um botão por etapa) e classificação -->
+        <style>
+            .sup-atend { border:1px solid #e5e5e5; border-radius:6px; background:#fcfcfc; margin-bottom:18px; }
+            .sup-atend-secao { padding:12px 14px; }
+            .sup-atend-secao + .sup-atend-secao { border-top:1px solid #eee; }
+            .sup-atend-titulo { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:#888; margin:0 0 8px; }
+            .sup-atend-topo { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+            .sup-atend-topo h4 { margin:0; }
+            .sup-atend-topo .sup-resp { margin-left:auto; display:flex; align-items:center; gap:10px; }
+            .sup-status-form { display:flex; flex-wrap:wrap; gap:6px; margin:0; }
+            .sup-status-btn { background:#fff; border:1px solid; border-radius:16px; padding:5px 12px; font-size:12px; line-height:1.4; cursor:pointer; transition:background .15s; }
+            .sup-status-btn:hover { background:#f3f3f3; }
+            .sup-status-btn.atual { color:#fff !important; cursor:default; }
+            .sup-status-btn.sugerido { border-width:2px; font-weight:700; padding:4px 11px; }
+            .sup-classif .form-group { margin-bottom:0; }
+            .sup-classif label { font-size:12px; color:#666; margin-bottom:4px; }
+            @media (max-width: 767px) { .sup-classif .col-sm-6 + .col-sm-6 { margin-top:10px; } .sup-atend-topo .sup-resp { margin-left:0; } }
+        </style>
+        <div class="sup-atend">
+            <div class="sup-atend-secao">
+                <div class="sup-atend-topo">
+                    <h4><i class="fa fa-tasks"></i> Atendimento</h4>
+                    <div class="sup-resp">
+                        <span>
+                            <i class="fa fa-user"></i> Responsável:
+                            <?= $__responsavel !== "" ? "<strong>" . htmlspecialchars($__responsavel) . "</strong>" : '<span class="text-muted">ninguém assumiu</span>' ?>
+                        </span>
+                        <?php if ($__responsavel === "" && $__status !== "fechado"): ?>
+                            <form method="post" style="margin:0;">
+                                <input type="hidden" name="sup_acao" value="assumir" />
+                                <input type="hidden" name="id" value="<?= $__verId ?>" />
+                                <button type="submit" class="btn blue btn-sm"><i class="fa fa-hand-paper-o"></i> Assumir chamado</button>
+                            </form>
+                        <?php endif; ?>
                     </div>
-                    <button type="submit" class="btn btn-primary"><i class="fa fa-share-square-o"></i> Atribuir</button>
-                    <span class="help-block" style="margin-top:6px;">
-                        O atendente escolhido recebe um e-mail com o chamado. Trocar o responsável não altera o status.
-                    </span>
-                </form>
-            <?php endif; ?>
-        </div>
+                </div>
+                <p style="margin:8px 0 0;color:#777;font-size:12px;">
+                    <i class="fa fa-users"></i> Quem recebe:
+                    <?php if ($__setorNome === ""): ?>
+                        <span class="text-muted">chamado sem setor — só os e-mails gerais das Configurações.</span>
+                    <?php elseif (empty($__equipeSetor)): ?>
+                        setor <strong><?= htmlspecialchars($__setorNome) ?></strong> — <span class="text-warning">ninguém nesse setor ainda.</span>
+                    <?php else: ?>
+                        setor <strong><?= htmlspecialchars($__setorNome) ?></strong> —
+                        <?= htmlspecialchars(implode(", ", array_map(fn($m) => strval($m["nome"] ?? ""), $__equipeSetor))) ?>
+                    <?php endif; ?>
+                </p>
+            </div>
 
-        <!-- Fluxo de atendimento -->
-        <div style="border:1px solid #eee;border-radius:6px;padding:14px;margin-bottom:18px;background:#fcfcfc;">
-            <h4 style="margin-top:0;"><i class="fa fa-tasks"></i> Fluxo de atendimento</h4>
-
-            <?php if ($__status === "aberto" || $__status === "reaberto"): ?>
-                <form method="post" style="display:inline-block;margin-right:8px;margin-bottom:6px;">
+            <div class="sup-atend-secao">
+                <p class="sup-atend-titulo">Status do chamado <span style="font-weight:400;text-transform:none;letter-spacing:0;">— clique para mudar; em destaque, o próximo passo sugerido</span></p>
+                <form method="post" class="sup-status-form">
                     <input type="hidden" name="sup_acao" value="status" />
                     <input type="hidden" name="id" value="<?= $__verId ?>" />
-                    <input type="hidden" name="status" value="em_analise" />
-                    <button type="submit" class="btn btn-default btn-sm" style="border-color:#8e44ad;color:#8e44ad;"><i class="fa fa-search"></i> Iniciar análise</button>
-                </form>
-            <?php endif; ?>
-            <?php if ($__status === "aberto" || $__status === "reaberto" || $__status === "em_analise"): ?>
-                <form method="post" style="display:inline-block;margin-right:8px;margin-bottom:6px;">
-                    <input type="hidden" name="sup_acao" value="aceitar" />
-                    <input type="hidden" name="id" value="<?= $__verId ?>" />
-                    <button type="submit" class="btn blue"><i class="fa fa-handshake-o"></i> Iniciar atendimento</button>
-                </form>
-            <?php endif; ?>
-
-            <form method="post" style="display:inline-block;margin-bottom:6px;">
-                <input type="hidden" name="sup_acao" value="tipo" />
-                <input type="hidden" name="id" value="<?= $__verId ?>" />
-                <select name="tipo" class="form-control input-sm" style="display:inline-block;width:auto;" required>
-                    <option value="">Classificar tipo...</option>
-                    <option value="duvida" <?= ($__tipo === "duvida") ? "selected" : "" ?>>Dúvida operacional</option>
-                    <option value="sugestao" <?= ($__tipo === "sugestao") ? "selected" : "" ?>>Sugestão</option>
-                    <option value="bug" <?= ($__tipo === "bug") ? "selected" : "" ?>>Bug de sistema</option>
-                </select>
-                <button type="submit" class="btn btn-default btn-sm"><i class="fa fa-tag"></i> Salvar tipo</button>
-            </form>
-
-            <!-- Prioridade: independente de status/tipo — pode ser trocada em qualquer ponto do fluxo. -->
-            <form method="post" style="display:inline-block;margin-bottom:6px;margin-left:8px;padding-left:8px;border-left:1px solid #ddd;">
-                <input type="hidden" name="sup_acao" value="prioridade" />
-                <input type="hidden" name="id" value="<?= $__verId ?>" />
-                <select name="prioridade" class="form-control input-sm" style="display:inline-block;width:auto;" required>
-                    <option value="baixa" <?= ($__prioridade === "baixa") ? "selected" : "" ?>>Prioridade: Baixa</option>
-                    <option value="media" <?= ($__prioridade === "media") ? "selected" : "" ?>>Prioridade: Média</option>
-                    <option value="alta" <?= ($__prioridade === "alta") ? "selected" : "" ?>>Prioridade: Alta</option>
-                    <option value="urgente" <?= ($__prioridade === "urgente") ? "selected" : "" ?>>Prioridade: Urgente</option>
-                </select>
-                <button type="submit" class="btn btn-default btn-sm"><i class="fa fa-flag"></i> Salvar prioridade</button>
-            </form>
-
-            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-                <?php if ($__status !== "resolvido" && $__status !== "cancelado"): ?>
-                    <form method="post">
-                        <input type="hidden" name="sup_acao" value="status" />
-                        <input type="hidden" name="id" value="<?= $__verId ?>" />
-                        <input type="hidden" name="status" value="aguardando_cliente" />
-                        <button type="submit" class="btn btn-primary btn-sm"><i class="fa fa-hourglass-half"></i> Aguardar retorno do cliente</button>
-                    </form>
-                <?php endif; ?>
-                <?php if ($__status !== "resolvido" && $__status !== "cancelado"): ?>
-                    <?php
-                        // Procedimento de fechamento: saindo de "Aguardando Atualização", quem finaliza
-                        // deve conferir o que subiu na atualização antes de concluir o chamado.
-                        $__confirmConcluir = $__status === "aguardando_atualizacao"
-                            ? "A atualização já subiu para produção? Confira tudo que subiu na atualização de sistema e confirme que a correção/melhoria deste chamado está no ar antes de concluir."
-                            : "Marcar como concluído?";
+                    <?php foreach ($__fluxo as $__chaveStatus => [$__rotuloStatus, $__corStatus, $__iconeStatus]):
+                        $__ehAtual = $__chaveStatus === $__status;
+                        $__ehSugerido = !$__ehAtual && $__chaveStatus === $__proxStatus;
+                        $__reabrir = $__status === "fechado" && $__chaveStatus === "aberto";
+                        $__confirmar = $__chaveStatus === "fechado" ? "Fechar o chamado?" : ($__reabrir ? "Reabrir o chamado?" : "");
                     ?>
-                    <form method="post">
-                        <input type="hidden" name="sup_acao" value="status" />
-                        <input type="hidden" name="id" value="<?= $__verId ?>" />
-                        <input type="hidden" name="status" value="resolvido" />
-                        <button type="submit" class="btn btn-success btn-sm" onclick="return confirm(<?= htmlspecialchars(json_encode($__confirmConcluir), ENT_QUOTES) ?>);"><i class="fa fa-check"></i> Concluído</button>
-                    </form>
-                <?php endif; ?>
-                <?php if ($__status !== "resolvido" && $__status !== "cancelado"): ?>
-                    <form method="post">
-                        <input type="hidden" name="sup_acao" value="status" />
-                        <input type="hidden" name="id" value="<?= $__verId ?>" />
-                        <input type="hidden" name="status" value="cancelado" />
-                        <button type="submit" class="btn btn-default btn-sm" onclick="return confirm('Cancelar o chamado?');"><i class="fa fa-times"></i> Cancelar</button>
-                    </form>
-                <?php endif; ?>
-                <?php if ($__status !== "aberto" && $__status !== "reaberto"): ?>
-                    <form method="post">
-                        <input type="hidden" name="sup_acao" value="status" />
-                        <input type="hidden" name="id" value="<?= $__verId ?>" />
-                        <input type="hidden" name="status" value="reaberto" />
-                        <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('Reabrir o chamado?');"><i class="fa fa-undo"></i> Reabrir</button>
-                    </form>
-                <?php endif; ?>
-                <?php if ($__tipo === "bug" && $__status !== "encaminhado_ssi" && $__status !== "em_andamento" && $__status !== "teste_interno" && $__status !== "resolvido" && $__status !== "cancelado"): ?>
-                    <form method="post" style="border-left:1px solid #ddd;padding-left:12px;">
-                        <input type="hidden" name="sup_acao" value="status" />
-                        <input type="hidden" name="id" value="<?= $__verId ?>" />
-                        <input type="hidden" name="status" value="encaminhado_ssi" />
-                        <label style="font-weight:400;margin-right:8px;"><input type="radio" name="ssi_prioridade" value="urgente" /> Urgente — produção</label>
-                        <label style="font-weight:400;margin-right:8px;"><input type="radio" name="ssi_prioridade" value="proxima_atualizacao" checked /> Próxima atualização</label>
-                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Encaminhar o chamado para a SSI?');"><i class="fa fa-bug"></i> Encaminhar a SSI</button>
-                    </form>
-                <?php endif; ?>
-                <?php if ($__status === "encaminhado_ssi"): ?>
-                    <form method="post" style="border-left:1px solid #ddd;padding-left:12px;">
-                        <input type="hidden" name="sup_acao" value="status" />
-                        <input type="hidden" name="id" value="<?= $__verId ?>" />
-                        <input type="hidden" name="status" value="em_andamento" />
-                        <button type="submit" class="btn btn-info btn-sm"><i class="fa fa-code"></i> Iniciar desenvolvimento (SSI)</button>
-                    </form>
-                <?php endif; ?>
-                <?php if ($__status === "em_andamento" && $__ssiCodigo !== ""): ?>
-                    <form method="post" style="border-left:1px solid #ddd;padding-left:12px;">
-                        <input type="hidden" name="sup_acao" value="status" />
-                        <input type="hidden" name="id" value="<?= $__verId ?>" />
-                        <input type="hidden" name="status" value="teste_interno" />
-                        <button type="submit" class="btn btn-default btn-sm" style="border-color:#16a085;color:#16a085;"><i class="fa fa-flask"></i> Enviar para teste interno</button>
-                    </form>
-                <?php endif; ?>
-                <?php if ($__status === "teste_interno"): ?>
-                    <form method="post" style="border-left:1px solid #ddd;padding-left:12px;">
-                        <input type="hidden" name="sup_acao" value="status" />
-                        <input type="hidden" name="id" value="<?= $__verId ?>" />
-                        <input type="hidden" name="status" value="aguardando_atualizacao" />
-                        <button type="submit" class="btn btn-default btn-sm" style="border-color:#e67e22;color:#e67e22;" onclick="return confirm('Aprovado no teste interno — marcar como Aguardando Atualização? Os envolvidos serão avisados de que a correção espera a próxima atualização em produção.');"><i class="fa fa-cloud-upload"></i> Aprovado — aguardar atualização</button>
-                    </form>
-                    <form method="post">
-                        <input type="hidden" name="sup_acao" value="status" />
-                        <input type="hidden" name="id" value="<?= $__verId ?>" />
-                        <input type="hidden" name="status" value="em_andamento" />
-                        <button type="submit" class="btn btn-default btn-sm" onclick="return confirm('Reprovado no teste interno — voltar para Em Andamento?');"><i class="fa fa-undo"></i> Reprovado no teste, voltar</button>
-                    </form>
-                <?php endif; ?>
-                <?php if ($__status === "aguardando_atualizacao"): ?>
-                    <form method="post" style="border-left:1px solid #ddd;padding-left:12px;">
-                        <input type="hidden" name="sup_acao" value="status" />
-                        <input type="hidden" name="id" value="<?= $__verId ?>" />
-                        <input type="hidden" name="status" value="em_andamento" />
-                        <button type="submit" class="btn btn-default btn-sm" onclick="return confirm('A correção não subiu na atualização — voltar para Em Andamento?');"><i class="fa fa-undo"></i> Não subiu, voltar</button>
-                    </form>
-                <?php endif; ?>
+                        <?php if ($__ehAtual): ?>
+                            <span class="sup-status-btn atual" style="background:<?= $__corStatus ?>;border-color:<?= $__corStatus ?>;" title="Status atual">
+                                <i class="fa <?= $__iconeStatus ?>"></i> <?= htmlspecialchars($__rotuloStatus) ?>
+                            </span>
+                        <?php else: ?>
+                            <button type="submit" name="status" value="<?= $__chaveStatus ?>"
+                                    class="sup-status-btn<?= $__ehSugerido ? " sugerido" : "" ?>"
+                                    style="border-color:<?= $__corStatus ?>;color:<?= $__corStatus ?>;"
+                                    title="<?= $__ehSugerido ? "Próximo passo sugerido" : "Mudar para " . htmlspecialchars($__rotuloStatus, ENT_QUOTES) ?>"
+                                    <?= $__confirmar !== "" ? "onclick=\"return confirm('" . $__confirmar . "');\"" : "" ?>>
+                                <i class="fa <?= $__reabrir ? "fa-undo" : $__iconeStatus ?>"></i> <?= htmlspecialchars($__reabrir ? "Reabrir" : $__rotuloStatus) ?>
+                            </button>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </form>
+            </div>
+
+            <div class="sup-atend-secao sup-classif">
+                <div class="row">
+                    <div class="col-sm-6">
+                        <form method="post" class="form-group">
+                            <input type="hidden" name="sup_acao" value="tipo" />
+                            <input type="hidden" name="id" value="<?= $__verId ?>" />
+                            <label><i class="fa fa-tag"></i> Tipo <small class="text-muted">(trocar encaminha ao setor do tipo)</small></label>
+                            <div class="input-group input-group-sm">
+                                <select name="tipo_id" class="form-control" required>
+                                    <option value="">Selecione...</option>
+                                    <?php foreach ($__tipos as $__tp): ?>
+                                        <option value="<?= (int) ($__tp["id"] ?? 0) ?>" <?= $__tipoAtual === (int) ($__tp["id"] ?? 0) ? "selected" : "" ?>><?= htmlspecialchars(strval($__tp["nome"] ?? "")) ?></option>
+                                    <?php endforeach; ?>
+                                    <?php if ($__tipoAtual > 0 && !in_array($__tipoAtual, $__tiposAtivosIds, true)): ?>
+                                        <option value="<?= $__tipoAtual ?>" selected><?= htmlspecialchars($__tipoNome) ?> (inativo)</option>
+                                    <?php endif; ?>
+                                </select>
+                                <span class="input-group-btn"><button type="submit" class="btn btn-default"><i class="fa fa-save"></i> Salvar</button></span>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="col-sm-6">
+                        <!-- Prioridade: independente de status/tipo — pode ser trocada em qualquer ponto do fluxo. -->
+                        <form method="post" class="form-group">
+                            <input type="hidden" name="sup_acao" value="prioridade" />
+                            <input type="hidden" name="id" value="<?= $__verId ?>" />
+                            <label><i class="fa fa-flag"></i> Prioridade <?= $__slaBadge ?></label>
+                            <div class="input-group input-group-sm">
+                                <select name="prioridade" class="form-control" required>
+                                    <?php foreach ($__prioridades as $__chavePrioridade => [$__rotuloPrioridade]): ?>
+                                        <option value="<?= $__chavePrioridade ?>" <?= $__prioridade === $__chavePrioridade ? "selected" : "" ?>><?= htmlspecialchars($__rotuloPrioridade) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <span class="input-group-btn"><button type="submit" class="btn btn-default"><i class="fa fa-save"></i> Salvar</button></span>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
+
+        <!-- Chat interno da equipe (a empresa não vê) -->
+        <style>
+            #chatInterno { border:1px solid #f0d58c; border-radius:6px; background:#fffdf5; margin-bottom:18px; }
+            #chatInterno .chat-topo { padding:10px 14px; border-bottom:1px solid #f0e2b6; display:flex; align-items:center; gap:8px; }
+            #chatInterno .chat-lista { height:280px; overflow-y:auto; padding:12px 14px; }
+            #chatInterno .chat-msg { max-width:75%; margin-bottom:10px; }
+            #chatInterno .chat-msg.eu { margin-left:auto; text-align:right; }
+            #chatInterno .chat-meta { font-size:11px; color:#999; margin-bottom:2px; }
+            #chatInterno .chat-balao { display:inline-block; text-align:left; white-space:pre-wrap; word-break:break-word; padding:7px 11px; border-radius:10px; background:#fff; border:1px solid #e6e6e6; }
+            #chatInterno .chat-msg.eu .chat-balao { background:#dcecfb; border-color:#c3dcf3; }
+            #chatInterno .chat-form { display:flex; gap:8px; padding:10px 14px; border-top:1px solid #f0e2b6; }
+            #chatInterno textarea { flex:1; resize:none; padding:7px 10px; border:1px solid #ddd; border-radius:4px; font-size:13px; }
+        </style>
+        <div id="chatInterno" data-id="<?= $__verId ?>">
+            <div class="chat-topo">
+                <i class="fa fa-lock text-warning"></i>
+                <strong>Chat interno da equipe</strong>
+                <small class="text-muted">— visível só para os atendentes, a empresa não vê.</small>
+            </div>
+            <div class="chat-lista" id="chatInternoLista">
+                <p class="text-muted chat-vazio" style="margin:0;"><i class="fa fa-spinner fa-spin"></i> Carregando...</p>
+            </div>
+            <form class="chat-form" id="chatInternoForm">
+                <textarea id="chatInternoTexto" rows="2" maxlength="2000" placeholder="Mensagem para a equipe (Enter envia, Shift+Enter quebra linha)"></textarea>
+                <button type="submit" class="btn yellow-gold" id="chatInternoEnviar"><i class="fa fa-paper-plane"></i> Enviar</button>
+            </form>
+        </div>
+        <script>
+        (function () {
+            var caixa = document.getElementById('chatInterno');
+            var lista = document.getElementById('chatInternoLista');
+            var form = document.getElementById('chatInternoForm');
+            var campo = document.getElementById('chatInternoTexto');
+            var botao = document.getElementById('chatInternoEnviar');
+            var ticketId = caixa.getAttribute('data-id');
+            var ultimoId = 0;
+            var buscando = false;
+
+            function adicionar(m) {
+                var vazio = lista.querySelector('.chat-vazio');
+                if (vazio) vazio.remove();
+                var item = document.createElement('div');
+                item.className = 'chat-msg' + (m.eu ? ' eu' : '');
+                var meta = document.createElement('div');
+                meta.className = 'chat-meta';
+                meta.textContent = (m.eu ? 'Você' : m.autor) + ' · ' + m.quando;
+                var balao = document.createElement('div');
+                balao.className = 'chat-balao';
+                balao.textContent = m.texto;
+                item.appendChild(meta);
+                item.appendChild(balao);
+                lista.appendChild(item);
+            }
+
+            function buscar() {
+                if (buscando) return;
+                buscando = true;
+                fetch('gestao.php?chat_interno=chat_interno_listar&id=' + ticketId + '&depois=' + ultimoId, { credentials: 'same-origin' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (d) {
+                        var vazio = lista.querySelector('.chat-vazio');
+                        if (!d.ok) {
+                            if (vazio) vazio.textContent = 'Não foi possível carregar o chat interno.';
+                            return;
+                        }
+                        var novas = d.mensagens || [];
+                        // Rola para o fim na primeira carga ou se o atendente já estava no fim (não atrapalha quem lê o histórico).
+                        var rolar = ultimoId === 0 || lista.scrollHeight - lista.scrollTop - lista.clientHeight < 40;
+                        novas.forEach(function (m) {
+                            if (m.id > ultimoId) { adicionar(m); ultimoId = m.id; }
+                        });
+                        if (ultimoId === 0 && vazio) vazio.textContent = 'Nenhuma mensagem ainda. Combine aqui o atendimento com a equipe.';
+                        if (novas.length && rolar) lista.scrollTop = lista.scrollHeight;
+                    })
+                    .catch(function () {})
+                    .then(function () { buscando = false; });
+            }
+
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                var texto = campo.value.trim();
+                if (!texto) return;
+                botao.disabled = true;
+                var corpo = new URLSearchParams();
+                corpo.append('sup_acao', 'chat_interno_enviar');
+                corpo.append('id', ticketId);
+                corpo.append('texto', texto);
+                fetch('gestao.php', { method: 'POST', credentials: 'same-origin', body: corpo })
+                    .then(function (r) { return r.json(); })
+                    .then(function (d) {
+                        if (!d.ok) { alert(d.msg || 'Erro ao enviar a mensagem.'); return; }
+                        campo.value = '';
+                        lista.scrollTop = lista.scrollHeight;
+                        // Se a consulta automática estiver em andamento, tenta de novo logo depois dela.
+                        buscando ? setTimeout(buscar, 700) : buscar();
+                    })
+                    .catch(function () { alert('Sem comunicação com o servidor de suporte.'); })
+                    .then(function () { botao.disabled = false; campo.focus(); });
+            });
+
+            campo.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    form.requestSubmit ? form.requestSubmit() : botao.click();
+                }
+            });
+
+            buscar();
+            // Só consulta com a aba visível, para não martelar a API com abas esquecidas abertas.
+            setInterval(function () { if (!document.hidden) buscar(); }, 5000);
+            document.addEventListener('visibilitychange', function () { if (!document.hidden) buscar(); });
+        })();
+        </script>
 
         <h4><i class="fa fa-paperclip"></i> Anexos (<?= count($__arquivos) ?>)</h4>
         <?= suporte_render_anexos($__arquivos, $__verId, "imagem_gestao.php") ?>
@@ -804,10 +740,7 @@
             <p class="text-muted"><i class="fa fa-info-circle"></i> Nenhum comentário ainda.</p>
         <?php endif; ?>
         <?php foreach ($__comentarios as $__c): ?>
-            <?php
-                $__ehEmpresa = (strval($__c["autor_tipo"] ?? "") === "empresa");
-                $__bg = $__ehEmpresa ? "#e8f0fe" : "#f9f9f9";
-            ?>
+            <?php $__bg = (strval($__c["autor_tipo"] ?? "") === "empresa") ? "#e8f0fe" : "#f9f9f9"; ?>
             <div style="border:1px solid #ddd;border-radius:6px;padding:10px 12px;margin-bottom:8px;background:<?= $__bg ?>;">
                 <div style="font-size:12px;color:#888;margin-bottom:4px;">
                     <i class="fa fa-user-circle"></i> <strong><?= htmlspecialchars(strval($__c["autor"] ?? "")) ?></strong>
@@ -835,25 +768,24 @@
 
 <?php else: ?>
 <?php
-    // ── Listagem (todas as empresas) ────────────────────────────────
-    $__fEmpresa = trim(strval($_GET["empresa"] ?? ""));
-    $__fSetorId = (int) ($_GET["setor_id"] ?? 0);
-    $__fStatus  = trim(strval($_GET["status"] ?? ""));
+    // ── Listagem (todas as empresas) ─────────────────────────────────────
+    $__fEmpresa    = trim(strval($_GET["empresa"] ?? ""));
+    $__fTipoId     = (int) ($_GET["tipo_id"] ?? 0);
+    $__fSetorId    = (int) ($_GET["setor_id"] ?? 0);
+    $__fStatus     = trim(strval($_GET["status"] ?? ""));
     $__fPrioridade = trim(strval($_GET["prioridade"] ?? ""));
-    $__fInicio  = trim(strval($_GET["data_inicio"] ?? ""));
-    $__fFim     = trim(strval($_GET["data_fim"] ?? ""));
-    $__fPagina  = max((int) ($_GET["pagina"] ?? 1), 1);
-    // "" = todos | "sem" = sem responsavel | numero = id do atendente
-    $__fAtendente = trim(strval($_GET["atendente_id"] ?? ""));
-
-    $__statusListagem = ["aberto", "em_analise", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi", "teste_interno", "aguardando_atualizacao"];
-    $__prioridadeListagem = ["baixa", "media", "alta", "urgente"];
+    $__fInicio     = trim(strval($_GET["data_inicio"] ?? ""));
+    $__fFim        = trim(strval($_GET["data_fim"] ?? ""));
+    $__fPagina     = max((int) ($_GET["pagina"] ?? 1), 1);
+    // "" = todos | "sem" = sem responsável | número = id do funcionário
+    $__fAtendente  = trim(strval($_GET["atendente_id"] ?? ""));
 
     $__queryFiltro = ["pagina" => $__fPagina, "limit" => 25];
     if ($__fEmpresa !== "") $__queryFiltro["empresa"] = $__fEmpresa;
+    if ($__fTipoId > 0) $__queryFiltro["tipo_id"] = $__fTipoId;
     if ($__fSetorId > 0) $__queryFiltro["setor_id"] = $__fSetorId;
-    if (in_array($__fStatus, $__statusListagem, true)) $__queryFiltro["status"] = $__fStatus;
-    if (in_array($__fPrioridade, $__prioridadeListagem, true)) $__queryFiltro["prioridade"] = $__fPrioridade;
+    if (isset($__fluxo[$__fStatus])) $__queryFiltro["status"] = $__fStatus;
+    if (isset($__prioridades[$__fPrioridade])) $__queryFiltro["prioridade"] = $__fPrioridade;
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $__fInicio)) $__queryFiltro["data_inicio"] = $__fInicio;
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $__fFim)) $__queryFiltro["data_fim"] = $__fFim;
     if ($__fAtendente === "sem" || (int) $__fAtendente > 0) $__queryFiltro["atendente_id"] = $__fAtendente;
@@ -863,21 +795,17 @@
     $__total = $__res["ok"] ? (int) ($__res["dados"]["total"] ?? 0) : 0;
     $__paginas = max((int) ceil($__total / 25), 1);
 
-    function gestao_manter(string $nome, string $valor, array $extra = []): string {
-        $params = ["empresa" => $valor] + $extra;
-        return "?" . http_build_query(array_filter($params, "strlen"));
+    function gestao_manter(array $params): string {
+        return "?" . http_build_query(array_filter($params, fn($v) => strval($v) !== "" && strval($v) !== "0"));
     }
+
+    // O painel de filtros só nasce aberto quando há filtro aplicado.
+    $__temFiltro = $__fEmpresa !== "" || $__fTipoId > 0 || $__fSetorId > 0 || $__fAtendente !== ""
+        || $__fStatus !== "" || $__fPrioridade !== "" || $__fInicio !== "" || $__fFim !== "";
 ?>
                 <?php if (!$__res["ok"]): ?>
                     <div class="alert alert-danger"><i class="fa fa-exclamation-triangle"></i> Não foi possível consultar a API de suporte.</div>
                 <?php endif; ?>
-
-                <?php
-                    // O painel de filtros nasce aberto so quando ha filtro aplicado: sem filtro,
-                    // a tela abre limpa e a lista fica com a tela inteira.
-                    $__temFiltro = $__fEmpresa !== "" || $__fSetorId > 0 || $__fAtendente !== ""
-                        || $__fStatus !== "" || $__fPrioridade !== "" || $__fInicio !== "" || $__fFim !== "";
-                ?>
 
                 <div class="row" style="margin-bottom:12px;">
                     <div class="col-sm-7">
@@ -924,27 +852,22 @@
                             </div>
                             <div class="col-md-3 col-sm-6">
                                 <div class="form-group">
-                                    <label>Setor</label>
-                                    <select name="setor_id" class="form-control">
+                                    <label>Tipo</label>
+                                    <select name="tipo_id" class="form-control">
                                         <option value="">Todos</option>
-                                        <?php foreach ($__setoresFiltro as $__s): ?>
-                                            <option value="<?= (int) ($__s["id"] ?? 0) ?>" <?= ($__fSetorId === (int) ($__s["id"] ?? 0)) ? "selected" : "" ?>>
-                                                <?= htmlspecialchars(strval($__s["nome"] ?? "")) ?>
-                                            </option>
+                                        <?php foreach ($__tipos as $__tp): ?>
+                                            <option value="<?= (int) ($__tp["id"] ?? 0) ?>" <?= ($__fTipoId === (int) ($__tp["id"] ?? 0)) ? "selected" : "" ?>><?= htmlspecialchars(strval($__tp["nome"] ?? "")) ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
                             </div>
                             <div class="col-md-3 col-sm-6">
                                 <div class="form-group">
-                                    <label>Atendente</label>
-                                    <select name="atendente_id" class="form-control">
+                                    <label>Setor</label>
+                                    <select name="setor_id" class="form-control">
                                         <option value="">Todos</option>
-                                        <option value="sem" <?= ($__fAtendente === "sem") ? "selected" : "" ?>>— sem responsável —</option>
-                                        <?php foreach ($__atendentes as $__a): ?>
-                                            <option value="<?= (int) ($__a["id"] ?? 0) ?>" <?= ((int) $__fAtendente === (int) ($__a["id"] ?? 0)) ? "selected" : "" ?>>
-                                                <?= htmlspecialchars(strval($__a["nome"] ?? "")) ?><?= strval($__a["status"] ?? "") !== "ativo" ? " (inativo)" : "" ?>
-                                            </option>
+                                        <?php foreach ($__setores as $__st): ?>
+                                            <option value="<?= (int) ($__st["id"] ?? 0) ?>" <?= ($__fSetorId === (int) ($__st["id"] ?? 0)) ? "selected" : "" ?>><?= htmlspecialchars(strval($__st["nome"] ?? "")) ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
@@ -954,22 +877,8 @@
                                     <label>Status</label>
                                     <select name="status" class="form-control">
                                         <option value="">Todos</option>
-                                        <?php
-                                            $__statusOpcoes = [
-                                                "aberto"                 => "Aberto",
-                                                "em_analise"             => "Em Análise",
-                                                "em_andamento"           => "Em Andamento",
-                                                "aguardando_cliente"     => "Aguardando retorno do cliente",
-                                                "reaberto"               => "Reaberto",
-                                                "encaminhado_ssi"        => "Encaminhado a SSI",
-                                                "teste_interno"          => "Teste Interno",
-                                                "aguardando_atualizacao" => "Aguardando Atualização",
-                                                "resolvido"              => "Concluído",
-                                                "cancelado"              => "Cancelado",
-                                            ];
-                                        ?>
-                                        <?php foreach ($__statusOpcoes as $__k => $__v): ?>
-                                            <option value="<?= $__k ?>" <?= ($__fStatus === $__k) ? "selected" : "" ?>><?= htmlspecialchars($__v) ?></option>
+                                        <?php foreach ($__fluxo as $__chaveStatus => [$__rotuloStatus]): ?>
+                                            <option value="<?= $__chaveStatus ?>" <?= ($__fStatus === $__chaveStatus) ? "selected" : "" ?>><?= htmlspecialchars($__rotuloStatus) ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
@@ -978,33 +887,43 @@
                         <div class="row">
                             <div class="col-md-3 col-sm-6">
                                 <div class="form-group">
-                                    <label>Prioridade</label>
-                                    <select name="prioridade" class="form-control">
-                                        <option value="">Todas</option>
-                                        <option value="baixa" <?= ($__fPrioridade === "baixa") ? "selected" : "" ?>>Baixa</option>
-                                        <option value="media" <?= ($__fPrioridade === "media") ? "selected" : "" ?>>Média</option>
-                                        <option value="alta" <?= ($__fPrioridade === "alta") ? "selected" : "" ?>>Alta</option>
-                                        <option value="urgente" <?= ($__fPrioridade === "urgente") ? "selected" : "" ?>>Urgente</option>
+                                    <label>Responsável</label>
+                                    <select name="atendente_id" class="form-control">
+                                        <option value="">Todos</option>
+                                        <option value="sem" <?= ($__fAtendente === "sem") ? "selected" : "" ?>>— sem responsável —</option>
+                                        <?php foreach ($__atendentes as $__a): ?>
+                                            <option value="<?= (int) ($__a["id"] ?? 0) ?>" <?= ((int) $__fAtendente === (int) ($__a["id"] ?? 0)) ? "selected" : "" ?>><?= htmlspecialchars(strval($__a["nome"] ?? "")) ?></option>
+                                        <?php endforeach; ?>
                                     </select>
                                 </div>
                             </div>
                             <div class="col-md-3 col-sm-6">
                                 <div class="form-group">
+                                    <label>Prioridade</label>
+                                    <select name="prioridade" class="form-control">
+                                        <option value="">Todas</option>
+                                        <?php foreach ($__prioridades as $__chavePrioridade => [$__rotuloPrioridade]): ?>
+                                            <option value="<?= $__chavePrioridade ?>" <?= ($__fPrioridade === $__chavePrioridade) ? "selected" : "" ?>><?= htmlspecialchars($__rotuloPrioridade) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-2 col-sm-6">
+                                <div class="form-group">
                                     <label>Aberto de</label>
                                     <input type="date" name="data_inicio" class="form-control" value="<?= htmlspecialchars($__fInicio) ?>" />
                                 </div>
                             </div>
-                            <div class="col-md-3 col-sm-6">
+                            <div class="col-md-2 col-sm-6">
                                 <div class="form-group">
                                     <label>até</label>
                                     <input type="date" name="data_fim" class="form-control" value="<?= htmlspecialchars($__fFim) ?>" />
                                 </div>
                             </div>
-                            <div class="col-md-3 col-sm-6">
+                            <div class="col-md-2 col-sm-12">
                                 <div class="form-group">
                                     <label style="display:block;">&nbsp;</label>
                                     <button type="submit" class="btn blue"><i class="fa fa-search"></i> Filtrar</button>
-                                    <a href="gestao.php" class="btn btn-default">Limpar</a>
                                 </div>
                             </div>
                         </div>
@@ -1012,9 +931,8 @@
                 </div>
 
                 <style>
-                    /* .label do Bootstrap e inline: empilhado, nao reserva espaco vertical
-                       nenhum e os badges saem colados. inline-block + margem resolve, e
-                       vale para toda a listagem (situacao, tipo, SSI). */
+                    /* .label do Bootstrap é inline: empilhado, não reserva espaço vertical e os
+                       badges saem colados. inline-block + margem resolve para toda a listagem. */
                     .suporte-lista td { vertical-align: middle; line-height: 1.6; }
                     .suporte-lista .label { display: inline-block; margin: 0 4px 3px 0; }
                     .suporte-lista .linha-meta { margin-top: 6px; }
@@ -1030,8 +948,8 @@
                             <th style="width:160px;">Empresa / Setor</th>
                             <th style="width:150px;">Solicitante</th>
                             <th>Descrição</th>
-                            <th style="width:140px;">Atendente</th>
-                            <th style="width:120px;">Situação</th>
+                            <th style="width:140px;">Responsável</th>
+                            <th style="width:130px;">Situação</th>
                             <th style="width:110px;">Datas</th>
                             <th style="width:70px;"></th>
                         </tr>
@@ -1044,44 +962,14 @@
                             <?php
                                 $__desc = trim(strval($__t["descricao"] ?? ""));
                                 $__descCurta = mb_strlen($__desc, "UTF-8") > 110 ? mb_substr($__desc, 0, 110, "UTF-8") . "…" : $__desc;
-                                $__statusT = strval($__t["status"] ?? "aberto");
-                                $__badgeMap = [
-                                    "aberto"             => '<span class="label label-warning">Aberto</span>',
-                                    "em_analise"         => '<span class="label label-default" style="background:#8e44ad;">Em Análise</span>',
-                                    "em_andamento"       => '<span class="label label-info">Em Andamento</span>',
-                                    "aguardando_cliente" => '<span class="label label-primary">Aguardando retorno</span>',
-                                    "resolvido"          => '<span class="label label-success">Concluído</span>',
-                                    "cancelado"          => '<span class="label label-default">Cancelado</span>',
-                                    "reaberto"           => '<span class="label label-warning">Reaberto</span>',
-                                    "encaminhado_ssi"    => '<span class="label label-danger">Encaminhado a SSI</span>',
-                                    "teste_interno"      => '<span class="label label-default" style="background:#16a085;">Teste Interno</span>',
-                                    "aguardando_atualizacao" => '<span class="label label-default" style="background:#e67e22;">Aguardando Atualização</span>',
-                                ];
-                                $__badgeT = $__badgeMap[$__statusT] ?? '<span class="label label-default">' . htmlspecialchars($__statusT) . '</span>';
-                                $__tipoLabel = ["duvida" => "Dúvida", "sugestao" => "Sugestão", "bug" => "Bug"][strval($__t["tipo"] ?? "")] ?? "";
-                                $__ssiT = strval($__t["ssi_codigo"] ?? "");
-
                                 $__prioridadeT = strval($__t["prioridade"] ?? "media");
-                                $__prioridadeBadgeMap = [
-                                    "baixa"   => '<span class="label label-default">Baixa</span>',
-                                    "media"   => '<span class="label label-info">Média</span>',
-                                    "alta"    => '<span class="label label-warning">Alta</span>',
-                                    "urgente" => '<span class="label label-danger">Urgente</span>',
-                                ];
-                                $__prioridadeBadgeT = $__prioridadeBadgeMap[$__prioridadeT] ?? $__prioridadeBadgeMap["media"];
+                                [$__prioridadeLabelT, $__prioridadeClasseT] = $__prioridades[$__prioridadeT] ?? $__prioridades["media"];
                                 $__slaT = suporte_sla_status($__prioridadeT, strval($__t["created_at"] ?? ""), strval($__t["fechado_em"] ?? ""), $__configAtual);
-
-                                // A URL inteira era o que mais poluia a linha: fica so o nome do
-                                // arquivo, com a URL completa no title e no destino do link.
+                                // A URL inteira poluía a linha: fica só o nome do arquivo, com a URL completa no title e no destino.
                                 $__pag = trim(strval($__t["pagina_url"] ?? ""));
                                 $__pagCurta = $__pag !== "" ? basename(strval(parse_url($__pag, PHP_URL_PATH) ?: "")) : "";
-
                                 $__atNome = trim(strval($__t["atendente_nome"] ?? ""));
-                                // Nome gravado sem vinculo com a equipe: aparece na coluna, mas nao
-                                // entra em "Meus atendimentos" de ninguem. Sinalizado para nao parecer
-                                // que o filtro esta perdendo chamado.
-                                $__atSolto = $__atNome !== "" && (int) ($__t["atendente_id"] ?? 0) < 1;
-
+                                $__tipoNomeT = trim(strval($__t["tipo_nome"] ?? ""));
                                 $__fechadoT = suporte_fmt_data(strval($__t["fechado_em"] ?? ""));
                             ?>
                             <tr>
@@ -1097,11 +985,8 @@
                                 <td>
                                     <?= htmlspecialchars($__descCurta) ?>
                                     <div class="linha-meta">
-                                        <?php if ($__tipoLabel !== ""): ?>
-                                            <small class="text-muted"><i class="fa fa-tag"></i> <?= htmlspecialchars($__tipoLabel) ?></small>
-                                        <?php endif; ?>
-                                        <?php if ($__ssiT !== ""): ?>
-                                            <small class="label label-danger" style="font-size:10px;"><?= htmlspecialchars($__ssiT) ?></small>
+                                        <?php if ($__tipoNomeT !== ""): ?>
+                                            <small class="text-muted"><i class="fa fa-tag"></i> <?= htmlspecialchars($__tipoNomeT) ?></small>
                                         <?php endif; ?>
                                         <?php if ($__pagCurta !== ""): ?>
                                             <small><a href="<?= htmlspecialchars($__pag, ENT_QUOTES) ?>" target="_blank" class="text-muted" title="<?= htmlspecialchars($__pag, ENT_QUOTES) ?>"><i class="fa fa-external-link"></i> <?= htmlspecialchars($__pagCurta) ?></a></small>
@@ -1111,17 +996,14 @@
                                 <td>
                                     <?php if ($__atNome !== ""): ?>
                                         <?= htmlspecialchars($__atNome) ?>
-                                        <?php if ($__atSolto): ?>
-                                            <br><small class="text-muted" title="Este nome não está vinculado a nenhum atendente da equipe, então o chamado não aparece em Meus atendimentos."><i class="fa fa-unlink"></i> fora da equipe</small>
-                                        <?php endif; ?>
                                     <?php else: ?>
                                         <small class="text-muted">— sem responsável —</small>
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <?= $__badgeT ?>
+                                    <?= gestao_badge_status($__fluxo, strval($__t["status"] ?? "aberto")) ?>
                                     <div class="linha-meta">
-                                        <?= $__prioridadeBadgeT ?>
+                                        <span class="label <?= $__prioridadeClasseT ?>"><?= htmlspecialchars($__prioridadeLabelT) ?></span>
                                         <?php if ($__slaT["classe"] === "danger"): ?>
                                             <span class="label label-danger" style="font-size:10px;">SLA</span>
                                         <?php endif; ?>
@@ -1145,13 +1027,12 @@
                         <ul class="pagination">
                             <?php for ($__p = 1; $__p <= $__paginas; $__p++): ?>
                                 <li class="<?= ($__p === $__fPagina) ? "active" : "" ?>">
-                                    <a href="<?= gestao_manter("empresa", $__fEmpresa, ["setor_id" => $__fSetorId ?: "", "atendente_id" => $__fAtendente, "status" => $__fStatus, "prioridade" => $__fPrioridade, "data_inicio" => $__fInicio, "data_fim" => $__fFim, "pagina" => $__p]) ?>"><?= $__p ?></a>
+                                    <a href="<?= gestao_manter(["empresa" => $__fEmpresa, "tipo_id" => $__fTipoId, "setor_id" => $__fSetorId, "atendente_id" => $__fAtendente, "status" => $__fStatus, "prioridade" => $__fPrioridade, "data_inicio" => $__fInicio, "data_fim" => $__fFim, "pagina" => $__p]) ?>"><?= $__p ?></a>
                                 </li>
                             <?php endfor; ?>
                         </ul>
                     </div>
                 <?php endif; ?>
-<?php endif; ?>
 <?php endif; ?>
 
             </div>
@@ -1160,4 +1041,3 @@
 </div>
 
 <?php rodape(); ?>
-
