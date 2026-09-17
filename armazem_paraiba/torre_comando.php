@@ -1475,7 +1475,10 @@ $notaGestao = torre_calcular_nota_gestao($empresaFiltro, $condEmpresa, $ativos, 
   }
   .tc-root{ font-family:"Segoe UI", Roboto, Arial, sans-serif; color:var(--tc-ink); max-width:100%; overflow-x:hidden; }
   .tc-root *{ box-sizing:border-box; }
-  .tc-root{ background:var(--tc-bg); margin:-25px -25px 0; padding:22px 25px 50px; }
+  /* Só o topo encosta no cabeçalho. A margem negativa nas laterais deslocava o painel 25px para
+     a esquerda, mas o max-width:100% impedia que ele crescesse do outro lado: sobrava espaço à
+     direita em qualquer largura e, no celular, o conteúdo saía 10px para fora da tela. */
+  .tc-root{ background:var(--tc-bg); margin:-25px 0 0; padding:22px 20px 50px; }
 
   .tc-top{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; margin-bottom:22px; }
   .tc-title{ display:flex; align-items:center; gap:12px; }
@@ -1490,6 +1493,7 @@ $notaGestao = torre_calcular_nota_gestao($empresaFiltro, $condEmpresa, $ativos, 
   .tc-btn-personalizar{ height:36px; box-sizing:border-box; }
   .tc-clock{ font-size:12px; color:var(--tc-ink-mute); display:flex; align-items:center; gap:6px; height:36px; }
   @media (max-width:700px){
+    .tc-root{ padding:16px 12px 40px; }
     .tc-top{ flex-direction:column; align-items:stretch; }
     .tc-filters{ flex-direction:column; align-items:stretch; width:100%; }
     .tc-filters form{ flex-direction:column; align-items:stretch; width:100%; }

@@ -921,28 +921,26 @@ const fs = require("fs");
 const path = require("path");
 const nodemailer = require("nodemailer");
 
-// Status permitidos do chamado (fluxo de atendimento).
+// Fluxo do chamado: Aberto → Em análise → Em desenvolvimento / Desenvolvimento interno → Corrigido → Fechado.
 const SUPORTE_STATUS = {
-    aberto:               "Aberto",
-    em_analise:           "Em Análise",
-    em_andamento:         "Em Andamento",
-    aguardando_cliente:   "Aguardando retorno do cliente",
-    resolvido:            "Concluído",
-    cancelado:            "Cancelado",
-    reaberto:             "Reaberto",
-    encaminhado_ssi:      "Encaminhado a SSI",
-    teste_interno:        "Teste Interno",
-    aguardando_atualizacao: "Aguardando Atualização"
+    aberto:             "Aberto",
+    em_analise:         "Em Análise",
+    em_desenvolvimento: "Em Desenvolvimento",
+    desenvolvimento_interno: "Enviado para Desenvolvimento Interno",
+    corrigido:          "Corrigido",
+    fechado:            "Fechado"
 };
 
-const SUPORTE_TIPOS = {
-    duvida:   "Dúvida operacional",
-    sugestao: "Sugestão",
-    bug:      "Bug de sistema"
-};
+// Os tipos de chamado ficam na tabela suporte_tipo (Gestão de Suporte → Configurações), cada um
+// ligado ao setor que recebe. Estes são só os iniciais, criados na primeira execução — a chave
+// casa com a antiga coluna suporte_ticket.tipo, para classificar os chamados que já existiam.
+const SUPORTE_TIPOS_INICIAIS = [
+    { chave: "bug",      nome: "Bug de sistema" },
+    { chave: "duvida",   nome: "Dúvida operacional" },
+    { chave: "sugestao", nome: "Sugestão" }
+];
 
-// Prioridade geral do chamado — independente do tipo e do status, vale o fluxo inteiro
-// (não confundir com ssi_prioridade, que só existe pra chamados encaminhados à SSI).
+// Prioridade geral do chamado — independente do tipo e do status, vale o fluxo inteiro.
 const SUPORTE_PRIORIDADES = {
     baixa:   "Baixa",
     media:   "Média",
@@ -1006,8 +1004,7 @@ function escH(s) {
 // Corpo padrão do e-mail de chamado.
 function htmlEmailSuporte(ticket, titulo, avisos) {
     const statusLabel = SUPORTE_STATUS[ticket.status] || ticket.status;
-    const tipoLabel = SUPORTE_TIPOS[ticket.tipo] || "";
-    const ss = ticket.ssi_codigo ? ("<br>SSI: <strong>" + escH(ticket.ssi_codigo) + "</strong> (" + (ticket.ssi_prioridade === "urgente" ? "Prioritária — urgente em produção" : "Próxima atualização") + ")") : "";
+    const tipoLabel = ticket.tipo_nome || "";
     return (
         "<div style='font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;'>" +
         "<h2 style='color:#337ab7;margin-bottom:4px;'>" + escH(titulo) + "</h2>" +
@@ -1015,8 +1012,7 @@ function htmlEmailSuporte(ticket, titulo, avisos) {
         "<table style='border-collapse:collapse;width:100%;font-size:14px;'>" +
         "<tr><td style='padding:6px 0;color:#555;width:130px;'><strong>Status:</strong></td><td>" + escH(statusLabel) + "</td></tr>" +
         (tipoLabel ? "<tr><td style='padding:6px 0;color:#555;'><strong>Tipo:</strong></td><td>" + escH(tipoLabel) + "</td></tr>" : "") +
-        (ticket.atendente_nome ? "<tr><td style='padding:6px 0;color:#555;'><strong>Atendente:</strong></td><td>" + escH(ticket.atendente_nome) + "</td></tr>" : "") +
-        ss +
+        (ticket.atendente_nome ? "<tr><td style='padding:6px 0;color:#555;'><strong>Responsável:</strong></td><td>" + escH(ticket.atendente_nome) + "</td></tr>" : "") +
         "</table>" +
         "<div style='background:#f7f7f7;border:1px solid #eee;border-radius:6px;padding:12px;margin-top:12px;'>" +
         "<strong style='color:#555;'>Descrição do problema:</strong><br>" +
@@ -1036,6 +1032,7 @@ function htmlEmailNotificacaoInterna(ticket) {
         "<p style='color:#888;margin-top:0;font-size:13px;'>Chamado #" + escH(ticket.id) + " — recém aberto, aguardando análise</p>" +
         "<table style='border-collapse:collapse;width:100%;font-size:14px;'>" +
         "<tr><td style='padding:6px 0;color:#555;width:130px;'><strong>Empresa:</strong></td><td>" + escH(ticket.empresa_nome || ticket.empresa_key || "") + " (" + escH(ticket.empresa_key || "") + ")</td></tr>" +
+        (ticket.tipo_nome ? "<tr><td style='padding:6px 0;color:#555;'><strong>Tipo:</strong></td><td>" + escH(ticket.tipo_nome) + "</td></tr>" : "") +
         (ticket.setor_nome ? "<tr><td style='padding:6px 0;color:#555;'><strong>Setor:</strong></td><td>" + escH(ticket.setor_nome) + "</td></tr>" : "") +
         "<tr><td style='padding:6px 0;color:#555;'><strong>Usuário:</strong></td><td>" + escH(ticket.user_nome || ticket.user_login || "") + "</td></tr>" +
         "</table>" +
@@ -1049,51 +1046,40 @@ function htmlEmailNotificacaoInterna(ticket) {
     );
 }
 
-// E-mail para o atendente vinculado ao setor do chamado — roteamento por equipe.
-// "externo" avisa quem atende o cliente; "interno_ssi" avisa quem desenvolve a correção.
-function htmlEmailAtendenteSetor(ticket, escopo) {
-    const ehSsi = escopo === "interno_ssi";
-    const titulo = ehSsi ? "Chamado encaminhado à SSI" : "Novo chamado no seu setor";
-    const cor = ehSsi ? "#c0392b" : "#e67e22";
-    const chamada = ehSsi
-        ? "Este chamado foi classificado como bug e encaminhado ao atendimento interno (SSI). Você está vinculado a esse setor como atendimento interno."
-        : "Você está vinculado a esse setor como atendimento externo. Acesse a Gestão de Suporte para assumir o chamado.";
+// E-mail para os funcionários do setor que recebe o tipo do chamado.
+function htmlEmailSetor(ticket, chamada) {
     return (
         "<div style='font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;'>" +
-        "<h2 style='color:" + cor + ";margin-bottom:4px;'>" + escH(titulo) + "</h2>" +
+        "<h2 style='color:#e67e22;margin-bottom:4px;'>Novo chamado para o seu setor</h2>" +
         "<p style='color:#888;margin-top:0;font-size:13px;'>Chamado #" + escH(ticket.id) + " — " + escH(ticket.setor_nome || "sem setor") + "</p>" +
         "<table style='border-collapse:collapse;width:100%;font-size:14px;'>" +
         "<tr><td style='padding:6px 0;color:#555;width:130px;'><strong>Empresa:</strong></td><td>" + escH(ticket.empresa_nome || ticket.empresa_key || "") + "</td></tr>" +
+        (ticket.tipo_nome ? "<tr><td style='padding:6px 0;color:#555;'><strong>Tipo:</strong></td><td>" + escH(ticket.tipo_nome) + "</td></tr>" : "") +
         "<tr><td style='padding:6px 0;color:#555;'><strong>Setor:</strong></td><td>" + escH(ticket.setor_nome || "—") + "</td></tr>" +
         "<tr><td style='padding:6px 0;color:#555;'><strong>Usuário:</strong></td><td>" + escH(ticket.user_nome || ticket.user_login || "") + "</td></tr>" +
-        (ticket.ssi_codigo ? "<tr><td style='padding:6px 0;color:#555;'><strong>SSI:</strong></td><td>" + escH(ticket.ssi_codigo) + " (" + (ticket.ssi_prioridade === "urgente" ? "Prioritária — urgente em produção" : "Próxima atualização") + ")</td></tr>" : "") +
         "</table>" +
         "<div style='background:#f7f7f7;border:1px solid #eee;border-radius:6px;padding:12px;margin-top:12px;'>" +
         "<strong style='color:#555;'>Descrição do problema:</strong><br>" +
         "<span style='white-space:pre-wrap;color:#333;'>" + escH(ticket.descricao || "") + "</span>" +
         "</div>" +
-        "<p style='color:#555;font-size:14px;margin-top:14px;'>" + chamada + "</p>" +
+        "<p style='color:#555;font-size:14px;margin-top:14px;'>" + escH(chamada || "Acesse a Gestão de Suporte para assumir o chamado.") + "</p>" +
         "<p style='color:#aaa;font-size:12px;margin-top:20px;'>Tech PS — Sistema de Suporte</p>" +
         "</div>"
     );
 }
 
-// Atendentes ativos vinculados a um setor num dos escopos (externo / interno_ssi).
-// Sem setor no chamado, ou setor sem ninguém vinculado, devolve lista vazia — quem
-// cobre esse caso é a lista geral de e-mails (suporte_config.emails_notificacao).
-async function atendentesDoSetor(setorId, escopo) {
+// Funcionários ativos de um setor — espelho do cadastro de funcionários do domínio Demo
+// (enviado por /suporte/atendentes/sincronizar). Sem setor, devolve lista vazia.
+async function membrosDoSetor(setorId) {
     const id = parseInt(setorId, 10);
     if (!id || id < 1) return [];
     try {
         return await suporteQuery(
-            "SELECT a.id, a.nome, a.email FROM suporte_atendente a " +
-            "JOIN suporte_atendente_setor v ON v.atendente_id = a.id " +
-            "WHERE v.setor_id = ? AND v.escopo = ? AND a.status = 'ativo' AND a.email <> '' " +
-            "ORDER BY a.nome ASC",
-            [id, escopo]
+            "SELECT id, nome, email FROM suporte_atendente WHERE setor_id = ? AND status = 'ativo' ORDER BY nome ASC",
+            [id]
         );
     } catch (err) {
-        console.error("[SUPORTE] Erro ao buscar atendentes do setor:", err.message);
+        console.error("[SUPORTE] Erro ao buscar funcionários do setor:", err.message);
         return [];
     }
 }
@@ -1120,13 +1106,14 @@ async function vincularChamadosPorNome() {
     }
 }
 
-// Dispara o aviso direcionado para todos os atendentes do setor no escopo informado.
-async function notificarAtendentesSetor(ticket, escopo, assunto) {
-    const equipe = await atendentesDoSetor(ticket.setor_id, escopo);
-    if (!equipe.length) return 0;
-    const html = htmlEmailAtendenteSetor(ticket, escopo);
-    equipe.forEach((a) => enviarEmailSuporte(a.email, assunto, html));
-    return equipe.length;
+// Avisa por e-mail todos os funcionários do setor do chamado que têm e-mail cadastrado.
+async function notificarSetor(ticket, assunto, chamada) {
+    const membros = await membrosDoSetor(ticket.setor_id);
+    const comEmail = membros.filter((m) => m.email);
+    if (!comEmail.length) return 0;
+    const html = htmlEmailSetor(ticket, chamada);
+    comEmail.forEach((m) => enviarEmailSuporte(m.email, assunto, html));
+    return comEmail.length;
 }
 
 // Lê uma chave de configuração do suporte (tabela suporte_config). Retorna "" se ausente/erro.
@@ -1231,13 +1218,16 @@ function criarTabelasSuporte() {
             responsavel_email VARCHAR(190) NOT NULL DEFAULT '',
             pagina_url VARCHAR(500) NOT NULL DEFAULT '',
             descricao TEXT NOT NULL,
-            status ENUM('aberto','em_analise','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi','teste_interno','aguardando_atualizacao') NOT NULL DEFAULT 'aberto',
-            tipo ENUM('duvida','sugestao','bug') DEFAULT NULL,
+            status ENUM('aberto','em_analise','em_desenvolvimento','desenvolvimento_interno','corrigido','fechado') NOT NULL DEFAULT 'aberto',
+            tipo_id BIGINT UNSIGNED DEFAULT NULL,
+            tipo_nome VARCHAR(150) DEFAULT NULL,
             prioridade ENUM('baixa','media','alta','urgente') NOT NULL DEFAULT 'media',
-            ssi_codigo VARCHAR(30) DEFAULT NULL,
-            ssi_prioridade ENUM('urgente','proxima_atualizacao') DEFAULT NULL,
+            setor_id BIGINT UNSIGNED DEFAULT NULL,
+            setor_nome VARCHAR(150) DEFAULT NULL,
+            atendente_id BIGINT UNSIGNED DEFAULT NULL,
             atendente_nome VARCHAR(150) DEFAULT NULL,
             aceito_em DATETIME DEFAULT NULL,
+            fechado_em DATETIME DEFAULT NULL,
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             KEY idx_ticket_empresa_data (empresa_key, created_at),
@@ -1278,6 +1268,19 @@ function criarTabelasSuporte() {
             CONSTRAINT fk_comentario_ticket FOREIGN KEY (ticket_id)
                 REFERENCES suporte_ticket (id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+        // Chat interno da equipe: tabela própria, nunca entra no payload de comentários/eventos que a empresa vê.
+        `CREATE TABLE IF NOT EXISTS suporte_chat_interno (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            ticket_id BIGINT UNSIGNED NOT NULL,
+            autor VARCHAR(150) NOT NULL DEFAULT '',
+            autor_login VARCHAR(100) NOT NULL DEFAULT '',
+            texto TEXT NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_chat_interno_ticket (ticket_id, id),
+            CONSTRAINT fk_chat_interno_ticket FOREIGN KEY (ticket_id)
+                REFERENCES suporte_ticket (id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
         `CREATE TABLE IF NOT EXISTS suporte_evento (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             ticket_id BIGINT UNSIGNED NOT NULL,
@@ -1300,6 +1303,20 @@ function criarTabelasSuporte() {
             PRIMARY KEY (id),
             UNIQUE KEY uniq_origem_setor (origem_setor_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+        `CREATE TABLE IF NOT EXISTS suporte_tipo (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            chave VARCHAR(30) DEFAULT NULL,
+            nome VARCHAR(150) NOT NULL,
+            setor_id BIGINT UNSIGNED DEFAULT NULL,
+            status ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo',
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uniq_tipo_chave (chave),
+            KEY idx_tipo_setor (setor_id),
+            CONSTRAINT fk_tipo_setor FOREIGN KEY (setor_id)
+                REFERENCES suporte_setor (id) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
         `CREATE TABLE IF NOT EXISTS suporte_config (
             chave VARCHAR(100) NOT NULL,
             valor TEXT,
@@ -1309,27 +1326,18 @@ function criarTabelasSuporte() {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
         `CREATE TABLE IF NOT EXISTS suporte_atendente (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            origem_entidade_id INT DEFAULT NULL,
             nome VARCHAR(150) NOT NULL,
-            email VARCHAR(190) NOT NULL,
+            email VARCHAR(190) NOT NULL DEFAULT '',
             login VARCHAR(100) NOT NULL DEFAULT '',
+            setor_id BIGINT UNSIGNED DEFAULT NULL,
             origem_empresa VARCHAR(60) NOT NULL DEFAULT '',
             status ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo',
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
-            UNIQUE KEY uniq_atendente_email (email)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
-        `CREATE TABLE IF NOT EXISTS suporte_atendente_setor (
-            atendente_id BIGINT UNSIGNED NOT NULL,
-            setor_id BIGINT UNSIGNED NOT NULL,
-            escopo ENUM('externo','interno_ssi') NOT NULL DEFAULT 'externo',
-            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (atendente_id, setor_id, escopo),
-            KEY idx_vinculo_setor (setor_id, escopo),
-            CONSTRAINT fk_vinculo_atendente FOREIGN KEY (atendente_id)
-                REFERENCES suporte_atendente (id) ON DELETE CASCADE,
-            CONSTRAINT fk_vinculo_setor FOREIGN KEY (setor_id)
-                REFERENCES suporte_setor (id) ON DELETE CASCADE
+            UNIQUE KEY uniq_atendente_origem (origem_entidade_id),
+            KEY idx_atendente_setor (setor_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     ];
     sqls.forEach((sql) => {
@@ -1345,13 +1353,9 @@ function migrarTabelasSuporte() {
         "ALTER TABLE suporte_ticket ADD COLUMN user_email VARCHAR(190) NOT NULL DEFAULT ''",
         "ALTER TABLE suporte_ticket ADD COLUMN responsavel_nome VARCHAR(150) NOT NULL DEFAULT ''",
         "ALTER TABLE suporte_ticket ADD COLUMN responsavel_email VARCHAR(190) NOT NULL DEFAULT ''",
-        "ALTER TABLE suporte_ticket ADD COLUMN tipo ENUM('duvida','sugestao','bug') DEFAULT NULL",
-        "ALTER TABLE suporte_ticket ADD COLUMN ssi_codigo VARCHAR(30) DEFAULT NULL",
-        "ALTER TABLE suporte_ticket ADD COLUMN ssi_prioridade ENUM('urgente','proxima_atualizacao') DEFAULT NULL",
         "ALTER TABLE suporte_ticket ADD COLUMN atendente_nome VARCHAR(150) DEFAULT NULL",
         "ALTER TABLE suporte_ticket ADD COLUMN aceito_em DATETIME DEFAULT NULL",
         "ALTER TABLE suporte_ticket ADD COLUMN fechado_em DATETIME DEFAULT NULL",
-        "ALTER TABLE suporte_ticket MODIFY status ENUM('aberto','em_analise','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi','teste_interno','aguardando_atualizacao') NOT NULL DEFAULT 'aberto'",
         "ALTER TABLE suporte_ticket ADD COLUMN setor_id BIGINT UNSIGNED DEFAULT NULL",
         "ALTER TABLE suporte_ticket ADD COLUMN setor_nome VARCHAR(150) DEFAULT NULL",
         "ALTER TABLE suporte_ticket ADD COLUMN prioridade ENUM('baixa','media','alta','urgente') NOT NULL DEFAULT 'media'",
@@ -1371,6 +1375,63 @@ function migrarTabelasSuporte() {
             });
     };
     migracoes.forEach(roda);
+}
+
+// Migração do fluxo simplificado. Roda a cada boot, é idempotente e sequencial — a conexão
+// do suporte é única, então cada passo só começa depois que o anterior terminou.
+async function migrarSuporteV2() {
+    const ignoraveis = new Set(["ER_DUP_FIELDNAME", "ER_DUP_KEYNAME", "ER_CANT_DROP_FIELD_OR_KEY", "ER_BAD_FIELD_ERROR"]);
+    const passo = async (descricao, sql, params) => {
+        try {
+            const r = await suporteQuery(sql, params || []);
+            if (r && r.affectedRows) console.log("[SUPORTE] Migração (" + descricao + "): " + r.affectedRows + " linha(s).");
+            return r;
+        } catch (err) {
+            if (err && ignoraveis.has(err.code)) return null;
+            console.error("[SUPORTE] Migração (" + descricao + ") falhou: " + err.message);
+            return null;
+        }
+    };
+
+    // Colunas do modelo novo.
+    await passo("tipo_id do chamado", "ALTER TABLE suporte_ticket ADD COLUMN tipo_id BIGINT UNSIGNED DEFAULT NULL");
+    await passo("tipo_nome do chamado", "ALTER TABLE suporte_ticket ADD COLUMN tipo_nome VARCHAR(150) DEFAULT NULL");
+    await passo("origem do funcionário", "ALTER TABLE suporte_atendente ADD COLUMN origem_entidade_id INT DEFAULT NULL");
+    await passo("setor do funcionário", "ALTER TABLE suporte_atendente ADD COLUMN setor_id BIGINT UNSIGNED DEFAULT NULL");
+    await passo("chave da origem", "ALTER TABLE suporte_atendente ADD UNIQUE KEY uniq_atendente_origem (origem_entidade_id)");
+    await passo("índice do setor", "ALTER TABLE suporte_atendente ADD KEY idx_atendente_setor (setor_id)");
+    // Dois funcionários podem ter o mesmo e-mail (ou nenhum): e-mail deixa de ser chave.
+    await passo("e-mail sem unicidade", "ALTER TABLE suporte_atendente DROP INDEX uniq_atendente_email");
+    await passo("e-mail opcional", "ALTER TABLE suporte_atendente MODIFY email VARCHAR(190) NOT NULL DEFAULT ''");
+
+    // Status: só migra se a coluna ainda não estiver no fluxo novo.
+    const coluna = await passo("definição de status", "SELECT COLUMN_TYPE AS tipo FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'suporte_ticket' AND COLUMN_NAME = 'status'");
+    const definicao = coluna && coluna.length ? String(coluna[0].tipo || "").toLowerCase() : "";
+    if (definicao && definicao !== "enum('aberto','em_analise','em_desenvolvimento','desenvolvimento_interno','corrigido','fechado')") {
+        await passo("status ampliado", "ALTER TABLE suporte_ticket MODIFY status ENUM('aberto','em_analise','em_andamento','aguardando_cliente','resolvido','cancelado','reaberto','encaminhado_ssi','teste_interno','aguardando_atualizacao','em_desenvolvimento','desenvolvimento_interno','corrigido','fechado') NOT NULL DEFAULT 'aberto'");
+        await passo("Reaberto → Aberto", "UPDATE suporte_ticket SET status = 'aberto' WHERE status = 'reaberto'");
+        // Em andamento com código de desenvolvimento antigo já estava em correção.
+        await passo("Em andamento com código → Em desenvolvimento", "UPDATE suporte_ticket SET status = 'em_desenvolvimento' WHERE status = 'em_andamento' AND COALESCE(ssi_codigo, '') <> ''");
+        await passo("Encaminhado/Teste interno → Em desenvolvimento", "UPDATE suporte_ticket SET status = 'em_desenvolvimento' WHERE status IN ('encaminhado_ssi','teste_interno')");
+        await passo("Em andamento/Aguardando cliente → Em análise", "UPDATE suporte_ticket SET status = 'em_analise' WHERE status IN ('em_andamento','aguardando_cliente')");
+        await passo("Aguardando atualização → Corrigido", "UPDATE suporte_ticket SET status = 'corrigido' WHERE status = 'aguardando_atualizacao'");
+        await passo("Concluído/Cancelado → Fechado", "UPDATE suporte_ticket SET status = 'fechado' WHERE status IN ('resolvido','cancelado')");
+        const restante = await passo("status sem correspondência", "SELECT COUNT(*) AS total FROM suporte_ticket WHERE status NOT IN ('aberto','em_analise','em_desenvolvimento','desenvolvimento_interno','corrigido','fechado')");
+        if (restante && restante.length && parseInt(restante[0].total, 10) === 0) {
+            await passo("status do fluxo novo", "ALTER TABLE suporte_ticket MODIFY status ENUM('aberto','em_analise','em_desenvolvimento','desenvolvimento_interno','corrigido','fechado') NOT NULL DEFAULT 'aberto'");
+        } else {
+            console.error("[SUPORTE] Ainda há chamados com status fora do fluxo novo; a lista de status não foi reduzida.");
+        }
+    }
+
+    // Tipos iniciais (só quando a tabela está vazia) e classificação dos chamados antigos.
+    const qtdTipos = await passo("tipos existentes", "SELECT COUNT(*) AS total FROM suporte_tipo");
+    if (qtdTipos && qtdTipos.length && parseInt(qtdTipos[0].total, 10) === 0) {
+        for (const t of SUPORTE_TIPOS_INICIAIS) {
+            await passo("tipo inicial " + t.chave, "INSERT IGNORE INTO suporte_tipo (chave, nome) VALUES (?, ?)", [t.chave, t.nome]);
+        }
+    }
+    await passo("tipo dos chamados antigos", "UPDATE suporte_ticket t JOIN suporte_tipo tp ON tp.chave = t.tipo SET t.tipo_id = tp.id, t.tipo_nome = tp.nome WHERE t.tipo_id IS NULL AND t.tipo IS NOT NULL");
 }
 
 function suporteQuery(sql, params) {
@@ -1587,24 +1648,32 @@ app.post("/suporte/tickets", uploadSuporte.array("anexos", SUPORTE.maxArquivos),
             return res.status(400).json({ ok: false, msg: "URL da página muito longa." });
         }
 
-        // Setor do chamado (opcional apenas se não houver nenhum setor ativo cadastrado).
+        // Tipo do chamado: define o setor que recebe (Gestão de Suporte → Configurações).
+        // Obrigatório quando houver tipo ativo. Tipo ainda sem setor é aceito — o chamado entra
+        // sem setor e só a lista geral de e-mails é avisada.
+        let tipoId = null;
+        let tipoNome = null;
         let setorId = null;
         let setorNome = null;
-        const setorIdInformado = parseInt(req.body.setor_id, 10);
-        if (setorIdInformado && setorIdInformado > 0) {
-            const setorRows = await suporteQuery(
-                "SELECT id, nome FROM suporte_setor WHERE id = ? AND status = 'ativo'",
-                [setorIdInformado]
+        const tipoIdInformado = parseInt(req.body.tipo_id, 10);
+        if (tipoIdInformado && tipoIdInformado > 0) {
+            const tipoRows = await suporteQuery(
+                "SELECT t.id, t.nome, s.id AS setor_id, s.nome AS setor_nome FROM suporte_tipo t " +
+                "LEFT JOIN suporte_setor s ON s.id = t.setor_id AND s.status = 'ativo' " +
+                "WHERE t.id = ? AND t.status = 'ativo'",
+                [tipoIdInformado]
             );
-            if (!setorRows.length) {
-                return res.status(400).json({ ok: false, msg: "Setor selecionado é inválido ou não está mais disponível." });
+            if (!tipoRows.length) {
+                return res.status(400).json({ ok: false, msg: "Tipo de chamado inválido ou não está mais disponível." });
             }
-            setorId = setorRows[0].id;
-            setorNome = setorRows[0].nome;
+            tipoId = tipoRows[0].id;
+            tipoNome = tipoRows[0].nome;
+            setorId = tipoRows[0].setor_id || null;
+            setorNome = tipoRows[0].setor_nome || null;
         } else {
-            const totalSetoresAtivos = await suporteQuery("SELECT COUNT(*) AS total FROM suporte_setor WHERE status = 'ativo'", []);
-            if (parseInt(totalSetoresAtivos[0].total, 10) > 0) {
-                return res.status(400).json({ ok: false, msg: "Selecione o setor de destino do chamado." });
+            const totalTiposAtivos = await suporteQuery("SELECT COUNT(*) AS total FROM suporte_tipo WHERE status = 'ativo'", []);
+            if (parseInt(totalTiposAtivos[0].total, 10) > 0) {
+                return res.status(400).json({ ok: false, msg: "Selecione o tipo do chamado." });
             }
         }
 
@@ -1658,8 +1727,8 @@ app.post("/suporte/tickets", uploadSuporte.array("anexos", SUPORTE.maxArquivos),
         }
 
         const ins = await suporteQuery(
-            "INSERT INTO suporte_ticket (empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, responsavel_nome, responsavel_email, pagina_url, descricao, setor_id, setor_nome) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [empresa, empresaNome, uid, ulogin, unome, uemailValido, respNome, respEmailValido, paginaUrl, descricao, setorId, setorNome]
+            "INSERT INTO suporte_ticket (empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, responsavel_nome, responsavel_email, pagina_url, descricao, tipo_id, tipo_nome, setor_id, setor_nome) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [empresa, empresaNome, uid, ulogin, unome, uemailValido, respNome, respEmailValido, paginaUrl, descricao, tipoId, tipoNome, setorId, setorNome]
         );
         const ticketId = ins.insertId;
 
@@ -1701,22 +1770,20 @@ app.post("/suporte/tickets", uploadSuporte.array("anexos", SUPORTE.maxArquivos),
             );
         }
 
-        // Aviso direcionado: atendentes de atendimento externo vinculados ao setor
-        // do chamado. Sem setor, ou setor sem equipe, ninguem recebe aqui - o aviso
-        // geral abaixo continua cobrindo esse caso.
-        await notificarAtendentesSetor(
+        // Aviso para os funcionários do setor que recebe esse tipo de chamado.
+        await notificarSetor(
             {
                 id: ticketId,
                 empresa_key: empresa,
                 empresa_nome: empresaNome,
+                tipo_nome: tipoNome,
                 setor_id: setorId,
                 setor_nome: setorNome,
                 user_nome: unome,
                 user_login: ulogin,
                 descricao: descricao
             },
-            "externo",
-            "Novo chamado #" + ticketId + (setorNome ? " - " + setorNome : "") + " - TechPS"
+            "Novo chamado #" + ticketId + (tipoNome ? " - " + tipoNome : "") + " - TechPS"
         );
 
         // Aviso interno: e-mail(s) cadastrados em Gestão de Suporte → Configurações.
@@ -1729,6 +1796,7 @@ app.post("/suporte/tickets", uploadSuporte.array("anexos", SUPORTE.maxArquivos),
                     id: ticketId,
                     empresa_key: empresa,
                     empresa_nome: empresaNome,
+                    tipo_nome: tipoNome,
                     setor_nome: setorNome,
                     user_nome: unome,
                     user_login: ulogin,
@@ -1757,6 +1825,7 @@ app.get("/suporte/tickets", exigirAdminSuporte, async (req, res) => {
         const offset = (pagina - 1) * limite;
 
         const setorIdFiltro = parseInt(req.query.setor_id, 10);
+        const tipoIdFiltro = parseInt(req.query.tipo_id, 10);
         const userIds = String(req.query.user_ids || "").split(",").map((v) => v.trim()).filter(Boolean).slice(0, 500);
         // Dono do chamado: id numerico filtra por atendente; "sem" traz os nao atribuidos.
         const atendenteFiltro = String(req.query.atendente_id || "").trim();
@@ -1765,6 +1834,7 @@ app.get("/suporte/tickets", exigirAdminSuporte, async (req, res) => {
         let params = [];
         if (empresa) { where.push("empresa_key = ?"); params.push(empresa); }
         if (setorIdFiltro && setorIdFiltro > 0) { where.push("setor_id = ?"); params.push(setorIdFiltro); }
+        if (tipoIdFiltro && tipoIdFiltro > 0) { where.push("tipo_id = ?"); params.push(tipoIdFiltro); }
         if (status && SUPORTE_STATUS[status]) { where.push("status = ?"); params.push(status); }
         if (prioridade && SUPORTE_PRIORIDADES[prioridade]) { where.push("prioridade = ?"); params.push(prioridade); }
         if (dataInicio && /^\d{4}-\d{2}-\d{2}$/.test(dataInicio)) { where.push("created_at >= ?"); params.push(dataInicio + " 00:00:00"); }
@@ -1775,7 +1845,7 @@ app.get("/suporte/tickets", exigirAdminSuporte, async (req, res) => {
         const filtro = where.length ? "WHERE " + where.join(" AND ") : "";
 
         const linhas = await suporteQuery(
-            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, responsavel_nome, responsavel_email, pagina_url, descricao, status, tipo, prioridade, ssi_codigo, ssi_prioridade, atendente_id, atendente_nome, aceito_em, fechado_em, created_at, setor_id, setor_nome FROM suporte_ticket " + filtro + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, responsavel_nome, responsavel_email, pagina_url, descricao, status, tipo_id, tipo_nome, prioridade, atendente_id, atendente_nome, aceito_em, fechado_em, created_at, setor_id, setor_nome FROM suporte_ticket " + filtro + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
             params.concat([limite, offset])
         );
         const totalRows = await suporteQuery(
@@ -1797,7 +1867,7 @@ app.get("/suporte/tickets/:id", exigirAdminSuporte, async (req, res) => {
         if (!id || id < 1) return res.status(400).json({ ok: false, msg: "ID inválido." });
 
         const linhas = await suporteQuery(
-            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, responsavel_nome, responsavel_email, pagina_url, descricao, status, tipo, prioridade, ssi_codigo, ssi_prioridade, atendente_id, atendente_nome, aceito_em, fechado_em, created_at, setor_id, setor_nome FROM suporte_ticket WHERE id = ?",
+            "SELECT id, empresa_key, empresa_nome, user_id, user_login, user_nome, user_email, responsavel_nome, responsavel_email, pagina_url, descricao, status, tipo_id, tipo_nome, prioridade, atendente_id, atendente_nome, aceito_em, fechado_em, created_at, setor_id, setor_nome FROM suporte_ticket WHERE id = ?",
             [id]
         );
         if (!linhas.length) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
@@ -1817,7 +1887,10 @@ app.get("/suporte/tickets/:id", exigirAdminSuporte, async (req, res) => {
             [id]
         );
 
-        res.json({ ok: true, ticket: linhas[0], arquivos, comentarios, eventos });
+        // Quem recebe o chamado: funcionários ativos do setor dele.
+        const equipeSetor = (await membrosDoSetor(linhas[0].setor_id)).map((m) => ({ id: m.id, nome: m.nome }));
+
+        res.json({ ok: true, ticket: linhas[0], arquivos, comentarios, eventos, equipe_setor: equipeSetor });
     } catch (err) {
         console.error("[SUPORTE] Erro ao buscar chamado:", err);
         res.status(500).json({ ok: false, msg: "Erro ao buscar chamado." });
@@ -1848,12 +1921,14 @@ app.get("/suporte/dashboard", exigirAdminSuporte, async (req, res) => {
         const dataInicio = String(req.query.data_inicio || "").trim();
         const dataFim = String(req.query.data_fim || "").trim();
         const setorIdFiltro = parseInt(req.query.setor_id, 10);
+        const tipoIdFiltro = parseInt(req.query.tipo_id, 10);
         const atendenteFiltro = String(req.query.atendente_id || "").trim();
 
         let where = [];
         let params = [];
         if (empresa) { where.push("empresa_key = ?"); params.push(empresa); }
         if (setorIdFiltro && setorIdFiltro > 0) { where.push("setor_id = ?"); params.push(setorIdFiltro); }
+        if (tipoIdFiltro && tipoIdFiltro > 0) { where.push("tipo_id = ?"); params.push(tipoIdFiltro); }
         if (atendenteFiltro === "sem") { where.push("atendente_id IS NULL"); }
         else if (parseInt(atendenteFiltro, 10) > 0) { where.push("atendente_id = ?"); params.push(parseInt(atendenteFiltro, 10)); }
         if (status && SUPORTE_STATUS[status]) { where.push("status = ?"); params.push(status); }
@@ -1862,7 +1937,7 @@ app.get("/suporte/dashboard", exigirAdminSuporte, async (req, res) => {
         const filtro = where.length ? "WHERE " + where.join(" AND ") : "";
 
         const linhas = await suporteQuery(
-            "SELECT id, empresa_key, empresa_nome, setor_nome, status, tipo, prioridade, pagina_url, created_at, aceito_em, fechado_em " +
+            "SELECT id, empresa_key, empresa_nome, setor_nome, status, tipo_nome, prioridade, pagina_url, created_at, aceito_em, fechado_em " +
             "FROM suporte_ticket " + filtro + " ORDER BY created_at ASC",
             params
         );
@@ -1873,7 +1948,7 @@ app.get("/suporte/dashboard", exigirAdminSuporte, async (req, res) => {
             slaHorasPorPrioridade[p] = /^\d+$/.test(bruto) ? parseInt(bruto, 10) : null;
         }
 
-        const STATUS_ABERTOS = new Set(["aberto", "em_analise", "em_andamento", "aguardando_cliente", "reaberto", "encaminhado_ssi", "teste_interno", "aguardando_atualizacao"]);
+        const STATUS_ABERTOS = new Set(["aberto", "em_analise", "em_desenvolvimento", "desenvolvimento_interno", "corrigido"]);
 
         const normalizarPagina = (url) => {
             let s = String(url || "").trim();
@@ -1899,7 +1974,7 @@ app.get("/suporte/dashboard", exigirAdminSuporte, async (req, res) => {
         for (const t of linhas) {
             contagemStatus[t.status] = (contagemStatus[t.status] || 0) + 1;
 
-            const tipoKey = t.tipo || "nao_classificado";
+            const tipoKey = t.tipo_nome || "Não classificado";
             contagemTipo[tipoKey] = (contagemTipo[tipoKey] || 0) + 1;
 
             const prioridadeKey = t.prioridade || "media";
@@ -1981,8 +2056,8 @@ app.get("/suporte/dashboard", exigirAdminSuporte, async (req, res) => {
             resumo: {
                 total: linhas.length,
                 abertos_agora: abertosDetalhe.length,
-                resolvidos: contagemStatus["resolvido"] || 0,
-                cancelados: contagemStatus["cancelado"] || 0,
+                corrigidos: contagemStatus["corrigido"] || 0,
+                fechados: contagemStatus["fechado"] || 0,
                 tempo_medio_resolucao_horas: qtdResolucao ? +(somaResolucaoHoras / qtdResolucao).toFixed(1) : null,
                 tempo_medio_aceite_horas: qtdAceite ? +(somaAceiteHoras / qtdAceite).toFixed(1) : null
             },
@@ -2053,156 +2128,141 @@ app.get("/suporte/setores", async (req, res) => {
     }
 });
 
-// == Equipe de atendimento ==============================================
-// Atendentes da TechPS vinculados aos setores, em dois escopos: "externo"
-// (atende o cliente) e "interno_ssi" (desenvolve a correcao do bug).
+// ══ Tipos de chamado ══════════════════════════════════════════════════════
+// Cada tipo aponta para o setor que recebe os chamados dele. Configurado em Gestão de
+// Suporte → Configurações; o widget lista os tipos ativos na abertura do chamado.
 
-// Lista atendentes com os setores vinculados em cada escopo.
+// Lista os tipos. O widget (token) recebe só id e nome dos ativos; a gestão (x-api-key) recebe
+// setor e quantos funcionários recebem, e com ?todos=1 também os inativos, para poder reativar.
+app.get("/suporte/tipos", async (req, res) => {
+    try {
+        const chaveAdmin = req.headers["x-api-key"] || "";
+        const autorizadoAdmin = SUPORTE.adminKey && chaveAdmin === SUPORTE.adminKey;
+        const autorizadoToken = !autorizadoAdmin && !!validarTokenSuporte(req.headers.authorization);
+        if (!autorizadoAdmin && !autorizadoToken) {
+            return res.status(401).json({ ok: false, msg: "Acesso não autorizado." });
+        }
+        const todos = autorizadoAdmin && String(req.query.todos || "") === "1";
+        const linhas = await suporteQuery(
+            "SELECT t.id, t.nome, t.status, t.setor_id, s.nome AS setor_nome, " +
+            "(SELECT COUNT(*) FROM suporte_atendente a WHERE a.setor_id = t.setor_id AND a.status = 'ativo') AS qtd_recebem " +
+            "FROM suporte_tipo t LEFT JOIN suporte_setor s ON s.id = t.setor_id " +
+            (todos ? "" : "WHERE t.status = 'ativo' ") +
+            "ORDER BY t.status ASC, t.nome ASC",
+            []
+        );
+        res.json({ ok: true, tipos: autorizadoAdmin ? linhas : linhas.map((t) => ({ id: t.id, nome: t.nome })) });
+    } catch (err) {
+        console.error("[SUPORTE] Erro ao listar tipos:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao listar tipos de chamado." });
+    }
+});
+
+// Cria (sem id) ou atualiza (com id) um tipo de chamado e o setor que recebe.
+app.post("/suporte/tipos", exigirAdminSuporte, async (req, res) => {
+    try {
+        const id = parseInt(req.body.id, 10) || 0;
+        const nome = String(req.body.nome || "").trim().slice(0, 150);
+        const status = String(req.body.status || "ativo").trim() === "inativo" ? "inativo" : "ativo";
+        const setorInformado = parseInt(req.body.setor_id, 10) || 0;
+        if (!nome) return res.status(400).json({ ok: false, msg: "Informe o nome do tipo de chamado." });
+
+        let setorId = null;
+        if (setorInformado > 0) {
+            const setor = await suporteQuery("SELECT id FROM suporte_setor WHERE id = ? AND status = 'ativo'", [setorInformado]);
+            if (!setor.length) return res.status(400).json({ ok: false, msg: "Setor inválido ou inativo." });
+            setorId = setor[0].id;
+        }
+
+        if (id > 0) {
+            const upd = await suporteQuery("UPDATE suporte_tipo SET nome = ?, setor_id = ?, status = ? WHERE id = ?", [nome, setorId, status, id]);
+            if (!upd.affectedRows) return res.status(404).json({ ok: false, msg: "Tipo de chamado não encontrado." });
+            return res.json({ ok: true, msg: "Tipo de chamado atualizado.", id: id });
+        }
+        const ins = await suporteQuery("INSERT INTO suporte_tipo (nome, setor_id, status) VALUES (?, ?, ?)", [nome, setorId, status]);
+        res.json({ ok: true, msg: "Tipo de chamado criado.", id: ins.insertId });
+    } catch (err) {
+        console.error("[SUPORTE] Erro ao salvar tipo:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao salvar tipo de chamado." });
+    }
+});
+
+// ══ Funcionários que recebem os chamados ══════════════════════════════════
+// Espelho dos funcionários ativos que estão em setores de suporte no cadastro do domínio Demo.
+
+// Lista quem recebe hoje (ativos), com o setor — usada nas Configurações e em "Meus atendimentos".
 app.get("/suporte/atendentes", exigirAdminSuporte, async (req, res) => {
     try {
-        const atendentes = await suporteQuery(
-            "SELECT id, nome, email, login, origem_empresa, status FROM suporte_atendente ORDER BY status ASC, nome ASC",
+        const linhas = await suporteQuery(
+            "SELECT a.id, a.nome, a.email, a.login, a.setor_id, s.nome AS setor_nome " +
+            "FROM suporte_atendente a LEFT JOIN suporte_setor s ON s.id = a.setor_id " +
+            "WHERE a.status = 'ativo' ORDER BY s.nome ASC, a.nome ASC",
             []
         );
-        const vinculos = await suporteQuery(
-            "SELECT v.atendente_id, v.setor_id, v.escopo, s.nome AS setor_nome " +
-            "FROM suporte_atendente_setor v JOIN suporte_setor s ON s.id = v.setor_id ORDER BY s.nome ASC",
-            []
-        );
-        const porAtendente = new Map();
-        vinculos.forEach((v) => {
-            if (!porAtendente.has(v.atendente_id)) porAtendente.set(v.atendente_id, { externo: [], interno_ssi: [] });
-            porAtendente.get(v.atendente_id)[v.escopo].push({ setor_id: v.setor_id, setor_nome: v.setor_nome });
-        });
-        const lista = atendentes.map((a) => ({
-            ...a,
-            setores_externo: (porAtendente.get(a.id) || {}).externo || [],
-            setores_interno_ssi: (porAtendente.get(a.id) || {}).interno_ssi || []
-        }));
-        res.json({ ok: true, atendentes: lista });
+        res.json({ ok: true, atendentes: linhas });
     } catch (err) {
-        console.error("[SUPORTE] Erro ao listar atendentes:", err);
-        res.status(500).json({ ok: false, msg: "Erro ao listar atendentes." });
+        console.error("[SUPORTE] Erro ao listar funcionários:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao listar funcionários do suporte." });
     }
 });
 
-// Cria ou atualiza um atendente e regrava os vinculos de setor dos dois escopos.
-// O e-mail e a chave: reenviar o mesmo e-mail atualiza o cadastro existente.
-app.post("/suporte/atendentes", exigirAdminSuporte, async (req, res) => {
+// Recebe do Demo a lista completa de funcionários dos setores de suporte. Quem não vier na lista
+// (saiu do setor, foi desligado) deixa de receber.
+app.post("/suporte/atendentes/sincronizar", exigirAdminSuporte, async (req, res) => {
     try {
-        const nome = String(req.body.nome || "").trim().slice(0, 150);
-        const email = String(req.body.email || "").trim().toLowerCase().slice(0, 190);
-        const login = String(req.body.login || "").trim().slice(0, 100);
-        const origemEmpresa = String(req.body.origem_empresa || "").trim().slice(0, 60);
-        const status = ["ativo", "inativo"].includes(String(req.body.status || "").trim())
-            ? String(req.body.status).trim()
-            : "ativo";
-
-        if (!nome) return res.status(400).json({ ok: false, msg: "Nome do atendente e obrigatorio." });
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            return res.status(400).json({ ok: false, msg: "E-mail do atendente invalido." });
+        const membros = Array.isArray(req.body.membros) ? req.body.membros.slice(0, 5000) : null;
+        if (membros === null) {
+            return res.status(400).json({ ok: false, msg: "Envie a lista de funcionários." });
+        }
+        // Lista vazia desativaria todo mundo: só é aceita quando o Demo confirma que está vazia mesmo.
+        if (!membros.length && String(req.body.permitir_vazio || "") !== "1") {
+            return res.status(400).json({ ok: false, msg: "Lista de funcionários vazia." });
         }
 
-        await suporteQuery(
-            "INSERT INTO suporte_atendente (nome, email, login, origem_empresa, status) VALUES (?, ?, ?, ?, ?) " +
-            "ON DUPLICATE KEY UPDATE nome = VALUES(nome), login = VALUES(login), origem_empresa = VALUES(origem_empresa), status = VALUES(status)",
-            [nome, email, login, origemEmpresa, status]
-        );
-        const achado = await suporteQuery("SELECT id FROM suporte_atendente WHERE email = ?", [email]);
-        if (!achado.length) return res.status(500).json({ ok: false, msg: "Nao foi possivel gravar o atendente." });
-        const atendenteId = achado[0].id;
+        const setores = await suporteQuery("SELECT id, origem_setor_id FROM suporte_setor", []);
+        const setorPorOrigem = new Map(setores.map((st) => [parseInt(st.origem_setor_id, 10), st.id]));
+        const recebidos = [];
+        for (const m of membros) {
+            const origem = parseInt(m.origem_entidade_id, 10);
+            const nome = String(m.nome || "").trim().slice(0, 150);
+            if (!origem || origem < 1 || !nome) continue;
+            const emailBruto = String(m.email || "").trim().toLowerCase().slice(0, 190);
+            const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailBruto) ? emailBruto : "";
+            const login = String(m.login || "").trim().slice(0, 100);
+            const setorId = setorPorOrigem.get(parseInt(m.setor_origem_id, 10)) || null;
 
-        // Regrava os vinculos: o que vier no POST passa a ser a verdade.
-        const normalizarIds = (valor) => {
-            const bruto = Array.isArray(valor) ? valor : String(valor || "").split(",");
-            return [...new Set(bruto.map((v) => parseInt(v, 10)).filter((v) => v > 0))];
-        };
-        const setoresExterno = normalizarIds(req.body["setores_externo"] || req.body["setores_externo[]"]);
-        const setoresSsi = normalizarIds(req.body["setores_interno_ssi"] || req.body["setores_interno_ssi[]"]);
-
-        await suporteQuery("DELETE FROM suporte_atendente_setor WHERE atendente_id = ?", [atendenteId]);
-        for (const setorId of setoresExterno) {
-            await suporteQuery(
-                "INSERT IGNORE INTO suporte_atendente_setor (atendente_id, setor_id, escopo) VALUES (?, ?, 'externo')",
-                [atendenteId, setorId]
-            );
+            let existente = await suporteQuery("SELECT id FROM suporte_atendente WHERE origem_entidade_id = ?", [origem]);
+            // Primeira sincronização: reaproveita o cadastro antigo da mesma pessoa (mesmo login), para os
+            // chamados que já estão no nome dela continuarem aparecendo em "Meus atendimentos".
+            if (!existente.length && login) {
+                existente = await suporteQuery("SELECT id FROM suporte_atendente WHERE origem_entidade_id IS NULL AND login = ? LIMIT 1", [login]);
+            }
+            if (existente.length) {
+                await suporteQuery(
+                    "UPDATE suporte_atendente SET origem_entidade_id = ?, nome = ?, email = ?, login = ?, setor_id = ?, origem_empresa = 'demo', status = 'ativo' WHERE id = ?",
+                    [origem, nome, email, login, setorId, existente[0].id]
+                );
+            } else {
+                await suporteQuery(
+                    "INSERT INTO suporte_atendente (origem_entidade_id, nome, email, login, setor_id, origem_empresa, status) VALUES (?, ?, ?, ?, ?, 'demo', 'ativo')",
+                    [origem, nome, email, login, setorId]
+                );
+            }
+            recebidos.push(origem);
         }
-        for (const setorId of setoresSsi) {
-            await suporteQuery(
-                "INSERT IGNORE INTO suporte_atendente_setor (atendente_id, setor_id, escopo) VALUES (?, ?, 'interno_ssi')",
-                [atendenteId, setorId]
-            );
-        }
 
-        // Quem entra na equipe assume tambem os chamados que ja levavam o nome dele.
-        await vincularChamadosPorNome();
+        // Quem não veio na lista e os cadastros manuais antigos (sem origem) deixam de receber.
+        const desativados = recebidos.length
+            ? await suporteQuery(
+                "UPDATE suporte_atendente SET status = 'inativo' WHERE status = 'ativo' AND (origem_entidade_id IS NULL OR origem_entidade_id NOT IN (" + recebidos.map(() => "?").join(",") + "))",
+                recebidos
+            )
+            : await suporteQuery("UPDATE suporte_atendente SET status = 'inativo' WHERE status = 'ativo'", []);
 
-        res.json({ ok: true, msg: "Atendente salvo.", atendente_id: atendenteId });
+        res.json({ ok: true, msg: "Funcionários sincronizados.", total: recebidos.length, desativados: desativados.affectedRows || 0 });
     } catch (err) {
-        console.error("[SUPORTE] Erro ao salvar atendente:", err);
-        res.status(500).json({ ok: false, msg: "Erro ao salvar atendente." });
-    }
-});
-
-// Remove o atendente da equipe. Os chamados ja atribuidos a ele preservam o
-// nome gravado (atendente_nome), so perdem o vinculo (atendente_id fica nulo).
-app.post("/suporte/atendentes/:id/remover", exigirAdminSuporte, async (req, res) => {
-    try {
-        const id = parseInt(req.params.id, 10);
-        if (!id || id < 1) return res.status(400).json({ ok: false, msg: "ID invalido." });
-        await suporteQuery("UPDATE suporte_ticket SET atendente_id = NULL WHERE atendente_id = ?", [id]);
-        const del = await suporteQuery("DELETE FROM suporte_atendente WHERE id = ?", [id]);
-        if (!del.affectedRows) return res.status(404).json({ ok: false, msg: "Atendente nao encontrado." });
-        res.json({ ok: true, msg: "Atendente removido da equipe." });
-    } catch (err) {
-        console.error("[SUPORTE] Erro ao remover atendente:", err);
-        res.status(500).json({ ok: false, msg: "Erro ao remover atendente." });
-    }
-});
-
-// Atribui (ou desatribui, com atendente_id = 0) o dono do chamado.
-app.post("/suporte/tickets/:id/atribuir", exigirAdminSuporte, async (req, res) => {
-    try {
-        const id = parseInt(req.params.id, 10);
-        const atendenteId = parseInt(req.body.atendente_id, 10) || 0;
-        const autor = String(req.body.autor || "Gestao TechPS").slice(0, 150);
-        if (!id || id < 1) return res.status(400).json({ ok: false, msg: "ID invalido." });
-
-        const chk = await suporteQuery("SELECT * FROM suporte_ticket WHERE id = ?", [id]);
-        if (!chk.length) return res.status(404).json({ ok: false, msg: "Chamado nao encontrado." });
-
-        if (atendenteId === 0) {
-            await suporteQuery("UPDATE suporte_ticket SET atendente_id = NULL, atendente_nome = NULL WHERE id = ?", [id]);
-            registrarEventoSuporte(id, "atribuicao", "Atendente removido do chamado", autor);
-            return res.json({ ok: true, msg: "Atendente removido do chamado." });
-        }
-
-        const alvo = await suporteQuery(
-            "SELECT id, nome, email FROM suporte_atendente WHERE id = ? AND status = 'ativo'",
-            [atendenteId]
-        );
-        if (!alvo.length) return res.status(400).json({ ok: false, msg: "Atendente invalido ou inativo." });
-
-        await suporteQuery(
-            "UPDATE suporte_ticket SET atendente_id = ?, atendente_nome = ? WHERE id = ?",
-            [alvo[0].id, alvo[0].nome, id]
-        );
-        registrarEventoSuporte(id, "atribuicao", "Chamado atribuido a " + alvo[0].nome, autor);
-
-        // Aviso ao atendente designado - o escopo segue o estagio do chamado.
-        const escopo = String(chk[0].status || "") === "encaminhado_ssi" ? "interno_ssi" : "externo";
-        if (alvo[0].email) {
-            enviarEmailSuporte(
-                alvo[0].email,
-                "Chamado #" + id + " atribuido a voce - TechPS",
-                htmlEmailAtendenteSetor({ ...chk[0], id }, escopo)
-            );
-        }
-
-        res.json({ ok: true, msg: "Chamado atribuido a " + alvo[0].nome + "." });
-    } catch (err) {
-        console.error("[SUPORTE] Erro ao atribuir chamado:", err);
-        res.status(500).json({ ok: false, msg: "Erro ao atribuir chamado." });
+        console.error("[SUPORTE] Erro ao sincronizar funcionários:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao sincronizar funcionários." });
     }
 });
 
@@ -2336,6 +2396,53 @@ app.post("/suporte/tickets/:id/comentarios", async (req, res) => {
     }
 });
 
+// Chat interno do chamado (só equipe TechPS — exige x-api-key).
+// De propósito não registra evento na timeline nem envia e-mail: ambos chegam à empresa.
+// "depois" = último id já exibido; a tela busca só as mensagens novas a cada poucos segundos.
+app.get("/suporte/tickets/:id/chat-interno", exigirAdminSuporte, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        if (!id || id < 1) return res.status(400).json({ ok: false, msg: "ID inválido." });
+        const depois = Math.max(parseInt(req.query.depois, 10) || 0, 0);
+
+        const mensagens = await suporteQuery(
+            "SELECT id, autor, autor_login, texto, created_at FROM suporte_chat_interno WHERE ticket_id = ? AND id > ? ORDER BY id ASC LIMIT 500",
+            [id, depois]
+        );
+        res.json({ ok: true, mensagens });
+    } catch (err) {
+        console.error("[SUPORTE] Erro ao listar chat interno:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao carregar o chat interno." });
+    }
+});
+
+app.post("/suporte/tickets/:id/chat-interno", exigirAdminSuporte, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        if (!id || id < 1) return res.status(400).json({ ok: false, msg: "ID inválido." });
+
+        let texto = String(req.body.texto || "").trim();
+        texto = texto.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+        if (texto.length < 1 || texto.length > 2000) {
+            return res.status(400).json({ ok: false, msg: "A mensagem deve ter entre 1 e 2000 caracteres." });
+        }
+
+        const chk = await suporteQuery("SELECT id FROM suporte_ticket WHERE id = ?", [id]);
+        if (!chk.length) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
+
+        const autor = String(req.body.autor || "Equipe TechPS").slice(0, 150);
+        const autorLogin = String(req.body.autor_login || "").slice(0, 100);
+        const ins = await suporteQuery(
+            "INSERT INTO suporte_chat_interno (ticket_id, autor, autor_login, texto) VALUES (?, ?, ?, ?)",
+            [id, autor, autorLogin, texto]
+        );
+        res.status(201).json({ ok: true, mensagem_id: ins.insertId });
+    } catch (err) {
+        console.error("[SUPORTE] Erro ao enviar mensagem no chat interno:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao enviar a mensagem." });
+    }
+});
+
 // Serve a imagem de um chamado (por id do arquivo — sem path traversal)
 app.get("/suporte/tickets/:id/arquivos/:arquivoId", exigirAdminSuporte, async (req, res) => {
     try {
@@ -2365,70 +2472,91 @@ app.get("/suporte/tickets/:id/arquivos/:arquivoId", exigirAdminSuporte, async (r
     }
 });
 
-// Aceita o chamado (atendente assume o atendimento)
+// Assume o chamado: quem clicou vira o responsável. Chamado ainda Aberto passa para Em análise.
 app.post("/suporte/tickets/:id/aceitar", exigirAdminSuporte, async (req, res) => {
     try {
         const id = parseInt(req.params.id, 10);
         if (!id || id < 1) return res.status(400).json({ ok: false, msg: "ID inválido." });
 
-        const atendente = String(req.body.atendente || "Atendente TechPS").slice(0, 150);
+        const atendente = String(req.body.atendente || "Atendente TechPS").trim().slice(0, 150);
+        const atendenteLogin = String(req.body.atendente_login || "").trim();
         const chk = await suporteQuery("SELECT * FROM suporte_ticket WHERE id = ?", [id]);
         if (!chk.length) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
-
-        // Quem clica em "Iniciar atendimento" vira o dono do chamado. Se essa pessoa
-        // estiver cadastrada na equipe de atendimento, grava tambem o vinculo (atendente_id)
-        // para o combo de responsavel e os filtros baterem com o nome exibido.
-        const atendenteLogin = String(req.body.atendente_login || "").trim();
-        let atendenteId = null;
-        if (atendenteLogin !== "" || atendente !== "") {
-            const naEquipe = await suporteQuery(
-                "SELECT id FROM suporte_atendente WHERE status = 'ativo' AND (login = ? OR nome = ?) LIMIT 1",
-                [atendenteLogin, atendente]
-            );
-            if (naEquipe.length) atendenteId = naEquipe[0].id;
+        if (chk[0].status === "fechado") {
+            return res.status(400).json({ ok: false, msg: "Chamado fechado não pode ser assumido. Reabra o chamado antes." });
         }
 
-        const upd = await suporteQuery(
-            "UPDATE suporte_ticket SET status = 'em_andamento', atendente_id = ?, atendente_nome = ?, aceito_em = NOW() WHERE id = ?",
-            [atendenteId, atendente, id]
+        // Liga ao cadastro do funcionário (login primeiro, depois nome) para o chamado aparecer em "Meus atendimentos".
+        let atendenteId = null;
+        const cadastro = await suporteQuery(
+            "SELECT id FROM suporte_atendente WHERE status = 'ativo' AND ((? <> '' AND login = ?) OR nome = ?) ORDER BY (login = ?) DESC LIMIT 1",
+            [atendenteLogin, atendenteLogin, atendente, atendenteLogin]
         );
-        if (!upd.affectedRows) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
+        if (cadastro.length) atendenteId = cadastro[0].id;
 
-        // Timeline: aceite do chamado.
-        registrarEventoSuporte(id, "aceito", "Atendimento iniciado pelo suporte (" + atendente + ")", atendente);
+        const novoStatus = chk[0].status === "aberto" ? "em_analise" : chk[0].status;
+        await suporteQuery(
+            "UPDATE suporte_ticket SET status = ?, atendente_id = ?, atendente_nome = ?, aceito_em = COALESCE(aceito_em, NOW()) WHERE id = ?",
+            [novoStatus, atendenteId, atendente, id]
+        );
+        registrarEventoSuporte(id, "assumido", "Chamado assumido por " + atendente, atendente);
 
+        const novoTicket = { ...chk[0], status: novoStatus, atendente_nome: atendente };
         notificarChamado(
-            chk[0],
-            "Chamado #" + id + " em atendimento — TechPS",
-            htmlEmailSuporte({ ...chk[0], status: "em_andamento", atendente_nome: atendente }, "Seu chamado entrou em atendimento!", "O atendente " + escH(atendente) + " iniciou o atendimento do seu chamado.")
+            novoTicket,
+            "Chamado #" + id + " em análise — TechPS",
+            htmlEmailSuporte(novoTicket, "Seu chamado está em análise", escH(atendente) + " assumiu o seu chamado e já está analisando.")
         );
 
-        res.json({ ok: true, msg: "Chamado aceito e em atendimento." });
+        res.json({ ok: true, msg: "Chamado assumido por " + atendente + "." });
     } catch (err) {
-        console.error("[SUPORTE] Erro ao aceitar chamado:", err);
-        res.status(500).json({ ok: false, msg: "Erro ao aceitar chamado." });
+        console.error("[SUPORTE] Erro ao assumir chamado:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao assumir chamado." });
     }
 });
 
-// Classifica o chamado (dúvida / sugestão / bug)
+// Reclassifica o tipo do chamado. O setor acompanha o tipo; se mudar, o novo setor é avisado.
 app.post("/suporte/tickets/:id/tipo", exigirAdminSuporte, async (req, res) => {
     try {
         const id = parseInt(req.params.id, 10);
-        const tipo = String(req.body.tipo || "").trim();
+        const tipoId = parseInt(req.body.tipo_id, 10) || 0;
+        const autor = String(req.body.autor || "Gestão TechPS").slice(0, 150);
         if (!id || id < 1) return res.status(400).json({ ok: false, msg: "ID inválido." });
-        if (!["duvida", "sugestao", "bug"].includes(tipo)) {
-            return res.status(400).json({ ok: false, msg: "Tipo deve ser duvida, sugestao ou bug." });
+        if (tipoId < 1) return res.status(400).json({ ok: false, msg: "Selecione o tipo do chamado." });
+
+        const chk = await suporteQuery("SELECT * FROM suporte_ticket WHERE id = ?", [id]);
+        if (!chk.length) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
+
+        const tipo = await suporteQuery(
+            "SELECT t.id, t.nome, s.id AS setor_id, s.nome AS setor_nome FROM suporte_tipo t " +
+            "LEFT JOIN suporte_setor s ON s.id = t.setor_id AND s.status = 'ativo' WHERE t.id = ?",
+            [tipoId]
+        );
+        if (!tipo.length) return res.status(400).json({ ok: false, msg: "Tipo de chamado inválido." });
+
+        // Tipo ainda sem setor configurado mantém o setor atual do chamado.
+        const setorId = tipo[0].setor_id || chk[0].setor_id || null;
+        const setorNome = tipo[0].setor_id ? tipo[0].setor_nome : (chk[0].setor_nome || null);
+        const setorMudou = !!setorId && Number(setorId) !== Number(chk[0].setor_id || 0);
+
+        await suporteQuery(
+            "UPDATE suporte_ticket SET tipo_id = ?, tipo_nome = ?, setor_id = ?, setor_nome = ? WHERE id = ?",
+            [tipo[0].id, tipo[0].nome, setorId, setorNome, id]
+        );
+        registrarEventoSuporte(id, "tipo", "Tipo alterado para " + tipo[0].nome + (setorMudou ? " — encaminhado ao setor " + setorNome : ""), autor);
+
+        if (setorMudou) {
+            notificarSetor(
+                { ...chk[0], tipo_nome: tipo[0].nome, setor_id: setorId, setor_nome: setorNome },
+                "Chamado #" + id + " encaminhado ao seu setor - TechPS",
+                "Este chamado foi reclassificado como " + tipo[0].nome + " e encaminhado ao seu setor."
+            );
         }
-        const upd = await suporteQuery("UPDATE suporte_ticket SET tipo = ? WHERE id = ?", [tipo, id]);
-        if (!upd.affectedRows) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
 
-        // Timeline: classificação do chamado.
-        registrarEventoSuporte(id, "tipo", "Chamado classificado como " + (SUPORTE_TIPOS[tipo] || tipo), "Gestão TechPS");
-
-        res.json({ ok: true, msg: "Tipo do chamado atualizado." });
+        res.json({ ok: true, msg: "Tipo do chamado atualizado" + (setorMudou ? " e encaminhado ao setor " + setorNome : "") + "." });
     } catch (err) {
-        console.error("[SUPORTE] Erro ao classificar chamado:", err);
-        res.status(500).json({ ok: false, msg: "Erro ao classificar chamado." });
+        console.error("[SUPORTE] Erro ao reclassificar chamado:", err);
+        res.status(500).json({ ok: false, msg: "Erro ao alterar o tipo do chamado." });
     }
 });
 
@@ -2455,11 +2583,12 @@ app.post("/suporte/tickets/:id/prioridade", exigirAdminSuporte, async (req, res)
     }
 });
 
-// Altera status do chamado (painel de gestão)
+// Altera o status do chamado: Aberto, Em análise, Em desenvolvimento, Corrigido ou Fechado.
 app.post("/suporte/tickets/:id/status", exigirAdminSuporte, async (req, res) => {
     try {
         const id = parseInt(req.params.id, 10);
         const status = String(req.body.status || "").trim();
+        const autor = String(req.body.autor || "Gestão TechPS").slice(0, 150);
         if (!id || id < 1) return res.status(400).json({ ok: false, msg: "ID inválido." });
         if (!SUPORTE_STATUS[status]) {
             return res.status(400).json({ ok: false, msg: "Status inválido." });
@@ -2467,91 +2596,35 @@ app.post("/suporte/tickets/:id/status", exigirAdminSuporte, async (req, res) => 
 
         const chk = await suporteQuery("SELECT * FROM suporte_ticket WHERE id = ?", [id]);
         if (!chk.length) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
-
-        // Encaminhado a SSI: gera código e exige prioridade.
-        let ssiCodigo = null;
-        let ssiPrioridade = null;
-        if (status === "encaminhado_ssi") {
-            ssiPrioridade = String(req.body.ssi_prioridade || "").trim();
-            if (!["urgente", "proxima_atualizacao"].includes(ssiPrioridade)) {
-                return res.status(400).json({ ok: false, msg: "Informe a prioridade da SSI (urgente ou proxima_atualizacao)." });
-            }
-            ssiCodigo = "SSI-" + new Date().getFullYear() + "-" + crypto.randomInt(1000, 9999);
+        if (chk[0].status === status) {
+            return res.json({ ok: true, msg: "O chamado já está como " + SUPORTE_STATUS[status] + "." });
         }
 
-        const upd = await suporteQuery(
-            "UPDATE suporte_ticket SET status = ?, ssi_codigo = COALESCE(?, ssi_codigo), ssi_prioridade = COALESCE(?, ssi_prioridade), " +
-            "fechado_em = CASE WHEN ? IN ('resolvido','cancelado') THEN NOW() WHEN ? IN ('aberto','reaberto') THEN NULL ELSE fechado_em END " +
-            "WHERE id = ?",
-            [status, ssiCodigo, ssiPrioridade, status, status, id]
+        // Fechado registra a data de fechamento; qualquer outro status (reabertura) limpa.
+        await suporteQuery(
+            "UPDATE suporte_ticket SET status = ?, fechado_em = CASE WHEN ? = 'fechado' THEN NOW() ELSE NULL END WHERE id = ?",
+            [status, status, id]
         );
-        if (!upd.affectedRows) return res.status(404).json({ ok: false, msg: "Chamado não encontrado." });
 
-        // Timeline: mudança de status (com horário de fechamento).
-        let descStatus = "Status alterado para " + (SUPORTE_STATUS[status] || status);
-        if (status === "resolvido" || status === "cancelado") {
-            descStatus += " — chamado fechado";
-        } else if (status === "encaminhado_ssi") {
-            descStatus += " (SSI " + (ssiCodigo || chk[0].ssi_codigo) + ")";
-        }
-        registrarEventoSuporte(id, "status", descStatus, "Gestão TechPS");
+        const reabertura = chk[0].status === "fechado";
+        registrarEventoSuporte(id, "status", (reabertura ? "Chamado reaberto — " : "Status alterado para ") + SUPORTE_STATUS[status], autor);
 
-        const novoTicket = { ...chk[0], status, ssi_codigo: ssiCodigo || chk[0].ssi_codigo, ssi_prioridade: ssiPrioridade || chk[0].ssi_prioridade };
+        const avisos = {
+            aberto: "O chamado foi reaberto e voltou para a fila da equipe.",
+            em_analise: "Nossa equipe está analisando o seu chamado.",
+            em_desenvolvimento: "A equipe está desenvolvendo a correção do seu chamado.",
+            desenvolvimento_interno: "Seu chamado foi enviado para o desenvolvimento interno da TechPS.",
+            corrigido: "A correção do seu chamado foi concluída. Se ainda notar o problema, responda por aqui.",
+            fechado: "Este chamado foi encerrado. Se precisar de mais alguma coisa, é só abrir um novo chamado."
+        };
+        const novoTicket = { ...chk[0], status };
+        notificarChamado(
+            novoTicket,
+            "Chamado #" + id + " — " + SUPORTE_STATUS[status] + " — TechPS",
+            htmlEmailSuporte(novoTicket, "Chamado #" + id + ": " + SUPORTE_STATUS[status], avisos[status])
+        );
 
-        // Encaminhado a SSI: avisa quem atende internamente esse setor (time de desenvolvimento).
-        if (status === "encaminhado_ssi") {
-            const equipeSsi = await atendentesDoSetor(novoTicket.setor_id, "interno_ssi");
-
-            // Atribuição automática só quando não há dúvida de quem é o dono: o setor tem
-            // exatamente um atendente interno. Com dois ou mais, a escolha continua do gestor.
-            if (equipeSsi.length === 1) {
-                await suporteQuery(
-                    "UPDATE suporte_ticket SET atendente_id = ?, atendente_nome = ? WHERE id = ?",
-                    [equipeSsi[0].id, equipeSsi[0].nome, id]
-                );
-                novoTicket.atendente_id = equipeSsi[0].id;
-                novoTicket.atendente_nome = equipeSsi[0].nome;
-                registrarEventoSuporte(
-                    id,
-                    "atribuicao",
-                    "Chamado atribuído automaticamente a " + equipeSsi[0].nome + " (único atendente interno do setor)",
-                    "Sistema"
-                );
-            }
-
-            if (equipeSsi.length) {
-                const htmlSsi = htmlEmailAtendenteSetor(novoTicket, "interno_ssi");
-                const assuntoSsi = "Chamado #" + id + " encaminhado à SSI - TechPS";
-                equipeSsi.forEach((a) => enviarEmailSuporte(a.email, assuntoSsi, htmlSsi));
-            }
-        }
-
-        // E-mails de status / encerramento.
-        {
-            const ehEncerramento = (status === "resolvido" || status === "cancelado");
-            const ehReaberto = (status === "reaberto");
-            let titulo = "Chamado #" + id + " atualizado — TechPS";
-            let avisos = "";
-            if (ehEncerramento) {
-                titulo = status === "resolvido" ? "Chamado #" + id + " resolvido — TechPS" : "Chamado #" + id + " cancelado — TechPS";
-                avisos = "Este chamado foi encerrado. Se precisar de mais alguma coisa, é só abrir um novo chamado.";
-            } else if (ehReaberto) {
-                avisos = "O chamado foi reaberto e voltou para análise da equipe.";
-            } else if (status === "aguardando_cliente") {
-                avisos = "Estamos aguardando o seu retorno para dar continuidade ao atendimento.";
-            } else if (status === "em_analise") {
-                avisos = "Nossa equipe já começou a analisar o seu chamado.";
-            } else if (status === "encaminhado_ssi") {
-                avisos = "O chamado foi encaminhado ao setor de suporte interno (SSI " + novoTicket.ssi_codigo + "). " + (novoTicket.ssi_prioridade === "urgente" ? "Tratamento prioritário — solução urgente em produção." : "Será resolvido na próxima atualização do sistema.");
-            } else if (status === "teste_interno") {
-                avisos = "A correção já foi desenvolvida e está em teste interno pela nossa equipe antes de ser liberada.";
-            } else if (status === "aguardando_atualizacao") {
-                avisos = "A correção/melhoria do seu chamado já foi desenvolvida, testada e aprovada — está aguardando apenas a próxima atualização do sistema em produção. Assim que a atualização for publicada, o chamado será concluído.";
-            }
-            notificarChamado(novoTicket, titulo, htmlEmailSuporte(novoTicket, titulo, avisos));
-        }
-
-        res.json({ ok: true, msg: "Status atualizado." });
+        res.json({ ok: true, msg: "Status atualizado para " + SUPORTE_STATUS[status] + "." });
     } catch (err) {
         console.error("[SUPORTE] Erro ao atualizar status:", err);
         res.status(500).json({ ok: false, msg: "Erro ao atualizar status." });
@@ -2580,7 +2653,7 @@ app.use((err, req, res, next) => {
 // Cria as tabelas do banco externo ao iniciar (se configurado).
 criarTabelasSuporte();
 migrarTabelasSuporte();
-vincularChamadosPorNome();
+migrarSuporteV2().then(() => vincularChamadosPorNome());
 
 // Configuração do servidor HTTP para aceitar requisições HTTP
 const httpServer = http.createServer(app);

@@ -103,9 +103,9 @@
             <input type="text" id="suporte-campo-pagina" readonly style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:4px;background:#f5f5f5;font-size:12px;color:#333;box-sizing:border-box;" />
         </div>
 
-        <div id="suporte-campo-setor-wrap" style="margin-bottom:10px;display:none;">
-            <label style="display:block;font-size:12px;font-weight:700;color:#555;margin-bottom:3px;">Setor <span style="color:#e74c3c;">*</span></label>
-            <select id="suporte-campo-setor" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;color:#333;box-sizing:border-box;">
+        <div id="suporte-campo-tipo-wrap" style="margin-bottom:10px;display:none;">
+            <label style="display:block;font-size:12px;font-weight:700;color:#555;margin-bottom:3px;">Tipo de chamado <span style="color:#e74c3c;">*</span></label>
+            <select id="suporte-campo-tipo" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;color:#333;box-sizing:border-box;">
                 <option value="">Selecione...</option>
             </select>
         </div>
@@ -147,7 +147,7 @@
 (function(){
     var cfg = {
         endpoint: <?= json_encode($__supEndpoint) ?>,
-        setoresEndpoint: <?= json_encode($__supApiUrl . "/suporte/setores") ?>,
+        tiposEndpoint: <?= json_encode($__supApiUrl . "/suporte/tipos") ?>,
         token:    <?= json_encode($__supToken) ?>,
         empresa:  <?= json_encode($__supEmpNome) ?>,
         usuario:  <?= json_encode($__supNome . " (" . $__supLogin . ")") ?>
@@ -168,7 +168,7 @@
     var arquivos     = [];
     var urlPagina    = "";
     var enviando     = false;
-    var setorObrigatorio = false;
+    var tipoObrigatorio = false;
     var pararGravacaoEmAndamento = function(){}; // sobrescrita pelo bloco de gravação de áudio, se suportado
 
     var btnAbrir     = document.getElementById('suporte-widget-btn');
@@ -183,8 +183,8 @@
     var txtDesc      = document.getElementById('suporte-campo-descricao');
     var contador     = document.getElementById('suporte-descricao-contador');
     var listaImg     = document.getElementById('suporte-lista-imagens');
-    var setorWrap    = document.getElementById('suporte-campo-setor-wrap');
-    var campoSetor   = document.getElementById('suporte-campo-setor');
+    var tipoWrap     = document.getElementById('suporte-campo-tipo-wrap');
+    var campoTipo    = document.getElementById('suporte-campo-tipo');
 
     if (!btnAbrir || !modal) return;
 
@@ -223,25 +223,27 @@
         return true;
     }
 
-    // ── Carrega os setores disponíveis (marcados em /demo) ──
-    function carregarSetores(){
-        if (!campoSetor || !setorWrap) return;
-        fetch(cfg.setoresEndpoint, { headers: { 'Authorization': 'Bearer ' + cfg.token } })
+    // ── Carrega os tipos de chamado (cada tipo já sabe qual setor recebe) ──
+    function carregarTipos(){
+        if (!campoTipo || !tipoWrap) return;
+        fetch(cfg.tiposEndpoint, { headers: { 'Authorization': 'Bearer ' + cfg.token } })
             .then(function(resposta){ return resposta.json(); })
             .then(function(json){
-                var setores = (json && json.ok && Array.isArray(json.setores)) ? json.setores : [];
-                setorObrigatorio = setores.length > 0;
-                if (!setorObrigatorio) { setorWrap.style.display = 'none'; return; }
-                campoSetor.innerHTML = '<option value="">Selecione...</option>';
-                setores.forEach(function(s){
+                var tipos = (json && json.ok && Array.isArray(json.tipos)) ? json.tipos : [];
+                tipoObrigatorio = tipos.length > 0;
+                if (!tipoObrigatorio) { tipoWrap.style.display = 'none'; return; }
+                var atual = campoTipo.value;
+                campoTipo.innerHTML = '<option value="">Selecione...</option>';
+                tipos.forEach(function(t){
                     var opt = document.createElement('option');
-                    opt.value = s.id;
-                    opt.textContent = s.nome;
-                    campoSetor.appendChild(opt);
+                    opt.value = t.id;
+                    opt.textContent = t.nome;
+                    campoTipo.appendChild(opt);
                 });
-                setorWrap.style.display = '';
+                campoTipo.value = atual;
+                tipoWrap.style.display = '';
             })
-            .catch(function(){ /* silencioso: se a API de setores falhar, não bloqueia o chamado */ });
+            .catch(function(){ /* silencioso: se a API de tipos falhar, não bloqueia o chamado */ });
     }
 
     // ── Abrir: captura a URL exata no momento do clique ──
@@ -252,7 +254,7 @@
         document.getElementById('suporte-campo-pagina').value  = urlPagina;
         modal.style.display = 'flex';
         txtDesc.focus();
-        carregarSetores();
+        carregarTipos();
     });
 
     function fechar(){
@@ -293,7 +295,8 @@
         palco.style.cssText = 'position:relative;max-width:90vw;max-height:70vh;line-height:0;cursor:crosshair;touch-action:none;';
         var imgTela = document.createElement('img');
         imgTela.src = canvasOriginal.toDataURL('image/png');
-        imgTela.style.cssText = 'max-width:90vw;max-height:70vh;display:block;user-select:none;-webkit-user-drag:none;';
+        // width/height auto explícitos: há páginas com regra global de img (ex.: logistica_modal.css força 30x30).
+        imgTela.style.cssText = 'width:auto;height:auto;min-width:0;min-height:0;max-width:90vw;max-height:70vh;display:block;user-select:none;-webkit-user-drag:none;';
         imgTela.draggable = false;
         palco.appendChild(imgTela);
 
@@ -398,6 +401,16 @@
         btnCancelarSelecao.addEventListener('click', fecharOverlay);
         barraBotoes.appendChild(btnCancelarSelecao);
 
+        var btnTelaInteira = criarBotao('Usar a tela inteira', ESTILO_SECUNDARIO);
+        btnTelaInteira.addEventListener('click', function(){
+            var copia = document.createElement('canvas');
+            copia.width = canvasOriginal.width;
+            copia.height = canvasOriginal.height;
+            copia.getContext('2d').drawImage(canvasOriginal, 0, 0);
+            mostrarPreview(copia);
+        });
+        barraBotoes.appendChild(btnTelaInteira);
+
         palco.addEventListener('mousedown', iniciarSelecao);
         window.addEventListener('mousemove', atualizarSelecao);
         window.addEventListener('mouseup', finalizarSelecao);
@@ -405,12 +418,315 @@
         window.addEventListener('touchmove', atualizarSelecao, { passive: false });
         window.addEventListener('touchend', finalizarSelecao);
 
+        // Depois do recorte: editor para marcar o print (lápis, marca-texto, retângulo, círculo, seta e texto).
+        // O desenho é aplicado direto nos pixels do recorte, então o anexo já sai com as marcações.
         function mostrarPreview(canvasRecorte){
             limparEventos();
+            palco.removeEventListener('mousedown', iniciarSelecao);
+            palco.removeEventListener('touchstart', iniciarSelecao);
             palco.innerHTML = '';
-            dica.textContent = 'Confira o recorte selecionado';
-            canvasRecorte.style.cssText = 'max-width:90vw;max-height:70vh;display:block;border:1px solid #fff;';
+            palco.style.cursor = 'crosshair';
+            dica.textContent = 'Destaque o problema no print e clique em Anexar';
+
+            var base = document.createElement('canvas');
+            base.width = canvasRecorte.width;
+            base.height = canvasRecorte.height;
+            base.getContext('2d').drawImage(canvasRecorte, 0, 0);
+
+            canvasRecorte.style.cssText = 'width:auto;height:auto;min-width:0;min-height:0;max-width:90vw;max-height:62vh;display:block;border:1px solid #fff;touch-action:none;';
+            palco.style.maxHeight = '62vh';
             palco.appendChild(canvasRecorte);
+            var ctx = canvasRecorte.getContext('2d');
+
+            var marcas = [];
+            var atual = null;
+            var ferramenta = 'lapis';
+            var cor = '#e74c3c';
+            var espessura = 4;
+            var campoTexto = null;
+
+            // ── Barra de ferramentas ──
+            var barraFerr = document.createElement('div');
+            barraFerr.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px;margin-bottom:10px;background:#fff;border-radius:6px;padding:6px 8px;max-width:90vw;box-sizing:border-box;line-height:normal;';
+            overlay.insertBefore(barraFerr, palco);
+
+            var ESTILO_FERR = 'border:1px solid #ccc;background:#fff;color:#333;border-radius:4px;padding:5px 9px;cursor:pointer;font-size:13px;min-width:34px;';
+            var ESTILO_FERR_ATIVA = 'border:1px solid #337ab7;background:#337ab7;color:#fff;border-radius:4px;padding:5px 9px;cursor:pointer;font-size:13px;min-width:34px;';
+            function separador(){
+                var s = document.createElement('span');
+                s.style.cssText = 'width:1px;align-self:stretch;background:#ddd;margin:0 2px;';
+                barraFerr.appendChild(s);
+            }
+
+            // Ícones em SVG: a página mistura Font Awesome 4 e 7, e nem todo nome de ícone existe nas duas.
+            function iconeSvg(conteudo){
+                return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:auto;">' + conteudo + '</svg>';
+            }
+            var ICONES = {
+                lapis: iconeSvg('<path d="M17 3l4 4L8 20H4v-4z"/>'),
+                marca: iconeSvg('<path d="M4 20h8"/><path d="M14.5 4.5l5 5L11 18H6v-5z" fill="currentColor" fill-opacity=".35"/>'),
+                retangulo: iconeSvg('<rect x="3" y="5" width="18" height="14" rx="1"/>'),
+                elipse: iconeSvg('<ellipse cx="12" cy="12" rx="9" ry="7"/>'),
+                seta: iconeSvg('<path d="M4 20L20 4"/><path d="M10 4h10v10"/>'),
+                texto: iconeSvg('<path d="M5 6V4h14v2"/><path d="M12 4v16"/><path d="M9 20h6"/>'),
+                desfazer: iconeSvg('<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/>'),
+                limpar: iconeSvg('<path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/>')
+            };
+
+            var botoesFerr = {};
+            [
+                ['lapis', 'Lápis'],
+                ['marca', 'Marca-texto'],
+                ['retangulo', 'Retângulo'],
+                ['elipse', 'Círculo'],
+                ['seta', 'Seta'],
+                ['texto', 'Texto']
+            ].forEach(function(def){
+                var b = document.createElement('button');
+                b.type = 'button';
+                b.title = def[1];
+                b.innerHTML = ICONES[def[0]];
+                b.addEventListener('click', function(){ confirmarTexto(); escolherFerramenta(def[0]); });
+                botoesFerr[def[0]] = b;
+                barraFerr.appendChild(b);
+            });
+            function escolherFerramenta(nome){
+                ferramenta = nome;
+                Object.keys(botoesFerr).forEach(function(k){ botoesFerr[k].style.cssText = k === nome ? ESTILO_FERR_ATIVA : ESTILO_FERR; });
+                palco.style.cursor = nome === 'texto' ? 'text' : 'crosshair';
+            }
+
+            separador();
+            var botoesCor = [];
+            ['#e74c3c', '#f1c40f', '#27ae60', '#337ab7', '#000000', '#ffffff'].forEach(function(c){
+                var b = document.createElement('button');
+                b.type = 'button';
+                b.title = 'Cor';
+                b.setAttribute('data-cor', c);
+                b.addEventListener('click', function(){ escolherCor(c); });
+                botoesCor.push(b);
+                barraFerr.appendChild(b);
+            });
+            function escolherCor(c){
+                cor = c;
+                if (campoTexto) campoTexto.style.color = c;
+                botoesCor.forEach(function(b){
+                    var ativa = b.getAttribute('data-cor') === c;
+                    b.style.cssText = 'width:22px;height:22px;border-radius:50%;cursor:pointer;padding:0;background:' + b.getAttribute('data-cor') + ';border:' + (ativa ? '3px solid #337ab7' : '1px solid #999') + ';box-shadow:' + (ativa ? '0 0 0 2px #fff inset' : 'none') + ';';
+                });
+            }
+
+            separador();
+            var seletorEspessura = document.createElement('select');
+            seletorEspessura.title = 'Espessura';
+            seletorEspessura.style.cssText = 'border:1px solid #ccc;border-radius:4px;padding:4px;font-size:13px;';
+            [['2', 'Fino'], ['4', 'Médio'], ['8', 'Grosso']].forEach(function(o){
+                var op = document.createElement('option');
+                op.value = o[0];
+                op.textContent = o[1];
+                if (o[0] === '4') op.selected = true;
+                seletorEspessura.appendChild(op);
+            });
+            seletorEspessura.addEventListener('change', function(){ espessura = parseInt(seletorEspessura.value, 10) || 4; });
+            barraFerr.appendChild(seletorEspessura);
+
+            separador();
+            var btnDesfazer = document.createElement('button');
+            btnDesfazer.type = 'button';
+            btnDesfazer.title = 'Desfazer (Ctrl+Z)';
+            btnDesfazer.innerHTML = ICONES.desfazer;
+            btnDesfazer.style.cssText = ESTILO_FERR;
+            btnDesfazer.addEventListener('click', desfazer);
+            barraFerr.appendChild(btnDesfazer);
+
+            var btnLimpar = document.createElement('button');
+            btnLimpar.type = 'button';
+            btnLimpar.title = 'Apagar todas as marcações';
+            btnLimpar.innerHTML = ICONES.limpar;
+            btnLimpar.style.cssText = ESTILO_FERR;
+            btnLimpar.addEventListener('click', function(){ confirmarTexto(); marcas = []; redesenhar(); });
+            barraFerr.appendChild(btnLimpar);
+
+            escolherFerramenta('lapis');
+            escolherCor(cor);
+
+            // ── Desenho ──
+            // Espessura e fonte acompanham a escala exibida, para o traço parecer igual em qualquer tamanho de print.
+            function escala(){
+                var r = canvasRecorte.getBoundingClientRect();
+                return r.width ? canvasRecorte.width / r.width : 1;
+            }
+            function ponto(evento){
+                var r = canvasRecorte.getBoundingClientRect();
+                var p = (evento.touches && evento.touches[0]) || (evento.changedTouches && evento.changedTouches[0]) || evento;
+                return {
+                    x: Math.min(Math.max(p.clientX - r.left, 0), r.width) * (canvasRecorte.width / r.width),
+                    y: Math.min(Math.max(p.clientY - r.top, 0), r.height) * (canvasRecorte.height / r.height)
+                };
+            }
+
+            function desenharMarca(m){
+                ctx.save();
+                ctx.strokeStyle = m.cor;
+                ctx.fillStyle = m.cor;
+                ctx.lineWidth = m.largura;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                if (m.tipo === 'lapis' || m.tipo === 'marca') {
+                    if (m.tipo === 'marca') { ctx.globalAlpha = 0.35; ctx.lineCap = 'square'; }
+                    ctx.beginPath();
+                    m.pontos.forEach(function(p, i){ i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); });
+                    if (m.pontos.length === 1) ctx.lineTo(m.pontos[0].x + 0.1, m.pontos[0].y);
+                    ctx.stroke();
+                } else if (m.tipo === 'retangulo') {
+                    ctx.strokeRect(Math.min(m.x1, m.x2), Math.min(m.y1, m.y2), Math.abs(m.x2 - m.x1), Math.abs(m.y2 - m.y1));
+                } else if (m.tipo === 'elipse') {
+                    ctx.beginPath();
+                    ctx.ellipse((m.x1 + m.x2) / 2, (m.y1 + m.y2) / 2, Math.abs(m.x2 - m.x1) / 2, Math.abs(m.y2 - m.y1) / 2, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                } else if (m.tipo === 'seta') {
+                    var ang = Math.atan2(m.y2 - m.y1, m.x2 - m.x1);
+                    var ponta = Math.max(m.largura * 4, 12);
+                    ctx.beginPath();
+                    ctx.moveTo(m.x1, m.y1);
+                    ctx.lineTo(m.x2 - Math.cos(ang) * ponta * 0.6, m.y2 - Math.sin(ang) * ponta * 0.6);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(m.x2, m.y2);
+                    ctx.lineTo(m.x2 - ponta * Math.cos(ang - Math.PI / 7), m.y2 - ponta * Math.sin(ang - Math.PI / 7));
+                    ctx.lineTo(m.x2 - ponta * Math.cos(ang + Math.PI / 7), m.y2 - ponta * Math.sin(ang + Math.PI / 7));
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (m.tipo === 'texto') {
+                    ctx.font = 'bold ' + m.tamanho + 'px Arial, sans-serif';
+                    ctx.textBaseline = 'top';
+                    // Contorno de contraste para o texto ser legível sobre qualquer fundo.
+                    ctx.lineWidth = Math.max(m.tamanho / 6, 2);
+                    ctx.strokeStyle = m.cor === '#ffffff' ? '#000000' : '#ffffff';
+                    m.texto.split('\n').forEach(function(linha, i){
+                        ctx.strokeText(linha, m.x, m.y + i * m.tamanho * 1.2);
+                        ctx.fillText(linha, m.x, m.y + i * m.tamanho * 1.2);
+                    });
+                }
+                ctx.restore();
+            }
+
+            function redesenhar(){
+                ctx.clearRect(0, 0, canvasRecorte.width, canvasRecorte.height);
+                ctx.drawImage(base, 0, 0);
+                marcas.forEach(desenharMarca);
+                if (atual) desenharMarca(atual);
+                btnDesfazer.disabled = marcas.length === 0;
+                btnDesfazer.style.opacity = marcas.length ? '1' : '.5';
+                btnLimpar.disabled = marcas.length === 0;
+                btnLimpar.style.opacity = marcas.length ? '1' : '.5';
+            }
+
+            function desfazer(){
+                if (campoTexto) { cancelarTexto(); return; }
+                marcas.pop();
+                redesenhar();
+            }
+
+            // ── Texto: caixa digitável sobre o print; Enter confirma, Shift+Enter quebra linha, Esc cancela ──
+            function abrirTexto(evento){
+                var p = ponto(evento);
+                var r = canvasRecorte.getBoundingClientRect();
+                var pr = palco.getBoundingClientRect();
+                var s = escala();
+                var tamanhoTela = 12 + espessura * 2;
+                campoTexto = document.createElement('textarea');
+                campoTexto.rows = 1;
+                campoTexto.setAttribute('data-x', p.x);
+                campoTexto.setAttribute('data-y', p.y);
+                campoTexto.setAttribute('data-tamanho', Math.round(tamanhoTela * s));
+                campoTexto.style.cssText = 'position:absolute;left:' + (p.x / s + r.left - pr.left) + 'px;top:' + (p.y / s + r.top - pr.top) + 'px;min-width:140px;background:rgba(255,255,255,.85);border:1px dashed #337ab7;outline:none;resize:none;padding:0 2px;margin:0;font:bold ' + tamanhoTela + 'px Arial, sans-serif;line-height:1.2;color:' + cor + ';z-index:2;overflow:hidden;';
+                campoTexto.placeholder = 'Digite...';
+                campoTexto.addEventListener('keydown', function(e){
+                    e.stopPropagation();
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); confirmarTexto(); }
+                    else if (e.key === 'Escape') { e.preventDefault(); cancelarTexto(); }
+                });
+                campoTexto.addEventListener('input', function(){
+                    campoTexto.rows = Math.max(campoTexto.value.split('\n').length, 1);
+                });
+                campoTexto.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+                campoTexto.addEventListener('touchstart', function(e){ e.stopPropagation(); });
+                palco.appendChild(campoTexto);
+                setTimeout(function(){ if (campoTexto) campoTexto.focus(); }, 0);
+            }
+            function confirmarTexto(){
+                if (!campoTexto) return;
+                var texto = campoTexto.value.replace(/\s+$/, '');
+                if (texto !== '') {
+                    marcas.push({
+                        tipo: 'texto', cor: cor, texto: texto,
+                        x: parseFloat(campoTexto.getAttribute('data-x')),
+                        y: parseFloat(campoTexto.getAttribute('data-y')),
+                        tamanho: parseInt(campoTexto.getAttribute('data-tamanho'), 10)
+                    });
+                }
+                cancelarTexto();
+                redesenhar();
+            }
+            function cancelarTexto(){
+                if (campoTexto && campoTexto.parentNode) campoTexto.parentNode.removeChild(campoTexto);
+                campoTexto = null;
+            }
+
+            function iniciarDesenho(evento){
+                if (evento.button !== undefined && evento.button !== 0) return;
+                evento.preventDefault();
+                if (campoTexto) { confirmarTexto(); return; }
+                if (ferramenta === 'texto') { abrirTexto(evento); return; }
+                var p = ponto(evento);
+                var largura = espessura * escala();
+                if (ferramenta === 'lapis' || ferramenta === 'marca') {
+                    atual = { tipo: ferramenta, cor: cor, largura: ferramenta === 'marca' ? largura * 4 : largura, pontos: [p] };
+                } else {
+                    atual = { tipo: ferramenta, cor: cor, largura: largura, x1: p.x, y1: p.y, x2: p.x, y2: p.y };
+                }
+                redesenhar();
+            }
+            function moverDesenho(evento){
+                if (!atual) return;
+                evento.preventDefault();
+                var p = ponto(evento);
+                if (atual.pontos) { atual.pontos.push(p); } else { atual.x2 = p.x; atual.y2 = p.y; }
+                redesenhar();
+            }
+            function terminarDesenho(){
+                if (!atual) return;
+                // Clique sem arrastar em forma/seta não vira marcação.
+                var valida = atual.pontos || Math.abs(atual.x2 - atual.x1) > 3 || Math.abs(atual.y2 - atual.y1) > 3;
+                if (valida) marcas.push(atual);
+                atual = null;
+                redesenhar();
+            }
+            function atalhos(e){
+                if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); desfazer(); }
+            }
+
+            canvasRecorte.addEventListener('mousedown', iniciarDesenho);
+            window.addEventListener('mousemove', moverDesenho);
+            window.addEventListener('mouseup', terminarDesenho);
+            canvasRecorte.addEventListener('touchstart', iniciarDesenho, { passive: false });
+            window.addEventListener('touchmove', moverDesenho, { passive: false });
+            window.addEventListener('touchend', terminarDesenho);
+            document.addEventListener('keydown', atalhos);
+
+            // Os listeners do editor ficam na window/document: saem junto com o overlay.
+            var limparEventosRecorte = limparEventos;
+            limparEventos = function(){
+                limparEventosRecorte();
+                window.removeEventListener('mousemove', moverDesenho);
+                window.removeEventListener('mouseup', terminarDesenho);
+                window.removeEventListener('touchmove', moverDesenho);
+                window.removeEventListener('touchend', terminarDesenho);
+                document.removeEventListener('keydown', atalhos);
+            };
+
+            redesenhar();
 
             barraBotoes.innerHTML = '';
 
@@ -425,6 +741,8 @@
 
             var btnAnexar2 = criarBotao('Anexar', ESTILO_PRIMARIO);
             btnAnexar2.addEventListener('click', function(){
+                // Texto ainda sendo digitado entra no anexo.
+                confirmarTexto();
                 // Fecha a tela de recorte na hora — não espera a geração do blob para sumir.
                 fecharOverlay();
                 try {
@@ -446,57 +764,80 @@
         }
     }
 
-    // ── Print da tela: fecha o widget, tira print da própria página (sem picker do navegador) e deixa recortar ──
-    var html2canvasCarregando = null;
-    function garantirHtml2Canvas(){
-        if (typeof window.html2canvas === 'function') return Promise.resolve();
-        if (html2canvasCarregando) return html2canvasCarregando;
-        html2canvasCarregando = new Promise(function(resolve, reject){
-            var script = document.createElement('script');
-            script.src = 'https://html2canvas.hertzen.com/dist/html2canvas.min.js';
-            script.onload = function(){ resolve(); };
-            script.onerror = function(){ html2canvasCarregando = null; reject(new Error('Falha ao carregar html2canvas')); };
-            document.head.appendChild(script);
+    // ── Print da tela: captura nativa da própria aba (getDisplayMedia) e depois recorte/desenho ──
+    // O navegador tira o print real, então textos, campos, ícones e mapas saem exatamente como na tela.
+    // (html2canvas redesenhava a página e deslocava textos de botões e apagava valores de campos.)
+    // O Chrome pede uma confirmação ("Compartilhar esta aba?") a cada print.
+    var capturaSuportada = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+
+    function esperar(ms){
+        return new Promise(function(resolve){ setTimeout(resolve, ms); });
+    }
+
+    function capturarAba(){
+        return navigator.mediaDevices.getDisplayMedia({
+            video: { displaySurface: 'browser', frameRate: 30 },
+            audio: false,
+            preferCurrentTab: true,
+            selfBrowserSurface: 'include',
+            surfaceSwitching: 'exclude',
+            monitorTypeSurfaces: 'exclude'
+        }).then(function(stream){
+            var video = document.createElement('video');
+            video.muted = true;
+            video.playsInline = true;
+            video.srcObject = stream;
+            function parar(){
+                stream.getTracks().forEach(function(t){ t.stop(); });
+                video.srcObject = null;
+            }
+            return new Promise(function(resolve, reject){
+                video.onloadedmetadata = function(){ video.play().then(resolve, reject); };
+                video.onerror = reject;
+            })
+            // Dá tempo da janela de permissão sumir e do widget oculto sair do quadro.
+            .then(function(){ return esperar(350); })
+            .then(function(){
+                var canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+                parar();
+                if (!canvas.width || !canvas.height) throw new Error('Quadro vazio');
+                return canvas;
+            }, function(erro){
+                parar();
+                throw erro;
+            });
         });
-        return html2canvasCarregando;
     }
 
     if (btnPrint) {
+        if (!capturaSuportada) {
+            // Ex.: navegadores de celular — sem captura de tela; segue com anexar arquivo.
+            btnPrint.style.display = 'none';
+        }
         btnPrint.addEventListener('click', function(){
-            garantirHtml2Canvas().then(function(){
-                // Esconde o widget (modal + botão flutuante) para ele não aparecer no print.
-                modal.style.display = 'none';
-                btnAbrir.style.display = 'none';
+            // Esconde o widget (modal + botão flutuante) para ele não aparecer no print.
+            modal.style.display = 'none';
+            btnAbrir.style.display = 'none';
 
-                function restaurarWidget(){
-                    modal.style.display = 'flex';
-                    btnAbrir.style.display = 'flex';
-                }
+            function restaurarWidget(){
+                modal.style.display = 'flex';
+                btnAbrir.style.display = 'flex';
+            }
 
-                // 2 frames de espera para garantir que o widget já sumiu da tela antes do print.
-                requestAnimationFrame(function(){
-                    requestAnimationFrame(function(){
-                        window.html2canvas(document.body, {
-                            useCORS: true,
-                            allowTaint: false,
-                            x: window.scrollX,
-                            y: window.scrollY,
-                            width: window.innerWidth,
-                            height: window.innerHeight
-                        }).then(function(canvas){
-                            restaurarWidget();
-                            abrirRecorteTela(canvas, function(blob){
-                                var arquivo = new File([blob], 'print-' + Date.now() + '.png', { type: 'image/png' });
-                                if (tentarAdicionarArquivo(arquivo)) { renderizarImagens(); }
-                            });
-                        }).catch(function(){
-                            restaurarWidget();
-                            alert('Não foi possível capturar a tela.');
-                        });
-                    });
+            capturarAba().then(function(canvas){
+                restaurarWidget();
+                abrirRecorteTela(canvas, function(blob){
+                    var arquivo = new File([blob], 'print-' + Date.now() + '.png', { type: 'image/png' });
+                    if (tentarAdicionarArquivo(arquivo)) { renderizarImagens(); }
                 });
-            }).catch(function(){
-                alert('Não foi possível carregar o recurso de print. Verifique sua conexão.');
+            }).catch(function(erro){
+                restaurarWidget();
+                // Negar a permissão não é erro: só volta para o formulário.
+                if (erro && (erro.name === 'NotAllowedError' || erro.name === 'AbortError')) return;
+                alert('Não foi possível capturar a tela. Você pode anexar uma imagem pelo botão Anexar arquivo.');
             });
         });
     }
@@ -646,7 +987,7 @@
         if (enviando) return;
         var descricao = txtDesc.value.trim();
         if (descricao.length < 5) { alert('Descreva o problema (mínimo 5 caracteres).'); txtDesc.focus(); return; }
-        if (setorObrigatorio && !campoSetor.value) { alert('Selecione o setor do chamado.'); campoSetor.focus(); return; }
+        if (tipoObrigatorio && !campoTipo.value) { alert('Selecione o tipo do chamado.'); campoTipo.focus(); return; }
 
         enviando = true;
         btnEnviar.disabled = true;
@@ -655,7 +996,7 @@
         var formData = new FormData();
         formData.append('descricao', descricao);
         formData.append('pagina_url', urlPagina);
-        if (campoSetor && campoSetor.value) { formData.append('setor_id', campoSetor.value); }
+        if (campoTipo && campoTipo.value) { formData.append('tipo_id', campoTipo.value); }
         arquivos.forEach(function(arquivo){ formData.append('anexos', arquivo); });
 
         fetch(cfg.endpoint, {
@@ -674,7 +1015,7 @@
                 renderizarImagens();
                 txtDesc.value = '';
                 contador.textContent = '0/2000';
-                if (campoSetor) { campoSetor.value = ''; }
+                if (campoTipo) { campoTipo.value = ''; }
                 fechar();
                 var msg = 'Chamado nº ' + res.json.ticket_id + ' aberto com sucesso. A equipe TechPS irá analisar.';
                 if (window.Swal) {

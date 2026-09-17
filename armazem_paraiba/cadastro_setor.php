@@ -311,6 +311,8 @@
 			}
 		}
 		remover("grupos_documentos",$_POST["id"]);
+		include_once __DIR__."/suporte/_membros_sync.php";
+		if(suporte_dominio_mestre()){ suporte_sincronizar_membros(5); } // quem recebe chamados de suporte
 		index();
 		exit;
 	}
@@ -485,6 +487,8 @@
 		if($__isDemo && !empty($setorId)){
 			suporte_sincronizar_setor($setorId, $_POST["nome"], $novoSetor["grup_tx_disponivel_suporte"] ?? "nao");
 		}
+		include_once __DIR__."/suporte/_membros_sync.php";
+		if(suporte_dominio_mestre()){ suporte_sincronizar_membros(5); } // quem recebe chamados de suporte
 
 		index();
 		exit;

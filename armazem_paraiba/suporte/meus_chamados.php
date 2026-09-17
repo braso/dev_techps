@@ -70,16 +70,12 @@
     }
 
     $__statusLabel = [
-        "aberto"             => '<span class="label label-warning">Aberto</span>',
-        "em_analise"         => '<span class="label label-default" style="background:#8e44ad;">Em Análise</span>',
-        "em_andamento"       => '<span class="label label-info">Em Andamento</span>',
-        "aguardando_cliente" => '<span class="label label-primary">Aguardando retorno</span>',
-        "resolvido"          => '<span class="label label-success">Concluído</span>',
-        "cancelado"          => '<span class="label label-default">Cancelado</span>',
-        "reaberto"           => '<span class="label label-warning">Reaberto</span>',
-        "encaminhado_ssi"    => '<span class="label label-danger">Encaminhado a SSI</span>',
-        "teste_interno"      => '<span class="label label-default" style="background:#16a085;">Teste Interno</span>',
-        "aguardando_atualizacao" => '<span class="label label-default" style="background:#e67e22;">Aguardando Atualização</span>',
+        "aberto"             => '<span class="label" style="background:#f39c12;">Aberto</span>',
+        "em_analise"         => '<span class="label" style="background:#8e44ad;">Em Análise</span>',
+        "em_desenvolvimento" => '<span class="label" style="background:#2980b9;">Em Desenvolvimento</span>',
+        "desenvolvimento_interno" => '<span class="label" style="background:#d35400;">Desenvolvimento Interno</span>',
+        "corrigido"          => '<span class="label" style="background:#16a085;">Corrigido</span>',
+        "fechado"            => '<span class="label" style="background:#27ae60;">Fechado</span>',
     ];
 
     function suporte_meus_badge(array $labels, string $status): string {

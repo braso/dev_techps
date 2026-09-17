@@ -974,6 +974,8 @@
 			}
 		}
 
+		include_once __DIR__."/suporte/_membros_sync.php";
+		if(suporte_dominio_mestre()){ suporte_sincronizar_membros(5); } // quem recebe chamados de suporte
 		$_POST["id"] = $id;
 		index();
 		exit;
@@ -1030,7 +1032,9 @@
 		if(!empty($motorista["user_nb_id"])){
 			atualizar("user", ["user_tx_status"], ["inativo"], $motorista["user_nb_id"]);
 		}
-		
+		include_once __DIR__."/suporte/_membros_sync.php";
+		if(suporte_dominio_mestre()){ suporte_sincronizar_membros(5); } // quem recebe chamados de suporte
+
 		index();
 		exit;
 	}

@@ -65,7 +65,7 @@
     $__fInicio  = trim(strval($_GET["data_inicio"] ?? ""));
     $__fFim     = trim(strval($_GET["data_fim"] ?? ""));
 
-    $__statusListagem = ["aberto", "em_analise", "em_andamento", "aguardando_cliente", "resolvido", "cancelado", "reaberto", "encaminhado_ssi", "teste_interno", "aguardando_atualizacao"];
+    $__statusListagem = ["aberto", "em_analise", "em_desenvolvimento", "desenvolvimento_interno", "corrigido", "fechado"];
 
     $__queryFiltro = [];
     if ($__fEmpresa !== "") $__queryFiltro["empresa"] = $__fEmpresa;
@@ -93,21 +93,13 @@
     $__statusLabel = [
         "aberto"             => "Aberto",
         "em_analise"         => "Em Análise",
-        "em_andamento"       => "Em Andamento",
-        "aguardando_cliente" => "Aguardando cliente",
-        "resolvido"          => "Concluído",
-        "cancelado"          => "Cancelado",
-        "reaberto"           => "Reaberto",
-        "encaminhado_ssi"    => "Encaminhado a SSI",
-        "teste_interno"      => "Teste Interno",
-        "aguardando_atualizacao" => "Aguardando Atualização",
+        "em_desenvolvimento" => "Em Desenvolvimento",
+        "desenvolvimento_interno" => "Desenvolvimento Interno",
+        "corrigido"          => "Corrigido",
+        "fechado"            => "Fechado",
     ];
-    $__tipoLabel = [
-        "duvida"           => "Dúvida operacional",
-        "sugestao"         => "Sugestão",
-        "bug"              => "Bug de sistema",
-        "nao_classificado" => "Não classificado",
-    ];
+    // O servidor já devolve o nome do tipo (configurado em Gestão → Configurações).
+    $__tipoLabel = new stdClass();
     $__prioridadeLabel = [
         "baixa"   => "Baixa",
         "media"   => "Média",
@@ -117,8 +109,8 @@
 
     $__totalGeral = (int) ($__resumo["total"] ?? 0);
     $__abertosAgora = (int) ($__resumo["abertos_agora"] ?? 0);
-    $__resolvidos = (int) ($__resumo["resolvidos"] ?? 0);
-    $__cancelados = (int) ($__resumo["cancelados"] ?? 0);
+    $__fechados = (int) ($__resumo["fechados"] ?? 0);
+    $__corrigidos = (int) ($__resumo["corrigidos"] ?? 0);
     $__tempoResolucao = $__resumo["tempo_medio_resolucao_horas"] ?? null;
     $__tempoAceite = $__resumo["tempo_medio_aceite_horas"] ?? null;
 
@@ -211,14 +203,14 @@
                     </div>
                     <div class="col-md-2 col-sm-4 col-xs-6">
                         <div class="sup-kpi">
-                            <div class="sup-kpi-label"><i class="fa fa-check-circle"></i> Concluídos</div>
-                            <div class="sup-kpi-value" style="color:#27ae60;"><?= number_format($__resolvidos, 0, ",", ".") ?></div>
+                            <div class="sup-kpi-label"><i class="fa fa-check-circle"></i> Fechados</div>
+                            <div class="sup-kpi-value" style="color:#27ae60;"><?= number_format($__fechados, 0, ",", ".") ?></div>
                         </div>
                     </div>
                     <div class="col-md-2 col-sm-4 col-xs-6">
                         <div class="sup-kpi">
-                            <div class="sup-kpi-label"><i class="fa fa-times-circle"></i> Cancelados</div>
-                            <div class="sup-kpi-value" style="color:#7f8c8d;"><?= number_format($__cancelados, 0, ",", ".") ?></div>
+                            <div class="sup-kpi-label"><i class="fa fa-wrench"></i> Corrigidos</div>
+                            <div class="sup-kpi-value" style="color:#16a085;"><?= number_format($__corrigidos, 0, ",", ".") ?></div>
                         </div>
                     </div>
                     <div class="col-md-2 col-sm-4 col-xs-6">
@@ -373,10 +365,8 @@
 
     function corPorStatus(status) {
         var mapa = {
-            aberto: "#f6c23e", em_analise: "#8e44ad", em_andamento: "#36b9cc",
-            aguardando_cliente: "#4e73df", resolvido: "#1cc88a", cancelado: "#7f8c8d",
-            reaberto: "#f6c23e", encaminhado_ssi: "#e74a3b", teste_interno: "#16a085",
-            aguardando_atualizacao: "#e67e22"
+            aberto: "#f39c12", em_analise: "#8e44ad", em_desenvolvimento: "#2980b9", desenvolvimento_interno: "#d35400",
+            corrigido: "#16a085", fechado: "#27ae60"
         };
         return mapa[status] || "#95a5a6";
     }

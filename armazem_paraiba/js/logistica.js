@@ -227,6 +227,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const displayResults = (data, plate, dateStart, dateEnd, speed, motoristaNome) => {
       resultsDiv.innerHTML = "";
 
+      // Nova consulta: descarta a linha selecionada na busca anterior, senão o ajuste
+      // abriria com a data/horas dela em vez da data desta consulta.
+      window.logisticaLinhaData = "";
+      window.logisticaLinhaStart = "";
+      window.logisticaLinhaEnd = "";
+
       // A API pode devolver posições fora de ordem cronológica: garante a
       // ordenação por data/hora antes de detectar paradas e calcular KM.
       data = [...data].sort((a, b) => new Date(a.moduleTime) - new Date(b.moduleTime));
@@ -736,8 +742,16 @@ document.addEventListener("DOMContentLoaded", () => {
             row.style.backgroundColor = "#fcc7c7";
             row.style.color = "black";
   
-            document.getElementById("hora").value = formatTime(startTime);
-            document.getElementById("horaFim").value = formatTime(endTime);
+            // O ajuste vale para o intervalo inteiro selecionado: hora de início da PRIMEIRA
+            // linha e hora de fim da ÚLTIMA. Usar o clique (startTime/endTime) pegava só a
+            // linha-âncora e a última clicada, ignorando o que ficou no meio.
+            document.getElementById("hora").value = formatTime(firstStartTime);
+            document.getElementById("horaFim").value = formatTime(lastEndTime);
+
+            // O formulário lateral relê estes valores ao abrir (logistica_modal.js). Sem
+            // atualizar aqui, ele voltava a mostrar os horários só da última linha clicada.
+            window.logisticaLinhaStart = firstStartTime;
+            window.logisticaLinhaEnd = lastEndTime;
   
             var _poiComentarios = [];
             var _poisData = window.pois || [];
@@ -1130,13 +1144,20 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
     
+    // Data yyyy-mm-dd no fuso LOCAL. toISOString() converte para UTC: no Brasil (UTC-3)
+    // tudo a partir das 21:00 caía no dia seguinte e o ajuste abria com a data errada.
+    function dataLocalISO(d) {
+      if (!(d instanceof Date) || isNaN(d)) return "";
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    }
+
     function appendRow(tbody, row) {
       const tr = document.createElement("tr");
     
       const moduleDateTime = new Date(row.moduleTime);
       const moduleDate = moduleDateTime.toLocaleDateString();
       const moduleTime = moduleDateTime.toLocaleTimeString();
-      tr.dataset.date = isNaN(moduleDateTime) ? "" : moduleDateTime.toISOString().slice(0, 10);
+      tr.dataset.date = dataLocalISO(moduleDateTime);
     
       let currentHodometro = parseFloat(row.hodometro);
       let hodometroDifference = previousHodometro !== null ? currentHodometro - previousHodometro : null;
@@ -1332,7 +1353,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const tr = document.createElement("tr");
-      tr.dataset.date = isNaN(stopStart) ? "" : stopStart.toISOString().slice(0, 10);
+      tr.dataset.date = dataLocalISO(stopStart);
 
       if (ignition === "true") {
         tr.classList.add("high-speed");
