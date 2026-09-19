@@ -805,22 +805,28 @@
 		}
 		.player-container iframe {
 			width: 100%;
-			height: 500px;
+			height: auto !important;
+			aspect-ratio: 16 / 9;
 			border: none;
+			display: block;
 		}
 		.video-embed-placeholder {
 			width: 100%;
-			height: 500px;
+			height: auto;
+			aspect-ratio: 16 / 9;
 			background: #000;
 		}
 		.video-embed-placeholder iframe {
 			width: 100%;
-			height: 500px;
+			height: 100% !important;
 			border: none;
+			display: block;
 		}
 		.video-element {
 			width: 100%;
-			height: 500px;
+			height: auto;
+			aspect-ratio: 16 / 9;
+			max-height: 70vh;
 			background: #000;
 			display: block;
 		}
@@ -843,15 +849,24 @@
 		.info-card h4 {
 			margin-top: 0;
 			color: #333;
+			overflow-wrap: anywhere;
+			word-break: break-word;
 		}
 		.material-item {
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
+			flex-wrap: wrap;
+			gap: 8px;
 			padding: 10px;
 			background: #f9f9f9;
 			border-radius: 4px;
 			margin-bottom: 8px;
+		}
+		.material-item > div {
+			min-width: 0;
+			overflow-wrap: anywhere;
+			word-break: break-word;
 		}
 		.questao-card {
 			background: #fff;
@@ -863,21 +878,28 @@
 		.questao-card h4 {
 			color: #333;
 			margin-bottom: 15px;
+			overflow-wrap: anywhere;
+			word-break: break-word;
 		}
-		.opcao-label {
+		.questao-card .opcao-label {
 			display: block;
 			padding: 10px 15px;
-			margin-bottom: 8px;
+			margin: 0 0 8px 0;
+			background: #fff;
 			border: 1px solid #ddd;
 			border-radius: 4px;
 			cursor: pointer;
 			transition: all 0.2s;
+			text-wrap: wrap;
+			white-space: normal;
+			overflow-wrap: anywhere;
+			word-break: break-word;
 		}
-		.opcao-label:hover {
+		.questao-card .opcao-label:hover {
 			background: #f0f0f0;
 			border-color: #3c8dbc;
 		}
-		.opcao-label input {
+		.questao-card .opcao-label input {
 			margin-right: 10px;
 		}
 		.resultado-acerto {
@@ -901,10 +923,36 @@
 		.chat-msg { margin-bottom: 12px; max-width: 80%; padding: 8px 12px; border-radius: 8px; }
 		.chat-msg-outro { background: #e9f1f8; border: 1px solid #c9dcec; }
 		.chat-msg-meu { background: #d4edda; border: 1px solid #b7dcc3; margin-left: auto; }
-		.chat-msg-cabecalho { font-size: 12px; margin-bottom: 3px; color: #444; }
-		.chat-msg-corpo { font-size: 13px; word-wrap: break-word; }
-		.chat-imagem { max-width: 220px; border-radius: 6px; border: 1px solid #ddd; }
+		.chat-msg-cabecalho { font-size: 12px; margin-bottom: 3px; color: #444; overflow-wrap: anywhere; word-break: break-word; }
+		.chat-msg-corpo { font-size: 13px; overflow-wrap: anywhere; word-break: break-word; }
+		.chat-imagem { max-width: min(220px, 100%); border-radius: 6px; border: 1px solid #ddd; }
+		.chat-container audio { max-width: min(280px, 100%) !important; }
 		.chat-form { margin-top: 12px; }
+		.info-card .alert { overflow-wrap: anywhere; word-break: break-word; }
+		.tab-pane p { overflow-wrap: anywhere; word-break: break-word; }
+		.episodio-item { max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
+
+		@media (max-width: 767px) {
+			.info-card { padding: 12px; }
+			.tab-content { padding: 10px 0; }
+			.chat-container { max-height: 300px; }
+			.chat-msg { max-width: 92%; }
+			.material-item .btn { width: 100%; }
+			.tempo-display { font-size: 16px; }
+			.info-card .text-right { text-align: left; }
+			#formAvaliacao .btn-lg { width: 100%; }
+			.questao-card { padding: 14px; }
+			.nav-tabs > li { float: none; display: block; }
+			.nav-tabs > li > a {
+				border: 1px solid #ddd;
+				border-radius: 4px !important;
+				margin-bottom: 4px;
+			}
+			.nav-tabs > li.active > a,
+			.nav-tabs > li.active > a:hover,
+			.nav-tabs > li.active > a:focus { border-bottom-color: #ddd; }
+			.nav-tabs { border-bottom: none; }
+		}
 	</style>
 
 	<div class='container-fluid'>
@@ -1462,7 +1510,7 @@
 				if(youtubePlayer) return;
 				var container = document.getElementById('videoPlayer');
 				if(container) {
-					container.innerHTML = '<iframe src=\"{$embedUrl}\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture\" allowfullscreen style=\"width:100%;height:500px;border:none;\"></iframe>';
+					container.innerHTML = '<iframe src=\"{$embedUrl}\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture\" allowfullscreen style=\"width:100%;height:100%;border:none;\"></iframe>';
 				}
 			}
 
@@ -1496,7 +1544,7 @@
 				if(container) { container.innerHTML = ''; }
 				youtubePlayer = new YT.Player('videoPlayer', {
 					width: '100%',
-					height: '500px',
+					height: '100%',
 					videoId: '{$videoIdYoutube}',
 					playerVars: {
 						enablejsapi: 1,

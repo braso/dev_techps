@@ -122,6 +122,7 @@
 		}
 		.treinamento-card .thumbnail {
 			width: 100%;
+			max-width: 100%;
 			height: 180px;
 			object-fit: cover;
 			border-radius: 4px;
@@ -129,6 +130,18 @@
 		}
 		.treinamento-card .info-item {
 			margin-bottom: 8px;
+		}
+		.treinamento-card h4 {
+			overflow-wrap: anywhere;
+			word-break: break-word;
+		}
+		.treinamento-card p {
+			overflow-wrap: anywhere;
+			word-break: break-word;
+		}
+		.treinamento-card .card-header {
+			overflow-wrap: anywhere;
+			word-break: break-word;
 		}
 		.treinamento-card .info-item i {
 			width: 20px;
@@ -180,6 +193,36 @@
 		.stat-item .stat-label {
 			color: #666;
 			font-size: 12px;
+		}
+
+		.treinamento-aba .panel-title {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 10px;
+		}
+		.treinamento-aba .panel-title .aba-seta {
+			margin-left: auto;
+		}
+
+		@media (max-width: 767px) {
+			.stats-bar { padding: 10px 6px; }
+			.stat-item { padding: 6px; }
+			.stat-item .stat-number { font-size: 22px; }
+			.filtros-container { padding: 12px; }
+			.filtros-container .col-md-5,
+			.filtros-container .col-md-4,
+			.filtros-container .col-md-2 { margin-bottom: 10px; }
+			.filtros-container .btn { width: 100%; }
+			.treinamento-aba .panel-title { font-size: 14px; }
+			.treinamento-aba .panel-title small {
+				margin-left: 0 !important;
+				width: 100%;
+			}
+			.treinamento-aba .panel-title .aba-seta { margin-left: 0; }
+			.treinamento-card .card-header { padding: 8px 10px; }
+			.treinamento-card .card-body { padding: 12px; }
+			.treinamento-card .thumbnail { height: 150px; }
 		}
 	</style>
 

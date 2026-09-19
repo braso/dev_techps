@@ -848,8 +848,12 @@ if (!empty($_POST["epi_carga_horaria"])) {
 			.nav-tabs-custom > .nav-tabs > li.active > a { border-top-color: #3c8dbc; }
 			.tab-content { padding: 15px; }
 			.video-preview { max-width: 400px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; }
-			.questao-item { background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin-bottom: 10px; }
-			.questao-item .opcoes { margin-left: 20px; }
+			#video_preview_container { max-width: 100%; }
+			#video_preview_container iframe { width: 100%; height: auto; aspect-ratio: 16 / 9; max-width: 560px; display: block; border: 0; }
+			.questao-item { background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin-bottom: 10px; overflow-wrap: anywhere; word-break: break-word; }
+			.questao-item .opcoes { margin-left: 20px; overflow-wrap: anywhere; word-break: break-word; }
+			.questao-item > div { flex-wrap: wrap; gap: 6px; }
+			.questao-item > div > strong { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
 			/* ===== QUESTÕES DINÂMICAS (componente moderno) ===== */
 			.questao-dinamica {
 				background: linear-gradient(180deg, #ffffff, #f7fafc);
@@ -949,10 +953,11 @@ if (!empty($_POST["epi_carga_horaria"])) {
 			}
 			.opcao-radio { cursor: pointer; font-weight: normal; }
 			.opcao-radio input[type=\"radio\"] { accent-color: #27ae60; margin-right: 3px; }
-			.material-item { display: flex; align-items: center; justify-content: space-between; padding: 8px; background: #f5f5f5; border-radius: 4px; margin-bottom: 5px; }
-			.perfil-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
-			.perfil-card-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 10px; }
-			.perfil-card-titulo { font-size: 14px; color: #2c6a86; }
+			.material-item { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 8px; background: #f5f5f5; border-radius: 4px; margin-bottom: 5px; overflow-wrap: anywhere; word-break: break-word; }
+			.material-item > span { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+			.perfil-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); overflow-wrap: anywhere; word-break: break-word; }
+			.perfil-card-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+			.perfil-card-titulo { font-size: 14px; color: #2c6a86; min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
 			.perfil-card-contador { background: #f0f7fb; border: 1px solid #d5e6f2; border-radius: 15px; padding: 3px 12px; font-size: 12px; color: #555; }
 			.perfil-contador-num { font-size: 14px; color: #3c8dbc; }
 			.atribuicao-resumo { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 15px; }
@@ -961,6 +966,32 @@ if (!empty($_POST["epi_carga_horaria"])) {
 			.atribuicao-resumo-item-info { background: linear-gradient(135deg, #337ab7, #23527c); box-shadow: 0 3px 8px rgba(51,122,183,0.3); }
 			.atribuicao-resumo-num { font-size: 26px; font-weight: bold; }
 			.atribuicao-resumo-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9; }
+
+			@media (max-width: 991px) {
+				.row div label {
+					margin: 0 0 4px 0;
+					text-wrap: wrap;
+					white-space: normal;
+				}
+			}
+			@media (max-width: 767px) {
+				.tab-content { padding: 10px; }
+				.nav-tabs { border-bottom: none; }
+				.nav-tabs > li { float: none; display: block; }
+				.nav-tabs > li > a {
+					border: 1px solid #ddd;
+					border-radius: 4px !important;
+					margin-bottom: 4px;
+				}
+				.nav-tabs > li.active > a,
+				.nav-tabs > li.active > a:hover,
+				.nav-tabs > li.active > a:focus { border-bottom-color: #ddd; }
+				.box-footer .btn { width: 100%; margin-bottom: 8px; }
+				.atribuicao-resumo-item { min-width: 100%; }
+				.perfil-card-header { flex-direction: column; align-items: flex-start; }
+				.perfil-card { padding: 12px; }
+				.questao-dinamica { padding: 12px; }
+			}
 		</style>
 
 		<div class='box box-primary'>
@@ -1319,7 +1350,8 @@ if (!empty($_POST["epi_carga_horaria"])) {
 										echo "<div class='alert alert-warning'><i class='fa fa-info-circle'></i> Nenhum episódio cadastrado. Clique em <strong>Adicionar Episódio</strong> para criar o primeiro vídeo da série.</div>";
 									} else {
 										echo "
-									<table class='table table-bordered table-striped'>
+									<div class='table-responsive'>
+									<table class='table table-bordered table-striped' style='min-width:560px;'>
 										<thead>
 											<tr>
 												<th style='width:50px;'>Ordem</th>
@@ -1353,7 +1385,8 @@ if (!empty($_POST["epi_carga_horaria"])) {
 										}
 										echo "
 										</tbody>
-									</table>";
+									</table>
+									</div>";
 									}
 
 									// FORMULÁRIO DO EPISÓDIO (quando episodio_edit está ativo)
@@ -1903,10 +1936,10 @@ if (!empty($_POST["epi_carga_horaria"])) {
 					$('#div_preview_video').show();
 					if(tipo === 'youtube'){
 						var match = url.match(/(?:youtube\\.com\\/watch\\?v=|youtu\\.be\\/)([^&\\n?#]+)/);
-						if(match) $('#video_preview_container').html('<iframe width=\"560\" height=\"315\" src=\"https://www.youtube.com/embed/' + match[1] + '\" frameborder=\"0\" allowfullscreen></iframe>');
+						if(match) $('#video_preview_container').html('<iframe src=\"https://www.youtube.com/embed/' + match[1] + '\" frameborder=\"0\" allowfullscreen></iframe>');
 					} else if(tipo === 'vimeo'){
 						var match = url.match(/vimeo\\.com\\/(\\d+)/);
-						if(match) $('#video_preview_container').html('<iframe width=\"560\" height=\"315\" src=\"https://player.vimeo.com/video/' + match[1] + '\" frameborder=\"0\" allowfullscreen></iframe>');
+						if(match) $('#video_preview_container').html('<iframe src=\"https://player.vimeo.com/video/' + match[1] + '\" frameborder=\"0\" allowfullscreen></iframe>');
 					}
 				} else {
 					$('#div_preview_video').hide();
@@ -1914,7 +1947,7 @@ if (!empty($_POST["epi_carga_horaria"])) {
 			}).trigger('change');
 
 			if($('#selectPerfis').length){
-				$('#selectPerfis').select2({ placeholder: 'Selecione os perfis...', allowClear: true, language: 'pt-BR' });
+				$('#selectPerfis').select2({ placeholder: 'Selecione os perfis...', allowClear: true, language: 'pt-BR', width: '100%' });
 			}
 		</script>";
 	}

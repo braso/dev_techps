@@ -270,8 +270,8 @@
 	echo "
 	<style>
 		.acomp-header { background: linear-gradient(135deg, #1e3a5f, #3c8dbc); color:#fff; border-radius:14px; padding:22px 24px; margin-bottom:20px; box-shadow:0 6px 18px rgba(30,58,95,0.25); }
-		.acomp-header h3 { margin:0 0 6px; font-weight:700; }
-		.acomp-header .acomp-sub { opacity:0.85; font-size:13px; }
+		.acomp-header h3 { margin:0 0 6px; font-weight:700; overflow-wrap:anywhere; word-break:break-word; }
+		.acomp-header .acomp-sub { opacity:0.85; font-size:13px; overflow-wrap:anywhere; word-break:break-word; }
 		.kpi-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin-bottom:20px; }
 		.kpi-card { border-radius:12px; padding:16px; color:#fff; box-shadow:0 4px 12px rgba(0,0,0,0.08); position:relative; overflow:hidden; }
 		.kpi-card .kpi-icon { font-size:22px; opacity:0.5; position:absolute; right:12px; top:12px; }
@@ -290,7 +290,7 @@
 		.acomp-filtros label { font-size:11px; text-transform:uppercase; font-weight:600; color:#555; }
 		.acomp-table { width:100%; background:#fff; border-collapse:separate; border-spacing:0; border-radius:12px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.06); }
 		.acomp-table thead th { background:#f4f6f9; color:#2c3e50; font-size:12px; text-transform:uppercase; letter-spacing:0.4px; padding:12px 14px; border-bottom:2px solid #e4e9f0; white-space:nowrap; }
-		.acomp-table tbody td { padding:12px 14px; border-bottom:1px solid #f0f2f5; vertical-align:middle; font-size:13px; }
+		.acomp-table tbody td { padding:12px 14px; border-bottom:1px solid #f0f2f5; vertical-align:middle; font-size:13px; overflow-wrap:anywhere; word-break:break-word; }
 		.acomp-table tbody tr:hover { background:#f7fafc; }
 		.acomp-table tbody tr:last-child td { border-bottom:none; }
 		.badge-status { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600; color:#fff; }
@@ -299,11 +299,25 @@
 		.btn-auditar { color:#3c8dbc; cursor:pointer; }
 		.btn-auditar:hover { text-decoration:underline; }
 		.progress { height:8px; margin:0; }
-		.log-item { border-left:3px solid #3c8dbc; padding:8px 12px; margin-bottom:8px; background:#f8fafc; border-radius:0 6px 6px 0; }
+		.log-item { border-left:3px solid #3c8dbc; padding:8px 12px; margin-bottom:8px; background:#f8fafc; border-radius:0 6px 6px 0; overflow-wrap:anywhere; word-break:break-word; }
 		.log-item .log-data { font-size:11px; color:#888; }
 		.log-item .log-evento { font-weight:600; font-size:12px; text-transform:capitalize; color:#2c3e50; }
 		.log-item .log-ip { font-size:11px; color:#aaa; }
 		.select-treino { max-width:400px; }
+		@media (max-width: 767px) {
+			.acomp-header { padding:16px; }
+			.acomp-header .text-right { text-align:left; margin-top:10px; }
+			.acomp-header .text-right .btn { margin-bottom:6px; }
+			.acomp-filtros { padding:12px; }
+			.acomp-filtros .text-right { text-align:left !important; padding-top:0 !important; }
+			.acomp-filtros .btn { margin-bottom:6px; }
+			.select-treino { max-width:100%; }
+			.kpi-grid { grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); }
+			.kpi-card .kpi-num { font-size:22px; }
+			.acomp-table thead th, .acomp-table tbody td { padding:10px; }
+			#tabelaAcomp { min-width:820px; }
+			.modal-dialog { margin:10px; }
+		}
 	</style>
 
 	<div class='container-fluid'>
@@ -390,23 +404,24 @@
 			</div>
 		</div>
 
-		<table class='acomp-table' id='tabelaAcomp'>
-			<thead>
-				<tr>
-					<th>Usuário</th>
-					<th>Empresa</th>
-					<th>Perfil</th>
-					<th>Status</th>
-					<th>Progresso</th>
-					<th>Tempo assistido</th>
-					<th>Nota / Aprovação</th>
-					<th>Tentativas</th>
-					<th>Início</th>
-					<th>Conclusão</th>
-					<th>Auditoria</th>
-				</tr>
-			</thead>
-			<tbody>";
+		<div class='table-responsive' style='border-radius:12px;'>
+			<table class='acomp-table' id='tabelaAcomp'>
+				<thead>
+					<tr>
+						<th>Usuário</th>
+						<th>Empresa</th>
+						<th>Perfil</th>
+						<th>Status</th>
+						<th>Progresso</th>
+						<th>Tempo assistido</th>
+						<th>Nota / Aprovação</th>
+						<th>Tentativas</th>
+						<th>Início</th>
+						<th>Conclusão</th>
+						<th>Auditoria</th>
+					</tr>
+				</thead>
+				<tbody>";
 
 	if (empty($usuarios)) {
 		echo "<tr><td colspan='11' class='acomp-empty'>Nenhum usuário encontrado para os filtros aplicados.</td></tr>";
@@ -462,8 +477,9 @@
 	}
 
 	echo "
-			</tbody>
-		</table>
+				</tbody>
+			</table>
+		</div>
 	</div>
 
 	<!-- MODAL DE AUDITORIA -->
