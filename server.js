@@ -1443,13 +1443,14 @@ function criarTabelasSuporte() {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
         `CREATE TABLE IF NOT EXISTS suporte_setor (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            origem_empresa VARCHAR(60) NOT NULL DEFAULT 'demo',
             origem_setor_id INT NOT NULL,
             nome VARCHAR(150) NOT NULL,
             status ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo',
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
-            UNIQUE KEY uniq_origem_setor (origem_setor_id)
+            UNIQUE KEY uniq_setor_origem_empresa (origem_empresa, origem_setor_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
         `CREATE TABLE IF NOT EXISTS suporte_tipo (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -1484,7 +1485,7 @@ function criarTabelasSuporte() {
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
-            UNIQUE KEY uniq_atendente_origem (origem_entidade_id),
+            UNIQUE KEY uniq_atendente_origem_empresa (origem_empresa, origem_entidade_id),
             KEY idx_atendente_setor (setor_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
     ];
@@ -1546,7 +1547,14 @@ async function migrarSuporteV2() {
     await passo("tipo_nome do chamado", "ALTER TABLE suporte_ticket ADD COLUMN tipo_nome VARCHAR(150) DEFAULT NULL");
     await passo("origem do funcionário", "ALTER TABLE suporte_atendente ADD COLUMN origem_entidade_id INT DEFAULT NULL");
     await passo("setor do funcionário", "ALTER TABLE suporte_atendente ADD COLUMN setor_id BIGINT UNSIGNED DEFAULT NULL");
-    await passo("chave da origem", "ALTER TABLE suporte_atendente ADD UNIQUE KEY uniq_atendente_origem (origem_entidade_id)");
+    // Setores e atendentes vêm de mais de um domínio (techps e demo): a chave passa a ser domínio + id de origem,
+    // e a sincronização de um domínio não apaga o que veio do outro.
+    await passo("setor: domínio de origem", "ALTER TABLE suporte_setor ADD COLUMN origem_empresa VARCHAR(60) NOT NULL DEFAULT 'demo' AFTER id");
+    await passo("setor: chave antiga", "ALTER TABLE suporte_setor DROP INDEX uniq_origem_setor");
+    await passo("setor: chave por domínio", "ALTER TABLE suporte_setor ADD UNIQUE KEY uniq_setor_origem_empresa (origem_empresa, origem_setor_id)");
+    await passo("atendente: domínio vazio = demo", "UPDATE suporte_atendente SET origem_empresa = 'demo' WHERE origem_empresa = ''");
+    await passo("atendente: chave antiga", "ALTER TABLE suporte_atendente DROP INDEX uniq_atendente_origem");
+    await passo("atendente: chave por domínio", "ALTER TABLE suporte_atendente ADD UNIQUE KEY uniq_atendente_origem_empresa (origem_empresa, origem_entidade_id)");
     await passo("índice do setor", "ALTER TABLE suporte_atendente ADD KEY idx_atendente_setor (setor_id)");
     // Dois funcionários podem ter o mesmo e-mail (ou nenhum): e-mail deixa de ser chave.
     await passo("e-mail sem unicidade", "ALTER TABLE suporte_atendente DROP INDEX uniq_atendente_email");
@@ -1750,6 +1758,12 @@ function categorizarArquivo(nomeOriginal, buffer) {
     }
 
     return null;
+}
+
+// Domínio que mandou setores/atendentes (ex.: "techps", "demo"). Sem informar = "demo" (versões antigas do PHP).
+function dominioOrigem(valor) {
+    const v = String(valor || "").trim().toLowerCase();
+    return /^[a-z0-9_]{1,60}$/.test(v) ? v : "demo";
 }
 
 function exigirAdminSuporte(req, res, next) {
@@ -2237,6 +2251,7 @@ app.get("/suporte/dashboard", exigirAdminSuporte, async (req, res) => {
 app.post("/suporte/setores", exigirAdminSuporte, async (req, res) => {
     try {
         const origemSetorId = parseInt(req.body.origem_setor_id, 10);
+        const origemEmpresa = dominioOrigem(req.body.origem_empresa);
         const nome = String(req.body.nome || "").trim().slice(0, 150);
         const status = String(req.body.status || "").trim();
         if (!origemSetorId || origemSetorId < 1) {
@@ -2250,9 +2265,9 @@ app.post("/suporte/setores", exigirAdminSuporte, async (req, res) => {
         }
 
         await suporteQuery(
-            "INSERT INTO suporte_setor (origem_setor_id, nome, status) VALUES (?, ?, ?) " +
+            "INSERT INTO suporte_setor (origem_empresa, origem_setor_id, nome, status) VALUES (?, ?, ?, ?) " +
             "ON DUPLICATE KEY UPDATE nome = VALUES(nome), status = VALUES(status), updated_at = NOW()",
-            [origemSetorId, nome, status]
+            [origemEmpresa, origemSetorId, nome, status]
         );
 
         res.json({ ok: true, msg: "Setor sincronizado." });
@@ -2274,7 +2289,7 @@ app.get("/suporte/setores", async (req, res) => {
         }
 
         const linhas = await suporteQuery(
-            "SELECT id, nome FROM suporte_setor WHERE status = 'ativo' ORDER BY nome ASC",
+            "SELECT id, nome, origem_empresa FROM suporte_setor WHERE status = 'ativo' ORDER BY nome ASC, origem_empresa ASC",
             []
         );
         res.json({ ok: true, setores: linhas });
@@ -2350,7 +2365,7 @@ app.post("/suporte/tipos", exigirAdminSuporte, async (req, res) => {
 app.get("/suporte/atendentes", exigirAdminSuporte, async (req, res) => {
     try {
         const linhas = await suporteQuery(
-            "SELECT a.id, a.nome, a.email, a.login, a.setor_id, s.nome AS setor_nome " +
+            "SELECT a.id, a.nome, a.email, a.login, a.setor_id, a.origem_empresa, s.nome AS setor_nome " +
             "FROM suporte_atendente a LEFT JOIN suporte_setor s ON s.id = a.setor_id " +
             "WHERE a.status = 'ativo' ORDER BY s.nome ASC, a.nome ASC",
             []
@@ -2362,8 +2377,8 @@ app.get("/suporte/atendentes", exigirAdminSuporte, async (req, res) => {
     }
 });
 
-// Recebe do Demo a lista completa de funcionários dos setores de suporte. Quem não vier na lista
-// (saiu do setor, foi desligado) deixa de receber.
+// Recebe de um domínio mestre (techps ou demo) a lista completa dos funcionários dele nos setores de suporte.
+// Quem não vier na lista (saiu do setor, foi desligado) deixa de receber — só entre os atendentes DESSE domínio.
 app.post("/suporte/atendentes/sincronizar", exigirAdminSuporte, async (req, res) => {
     try {
         const membros = Array.isArray(req.body.membros) ? req.body.membros.slice(0, 5000) : null;
@@ -2375,7 +2390,8 @@ app.post("/suporte/atendentes/sincronizar", exigirAdminSuporte, async (req, res)
             return res.status(400).json({ ok: false, msg: "Lista de funcionários vazia." });
         }
 
-        const setores = await suporteQuery("SELECT id, origem_setor_id FROM suporte_setor", []);
+        const origemEmpresa = dominioOrigem(req.body.origem_empresa);
+        const setores = await suporteQuery("SELECT id, origem_setor_id FROM suporte_setor WHERE origem_empresa = ?", [origemEmpresa]);
         const setorPorOrigem = new Map(setores.map((st) => [parseInt(st.origem_setor_id, 10), st.id]));
         const recebidos = [];
         for (const m of membros) {
@@ -2387,7 +2403,7 @@ app.post("/suporte/atendentes/sincronizar", exigirAdminSuporte, async (req, res)
             const login = String(m.login || "").trim().slice(0, 100);
             const setorId = setorPorOrigem.get(parseInt(m.setor_origem_id, 10)) || null;
 
-            let existente = await suporteQuery("SELECT id FROM suporte_atendente WHERE origem_entidade_id = ?", [origem]);
+            let existente = await suporteQuery("SELECT id FROM suporte_atendente WHERE origem_empresa = ? AND origem_entidade_id = ?", [origemEmpresa, origem]);
             // Primeira sincronização: reaproveita o cadastro antigo da mesma pessoa (mesmo login), para os
             // chamados que já estão no nome dela continuarem aparecendo em "Meus atendimentos".
             if (!existente.length && login) {
@@ -2395,25 +2411,26 @@ app.post("/suporte/atendentes/sincronizar", exigirAdminSuporte, async (req, res)
             }
             if (existente.length) {
                 await suporteQuery(
-                    "UPDATE suporte_atendente SET origem_entidade_id = ?, nome = ?, email = ?, login = ?, setor_id = ?, origem_empresa = 'demo', status = 'ativo' WHERE id = ?",
-                    [origem, nome, email, login, setorId, existente[0].id]
+                    "UPDATE suporte_atendente SET origem_entidade_id = ?, nome = ?, email = ?, login = ?, setor_id = ?, origem_empresa = ?, status = 'ativo' WHERE id = ?",
+                    [origem, nome, email, login, setorId, origemEmpresa, existente[0].id]
                 );
             } else {
                 await suporteQuery(
-                    "INSERT INTO suporte_atendente (origem_entidade_id, nome, email, login, setor_id, origem_empresa, status) VALUES (?, ?, ?, ?, ?, 'demo', 'ativo')",
-                    [origem, nome, email, login, setorId]
+                    "INSERT INTO suporte_atendente (origem_entidade_id, nome, email, login, setor_id, origem_empresa, status) VALUES (?, ?, ?, ?, ?, ?, 'ativo')",
+                    [origem, nome, email, login, setorId, origemEmpresa]
                 );
             }
             recebidos.push(origem);
         }
 
-        // Quem não veio na lista e os cadastros manuais antigos (sem origem) deixam de receber.
+        // Quem deste domínio não veio na lista (e cadastros manuais antigos, sem origem) deixa de receber.
+        // Atendentes de OUTRO domínio mestre não são tocados.
         const desativados = recebidos.length
             ? await suporteQuery(
-                "UPDATE suporte_atendente SET status = 'inativo' WHERE status = 'ativo' AND (origem_entidade_id IS NULL OR origem_entidade_id NOT IN (" + recebidos.map(() => "?").join(",") + "))",
-                recebidos
+                "UPDATE suporte_atendente SET status = 'inativo' WHERE status = 'ativo' AND origem_empresa = ? AND (origem_entidade_id IS NULL OR origem_entidade_id NOT IN (" + recebidos.map(() => "?").join(",") + "))",
+                [origemEmpresa, ...recebidos]
             )
-            : await suporteQuery("UPDATE suporte_atendente SET status = 'inativo' WHERE status = 'ativo'", []);
+            : await suporteQuery("UPDATE suporte_atendente SET status = 'inativo' WHERE status = 'ativo' AND origem_empresa = ?", [origemEmpresa]);
 
         res.json({ ok: true, msg: "Funcionários sincronizados.", total: recebidos.length, desativados: desativados.affectedRows || 0 });
     } catch (err) {
