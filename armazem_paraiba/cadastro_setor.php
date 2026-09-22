@@ -4,8 +4,9 @@
 		error_reporting(E_ALL);
 */
 
-	include "conecta.php";
+	// Antes do conecta.php: ele já executa a ação pedida (layout_setor etc.) durante o include.
 	include_once __DIR__."/suporte/_membros_sync.php";
+	include "conecta.php";
 
 	// Setores do módulo de suporte são mantidos pelos domínios mestres (techps e demo), cada um com os seus.
 	function suporteSetorDominioEhDemo(): bool {
