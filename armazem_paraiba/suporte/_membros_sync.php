@@ -2,18 +2,29 @@
     /* ============================================================
        Suporte — funcionários que recebem os chamados
        O tipo do chamado aponta para um setor, e quem está nesse
-       setor recebe. A fonte é o cadastro de funcionários do domínio
-       Demo: funcionário ativo, em setor marcado como "Disponibilizar
-       no módulo de suporte". Este arquivo envia essa lista inteira
-       ao servidor central, que avisa e lista quem recebe.
-       Chamado ao salvar funcionário/setor no Demo e pelo botão
+       setor recebe. A fonte é o cadastro de funcionários dos domínios
+       MESTRES (techps e demo): funcionário ativo, em setor marcado como
+       "Disponibilizar no módulo de suporte". Cada domínio envia a lista
+       inteira DELE; o servidor central só troca os atendentes daquele
+       domínio (um domínio não apaga os do outro).
+       Chamado ao salvar funcionário/setor num domínio mestre e pelo botão
        "Sincronizar agora" em Gestão de Suporte → Configurações.
        ============================================================ */
 
+    // Domínios que mantêm setores e atendentes do suporte (cada um com os seus).
+    if (!defined("SUPORTE_DOMINIOS_MESTRES")) {
+        define("SUPORTE_DOMINIOS_MESTRES", ["techps", "demo"]);
+    }
+
+    if (!function_exists("suporte_dominio_atual")) {
+        function suporte_dominio_atual(): string {
+            return strtolower(trim(strval($_ENV["CONTEX_PATH"] ?? ""), "/"));
+        }
+    }
+
     if (!function_exists("suporte_dominio_mestre")) {
-        // A lista de setores e de funcionários do suporte só é mantida no domínio Demo.
         function suporte_dominio_mestre(): bool {
-            return strpos(trim(strval($_ENV["CONTEX_PATH"] ?? ""), "/"), "demo") !== false;
+            return in_array(suporte_dominio_atual(), SUPORTE_DOMINIOS_MESTRES, true);
         }
     }
 
@@ -24,7 +35,7 @@
          */
         function suporte_sincronizar_membros(int $timeout = 8): array {
             if (!suporte_dominio_mestre()) {
-                return ["ok" => false, "msg" => "A lista de funcionários do suporte só é enviada a partir do domínio Demo.", "total" => 0];
+                return ["ok" => false, "msg" => "A lista de funcionários do suporte só é enviada a partir dos domínios TechPS e Demo.", "total" => 0];
             }
             $apiUrl = rtrim(strval($_ENV["SUPORTE_API_URL"] ?? ""), "/");
             $adminKey = strval($_ENV["SUPORTE_ADMIN_KEY"] ?? "");
@@ -76,7 +87,7 @@
             }
 
             // Lista vazia aqui é real (ninguém em setor de suporte), então o central pode aplicar.
-            $corpo = json_encode(["membros" => array_values($membros), "permitir_vazio" => "1"], JSON_UNESCAPED_UNICODE);
+            $corpo = json_encode(["membros" => array_values($membros), "permitir_vazio" => "1", "origem_empresa" => suporte_dominio_atual()], JSON_UNESCAPED_UNICODE);
             $ch = curl_init($apiUrl . "/suporte/atendentes/sincronizar");
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,

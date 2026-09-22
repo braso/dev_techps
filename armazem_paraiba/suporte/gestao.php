@@ -239,6 +239,14 @@
 
     $__resSetores = gestao_requisitar("GET", "/suporte/setores");
     $__setores = $__resSetores["ok"] ? ($__resSetores["dados"]["setores"] ?? []) : [];
+    // Setores vêm de dois domínios (techps e demo): nome repetido ganha o domínio ao lado para não confundir.
+    $__nomesSetor = array_count_values(array_map(fn($st) => mb_strtolower(strval($st["nome"] ?? "")), $__setores));
+    foreach ($__setores as &$__st) {
+        if (($__nomesSetor[mb_strtolower(strval($__st["nome"] ?? ""))] ?? 0) > 1 && !empty($__st["origem_empresa"])) {
+            $__st["nome"] = strval($__st["nome"]) . " (" . $__st["origem_empresa"] . ")";
+        }
+    }
+    unset($__st);
 
     // E-mails de aviso + SLA por prioridade (badge de SLA na lista/detalhe e a própria tela de configurações).
     $__resConfig = gestao_requisitar("GET", "/suporte/config");
@@ -248,7 +256,7 @@
     $__resTipos = gestao_requisitar("GET", "/suporte/tipos", $__verConfig ? ["todos" => 1] : []);
     $__tipos = $__resTipos["ok"] ? ($__resTipos["dados"]["tipos"] ?? []) : [];
 
-    // Funcionários que recebem (espelho do cadastro do Demo): Configurações, filtro e "Meus atendimentos".
+    // Funcionários que recebem (espelho dos cadastros do TechPS e do Demo): Configurações, filtro e "Meus atendimentos".
     $__resAtendentes = gestao_requisitar("GET", "/suporte/atendentes");
     $__atendentes = $__resAtendentes["ok"] ? ($__resAtendentes["dados"]["atendentes"] ?? []) : [];
     $__euAtendenteId = 0;
@@ -393,15 +401,15 @@
                     </table>
                 </div>
                 <?php if (empty($__setores)): ?>
-                    <p class="text-warning"><i class="fa fa-exclamation-triangle"></i> Nenhum setor disponível. Marque "Disponibilizar no módulo de suporte" no <strong>Cadastro de Setor</strong> do domínio Demo.</p>
+                    <p class="text-warning"><i class="fa fa-exclamation-triangle"></i> Nenhum setor disponível. Marque "Disponibilizar no módulo de suporte" no <strong>Cadastro de Setor</strong> do domínio TechPS ou Demo.</p>
                 <?php endif; ?>
 
                 <!-- Funcionários que recebem -->
                 <hr style="margin:24px 0 18px;">
                 <h4 style="margin-top:0;"><i class="fa fa-users"></i> Funcionários que recebem</h4>
                 <p class="help-block" style="margin-top:-4px;">
-                    Vem do <strong>cadastro de funcionários do domínio Demo</strong>: funcionário ativo, em setor marcado como
-                    "Disponibilizar no módulo de suporte". A lista se atualiza sozinha ao salvar um funcionário ou um setor no Demo.
+                    Vem do <strong>cadastro de funcionários dos domínios TechPS e Demo</strong> (cada um com os seus): funcionário ativo, em setor marcado como
+                    "Disponibilizar no módulo de suporte". A lista se atualiza sozinha ao salvar um funcionário ou um setor nesses domínios.
                 </p>
                 <?php if ($__ehDemo): ?>
                     <form method="post" style="margin-bottom:12px;">
@@ -409,7 +417,7 @@
                         <button type="submit" class="btn btn-default btn-sm"><i class="fa fa-refresh"></i> Sincronizar agora</button>
                     </form>
                 <?php else: ?>
-                    <p class="text-muted"><i class="fa fa-info-circle"></i> Para sincronizar manualmente, use esta mesma tela no domínio Demo.</p>
+                    <p class="text-muted"><i class="fa fa-info-circle"></i> Para sincronizar manualmente, use esta mesma tela no domínio TechPS ou Demo.</p>
                 <?php endif; ?>
                 <?php if (empty($__atendentes)): ?>
                     <p class="text-muted">Nenhum funcionário recebendo chamados ainda.</p>

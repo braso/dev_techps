@@ -5,11 +5,11 @@
 */
 
 	include "conecta.php";
+	include_once __DIR__."/suporte/_membros_sync.php";
 
-	// Só o domínio /demo mantém a lista mestra de setores usados no módulo de suporte.
+	// Setores do módulo de suporte são mantidos pelos domínios mestres (techps e demo), cada um com os seus.
 	function suporteSetorDominioEhDemo(): bool {
-		$empresaAtual = trim(strval($_ENV["CONTEX_PATH"] ?? ""), "/");
-		return strpos($empresaAtual, "demo") !== false;
+		return suporte_dominio_mestre();
 	}
 
 	function ensureColunaDisponivelSuporte(){
@@ -36,7 +36,7 @@
 	}
 
 	// Sincroniza o setor com o banco central do módulo de suporte (server.js).
-	// Só é chamado quando o domínio atual é /demo (única fonte da lista de setores de suporte).
+	// Só é chamado nos domínios mestres (techps e demo); o servidor guarda o setor junto com o domínio de origem.
 	function suporte_sincronizar_setor(int $setorId, string $nome, string $ativoSimNao): void {
 		if($setorId <= 0){
 			return;
@@ -59,6 +59,7 @@
 			CURLOPT_HTTPHEADER     => ["x-api-key: " . $adminKey],
 			CURLOPT_POSTFIELDS     => http_build_query([
 				"origem_setor_id" => $setorId,
+				"origem_empresa"  => suporte_dominio_atual(),
 				"nome"            => $nome,
 				"status"          => $status,
 			]),
