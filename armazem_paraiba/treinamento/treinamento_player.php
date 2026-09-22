@@ -1,6 +1,7 @@
 <?php
 	include_once __DIR__."/../load_env.php";
 	include_once __DIR__."/../conecta.php";
+	include_once __DIR__."/certificado.php";
 
 	// =====================================================
 	// MÓDULO DE TREINAMENTO - Player de Vídeo
@@ -721,6 +722,25 @@
 	// Log de acesso
 	registrarLogTreinamento($treinamentoId, $usuarioId, "acesso", "Acesso ao player");
 
+	// Certificado: gera automaticamente quando o treinamento está concluído
+	$certificadoRegistro = [];
+	$certificadoCaminho = "";
+	$certificadoStatus = "";
+	try {
+		if (treinamento_certificado_estaConcluido($treinamentoId, $usuarioId)) {
+			$resultadoCertificado = treinamento_certificado_gerar($treinamentoId, $usuarioId);
+			$certificadoRegistro = !empty($resultadoCertificado["registro"])
+				? $resultadoCertificado["registro"]
+				: treinamento_certificado_buscarRegistro($treinamentoId, $usuarioId);
+			$certificadoCaminho = !empty($certificadoRegistro) ? treinamento_certificado_arquivo($certificadoRegistro) : "";
+			$certificadoStatus = strval($certificadoRegistro["trece_tx_status"] ?? "");
+		}
+	} catch (Throwable $e) {
+		$certificadoRegistro = [];
+		$certificadoCaminho = "";
+		$certificadoStatus = "";
+	}
+
 	// =====================================================
 	// RENDERIZAR PÁGINA
 	// =====================================================
@@ -1004,6 +1024,23 @@
 				<div class='alert alert-success'>
 					<i class='fa fa-check-circle'></i> <strong>Treinamento Concluído!</strong>
 					" . ($aprovado ? "Avaliação aprovada com nota: <strong>{$notaAtual}%</strong>" : "") . "
+				</div>";
+				}
+
+				// Certificado de conclusão
+				if ($certificadoStatus === "aguardando_assinatura") {
+					echo "
+				<div class='alert alert-info'>
+					<i class='fa fa-pencil-square-o'></i> <strong>Certificado enviado para assinatura!</strong>
+					Verifique seu e-mail e assine o documento. Após a assinatura, o certificado ficará disponível em <strong>Meus Documentos</strong>.
+				</div>";
+				} elseif ($certificadoCaminho !== "") {
+					$certificadoUrl = ($_ENV["URL_BASE"] ?? "") . ($CONTEX["path"] ?? "") . "/" . ltrim($certificadoCaminho, "/");
+					echo "
+				<div class='alert alert-success'>
+					<i class='fa fa-certificate'></i> <strong>Certificado disponível!</strong>
+					Seu certificado de conclusão já foi gerado e está salvo em <strong>Meus Documentos</strong>.
+					<a href='{$certificadoUrl}' target='_blank' class='btn btn-success btn-sm' style='margin-left:8px;'><i class='fa fa-download'></i> Abrir certificado</a>
 				</div>";
 				}
 

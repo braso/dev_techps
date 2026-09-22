@@ -9,6 +9,7 @@ armazem_paraiba/treinamento/
 ├── cadastro_treinamento.php    # Admin: CRUD de treinamentos + atribuições
 ├── treinamento_assistir.php    # Usuário: listagem "Meus Treinamentos"
 ├── treinamento_player.php      # Usuário: player com proteções anti-adiantamento
+├── certificado.php             # Geração automática do certificado de conclusão
 └── uploads/materiais/{id}/     # Arquivos de material de apoio por treinamento
 ```
 
@@ -23,6 +24,7 @@ armazem_paraiba/treinamento/
 | `treinamento_atribuicao` | Atribuição individual de acesso (legado) |
 | `treinamento_bloqueio` | Bloqueio individual: usuário desmarcado não vê o treinamento mesmo com perfil |
 | `treinamento_log` | Auditoria de eventos (acesso, edição, avaliação) |
+| `treinamento_certificado` | Controle do certificado gerado (um por treinamento/usuário): status, caminho, documento do funcionário e solicitação de assinatura |
 
 ## Fluxo de Acesso
 
@@ -62,6 +64,26 @@ armazem_paraiba/treinamento/
 ## Conclusão
 
 - Ao atingir 100% (vídeo terminado), o servidor marca `trepr_nb_concluido = 1` e grava a data de conclusão automaticamente - **sem depender de avaliação** (banco de questões desativado temporariamente).
+- Para séries, a linha geral de progresso é marcada como concluída quando **todos os episódios** estão aprovados.
+- A **emissão do certificado** tem regra própria e exige também a aprovação na avaliação quando houver questões (ver seção Certificados).
+
+## Certificados
+
+Gerados automaticamente quando o treinamento é **concluído e aprovado** (ao abrir o player, se ainda não existir; o acompanhamento também possui o botão **Gerar Certificados** para reprocessar todos os concluídos).
+
+Regra de emissão (`treinamento_certificado_estaConcluido`):
+- **Vídeo único**: exige o vídeo finalizado (`trepr_nb_concluido = 1`) **e** aprovação na avaliação (`trepr_nb_avaliacao_aprovada = 1`) quando o treinamento tiver questões ativas. Sem questões cadastradas, basta o vídeo finalizado.
+- **Série**: exige **todos os episódios aprovados** (a aprovação do episódio já pressupõe o vídeo assistido). O PDF lista cada episódio com título, duração, data de conclusão e aproveitamento, além do total de carga horária.
+
+1. **Tipo de documento**: o certificado usa o tipo de documento ativo chamado `Certificado`/`Certificados` (criado em `cadastro_tipo_doc.php`). O cabeçalho/rodapé configurados em `documentos/configurar_layout.php` são aplicados ao PDF (mesmo padrão TCPDF do módulo Documentos).
+   - **Logo**: usa `tipo_tx_logo` do tipo quando configurado; senão, usa a logo do cliente (`imagens/logo_topo_cliente.png`) à esquerda e a logo da empresa do funcionário (`empresa.empr_tx_logo`) à direita, como nos demais PDFs do sistema.
+   - **Visual**: moldura dupla, título e cabeçalho na cor do sistema e código de autenticação no rodapé.
+2. **Campos**: se o tipo tiver campos dinâmicos configurados (`camp_documento_modulo`), os valores são preenchidos automaticamente conforme o rótulo (nome, CPF, matrícula, empresa, treinamento, carga horária, data, nota, instrutor, validade, código etc.). Sem layout configurado, usa o conjunto padrão de campos.
+3. **Assinatura = Não** (`tipo_tx_assinatura = 'nao'`): o PDF é gerado e salvo em `arquivos/Funcionarios/{entidadeId}/`, e registrado em `documento_funcionario` (aba **Documentos** do funcionário em `cadastro_funcionario.php`).
+4. **Assinatura = Sim** (`tipo_tx_assinatura = 'sim'`): o PDF é enviado ao módulo de assinatura via `assinatura/integracao/assinatura_integracao.php` (assinante único = funcionário, `salvar_documento_funcionario = 'sim'`). Após a assinatura, o módulo existente salva o PDF assinado na **mesma pasta** e registra em `documento_funcionario` com `docu_tx_assinado = 'sim'`.
+5. **Vencimento**: quando o tipo tem vencimento `sim`, a data é calculada com base em `trei_nb_dias_validade` do treinamento.
+6. **Status** (`treinamento_certificado.trece_tx_status`): `gerado`, `aguardando_assinatura`, `assinado` ou `erro`. O status de assinatura é sincronizado automaticamente a partir de `solicitacoes_assinatura` ao abrir o player.
+7. **Constante opcional**: definir `TREINAMENTO_CERTIFICADO_ENVIAR_EMAIL` como `false` desativa o e-mail de convite de assinatura (útil em homologação).
 
 ## Pontos de Atenção (bugs conhecidos e contornos)
 

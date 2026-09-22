@@ -127,6 +127,22 @@
         mysqli_query($conn, "ALTER TABLE inst_documento_modulo ADD COLUMN inst_tx_data_referencia DATE NULL AFTER inst_nb_entidade;");
     };
 
+    // Migração da tabela tipos_documentos: cabeçalho, rodapé e logo usados na geração de PDF
+    $__checkTiposDoc = mysqli_query($conn, "SHOW TABLES LIKE 'tipos_documentos'");
+    if ($__checkTiposDoc && mysqli_num_rows($__checkTiposDoc) > 0) {
+        $__colTiposDoc = [
+            "tipo_tx_logo" => "VARCHAR(255) DEFAULT NULL",
+            "tipo_tx_cabecalho" => "TEXT DEFAULT NULL",
+            "tipo_tx_rodape" => "TEXT DEFAULT NULL"
+        ];
+        foreach ($__colTiposDoc as $__col => $__tipo) {
+            $__checkCol = mysqli_query($conn, "SHOW COLUMNS FROM tipos_documentos LIKE '{$__col}'");
+            if ($__checkCol && mysqli_num_rows($__checkCol) === 0) {
+                @mysqli_query($conn, "ALTER TABLE tipos_documentos ADD COLUMN {$__col} {$__tipo}");
+            }
+        }
+    };
+
     // Migração da tabela parametro: coluna para abonar feriados automaticamente na escala
     $checkAbonarFeriado = mysqli_query($conn, "SHOW COLUMNS FROM parametro LIKE 'para_tx_abonarFeriadoEscala'");
     if ($checkAbonarFeriado && mysqli_num_rows($checkAbonarFeriado) == 0) {
@@ -442,6 +458,30 @@
         PRIMARY KEY (trei_nb_id, user_nb_id),
         FOREIGN KEY (trei_nb_id) REFERENCES treinamento(trei_nb_id) ON DELETE CASCADE,
         FOREIGN KEY (user_nb_id) REFERENCES user(user_nb_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+    // Certificados de conclusão (um por treinamento/usuário) gerados automaticamente
+    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_certificado (
+        trece_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        trece_nb_treinamento_id INT NOT NULL,
+        trece_nb_usuario_id INT NOT NULL,
+        trece_nb_entidade_id INT NULL,
+        trece_nb_tipo_documento INT NULL,
+        trece_tx_nome_arquivo VARCHAR(255) NULL,
+        trece_tx_caminho VARCHAR(500) NULL,
+        trece_nb_documento_funcionario INT NULL,
+        trece_nb_solicitacao_assinatura INT NULL,
+        trece_tx_id_documento VARCHAR(100) NULL,
+        trece_tx_codigo_autenticacao VARCHAR(60) NULL,
+        trece_tx_status ENUM('gerado','aguardando_assinatura','assinado','erro') DEFAULT 'gerado',
+        trece_tx_detalhe TEXT NULL,
+        trece_dt_data_conclusao DATETIME NULL,
+        trece_dt_data_assinatura DATETIME NULL,
+        trece_dt_data_cadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
+        trece_dt_data_atualiza DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_treinamento_usuario (trece_nb_treinamento_id, trece_nb_usuario_id),
+        KEY idx_usuario (trece_nb_usuario_id),
+        KEY idx_solicitacao (trece_nb_solicitacao_assinatura)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
     // =====================================================

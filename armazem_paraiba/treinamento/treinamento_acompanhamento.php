@@ -2,6 +2,7 @@
 	include_once __DIR__."/../load_env.php";
 	include_once __DIR__."/../conecta.php";
 	include_once __DIR__."/../check_permission.php";
+	include_once __DIR__."/certificado.php";
 	verificaPermissao('/treinamento/cadastro_treinamento.php');
 
 	// =====================================================
@@ -47,6 +48,57 @@
 		$empresasHabAcomp = json_decode($treinamento["trei_tx_empresas_habilitadas"], true);
 		if (!is_array($empresasHabAcomp)) $empresasHabAcomp = [];
 		$empresasHabAcomp = array_map('intval', $empresasHabAcomp);
+	}
+
+	// =====================================================
+	// AJAX: GERAR CERTIFICADOS DOS USUÁRIOS CONCLUÍDOS
+	// =====================================================
+	if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["acao_certificados"] ?? "") === "gerar") {
+		header('Content-Type: application/json');
+		@set_time_limit(300);
+		$tId = (int)($_POST["treinamento_id"] ?? 0);
+		if ($tId <= 0) {
+			echo json_encode(["success" => false, "message" => "Treinamento inválido."]);
+			exit;
+		}
+		$tipoCertificado = treinamento_certificado_buscarTipo();
+		if (empty($tipoCertificado)) {
+			echo json_encode(["success" => false, "message" => "Tipo de documento 'Certificados' não encontrado ou inativo. Cadastre-o em Tipos de Documentos."]);
+			exit;
+		}
+
+		$gerados = 0;
+		$existentes = 0;
+		$erros = [];
+		$rsUsuarios = query(
+			"SELECT DISTINCT trepr_nb_usuario_id FROM treinamento_progresso WHERE trepr_nb_treinamento_id = ?",
+			"i",
+			[$tId]
+		);
+		while ($rsUsuarios && ($rU = mysqli_fetch_assoc($rsUsuarios))) {
+			$uId = (int)$rU["trepr_nb_usuario_id"];
+			if ($uId <= 0 || !treinamento_certificado_estaConcluido($tId, $uId)) {
+				continue;
+			}
+			$resultado = treinamento_certificado_gerar($tId, $uId);
+			if (!empty($resultado["ok"])) {
+				if (!empty($resultado["existente"])) {
+					$existentes++;
+				} else {
+					$gerados++;
+				}
+			} else {
+				$erros[] = "Usuário #{$uId}: " . strval($resultado["message"] ?? "erro");
+			}
+		}
+
+		echo json_encode([
+			"success" => true,
+			"gerados" => $gerados,
+			"existentes" => $existentes,
+			"erros" => $erros
+		]);
+		exit;
 	}
 
 	// =====================================================
@@ -331,6 +383,7 @@
 				</div>
 				<div class='col-md-4 text-right'>
 					<a href='cadastro_treinamento.php' class='btn btn-default btn-sm' style='background:rgba(255,255,255,0.15);border:none;color:#fff;'><i class='fa fa-arrow-left'></i> Voltar</a>
+					<button class='btn btn-sm' style='background:rgba(255,255,255,0.15);border:none;color:#fff;' onclick='gerarCertificadosAcomp()'><i class='fa fa-certificate'></i> Gerar Certificados</button>
 					<button class='btn btn-sm' style='background:rgba(255,255,255,0.15);border:none;color:#fff;' onclick='exportarCSVAcomp()'><i class='fa fa-download'></i> Exportar CSV</button>
 				</div>
 			</div>
@@ -551,8 +604,36 @@
 			});
 		}
 
-		function exportarCSVAcomp() {
-			var linhas = [];
+		function gerarCertificadosAcomp() {
+			Swal.fire({
+				title: 'Gerar certificados?',
+				html: 'Serão gerados os certificados de todos os usuários que concluíram este treinamento.<br><br><small>Quem já possui certificado não será afetado.</small>',
+				icon: 'question',
+				showCancelButton: true,
+				confirmButtonColor: '#3085d6',
+				cancelButtonColor: '#d33',
+				confirmButtonText: 'Sim, gerar!',
+				cancelButtonText: 'Cancelar'
+			}).then((result) => {
+				if (!result.isConfirmed) return;
+				Swal.fire({ title: 'Gerando certificados...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+				$.post(window.location.pathname, { acao_certificados: 'gerar', treinamento_id: acompTreinamentoId }, function(data) {
+					if (!data.success) {
+						Swal.fire({ icon: 'error', title: 'Erro', text: data.message || 'Não foi possível gerar os certificados.' });
+						return;
+					}
+					var texto = data.gerados + ' certificado(s) gerado(s). ' + data.existentes + ' já existente(s).';
+					if (data.erros && data.erros.length > 0) {
+						texto += '<br><br><small>' + data.erros.slice(0, 5).join('<br>') + (data.erros.length > 5 ? '<br>...' : '') + '</small>';
+					}
+					Swal.fire({ icon: 'success', title: 'Concluído', html: texto }).then(() => window.location.reload());
+				}, 'json').fail(function() {
+					Swal.fire({ icon: 'error', title: 'Erro', text: 'Erro ao conectar com o servidor.' });
+				});
+			});
+		}
+
+		function exportarCSVAcomp() {			var linhas = [];
 			$('#tabelaAcomp thead th').each(function(i, th) { linhas.push($(th).text().trim()); });
 			var csv = '\\uFEFFsep=;\\r\\n' + linhas.join(';') + '\\r\\n';
 			$('#tabelaAcomp tbody tr:visible').each(function() {
