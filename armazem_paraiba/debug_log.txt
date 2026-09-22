@@ -114,3 +114,29 @@ TEST_2026-05-20 01:08:23_6a0d098748455
     [id] => 
 )
 
+2026-09-22 08:21:06 POST: Array
+(
+    [HTTP_REFERER] => http://localhost/braso/armazem_paraiba/cadastro_tipo_doc.php
+    [nome] => Treinamentos
+    [setor] => 3
+    [sub-setor] => 
+    [vencimento] => nao
+    [assinatura] => sim
+    [acao] => cadastra_tipo_doc()
+    [returnValues] => {"id":48,"acao":"modificarTipoDoc()","busca_nome_like":"tre","nome":"Treinamentos","setor":3,"vencimento":"nao","assinatura":"nao","sub-setor":null,"status":"ativo","HTTP_REFERER":"http:\/\/localhost\/braso\/armazem_paraiba\/cadastro_tipo_doc.php","acaoPrevia":"index"}
+    [id] => 48
+)
+
+2026-09-22 08:55:26 POST: Array
+(
+    [HTTP_REFERER] => http://localhost/braso/armazem_paraiba/cadastro_tipo_doc.php
+    [nome] => Certificados
+    [setor] => 3
+    [sub-setor] => 
+    [vencimento] => nao
+    [assinatura] => nao
+    [acao] => cadastra_tipo_doc()
+    [returnValues] => {"id":49,"acao":"modificarTipoDoc()","busca_nome_like":"certi","nome":"Certificados","setor":3,"vencimento":"nao","assinatura":"sim","sub-setor":null,"status":"ativo","HTTP_REFERER":"http:\/\/localhost\/braso\/armazem_paraiba\/cadastro_tipo_doc.php","acaoPrevia":"index"}
+    [id] => 49
+)
+

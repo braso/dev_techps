@@ -133,9 +133,9 @@
 			transition: box-shadow 0.2s;
 		}
 		.gc-card:hover { box-shadow: 0 3px 8px rgba(0,0,0,0.12); }
-		.gc-card-titulo { font-size: 15px; font-weight: bold; color: #333; word-wrap: break-word; }
+		.gc-card-titulo { font-size: 15px; font-weight: bold; color: #333; overflow-wrap: anywhere; word-break: break-word; }
 		.gc-card-badges { margin-top: 4px; }
-		.gc-card-meta { font-size: 12px; color: #666; margin-top: 4px; word-wrap: break-word; }
+		.gc-card-meta { font-size: 12px; color: #666; margin-top: 4px; overflow-wrap: anywhere; word-break: break-word; }
 		.gc-badge-pendente {
 			background: #d9534f;
 			color: #fff;
@@ -158,9 +158,10 @@
 		.gc-msg { margin-bottom: 12px; max-width: 80%; padding: 8px 12px; border-radius: 8px; }
 		.gc-msg-outro { background: #e9f1f8; border: 1px solid #c9dcec; }
 		.gc-msg-meu { background: #d4edda; border: 1px solid #b7dcc3; margin-left: auto; }
-		.gc-msg-cabecalho { font-size: 12px; margin-bottom: 3px; color: #444; }
-		.gc-msg-corpo { font-size: 13px; word-wrap: break-word; }
-		.gc-imagem { max-width: 220px; border-radius: 6px; border: 1px solid #ddd; }
+		.gc-msg-cabecalho { font-size: 12px; margin-bottom: 3px; color: #444; overflow-wrap: anywhere; word-break: break-word; }
+		.gc-msg-corpo { font-size: 13px; overflow-wrap: anywhere; word-break: break-word; }
+		.gc-imagem { max-width: min(220px, 100%); border-radius: 6px; border: 1px solid #ddd; }
+		.gc-chat-container audio { max-width: min(280px, 100%) !important; }
 		.gc-badge-nivel {
 			font-size: 10px;
 			padding: 2px 6px;
@@ -171,6 +172,12 @@
 		.gc-badge-admin { background: #3c8dbc; color: #fff; }
 		.gc-badge-usuario { background: #888; color: #fff; }
 		.gc-form { margin-top: 12px; }
+		@media (max-width: 767px) {
+			.gc-card { padding: 10px 12px; }
+			.gc-chat-container { max-height: 60vh; }
+			.gc-msg { max-width: 92%; }
+			.gc-chat-container audio { max-width: 100% !important; }
+		}
 	</style>
 
 	<div class='container-fluid'>
