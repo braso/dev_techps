@@ -129,7 +129,7 @@
         exit;
     }
 
-	function criaSectionSubSetor($subSetores, $subSetorSelecionado = null, $tamanho) {
+	function criaSectionSubSetor($subSetores, $tamanho, $subSetorSelecionado = null) {
 		$js = "
 		<script>
 		// Dados dos sub-setores
@@ -222,7 +222,7 @@
 		$campos = [
 			campo("Nome*", "nome", $_POST["nome"], 4),
             combo_bd("!Setor*", "setor", $_POST["setor"], 2, "grupos_documentos"),
-			criaSectionSubSetor($sbsetor_documento, $_POST["sub-setor"], 2),
+			criaSectionSubSetor($sbsetor_documento, 2, $_POST["sub-setor"]),
 			$campoStatus,
             combo("Vencimento", "vencimento", $_POST["vencimento"], 2, ["" => "", "sim" => "Sim", "nao" => "Não"]),
             combo("Assinatura", "assinatura", $_POST["assinatura"], 2, ["" => "", "sim" => "Sim", "nao" => "Não"]),
@@ -288,7 +288,7 @@
             "SETOR" 		=> "grup_tx_nome",
 			"SUBSETOR" 		=> "sbgr_tx_nome",
             "STATUS" 	    => "tipo_tx_status",
-            "CAMPOS"        => "qtd_campos",
+            "MODELOS"       => "qtd_modelos",
         ];
 
         $camposBusca = [
@@ -301,74 +301,86 @@
 
         $queryBase = 
             "SELECT t.tipo_nb_id, t.tipo_tx_nome, g.grup_tx_nome, s.sbgr_tx_nome, t.tipo_tx_status,
-                   (SELECT COUNT(*) FROM camp_documento_modulo WHERE camp_nb_tipo_doc = t.tipo_nb_id AND camp_tx_status = 'ativo') as qtd_campos
+                   (SELECT COUNT(*) FROM modelo_termo WHERE mode_nb_tipo_doc = t.tipo_nb_id AND mode_tx_status = 'ativo') as qtd_modelos
              FROM tipos_documentos t
              LEFT JOIN grupos_documentos g ON g.grup_nb_id = t.tipo_nb_grupo
              LEFT JOIN sbgrupos_documentos s ON t.tipo_nb_sbgrupo = s.sbgr_nb_id"
         ;
 
-        $actions = criarIconesGrid(
-            ["glyphicon glyphicon-search search-button", "glyphicon glyphicon-th-list", "glyphicon glyphicon-remove search-remove"],
-            ["cadastro_tipo_doc.php", "documentos/configurar_layout.php", "cadastro_tipo_doc.php"],
-            ["modificarTipoDoc()", "index", "excluirTipoDoc()"],
-            ["", "id", ""]
-        );
+        $gridFields["actions"] = [
+            "<a href='javascript:;' title='Visualizar' class='btn btn-xs btn-default' onclick='tipoDocAcao(\"modificarTipoDoc()\", this, \"cadastro_tipo_doc.php\")'><span class='glyphicon glyphicon-search'></span></a>",
+            "<a href='javascript:;' title='Termos' class='btn btn-xs btn-default' onclick='tipoDocAcaoModelos(this)'><span class='glyphicon glyphicon-th-list'></span></a>",
+            "<a href='javascript:;' title='Excluir' class='btn btn-xs btn-danger' onclick='tipoDocAcaoExcluir(this, \"cadastro_tipo_doc.php\")'><span class='glyphicon glyphicon-remove'></span></a>"
+        ];
 
-        $actions["functions"][1] .= 
-            "esconderInativar('glyphicon glyphicon-remove search-remove', 4);"
-        ;
-
-        $gridFields["actions"] = $actions["tags"];
+        echo "
+        <script>
+            function tipoDocHiddenInput(nome, valor) {
+                var inp = document.createElement('input');
+                inp.type = 'hidden';
+                inp.name = nome;
+                inp.value = valor;
+                return inp;
+            }
+            function tipoDocAcao(acao, el, url) {
+                var tr = $(el).closest('tr');
+                var rowId = tr.attr('data-row-id');
+                if (rowId === undefined || rowId === '') {
+                    rowId = tr.children().first().text().trim();
+                }
+                var form = document.createElement('form');
+                form.method = 'post';
+                form.action = url;
+                form.appendChild(tipoDocHiddenInput('id', rowId));
+                form.appendChild(tipoDocHiddenInput('acao', acao));
+                document.body.appendChild(form);
+                form.submit();
+            }
+            function tipoDocAcaoExcluir(el, url) {
+                var tr = $(el).closest('tr');
+                var rowId = tr.attr('data-row-id');
+                if (rowId === undefined || rowId === '') {
+                    rowId = tr.children().first().text().trim();
+                }
+                if (!confirm('Deseja excluir o tipo de documento?')) { return; }
+                var form = document.createElement('form');
+                form.method = 'post';
+                form.action = url;
+                form.appendChild(tipoDocHiddenInput('id', rowId));
+                form.appendChild(tipoDocHiddenInput('acao', 'excluirTipoDoc()'));
+                document.body.appendChild(form);
+                form.submit();
+            }
+            function tipoDocAcaoModelos(el) {
+                var tr = $(el).closest('tr');
+                var rowId = tr.attr('data-row-id');
+                if (rowId === undefined || rowId === '') {
+                    rowId = tr.children().first().text().trim();
+                }
+                location.href = 'documentos/termos/modelos_termo.php?tipo_doc=' + encodeURIComponent(rowId);
+            }
+        </script>
+        ";
 
         $jsFunctions =
             "const funcoesInternas = function(){
-                // Identificar a coluna QTD (penúltima antes das ações) e a tabela
+                var idxModelos = -1;
+                $('#result thead th[value]').each(function(i, th){
+                    if($(th).text().trim() === 'MODELOS'){ idxModelos = i; }
+                });
                 $('#result tbody tr').each(function(){
                     var row = $(this);
-                    var cellQtd = row.find('td').eq(5); // Índice 5 é o QTD (0-indexed)
-                    var qtd = parseInt(cellQtd.text()) || 0;
-                    
+                    if(idxModelos < 0){ return; }
+                    var cell = row.find('td').eq(idxModelos);
+                    var qtd = parseInt(cell.text().trim()) || 0;
                     if(qtd > 0){
-                        // Se houver campos, muda o ícone e destaca em azul
-                        var iconLayout = row.find('.glyphicon-th-list');
-                        iconLayout
-                            .removeClass('glyphicon-th-list')
-                            .addClass('glyphicon-ok-circle')
-                            .css('color', '#337ab7')
-                            .attr('title', 'Layout configurado (' + qtd + ' campos)');
-                        // Rebinda o clique pois a classe mudou
-                        iconLayout.off('click').on('click', function(event){
-                            var f = document.createElement('form');
-                            f.setAttribute('method', 'post');
-                            f.setAttribute('action', 'documentos/configurar_layout.php');
-                            var inp = document.createElement('input');
-                            inp.setAttribute('name', 'id');
-                            var r = $(event.target).closest('tr');
-                            var rid = r.attr('data-row-id') || r.children().first().text();
-                            inp.setAttribute('value', rid);
-                            f.appendChild(inp);
-                            var acaoInp = document.createElement('input');
-                            acaoInp.setAttribute('name', 'acao');
-                            acaoInp.setAttribute('value', 'index');
-                            f.appendChild(acaoInp);
-                            document.body.appendChild(f);
-                            f.submit();
-                        });
+                        cell.html('<span class=\"label label-success\">' + qtd + ' modelo(s)</span>');
+                        row.find('a[title=\"Termos\"]').removeClass('btn-default').addClass('btn-success');
+                        row.css('background', '#f2fbf2');
+                    } else {
+                        cell.html('<span class=\"label label-default\">sem modelo</span>');
                     }
-                    
-                    // Esconde a coluna CAMPOS que usamos apenas para a lógica
-                    cellQtd.hide();
                 });
-                // Esconde o cabeçalho da coluna CAMPOS
-                $('#result thead th').eq(5).hide();
-                // Adiciona cabeçalhos para as colunas de ação (remove antes pra evitar duplicata)
-                var headerRow = $('#result thead tr');
-                headerRow.find('.th-action-col').remove();
-                headerRow.append('<th class=\"th-action-col table-col-head\" style=\"text-align:center;\">VISUALIZAR</th>');
-                headerRow.append('<th class=\"th-action-col table-col-head\" style=\"text-align:center;\">DOC.LAYOUT</th>');
-                headerRow.append('<th class=\"th-action-col table-col-head\" style=\"text-align:center;\">EXCLUIR</th>');
-
-                ".implode(" ", $actions["functions"])."
             }"
         ;
 

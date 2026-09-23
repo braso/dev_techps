@@ -228,6 +228,9 @@ function assinatura_integracao_criarSolicitacaoUnicoAssinante(
 	$email = trim(strval($entidade["enti_tx_email"] ?? ""));
 	$nome = trim(strval($entidade["enti_tx_nome"] ?? ""));
 	$entiNbId = intval($entidade["enti_nb_id"] ?? 0);
+	if(($email === "" || !filter_var($email, FILTER_VALIDATE_EMAIL)) && !empty($opts["email_fallback"]) && filter_var($opts["email_fallback"], FILTER_VALIDATE_EMAIL)){
+		$email = trim(strval($opts["email_fallback"]));
+	}
 	if($email === "" || !filter_var($email, FILTER_VALIDATE_EMAIL)){
 		return ["ok" => false, "error" => "Funcionário sem e-mail válido."];
 	}
