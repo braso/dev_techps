@@ -140,3 +140,30 @@ TEST_2026-05-20 01:08:23_6a0d098748455
     [id] => 49
 )
 
+2026-09-22 19:12:58 POST: Array
+(
+    [HTTP_REFERER] => http://localhost/braso/armazem_paraiba/cadastro_tipo_doc.php
+    [nome] => tesssssss
+    [setor] => 1
+    [sub-setor] => 
+    [busca_banco] => ativo
+    [vencimento] => nao
+    [assinatura] => nao
+    [acao] => cadastra_tipo_doc()
+    [returnValues] => {"busca_codigo":"","busca_nome_like":"","busca_setor":"","busca_subsetor":"","busca_status":"","acao":"layout_tipo_doc()","vencimento":"nao","assinatura":"nao","HTTP_REFERER":"http:\/\/localhost\/braso\/armazem_paraiba\/cadastro_tipo_doc.php","acaoPrevia":"index"}
+    [id] => 
+)
+
+2026-09-22 19:13:11 POST: Array
+(
+    [HTTP_REFERER] => http://localhost/braso/armazem_paraiba/cadastro_tipo_doc.php
+    [nome] => tesssssss
+    [setor] => 1
+    [sub-setor] => 
+    [vencimento] => nao
+    [assinatura] => sim
+    [acao] => cadastra_tipo_doc()
+    [returnValues] => {"id":383,"acao":"modificarTipoDoc()","busca_nome_like":"tess","nome":"tesssssss","setor":1,"vencimento":"nao","assinatura":"nao","sub-setor":null,"status":"ativo","HTTP_REFERER":"http:\/\/localhost\/braso\/armazem_paraiba\/cadastro_tipo_doc.php","acaoPrevia":"index"}
+    [id] => 383
+)
+

@@ -1,0 +1,9 @@
+[2026-09-23 02:23:47] user=(0) ip= evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=25 entidade=200 termo=9 solicitacao=16
+[2026-09-23 02:23:48] user=(0) ip= evento=assinatura_erro detalhe=Funcionário sem e-mail válido. modelo=25 entidade=200
+[2026-09-23 02:24:17] user=(0) ip= evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=26 entidade=200 termo=11 solicitacao=17
+[2026-09-23 02:24:17] user=(0) ip= evento=assinatura_erro detalhe=Funcionário sem e-mail válido. modelo=26 entidade=200
+[2026-09-23 08:46:49] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=24 entidade=200 termo=13 solicitacao=18
+[2026-09-23 08:55:48] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=24 entidade=194 termo=14 solicitacao=19
+[2026-09-23 09:01:21] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=24 entidade=195 termo=15 solicitacao=20
+[2026-09-23 09:02:49] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=24 entidade=196 termo=16 solicitacao=21
+[2026-09-23 09:43:10] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=sincronizar detalhe=Termo #16 marcado como assinado solicitacao=21
