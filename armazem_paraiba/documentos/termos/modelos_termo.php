@@ -107,6 +107,7 @@ function index() {
 				<form method='post' style='display:inline;'><input type='hidden' name='id' value='{$id}'><input type='hidden' name='acao' value='form'><button type='submit' class='btn btn-xs btn-default' title='Editar'><span class='glyphicon glyphicon-pencil'></span></button></form>
 				<a href='{$previewUrl}' target='_blank' class='btn btn-xs btn-info' title='Pré-visualizar'><span class='glyphicon glyphicon-eye-open'></span></a>
 				<button type='button' class='btn btn-xs btn-success' onclick='termosModalEnviar({$id}, {$nomeJs})' title='Enviar para Assinatura'><span class='glyphicon glyphicon-send'></span></button>
+				<button type='button' class='btn btn-xs btn-default' onclick='termosModalClonar()' title='Clonar modelos de termo'>Clonar</button>
 				{$btnStatus}
 				<form method='post' style='display:inline;' onsubmit='return confirm(\"Deseja excluir este modelo?\");'><input type='hidden' name='id' value='{$id}'><input type='hidden' name='acao' value='excluir'><button type='submit' class='btn btn-xs btn-danger' title='Excluir'><span class='glyphicon glyphicon-trash'></span></button></form>
 			</td>";
@@ -114,6 +115,26 @@ function index() {
 	}
 
 	echo "</tbody></table></div>";
+
+	$modelosCloneHtml = "";
+	$resClone = query(
+		"SELECT m.mode_nb_id, m.mode_tx_nome, m.mode_tx_status, t.tipo_tx_nome, t.tipo_tx_assinatura
+		 FROM modelo_termo m
+		 LEFT JOIN tipos_documentos t ON t.tipo_nb_id = m.mode_nb_tipo_doc
+		 ORDER BY m.mode_tx_nome ASC"
+	);
+	if($resClone && mysqli_num_rows($resClone) == 0){
+		$modelosCloneHtml = "<div class='text-muted'>Nenhum modelo cadastrado.</div>";
+	}
+	while($resClone && ($rc = mysqli_fetch_assoc($resClone))){
+		$rcId = intval($rc["mode_nb_id"]);
+		$rcStatus = strtolower(trim(strval($rc["mode_tx_status"] ?? "inativo"))) === "ativo" ? "" : " (inativo)";
+		$modelosCloneHtml .= "<label class='clonar-modelo-item' data-id='{$rcId}' style='font-weight:normal; display:block; margin:2px 0;'>"
+			. "<input type='checkbox' class='clonar-modelo' value='{$rcId}'> "
+			. termos_h($rc["mode_tx_nome"]) . $rcStatus
+			. " <span class='text-muted'>— " . termos_h($rc["tipo_tx_nome"] ?? "sem tipo") . "</span>"
+			. "</label>";
+	}
 
 	$userId = intval($_SESSION["user_nb_id"] ?? 0);
 	$empresaPadrao = 0;
@@ -269,6 +290,33 @@ function index() {
 					<button type='button' id='termos_modal_btn_enviar' class='btn btn-success' onclick='termosModalEnviarAssinatura()'>
 						Enviar para Assinatura
 					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class='modal fade' id='modal_clonar_modelos' tabindex='-1' role='dialog'>
+		<div class='modal-dialog' role='document'>
+			<div class='modal-content'>
+				<div class='modal-header'>
+					<button type='button' class='close' data-dismiss='modal'>&times;</button>
+					<h4 class='modal-title'>Clonar Modelos de Termo</h4>
+				</div>
+				<div class='modal-body'>
+					<div class='alert alert-info' style='padding:8px 12px; font-size:12px;'>
+						<i class='fa fa-copy'></i> Selecione um ou mais modelos para criar cópias. A cópia preserva o texto, o tipo de documento e os assinantes.
+					</div>
+					<div style='margin:4px 0;'>
+						<button type='button' class='btn btn-default btn-xs' onclick='termosModalClonarMarcar(true)'>Marcar todos</button>
+						<button type='button' class='btn btn-default btn-xs' onclick='termosModalClonarMarcar(false)'>Desmarcar todos</button>
+					</div>
+					<div id='clonar_modelos_lista' style='max-height:320px; overflow-y:auto; border:1px solid #eee; padding:6px; background:#fcfcfc;'>
+						{$modelosCloneHtml}
+					</div>
+				</div>
+				<div class='modal-footer'>
+					<button type='button' class='btn btn-default' data-dismiss='modal'>Fechar</button>
+					<button type='button' class='btn btn-success' onclick='termosModalClonarEnviar()'>Clonar Selecionados</button>
 				</div>
 			</div>
 		</div>
@@ -492,6 +540,46 @@ function termosModalCargosSelecionados() {
 				});
 			}
 			proximo(0);
+		}
+
+		function termosModalClonar() {
+			$('#clonar_modelos_lista .clonar-modelo-item').show();
+			$('#clonar_modelos_lista .clonar-modelo').prop('checked', false);
+			termosModalAtualizarUniform();
+			$('#modal_clonar_modelos').modal('show');
+		}
+
+		function termosModalClonarMarcar(marcar) {
+			$('#clonar_modelos_lista .clonar-modelo:visible').prop('checked', marcar);
+			termosModalAtualizarUniform();
+		}
+
+		function termosModalClonarEnviar() {
+			var ids = [];
+			$('#clonar_modelos_lista .clonar-modelo:checked').each(function() {
+				ids.push(parseInt($(this).val(), 10));
+			});
+			if (ids.length === 0) {
+				alert('Selecione ao menos um modelo para clonar.');
+				return;
+			}
+			var form = document.createElement('form');
+			form.method = 'post';
+			form.action = 'modelos_termo.php';
+			for (var i = 0; i < ids.length; i++) {
+				var inp = document.createElement('input');
+				inp.type = 'hidden';
+				inp.name = 'ids[]';
+				inp.value = ids[i];
+				form.appendChild(inp);
+			}
+			var acao = document.createElement('input');
+			acao.type = 'hidden';
+			acao.name = 'acao';
+			acao.value = 'clonar_modelos';
+			form.appendChild(acao);
+			document.body.appendChild(form);
+			form.submit();
 		}
 
 		$(function() {
@@ -738,6 +826,86 @@ function excluir() {
 		termos_log("modelo_excluido", "Modelo #{$id} excluído permanentemente");
 		set_status("Modelo excluído com sucesso!");
 	}
+	index();
+	exit;
+}
+
+function termos_nome_clonado(string $nome): string {
+	$base = trim($nome);
+	if($base === ""){
+		$base = "Modelo";
+	}
+	$candidato = $base . " (cópia)";
+	$i = 2;
+	while(true){
+		$res = query("SELECT mode_nb_id FROM modelo_termo WHERE mode_tx_nome = ? LIMIT 1", "s", [$candidato]);
+		if(!($res instanceof mysqli_result) || mysqli_num_rows($res) == 0){
+			break;
+		}
+		$candidato = $base . " (cópia " . $i . ")";
+		$i++;
+	}
+	return $candidato;
+}
+
+function clonar_modelos() {
+	global $conn;
+	termos_ensure_tables($conn);
+	termos_verificar_permissao("/documentos/termos/modelos_termo.php");
+
+	$ids = $_POST["ids"] ?? [];
+	if(!is_array($ids)){
+		$ids = [];
+	}
+	$ids = array_values(array_filter(array_map("intval", $ids)));
+	$user = intval($_SESSION["user_nb_id"] ?? 0);
+	$clonados = 0;
+
+	foreach($ids as $id){
+		$origem = termos_carregar_modelo($id);
+		if(empty($origem)){
+			continue;
+		}
+		$nomeNovo = termos_nome_clonado(strval($origem["mode_tx_nome"] ?? ""));
+		$novoId = termos_inserir_id(
+			"INSERT INTO modelo_termo (mode_tx_nome, mode_nb_tipo_doc, mode_tx_conteudo, mode_tx_denominacao, mode_tx_cidade_assinatura, mode_tx_status, mode_nb_userCadastro) VALUES (?, ?, ?, ?, ?, 'ativo', ?)",
+			"sisssi",
+			[
+				$nomeNovo,
+				intval($origem["mode_nb_tipo_doc"] ?? 0),
+				strval($origem["mode_tx_conteudo"] ?? ""),
+				strval($origem["mode_tx_denominacao"] ?? ""),
+				strval($origem["mode_tx_cidade_assinatura"] ?? ""),
+				$user
+			]
+		);
+		if($novoId <= 0){
+			continue;
+		}
+
+		$assinantes = termos_carregar_assinantes($id);
+		foreach($assinantes as $as){
+			$entiOrigem = intval($as["moas_nb_entidade"] ?? 0);
+			termos_executar(
+				"INSERT INTO modelo_termo_assinante (moas_nb_modelo, moas_tx_tipo, moas_tx_funcao, moas_nb_ordem, moas_nb_entidade, moas_tx_nome, moas_tx_email) VALUES (?, ?, ?, ?, ?, ?, ?)",
+				"issiiss",
+				[
+					$novoId,
+					strval($as["moas_tx_tipo"] ?? "funcionario"),
+					strval($as["moas_tx_funcao"] ?? "Signatário"),
+					intval($as["moas_nb_ordem"] ?? 1),
+					$entiOrigem > 0 ? $entiOrigem : null,
+					strval($as["moas_tx_nome"] ?? ""),
+					strval($as["moas_tx_email"] ?? "")
+				]
+			);
+		}
+
+		termos_log("modelo_clonado", "Modelo #{$id} clonado para #{$novoId}", ["nome" => $nomeNovo]);
+		$clonados++;
+	}
+
+	set_status($clonados > 0 ? "{$clonados} modelo(s) clonado(s) com sucesso!" : "Nenhum modelo foi clonado.");
 	index();
 	exit;
 }
