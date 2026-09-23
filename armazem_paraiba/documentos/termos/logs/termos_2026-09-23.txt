@@ -7,3 +7,7 @@
 [2026-09-23 09:01:21] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=24 entidade=195 termo=15 solicitacao=20
 [2026-09-23 09:02:49] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=24 entidade=196 termo=16 solicitacao=21
 [2026-09-23 09:43:10] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=sincronizar detalhe=Termo #16 marcado como assinado solicitacao=21
+[2026-09-23 10:28:03] user=admin(1) ip=::ffff:172.18.0.1 evento=modelo_criado detalhe=Modelo #27 criado nome=MODELO_CLONE_TESTE
+[2026-09-23 10:28:19] user=admin(1) ip=::ffff:172.18.0.1 evento=modelo_clonado detalhe=Modelo #27 clonado para #28 nome=MODELO_CLONE_TESTE_(cópia)
+[2026-09-23 10:50:36] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=modelo_clonado detalhe=Modelo #24 clonado para #29 nome=Termo_de_Responsabilidade_de_Acompanhamento_do_Ponto_(cópia)
+[2026-09-23 10:50:51] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=modelo_atualizado detalhe=Modelo #24 atualizado nome=Termo_de_Responsabilidade_de_Acompanhamento_do_Ponto
