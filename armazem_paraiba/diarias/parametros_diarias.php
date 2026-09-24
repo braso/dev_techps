@@ -24,12 +24,21 @@ function dp_getFlash() {
 function dp_tipoCampo($chave) {
     $tipos = array(
         'limite_km_almoco' => 'inteiro',
-        'distancia_pernoite_metros' => 'inteiro',
+        'distancia_pernoite_km' => 'inteiro',
         'autogerar_consumo' => 'simnao',
-        'limite_dias_autogeracao' => 'inteiro',
+        'limite_dias_autogeracao' => 'data',
         'url_api_logistica' => 'texto'
     );
     return isset($tipos[$chave]) ? $tipos[$chave] : 'moeda';
+}
+
+// Unidade de medida exibida ao lado do campo (identifica campos de distancia).
+function dp_unidadeCampo($chave) {
+    $unidades = array(
+        'limite_km_almoco' => 'km',
+        'distancia_pernoite_km' => 'km'
+    );
+    return isset($unidades[$chave]) ? $unidades[$chave] : '';
 }
 
 // Persiste os valores informados na tela de parametros.
@@ -58,6 +67,12 @@ function dp_salvarParametros() {
                 break;
             case 'simnao':
                 $valor = ($valor === 'sim') ? 'sim' : 'nao';
+                break;
+            case 'data':
+                $valor = trim(strval($valor));
+                if ($valor !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $valor)) {
+                    $valor = '';
+                }
                 break;
             case 'texto':
                 $valor = trim(strval($valor));
@@ -115,7 +130,8 @@ cabecalho("Parametros de Diarias");
 
                 <div class="alert alert-info" style="font-size:13px;">
                     Valores fixados na clausula: A) com pernoite R$ 107,00 - intermunicipais e/ou interestaduais;
-                    B) sem pernoite R$ 55,00; C) almoco R$ 40,00 - percursos de ate 80 km (ida) com retorno a base.
+                    B) sem pernoite R$ 55,00 - retorno a base com km de ida ACIMA do limite (80 km);
+                    C) almoco R$ 40,00 - retorno a base com km de ida ATE o limite (80 km).
                     Ajuste os valores abaixo somente em caso de nova convencao coletiva.
                 </div>
 
@@ -142,10 +158,18 @@ cabecalho("Parametros de Diarias");
                                         <input type="text" class="form-control input-sm" name="<?php echo htmlspecialchars($chave); ?>"
                                                value="<?php echo htmlspecialchars(diar_formatarValor($valorAtual)); ?>" data-mask-money>
                                     <?php elseif ($tipoCampo === 'inteiro'): ?>
-                                        <input type="number" class="form-control input-sm" name="<?php echo htmlspecialchars($chave); ?>"
-                                               value="<?php echo htmlspecialchars($valorAtual); ?>" min="0" step="1">
+                                        <div class="input-group">
+                                            <input type="number" class="form-control input-sm" name="<?php echo htmlspecialchars($chave); ?>"
+                                                   value="<?php echo htmlspecialchars($valorAtual); ?>" min="0" step="1">
+                                            <?php if (dp_unidadeCampo($chave) !== ''): ?>
+                                                <span class="input-group-addon"><?php echo htmlspecialchars(dp_unidadeCampo($chave)); ?></span>
+                                            <?php endif; ?>
+                                        </div>
                                     <?php elseif ($tipoCampo === 'hora'): ?>
                                         <input type="time" class="form-control input-sm" name="<?php echo htmlspecialchars($chave); ?>"
+                                               value="<?php echo htmlspecialchars($valorAtual); ?>">
+                                    <?php elseif ($tipoCampo === 'data'): ?>
+                                        <input type="date" class="form-control input-sm" name="<?php echo htmlspecialchars($chave); ?>"
                                                value="<?php echo htmlspecialchars($valorAtual); ?>">
                                     <?php elseif ($tipoCampo === 'texto'): ?>
                                         <input type="text" class="form-control input-sm" name="<?php echo htmlspecialchars($chave); ?>"

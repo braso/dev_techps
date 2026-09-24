@@ -155,6 +155,11 @@ function index() {
 			? "<a href='{$pdfLink}' target='_blank' class='btn btn-xs btn-info' title='Abrir PDF'><span class='glyphicon glyphicon-print'></span></a>"
 			: "<span class='text-muted' title='PDF disponível após conclusão das assinaturas'><span class='glyphicon glyphicon-print'></span></span>";
 
+		$botaoCancelar = "";
+		if(!in_array($status, ["assinado", "cancelado"], true)){
+			$botaoCancelar = "<form method='post' style='display:inline;' onsubmit='return confirm(\"Cancelar este termo?\");'><input type='hidden' name='id' value='{$id}'><input type='hidden' name='acao' value='cancelar'><button type='submit' class='btn btn-xs btn-danger' title='Cancelar'><span class='glyphicon glyphicon-ban-circle'></span></button></form>";
+		}
+
 		echo "<tr>";
 		echo "<td>{$id}</td>";
 		echo "<td>{$modeloNome}</td>";
@@ -166,7 +171,7 @@ function index() {
 		echo "<td>
 				<form method='post' style='display:inline;'><input type='hidden' name='id' value='{$id}'><input type='hidden' name='acao' value='sincronizar'><button type='submit' class='btn btn-xs btn-default' title='Sincronizar status com o módulo de assinatura'><span class='glyphicon glyphicon-refresh'></span></button></form>
 				{$acaoPdf}
-				<form method='post' style='display:inline;' onsubmit='return confirm(\"Cancelar este termo?\");'><input type='hidden' name='id' value='{$id}'><input type='hidden' name='acao' value='cancelar'><button type='submit' class='btn btn-xs btn-danger' title='Cancelar'><span class='glyphicon glyphicon-ban-circle'></span></button></form>
+				{$botaoCancelar}
 			</td>";
 		echo "</tr>";
 	}
@@ -219,14 +224,55 @@ function cancelar() {
 	termos_verificar_permissao("/documentos/termos/listar_termos.php");
 
 	$id = intval($_POST["id"] ?? 0);
-	if($id > 0){
-		termos_atualizar_gerado($id, [
-			"terg_tx_status" => "cancelado",
-			"terg_tx_detalhe" => "Cancelado manualmente pelo usuário."
-		]);
-		termos_log("cancelado", "Termo #{$id} cancelado manualmente");
-		set_status("Termo #{$id} cancelado.");
+	$reg = termos_carregar_registro($id);
+	if(empty($reg)){
+		set_status("ERRO: Termo não encontrado.");
+		index();
+		exit;
 	}
+
+	$statusAtual = strtolower(trim(strval($reg["terg_tx_status"] ?? "")));
+	if(in_array($statusAtual, ["assinado", "cancelado"], true)){
+		set_status($statusAtual === "assinado" ? "ERRO: Termo já assinado não pode ser cancelado." : "Termo já está cancelado.");
+		index();
+		exit;
+	}
+
+	$solId = intval($reg["terg_nb_solicitacao_assinatura"] ?? 0);
+	if($solId > 0){
+		$ajustesStatus = [
+			"assinantes" => "ENUM('pendente','assinado','dispensado','cancelado') NOT NULL DEFAULT 'pendente'",
+			"solicitacoes_assinatura" => "ENUM('pendente','em_progresso','concluido','assinado','finalizado','cancelada','expirada') DEFAULT 'pendente'"
+		];
+		foreach($ajustesStatus as $tabelaStatus => $tipoStatus){
+			$checkStatus = query("SHOW COLUMNS FROM {$tabelaStatus} LIKE 'status'");
+			if($checkStatus instanceof mysqli_result && ($colStatus = mysqli_fetch_assoc($checkStatus))){
+				$tipoColuna = strtolower(strval($colStatus["Type"] ?? ""));
+				if(strpos($tipoColuna, "enum") !== false && strpos($tipoColuna, "cancelada") === false && strpos($tipoColuna, "dispensado") === false){
+					termos_executar("ALTER TABLE {$tabelaStatus} MODIFY COLUMN status {$tipoStatus}");
+				}
+			}
+		}
+		termos_executar(
+			"UPDATE solicitacoes_assinatura SET status = 'cancelada', expires_at = UTC_TIMESTAMP() - INTERVAL 1 DAY WHERE id = ? AND LOWER(status) NOT IN ('concluido','assinado','finalizado')",
+			"i",
+			[$solId]
+		);
+		termos_executar(
+			"UPDATE assinantes SET status = 'dispensado' WHERE id_solicitacao = ? AND LOWER(status) = 'pendente'",
+			"i",
+			[$solId]
+		);
+		termos_log("cancelado", "Termo #{$id} cancelado — solicitação #{$solId} cancelada e retirada da assinatura do funcionário");
+	}else{
+		termos_log("cancelado", "Termo #{$id} cancelado manualmente");
+	}
+
+	termos_atualizar_gerado($id, [
+		"terg_tx_status" => "cancelado",
+		"terg_tx_detalhe" => "Cancelado manualmente pelo usuário." . ($solId > 0 ? " Solicitação de assinatura cancelada." : "")
+	]);
+	set_status("Termo #{$id} cancelado.");
 	index();
 	exit;
 }
