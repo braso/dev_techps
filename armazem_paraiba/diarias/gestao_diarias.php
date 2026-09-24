@@ -102,6 +102,15 @@ function dg_lancarConsumo() {
     );
 
     diar_log_runtime("Consumo lancado: entidade {$idEntidade}, data {$dataConsumo}, tipo {$tipo}, valor {$valor}");
+    diar_logEvento('consumo_lancado', 'Consumo manual lancado', array(
+        'entidade' => $idEntidade,
+        'data' => $dataConsumo,
+        'tipo' => $tipo,
+        'valor' => $valor,
+        'km' => $km,
+        'pernoite' => $pernoite,
+        'placa' => $placa
+    ));
     dg_setFlashGestao('Consumo do dia '.$dataConsumo.' lancado com sucesso.', false);
     header("Location: ".dg_urlRetorno());
     exit;
@@ -138,6 +147,13 @@ function dg_lancarDeposito() {
     );
 
     diar_log_runtime("Deposito lancado: entidade {$idEntidade}, data {$dataDeposito}, dias {$dias}, valor {$valorTotal}");
+    diar_logEvento('deposito_lancado', 'Deposito manual lancado', array(
+        'entidade' => $idEntidade,
+        'data' => $dataDeposito,
+        'dias' => $dias,
+        'valor_total' => $valorTotal,
+        'valor_dia' => $valorDia
+    ));
     dg_setFlashGestao('Deposito de '.diar_formatarValor($valorTotal).' referente a '.$dias.' dia(s) lancado com sucesso.', false);
     header("Location: ".dg_urlRetorno());
     exit;
@@ -160,6 +176,7 @@ function dg_excluirConsumo() {
 
     diar_query("DELETE FROM diaria_consumo WHERE dcon_nb_id = ?", "i", array($idConsumo));
     diar_log_runtime("Consumo {$idConsumo} excluido pelo usuario {$idUser}");
+    diar_logEvento('consumo_excluido', 'Consumo excluido', array('id_consumo' => $idConsumo));
     dg_setFlashGestao('Lancamento de consumo excluido.', false);
     header("Location: ".dg_urlRetorno());
     exit;
@@ -182,6 +199,7 @@ function dg_excluirDeposito() {
 
     diar_query("DELETE FROM diaria_deposito WHERE depr_nb_id = ?", "i", array($idDeposito));
     diar_log_runtime("Deposito {$idDeposito} excluido pelo usuario {$idUser}");
+    diar_logEvento('deposito_excluido', 'Deposito excluido', array('id_deposito' => $idDeposito));
     dg_setFlashGestao('Lancamento de deposito excluido.', false);
     header("Location: ".dg_urlRetorno());
     exit;
@@ -230,6 +248,15 @@ function dg_editarConsumo() {
     );
 
     diar_log_runtime("Consumo {$idConsumo} editado: tipo {$tipo}, valor {$valor}, km ".var_export($km, true).", pernoite ".var_export($pernoite, true));
+    diar_logEvento('consumo_editado', 'Consumo editado', array(
+        'id_consumo' => $idConsumo,
+        'data' => $dataConsumo,
+        'tipo' => $tipo,
+        'valor' => $valor,
+        'km' => $km,
+        'pernoite' => $pernoite,
+        'placa' => $placa
+    ));
     dg_setFlashGestao('Consumo do dia '.$dataConsumo.' atualizado.', false);
     header("Location: ".dg_urlRetorno());
     exit;
@@ -269,6 +296,11 @@ function dg_processar() {
         }
     }
     diar_log_runtime("Processamento manual diarias entidade {$idEntidade}: {$gerados} gerados, {$pulados} pulados");
+    diar_logEvento('processamento_manual', 'Processamento manual de diarias', array(
+        'entidade' => $idEntidade,
+        'gerados' => $gerados,
+        'pulados' => $pulados
+    ));
     dg_setFlashGestao($msg, false);
     header("Location: ".dg_urlRetorno());
     exit;

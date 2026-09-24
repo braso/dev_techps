@@ -1,0 +1,35 @@
+[2026-09-24 09:42:43] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=2 gerados=1 pulados=3 periodo=2026-09-14_a_2026-09-24
+[2026-09-24 09:42:44] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=5 gerados=1 pulados=2 periodo=2026-09-14_a_2026-09-24
+[2026-09-24 09:42:44] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=6 gerados=1 pulados=4 periodo=2026-09-14_a_2026-09-24
+[2026-09-24 09:42:44] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=25 gerados=1 pulados=1 periodo=2026-09-14_a_2026-09-24
+[2026-09-24 09:42:44] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=28 gerados=1 pulados=2 periodo=2026-09-14_a_2026-09-24
+[2026-09-24 09:42:44] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=30 gerados=1 pulados=1 periodo=2026-09-14_a_2026-09-24
+[2026-09-24 09:42:44] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto_lote detalhe=Processamento automatico de todos os motoristas gerados=6 pulados=70 data_fim=
+[2026-09-24 09:43:25] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=reset_negado detalhe=Senha incorreta na confirmacao da zeragem dos lancamentos
+[2026-09-24 09:44:00] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=reset_lancamentos detalhe=Lancamentos de diarias zerados pelo super admin consumos_apagados=96 depositos_apagados=2
+[2026-09-24 09:44:19] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=parametros_salvos detalhe=Parametros de diarias atualizados itens_salvos=8
+[2026-09-24 09:44:29] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=2 gerados=2 pulados=1 periodo=2026-09-21_a_2026-09-24
+[2026-09-24 09:44:31] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=5 gerados=2 pulados=1 periodo=2026-09-21_a_2026-09-24
+[2026-09-24 09:44:31] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=6 gerados=3 pulados=0 periodo=2026-09-21_a_2026-09-24
+[2026-09-24 09:44:31] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=23 gerados=2 pulados=1 periodo=2026-09-21_a_2026-09-24
+[2026-09-24 09:44:31] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=25 gerados=3 pulados=0 periodo=2026-09-21_a_2026-09-24
+[2026-09-24 09:44:31] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=26 gerados=3 pulados=0 periodo=2026-09-21_a_2026-09-24
+[2026-09-24 09:44:32] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=28 gerados=3 pulados=0 periodo=2026-09-21_a_2026-09-24
+[2026-09-24 09:44:32] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=30 gerados=3 pulados=0 periodo=2026-09-21_a_2026-09-24
+[2026-09-24 09:44:32] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto_lote detalhe=Processamento automatico de todos os motoristas gerados=21 pulados=21 data_fim=
+[2026-09-24 09:44:39] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=2 gerados=1 pulados=1 periodo=2026-09-21_a_2026-09-24
+[2026-09-24 09:44:40] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=5 gerados=1 pulados=1 periodo=2026-09-21_a_2026-09-24
+[2026-09-24 09:44:40] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=6 gerados=1 pulados=0 periodo=2026-09-21_a_2026-09-24
+[2026-09-24 09:44:40] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=25 gerados=1 pulados=0 periodo=2026-09-21_a_2026-09-24
+[2026-09-24 09:44:40] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=26 gerados=1 pulados=0 periodo=2026-09-21_a_2026-09-24
+[2026-09-24 09:44:40] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=28 gerados=1 pulados=0 periodo=2026-09-21_a_2026-09-24
+[2026-09-24 09:44:40] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=30 gerados=1 pulados=0 periodo=2026-09-21_a_2026-09-24
+[2026-09-24 09:44:40] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto_lote detalhe=Processamento automatico de todos os motoristas gerados=7 pulados=21 data_fim=
+[2026-09-24 09:44:49] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=2 gerados=1 pulados=1 periodo=2026-09-21_a_2026-09-24
+[2026-09-24 09:44:50] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=5 gerados=1 pulados=1 periodo=2026-09-21_a_2026-09-24
+[2026-09-24 09:44:50] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=6 gerados=1 pulados=0 periodo=2026-09-21_a_2026-09-24
+[2026-09-24 09:44:50] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=25 gerados=1 pulados=0 periodo=2026-09-21_a_2026-09-24
+[2026-09-24 09:44:50] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=26 gerados=1 pulados=0 periodo=2026-09-21_a_2026-09-24
+[2026-09-24 09:44:50] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=28 gerados=1 pulados=0 periodo=2026-09-21_a_2026-09-24
+[2026-09-24 09:44:50] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto detalhe=Consumos automaticos gerados entidade=30 gerados=1 pulados=0 periodo=2026-09-21_a_2026-09-24
+[2026-09-24 09:44:50] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=geracao_auto_lote detalhe=Processamento automatico de todos os motoristas gerados=7 pulados=21 data_fim=

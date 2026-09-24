@@ -39,6 +39,65 @@ function diar_log_runtime($mensagem) {
     @file_put_contents(dirname(__DIR__)."/debug_log_diarias.txt", $linha, FILE_APPEND);
 }
 
+/* ==========================================================================
+   LOGS DE NEGOCIO — arquivo texto diario (mesmo padrao do modulo de documentos)
+   ========================================================================== */
+
+// Diretorio dos logs do modulo.
+function diar_logsDir() {
+    return __DIR__."/logs";
+}
+
+// Arquivo de log do dia atual.
+function diar_logArquivoAtual() {
+    return diar_logsDir()."/diarias_".date("Y-m-d").".txt";
+}
+
+// Registra um evento de negocio no log diario do modulo.
+function diar_logEvento($evento, $detalhe = '', $extra = array()) {
+    $dir = diar_logsDir();
+    if (!is_dir($dir)) { @mkdir($dir, 0777, true); }
+    if (!is_dir($dir)) { return; }
+    $usuario = intval(diar_sessao('user_nb_id', 0));
+    $login = trim(strval(diar_sessao('user_tx_login', '')));
+    $ip = trim(strval(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : ''));
+    $detalhe = preg_replace('/[\r\n]+/', ' ', trim(strval($detalhe)));
+    $extraStr = '';
+    if (is_array($extra)) {
+        foreach ($extra as $k => $v) {
+            $extraStr .= ' '.$k.'='.preg_replace('/[\r\n\s]+/', '_', strval($v));
+        }
+    }
+    $linha = sprintf(
+        "[%s] user=%s(%d) ip=%s evento=%s detalhe=%s%s\n",
+        date("Y-m-d H:i:s"),
+        $login,
+        $usuario,
+        $ip,
+        strval($evento),
+        $detalhe,
+        $extraStr
+    );
+    @file_put_contents(diar_logArquivoAtual(), $linha, FILE_APPEND | LOCK_EX);
+    diar_logLimpar(30);
+}
+
+// Remove arquivos de log mais antigos que $dias (retencao padrao: 30 dias).
+function diar_logLimpar($dias = 30) {
+    $dias = intval($dias);
+    if ($dias <= 0) { return; }
+    $dir = diar_logsDir();
+    if (!is_dir($dir)) { return; }
+    $corte = strtotime('-'.$dias.' days');
+    $arquivos = glob($dir."/diarias_*.txt");
+    if (!is_array($arquivos)) { return; }
+    foreach ($arquivos as $arquivo) {
+        if (!preg_match('/diarias_(\d{4}-\d{2}-\d{2})\.txt$/', basename($arquivo), $m)) { continue; }
+        $ts = strtotime($m[1]);
+        if ($ts !== false && $ts < $corte) { @unlink($arquivo); }
+    }
+}
+
 // Verifica se uma coluna existe em uma tabela.
 function diar_colunaExiste($tabela, $coluna) {
     $tabela = preg_replace('/[^a-zA-Z0-9_]/', '', $tabela);
@@ -529,6 +588,61 @@ function diar_isSuperAdmin() {
     }
     $nivel = trim(strval(diar_val($_SESSION, 'user_tx_nivel', '')));
     return (bool)preg_match('/super\s+administrador/i', $nivel);
+}
+
+// Confere a senha do usuario logado (mesmo hash md5 usado no login).
+function diar_verificarSenhaUsuario($senha) {
+    $senha = strval($senha);
+    if ($senha === '') { return false; }
+    $userId = intval(diar_sessao('user_nb_id', 0));
+    if ($userId <= 0) { return false; }
+    $r = diar_fetch_assoc_safe(diar_query(
+        "SELECT user_tx_senha FROM user WHERE user_nb_id = ? LIMIT 1",
+        "i",
+        array($userId)
+    ));
+    $hash = strval(diar_val($r, 'user_tx_senha', ''));
+    if ($hash === '') { return false; }
+    return (md5($senha) === $hash);
+}
+
+// Contagens atuais dos lancamentos (consumo/deposito) para a tela de reset.
+function diar_contarLancamentos() {
+    $out = array('consumos' => 0, 'consumos_auto' => 0, 'depositos' => 0);
+    $con = diar_fetch_assoc_safe(diar_query(
+        "SELECT COUNT(*) AS total,
+                SUM(CASE WHEN dcon_tx_origem = 'auto' THEN 1 ELSE 0 END) AS auto
+         FROM diaria_consumo"
+    ));
+    $dep = diar_fetch_assoc_safe(diar_query("SELECT COUNT(*) AS total FROM diaria_deposito"));
+    $out['consumos'] = intval(diar_val($con, 'total', 0));
+    $out['consumos_auto'] = intval(diar_val($con, 'auto', 0));
+    $out['depositos'] = intval(diar_val($dep, 'total', 0));
+    return $out;
+}
+
+// Zera TODOS os lancamentos de diarias (consumo e deposito), inclusive os gerados automaticamente.
+// Mantem as configuracoes: parametros, bases e POI base.
+// Usa DELETE em transacao (seguro e sem exigir privilegio de DROP) e reinicia os IDs.
+function diar_zerarLancamentos() {
+    $out = array('ok' => false, 'consumos' => 0, 'depositos' => 0);
+    $contagens = diar_contarLancamentos();
+    $out['consumos'] = $contagens['consumos'];
+    $out['depositos'] = $contagens['depositos'];
+
+    diar_query("START TRANSACTION");
+    $okCon = (diar_query("DELETE FROM diaria_consumo") !== false);
+    $okDep = (diar_query("DELETE FROM diaria_deposito") !== false);
+    if ($okCon && $okDep) {
+        diar_query("COMMIT");
+        $out['ok'] = true;
+        // Reinicia os auto-incrementos (best-effort; requer privilegio ALTER).
+        diar_query("ALTER TABLE diaria_consumo AUTO_INCREMENT = 1");
+        diar_query("ALTER TABLE diaria_deposito AUTO_INCREMENT = 1");
+    } else {
+        diar_query("ROLLBACK");
+    }
+    return $out;
 }
 
 /* ==========================================================================
@@ -1220,6 +1334,12 @@ function diar_gerarConsumosPendentes($entidadeId, $dataFim = '', $diasRetroativo
     }
     if ($gerados > 0) {
         diar_log_runtime("Consumos automaticos gerados para entidade {$entidadeId}: {$gerados}");
+        diar_logEvento('geracao_auto', 'Consumos automaticos gerados', array(
+            'entidade' => $entidadeId,
+            'gerados' => $gerados,
+            'pulados' => $pulados,
+            'periodo' => $dataIni.'_a_'.$dataFim
+        ));
     }
     return array('gerados' => $gerados, 'pulados' => $pulados, 'motivos' => $motivos);
 }
@@ -1526,6 +1646,11 @@ function diar_gerarConsumosPendentesTodos($dataFim = '', $diasRetroativos = 0) {
     }
     if ($totalGerados > 0) {
         diar_log_runtime("Processamento automatico na abertura: {$totalGerados} consumo(s) gerados");
+        diar_logEvento('geracao_auto_lote', 'Processamento automatico de todos os motoristas', array(
+            'gerados' => $totalGerados,
+            'pulados' => $totalPulados,
+            'data_fim' => $dataFim
+        ));
     }
     return array('gerados' => $totalGerados, 'pulados' => $totalPulados, 'alertas' => $alertas);
 }
