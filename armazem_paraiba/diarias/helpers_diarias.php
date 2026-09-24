@@ -39,6 +39,65 @@ function diar_log_runtime($mensagem) {
     @file_put_contents(dirname(__DIR__)."/debug_log_diarias.txt", $linha, FILE_APPEND);
 }
 
+/* ==========================================================================
+   LOGS DE NEGOCIO — arquivo texto diario (mesmo padrao do modulo de documentos)
+   ========================================================================== */
+
+// Diretorio dos logs do modulo.
+function diar_logsDir() {
+    return __DIR__."/logs";
+}
+
+// Arquivo de log do dia atual.
+function diar_logArquivoAtual() {
+    return diar_logsDir()."/diarias_".date("Y-m-d").".txt";
+}
+
+// Registra um evento de negocio no log diario do modulo.
+function diar_logEvento($evento, $detalhe = '', $extra = array()) {
+    $dir = diar_logsDir();
+    if (!is_dir($dir)) { @mkdir($dir, 0777, true); }
+    if (!is_dir($dir)) { return; }
+    $usuario = intval(diar_sessao('user_nb_id', 0));
+    $login = trim(strval(diar_sessao('user_tx_login', '')));
+    $ip = trim(strval(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : ''));
+    $detalhe = preg_replace('/[\r\n]+/', ' ', trim(strval($detalhe)));
+    $extraStr = '';
+    if (is_array($extra)) {
+        foreach ($extra as $k => $v) {
+            $extraStr .= ' '.$k.'='.preg_replace('/[\r\n\s]+/', '_', strval($v));
+        }
+    }
+    $linha = sprintf(
+        "[%s] user=%s(%d) ip=%s evento=%s detalhe=%s%s\n",
+        date("Y-m-d H:i:s"),
+        $login,
+        $usuario,
+        $ip,
+        strval($evento),
+        $detalhe,
+        $extraStr
+    );
+    @file_put_contents(diar_logArquivoAtual(), $linha, FILE_APPEND | LOCK_EX);
+    diar_logLimpar(30);
+}
+
+// Remove arquivos de log mais antigos que $dias (retencao padrao: 30 dias).
+function diar_logLimpar($dias = 30) {
+    $dias = intval($dias);
+    if ($dias <= 0) { return; }
+    $dir = diar_logsDir();
+    if (!is_dir($dir)) { return; }
+    $corte = strtotime('-'.$dias.' days');
+    $arquivos = glob($dir."/diarias_*.txt");
+    if (!is_array($arquivos)) { return; }
+    foreach ($arquivos as $arquivo) {
+        if (!preg_match('/diarias_(\d{4}-\d{2}-\d{2})\.txt$/', basename($arquivo), $m)) { continue; }
+        $ts = strtotime($m[1]);
+        if ($ts !== false && $ts < $corte) { @unlink($arquivo); }
+    }
+}
+
 // Verifica se uma coluna existe em uma tabela.
 function diar_colunaExiste($tabela, $coluna) {
     $tabela = preg_replace('/[^a-zA-Z0-9_]/', '', $tabela);
@@ -146,12 +205,12 @@ function diar_parametrosPadrao() {
         'valor_pernoite' => array('107.00', 'Diaria com pernoite (R$) - intermunicipais e/ou interestaduais'),
         'valor_sem_pernoite' => array('55.00', 'Diaria sem pernoite (R$)'),
         'valor_almoco' => array('40.00', 'Diaria de almoco (R$) - percursos ate 80 km que retornam a base'),
-        'limite_km_almoco' => array('80', 'Limite de km (ida): ate = almoco R$40, acima = sem pernoite R$55'),
+        'limite_km_almoco' => array('80', 'Limite de km (ida) - informe o valor em QUILOMETROS. Regra: ate este limite de km (ida) = diaria de almoco R$ 40,00; acima deste limite = diaria sem pernoite R$ 55,00'),
         'valor_diaria_cheia' => array('107.00', 'Valor padrao da diaria cheia usado no lancamento manual do gestor'),
-        'distancia_pernoite_metros' => array('1000', 'Distancia (em metros) alem do raio da base para considerar pernoite. Ex.: raio 110 + 1000 = 1110m do centro = pernoite'),
+        'distancia_pernoite_km' => array('1', 'Distancia (em KM) alem do raio da base para considerar pernoite. Ex.: raio 1 km + 1 km = 2 km do centro = pernoite'),
         'url_api_logistica' => array('https://logistica.integracao.techpsgj.com.br', 'URL base da API de logistica (GPS) para consultar posicoes quando as batidas nao tem coordenadas'),
         'autogerar_consumo' => array('sim', 'Gera automaticamente o consumo do dia anterior ao abrir a gestao (sim/nao)'),
-        'limite_dias_autogeracao' => array('0', 'Quantidade maxima de dias anteriores para gerar automaticamente (0 = desativado)')
+        'limite_dias_autogeracao' => array('', 'Data de inicio da geracao automatica do consumo. A partir da data selecionada, os dias pendentes (ate ontem) serao gerados ao abrir a gestao. Deixe vazio para desativar')
     );
 }
 
@@ -531,6 +590,61 @@ function diar_isSuperAdmin() {
     return (bool)preg_match('/super\s+administrador/i', $nivel);
 }
 
+// Confere a senha do usuario logado (mesmo hash md5 usado no login).
+function diar_verificarSenhaUsuario($senha) {
+    $senha = strval($senha);
+    if ($senha === '') { return false; }
+    $userId = intval(diar_sessao('user_nb_id', 0));
+    if ($userId <= 0) { return false; }
+    $r = diar_fetch_assoc_safe(diar_query(
+        "SELECT user_tx_senha FROM user WHERE user_nb_id = ? LIMIT 1",
+        "i",
+        array($userId)
+    ));
+    $hash = strval(diar_val($r, 'user_tx_senha', ''));
+    if ($hash === '') { return false; }
+    return (md5($senha) === $hash);
+}
+
+// Contagens atuais dos lancamentos (consumo/deposito) para a tela de reset.
+function diar_contarLancamentos() {
+    $out = array('consumos' => 0, 'consumos_auto' => 0, 'depositos' => 0);
+    $con = diar_fetch_assoc_safe(diar_query(
+        "SELECT COUNT(*) AS total,
+                SUM(CASE WHEN dcon_tx_origem = 'auto' THEN 1 ELSE 0 END) AS auto
+         FROM diaria_consumo"
+    ));
+    $dep = diar_fetch_assoc_safe(diar_query("SELECT COUNT(*) AS total FROM diaria_deposito"));
+    $out['consumos'] = intval(diar_val($con, 'total', 0));
+    $out['consumos_auto'] = intval(diar_val($con, 'auto', 0));
+    $out['depositos'] = intval(diar_val($dep, 'total', 0));
+    return $out;
+}
+
+// Zera TODOS os lancamentos de diarias (consumo e deposito), inclusive os gerados automaticamente.
+// Mantem as configuracoes: parametros, bases e POI base.
+// Usa DELETE em transacao (seguro e sem exigir privilegio de DROP) e reinicia os IDs.
+function diar_zerarLancamentos() {
+    $out = array('ok' => false, 'consumos' => 0, 'depositos' => 0);
+    $contagens = diar_contarLancamentos();
+    $out['consumos'] = $contagens['consumos'];
+    $out['depositos'] = $contagens['depositos'];
+
+    diar_query("START TRANSACTION");
+    $okCon = (diar_query("DELETE FROM diaria_consumo") !== false);
+    $okDep = (diar_query("DELETE FROM diaria_deposito") !== false);
+    if ($okCon && $okDep) {
+        diar_query("COMMIT");
+        $out['ok'] = true;
+        // Reinicia os auto-incrementos (best-effort; requer privilegio ALTER).
+        diar_query("ALTER TABLE diaria_consumo AUTO_INCREMENT = 1");
+        diar_query("ALTER TABLE diaria_deposito AUTO_INCREMENT = 1");
+    } else {
+        diar_query("ROLLBACK");
+    }
+    return $out;
+}
+
 /* ==========================================================================
    CONTROLE AUTOMATICO DE DIARIAS
    Motor de regras baseado na Clausula Decima Quarta da CCT RN:
@@ -772,8 +886,8 @@ function diar_pernoiteViaPonto($entidadeId, $data, $empresaId, $parametros = arr
     $out['pico_km'] = round($picoMetros / 1000, 2);
 
     // Regra CCT RN: fim da jornada fora da base = pernoite (qualquer hora).
-    // Limiar = raio da base + distancia_pernoite_metros (configuravel).
-    $distanciaPernoite = intval(diar_val($parametros, 'distancia_pernoite_metros', 1000));
+    // Limiar = raio da base + distancia_pernoite_km (configuravel, convertida para metros).
+    $distanciaPernoite = intval(diar_val($parametros, 'distancia_pernoite_km', 1)) * 1000;
     $limiarPernoite = $raioBase + $distanciaPernoite;
     $ultima = end($batidas);
     $distUltima = diar_distanciaMeters($latBase, $lonBase, floatval($ultima['pont_tx_latitude']), floatval($ultima['pont_tx_longitude']));
@@ -878,8 +992,8 @@ function diar_pernoiteViaGPSFallback($entidadeId, $data, $empresaId, $parametros
         ? round($kmHodometro, 2)
         : round($picoMetros / 1000, 2);
 
-    // Pernoite: ultima posicao alem do limiar (raio + distancia configurada).
-    $distanciaPernoite = intval(diar_val($parametros, 'distancia_pernoite_metros', 1000));
+    // Pernoite: ultima posicao alem do limiar (raio + distancia configurada em km).
+    $distanciaPernoite = intval(diar_val($parametros, 'distancia_pernoite_km', 1)) * 1000;
     $limiarPernoite = $raioBase + $distanciaPernoite;
     $distUltima = diar_distanciaMeters($latBase, $lonBase, $ultimaLat, $ultimaLon);
     $out['pernoite'] = ($distUltima > $limiarPernoite) ? 'sim' : 'nao';
@@ -1151,17 +1265,30 @@ function diar_gerarConsumosPendentes($entidadeId, $dataFim = '', $diasRetroativo
     if (strtolower(trim(strval(diar_val($parametros, 'autogerar_consumo', 'sim')))) !== 'sim') {
         return array('gerados' => 0, 'pulados' => 0, 'motivos' => array());
     }
-    // Se nao especificado, usar o limite configurado nos parametros (0 = desativado).
+    // Se nao especificado, usar a data de inicio configurada nos parametros (vazio = desativado).
     if ($diasRetroativos <= 0) {
-        $diasRetroativos = intval(diar_val($parametros, 'limite_dias_autogeracao', '0'));
-    }
-    if ($diasRetroativos <= 0) {
-        return array('gerados' => 0, 'pulados' => 0, 'motivos' => array());
+        $paramInicio = trim(strval(diar_val($parametros, 'limite_dias_autogeracao', '')));
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $paramInicio)) {
+            $dataIniParam = $paramInicio;
+        } else {
+            // Compatibilidade: valor numerico antigo = quantidade de dias retroativos.
+            $diasRetroativos = intval($paramInicio);
+        }
     }
     $idUser = intval(diar_sessao('user_nb_id', 0));
     $dataFim = ($dataFim === '') ? date('Y-m-d') : diar_dataParaSql($dataFim);
-    $diasRetroativos = max(1, intval($diasRetroativos));
-    $dataIni = date('Y-m-d', strtotime($dataFim.' - '.$diasRetroativos.' days'));
+    if (isset($dataIniParam)) {
+        if ($dataIniParam > $dataFim) {
+            return array('gerados' => 0, 'pulados' => 0, 'motivos' => array());
+        }
+        $dataIni = $dataIniParam;
+    } else {
+        if ($diasRetroativos <= 0) {
+            return array('gerados' => 0, 'pulados' => 0, 'motivos' => array());
+        }
+        $diasRetroativos = max(1, intval($diasRetroativos));
+        $dataIni = date('Y-m-d', strtotime($dataFim.' - '.$diasRetroativos.' days'));
+    }
 
     $gerados = 0;
     $pulados = 0;
@@ -1207,6 +1334,12 @@ function diar_gerarConsumosPendentes($entidadeId, $dataFim = '', $diasRetroativo
     }
     if ($gerados > 0) {
         diar_log_runtime("Consumos automaticos gerados para entidade {$entidadeId}: {$gerados}");
+        diar_logEvento('geracao_auto', 'Consumos automaticos gerados', array(
+            'entidade' => $entidadeId,
+            'gerados' => $gerados,
+            'pulados' => $pulados,
+            'periodo' => $dataIni.'_a_'.$dataFim
+        ));
     }
     return array('gerados' => $gerados, 'pulados' => $pulados, 'motivos' => $motivos);
 }
@@ -1236,17 +1369,21 @@ function diar_limparConsumosInvalidos($entidadeId = 0) {
     return $hoje;
 }
 
-// Controle semanal (segunda a domingo): um registro por dia com a diaria consumida.
-// $dataIni deve ser a segunda-feira da semana. Retorna dias + totais.
-function diar_controleSemana($entidadeId, $dataIni, $dataFim = '') {
+// Controle de um periodo (qualquer intervalo de datas): um registro por dia com a diaria consumida.
+// Retorna dias + totais. Usado na aba Semana da gestao (calendario de/ate).
+function diar_controlePeriodo($entidadeId, $dataIni, $dataFim = '') {
     $entidadeId = intval($entidadeId);
     $dataIni = diar_dataParaSql($dataIni);
-    $dataFim = ($dataFim === '') ? date('Y-m-d', strtotime($dataIni.' +6 days')) : diar_dataParaSql($dataFim);
+    $dataFim = ($dataFim === '') ? $dataIni : diar_dataParaSql($dataFim);
+    if ($dataIni !== '' && $dataFim !== '' && $dataFim < $dataIni) {
+        $tmp = $dataIni; $dataIni = $dataFim; $dataFim = $tmp;
+    }
 
     $out = array(
         'data_inicio' => $dataIni,
         'data_fim' => $dataFim,
         'dias' => array(),
+        'qtd_dias' => 0,
         'total_consumido' => 0.0,
         'dias_com_diaria' => 0,
         'dias_com_pernoite' => 0,
@@ -1274,12 +1411,12 @@ function diar_controleSemana($entidadeId, $dataIni, $dataFim = '') {
         }
     }
 
-    $diasNomes = array('Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado', 'Domingo');
-    for ($i = 0; $i < 7; $i++) {
-        $data = date('Y-m-d', strtotime($dataIni.' +'.$i.' days'));
+    $diasNomes = array(1 => 'Segunda', 2 => 'Terca', 3 => 'Quarta', 4 => 'Quinta', 5 => 'Sexta', 6 => 'Sabado', 7 => 'Domingo');
+    for ($ts = strtotime($dataIni); $ts !== false && $ts <= strtotime($dataFim); $ts = strtotime('+1 day', $ts)) {
+        $data = date('Y-m-d', $ts);
         $dia = array(
             'data' => $data,
-            'dia_semana' => $diasNomes[$i],
+            'dia_semana' => isset($diasNomes[intval(date('N', $ts))]) ? $diasNomes[intval(date('N', $ts))] : '',
             'tem_consumo' => false,
             'tipo' => '',
             'valor' => 0.0,
@@ -1328,17 +1465,26 @@ function diar_controleSemana($entidadeId, $dataIni, $dataFim = '') {
         }
         $out['dias'][] = $dia;
     }
+    $out['qtd_dias'] = count($out['dias']);
 
     return $out;
 }
 
-// Resumo semanal (segunda a domingo) de um funcionario em relacao a uma data de referencia.
-function diar_resumoSemana($entidadeId, $dataRef = '') {
+// Controle da semana (segunda a domingo) — mantido por compatibilidade.
+function diar_controleSemana($entidadeId, $dataIni, $dataFim = '') {
+    $dataIni = diar_dataParaSql($dataIni);
+    $dataFim = ($dataFim === '') ? date('Y-m-d', strtotime($dataIni.' +6 days')) : diar_dataParaSql($dataFim);
+    return diar_controlePeriodo($entidadeId, $dataIni, $dataFim);
+}
+
+// Resumo de um periodo (qualquer intervalo) de um funcionario: depositado x consumido.
+function diar_resumoPeriodo($entidadeId, $dataIni, $dataFim = '') {
     $entidadeId = intval($entidadeId);
-    $dataRef = ($dataRef === '') ? date('Y-m-d') : diar_dataParaSql($dataRef);
-    $diaSemana = intval(date('N', strtotime($dataRef))); // 1 = segunda, 7 = domingo
-    $dataIni = date('Y-m-d', strtotime($dataRef.' -'.($diaSemana - 1).' days'));
-    $dataFim = date('Y-m-d', strtotime($dataIni.' +6 days'));
+    $dataIni = diar_dataParaSql($dataIni);
+    $dataFim = ($dataFim === '') ? $dataIni : diar_dataParaSql($dataFim);
+    if ($dataIni !== '' && $dataFim !== '' && $dataFim < $dataIni) {
+        $tmp = $dataIni; $dataIni = $dataFim; $dataFim = $tmp;
+    }
 
     $out = array(
         'data_inicio' => $dataIni,
@@ -1370,10 +1516,22 @@ function diar_resumoSemana($entidadeId, $dataRef = '') {
     $out['consumido'] = round(floatval(diar_val($con, 'total', 0)), 2);
     $out['dias_consumidos'] = intval(diar_val($con, 'dias', 0));
     $out['saldo'] = round($out['depositado'] - $out['consumido'], 2);
-    // Complementa apenas o que falta para cobrir o consumo da semana.
+    // Complementa apenas o que falta para cobrir o consumo do periodo.
     $out['complemento_sugerido'] = round(max(0, $out['consumido'] - $out['depositado']), 2);
 
     return $out;
+}
+
+// Resumo semanal (segunda a domingo) em relacao a uma data de referencia — mantido por compatibilidade.
+function diar_resumoSemana($entidadeId, $dataRef = '') {
+    $dataRef = ($dataRef === '') ? date('Y-m-d') : diar_dataParaSql($dataRef);
+    if ($dataRef === '') {
+        $dataRef = date('Y-m-d');
+    }
+    $diaSemana = intval(date('N', strtotime($dataRef))); // 1 = segunda, 7 = domingo
+    $dataIni = date('Y-m-d', strtotime($dataRef.' -'.($diaSemana - 1).' days'));
+    $dataFim = date('Y-m-d', strtotime($dataIni.' +6 days'));
+    return diar_resumoPeriodo($entidadeId, $dataIni, $dataFim);
 }
 
 // Lista funcionarios candidatos a diarias (Motorista/Ajudante/Terceirizado) de uma empresa (0 = todas).
@@ -1488,6 +1646,11 @@ function diar_gerarConsumosPendentesTodos($dataFim = '', $diasRetroativos = 0) {
     }
     if ($totalGerados > 0) {
         diar_log_runtime("Processamento automatico na abertura: {$totalGerados} consumo(s) gerados");
+        diar_logEvento('geracao_auto_lote', 'Processamento automatico de todos os motoristas', array(
+            'gerados' => $totalGerados,
+            'pulados' => $totalPulados,
+            'data_fim' => $dataFim
+        ));
     }
     return array('gerados' => $totalGerados, 'pulados' => $totalPulados, 'alertas' => $alertas);
 }

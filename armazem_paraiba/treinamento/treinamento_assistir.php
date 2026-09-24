@@ -319,10 +319,12 @@
 			$episodiosCard = [];
 			if ($ehSerieCard) {
 				$rsEpiCard = query(
-					"SELECT trepi_nb_id, trepi_tx_titulo, trepi_nb_ordem FROM treinamento_episodio WHERE trepi_nb_treinamento_id = ? AND trepi_tx_status = 'ativo' ORDER BY trepi_nb_ordem, trepi_nb_id",
+					"SELECT trepi_nb_id, trepi_tx_titulo, trepi_nb_ordem, trepi_tx_url_video, trepi_tx_tipo_video FROM treinamento_episodio WHERE trepi_nb_treinamento_id = ? AND trepi_tx_status = 'ativo' ORDER BY trepi_nb_ordem, trepi_nb_id",
 					"i", [$treinamentoId]
 				);
 				$todosEpi = [];
+				$episodioCapaUrl = "";
+				$episodioCapaTipo = "";
 				while ($rsEpiCard && ($rEpiCard = mysqli_fetch_assoc($rsEpiCard))) {
 					$todosEpi[] = (int)$rEpiCard["trepi_nb_id"];
 					$episodiosCard[] = [
@@ -330,6 +332,11 @@
 						"titulo" => strval($rEpiCard["trepi_tx_titulo"] ?? ""),
 						"ordem" => (int)($rEpiCard["trepi_nb_ordem"] ?? 0)
 					];
+					// Guarda a URL/tipo do primeiro episódio para usar como capa do card
+					if ($episodioCapaUrl === "" && !empty($rEpiCard["trepi_tx_url_video"])) {
+						$episodioCapaUrl = $rEpiCard["trepi_tx_url_video"];
+						$episodioCapaTipo = strval($rEpiCard["trepi_tx_tipo_video"] ?? "youtube");
+					}
 				}
 				$totalEpisodiosCard = count($todosEpi);
 				foreach ($todosEpi as $idxEpi => $idEpi) {
@@ -412,10 +419,33 @@
 
 			ob_start();
 
-			// Thumbnail
-			$thumbSrc = !empty($thumbnail) ? ($_ENV["URL_BASE"] ?? "") . ($CONTEX["path"] ?? "") . "/treinamento/uploads/{$thumbnail}" : "";
+			// Capa do card: prévia do vídeo cadastrado (thumbnail do YouTube), fallback para o material enviado e ícone
+			$urlVideoCapa = "";
+			$tipoVideoCapa = $t["trei_tx_tipo_video"] ?? "youtube";
+			if ($ehSerieCard) {
+				// Séries: usa o vídeo do primeiro episódio como capa
+				$urlVideoCapa = $episodioCapaUrl;
+				$tipoVideoCapa = $episodioCapaTipo;
+			} else {
+				$urlVideoCapa = $t["trei_tx_url_video"] ?? "";
+			}
+			$thumbSrc = "";
+			if (!empty($thumbnail)) {
+				$thumbSrc = ($_ENV["URL_BASE"] ?? "") . ($CONTEX["path"] ?? "") . "/treinamento/uploads/{$thumbnail}";
+			} elseif ($tipoVideoCapa === "youtube" && !empty($urlVideoCapa)) {
+				preg_match('/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/', $urlVideoCapa, $mYt);
+				if (!empty($mYt[1])) {
+					$thumbSrc = "https://img.youtube.com/vi/" . $mYt[1] . "/hqdefault.jpg";
+				}
+			} elseif ($tipoVideoCapa === "vimeo" && !empty($urlVideoCapa)) {
+				// Vimeo: extrai o ID e usa a capa padrão do player
+				preg_match('/(?:vimeo\.com\/)(\d+)/', $urlVideoCapa, $mVm);
+				if (!empty($mVm[1])) {
+					$thumbSrc = "https://vumbnail.com/" . $mVm[1] . ".jpg";
+				}
+			}
 			$thumbHtml = !empty($thumbSrc)
-				? "<img src='{$thumbSrc}' class='thumbnail' alt='{$titulo}'>"
+				? "<img src='{$thumbSrc}' class='thumbnail' alt='{$titulo}' loading='lazy' onerror=\"this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';\"><div class='thumbnail' style='display:none;align-items:center;justify-content:center;background:#3c8dbc;color:#fff;font-size:48px;'><i class='fa fa-graduation-cap'></i></div>"
 				: "<div class='thumbnail' style='display:flex;align-items:center;justify-content:center;background:#3c8dbc;color:#fff;font-size:48px;'><i class='fa fa-graduation-cap'></i></div>";
 
 			// Badge tipo
