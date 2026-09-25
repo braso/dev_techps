@@ -8,7 +8,7 @@
     $elements = explode('/', $path);
     //após a linha acima temos elements[0]=api e o elements[1]=login
     
-    if(empty($elements[0]) || empty($elements[1]) || !in_array($elements[1], ['login', 'login_step1', 'login_step2', 'login_rfid', 'login_digital', 'refresh', 'users', 'journeys', 'delLastRegister', 'loginRfid', 'loginSE', 'plates'])){
+    if(empty($elements[0]) || empty($elements[1]) || !in_array($elements[1], ['login', 'login_step1', 'login_step2', 'login_rfid', 'login_digital', 'refresh', 'users', 'journeys', 'delLastRegister', 'loginRfid', 'loginSE', 'plates', 'signatures'])){
         echo "not found";
         exit;
     }
@@ -49,6 +49,23 @@
         case 'plates':
             if($_SERVER['REQUEST_METHOD'] === 'GET'){
                 get_plates($elements[2]);
+            }
+        break;
+
+        // Assinatura eletronica (documentos pendentes do usuario do app)
+        //   GET /signatures/{userId}           -> lista
+        //   GET /signatures/{userId}/count     -> contadores
+        //   PUT /signatures/{assinanteId}/read -> marca como lida
+        case 'signatures':
+            $action = isset($elements[3]) ? strtok($elements[3], '?') : '';
+            if($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'count'){
+                get_signatures_count($elements[2]);
+            }elseif($_SERVER['REQUEST_METHOD'] === 'GET'){
+                get_signatures($elements[2]);
+            }elseif(($_SERVER['REQUEST_METHOD'] === 'PUT' || $_SERVER['REQUEST_METHOD'] === 'POST') && $action === 'read'){
+                mark_signature_read($elements[2]);
+            }else{
+                echo "not found";
             }
         break;
         

@@ -801,3 +801,167 @@
         )[0];
         return delete_last($userEntityRegistry["enti_tx_matricula"]);
     }
+
+    // =====================================================================
+    // ASSINATURA ELETRÔNICA (app) — documentos pendentes de assinatura
+    // Rotas (ws/index.php):
+    //   GET /ws/signatures/{userId}          lista de pendências
+    //   GET /ws/signatures/{userId}/count    {pendentes, nao_lidas}
+    //   PUT /ws/signatures/{assinanteId}/read marca como lida no app
+    // A assinatura em si continua na página web assinar_via_link.php (token).
+    // =====================================================================
+
+    function signatures_ensure_schema(){
+        try{
+            $col = get_data("SHOW COLUMNS FROM assinantes LIKE 'app_lida_em'");
+            if(empty($col)){
+                insert_data("ALTER TABLE assinantes ADD COLUMN app_lida_em DATETIME NULL DEFAULT NULL", []);
+            }
+        }catch(Exception $e){}
+    }
+
+    // URL pública da pasta assinatura desta empresa.
+    // Prioridade: URL_ASSINATURA no .env > montada a partir da requisição (scheme + host + APP_PATH + CONTEX_PATH + /assinatura)
+    function signatures_base_url(){
+        $env = trim((string)($_ENV["URL_ASSINATURA"] ?? ""));
+        if($env !== "") return rtrim($env, "/");
+
+        $proto = $_SERVER["HTTP_X_FORWARDED_PROTO"] ?? ($_SERVER["REQUEST_SCHEME"] ?? "http");
+        if(empty($proto) && !empty($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] !== "off") $proto = "https";
+        $host = $_SERVER["HTTP_X_FORWARDED_HOST"] ?? ($_SERVER["HTTP_HOST"] ?? "localhost");
+        $appPath = rtrim((string)($_ENV["APP_PATH"] ?? ""), "/");
+        $contex = rtrim((string)($_ENV["CONTEX_PATH"] ?? ""), "/");
+        return "{$proto}://{$host}{$appPath}{$contex}/assinatura";
+    }
+
+    function signatures_user_from_token(){
+        try{
+            $decoded = validate_token($_ENV["APP_KEY"]);
+        }catch(Exception $e){
+            die($e->getMessage());
+        }
+        return intval($decoded->data->user_id);
+    }
+
+    function signatures_pending_query($extraWhere = ""){
+        return
+            "SELECT
+                a.id                        AS id,
+                a.token                     AS token,
+                a.funcao                    AS funcao,
+                a.ordem                     AS ordem,
+                a.status                    AS status,
+                a.app_lida_em               AS lida_em,
+                s.id                        AS solicitacao_id,
+                s.id_documento              AS id_documento,
+                s.nome_arquivo_original     AS arquivo,
+                s.data_solicitacao          AS data_solicitacao,
+                s.expires_at                AS expires_at,
+                s.status                    AS status_solicitacao,
+                s.modo_envio                AS modo_envio,
+                t.tipo_tx_nome              AS tipo,
+                (SELECT COUNT(*) FROM assinantes a3 WHERE a3.id_solicitacao = s.id) AS total_signatarios
+            FROM assinantes a
+            JOIN solicitacoes_assinatura s ON s.id = a.id_solicitacao
+            JOIN user u ON u.user_nb_entidade = a.enti_nb_id
+            LEFT JOIN tipos_documentos t ON t.tipo_nb_id = s.tipo_documento_id
+            WHERE u.user_nb_id = ?
+              AND u.user_tx_status = 'ativo'
+              AND LOWER(TRIM(a.status)) <> 'assinado'
+              AND LOWER(TRIM(a.status)) <> 'dispensado'
+              AND a.ordem = (
+                    SELECT MIN(a2.ordem) FROM assinantes a2
+                    WHERE a2.id_solicitacao = a.id_solicitacao
+                      AND LOWER(TRIM(a2.status)) <> 'assinado'
+                      AND LOWER(TRIM(a2.status)) <> 'dispensado'
+              )
+              AND LOWER(TRIM(s.status)) IN ('pendente','em_progresso')
+              {$extraWhere}
+            ORDER BY s.data_solicitacao DESC, s.id DESC";
+    }
+
+    function get_signatures($userId = null){
+        signatures_ensure_schema();
+        $tokenUser = signatures_user_from_token();
+        // Segurança: só devolve as pendências do próprio usuário do token
+        $userId = $tokenUser;
+
+        $rows = get_data(signatures_pending_query(), [$userId]);
+        $base = signatures_base_url();
+        $nowUtc = gmdate("Y-m-d H:i:s");
+
+        $out = [];
+        foreach($rows as $r){
+            $expirado = !empty($r["expires_at"]) && $r["expires_at"] !== "0000-00-00 00:00:00" && $r["expires_at"] < $nowUtc;
+            $titulo = trim((string)($r["tipo"] ?? ""));
+            if($titulo === "") $titulo = trim((string)($r["arquivo"] ?? ""));
+            if($titulo === "") $titulo = "Documento " . $r["id_documento"];
+            $out[] = [
+                "id"                => intval($r["id"]),
+                "solicitacaoID"     => intval($r["solicitacao_id"]),
+                "idDocumento"       => $r["id_documento"],
+                "titulo"            => $titulo,
+                "arquivo"           => $r["arquivo"],
+                "tipo"              => $r["tipo"],
+                "funcao"            => $r["funcao"],
+                "ordem"             => intval($r["ordem"]),
+                "totalSignatarios"  => intval($r["total_signatarios"]),
+                "dataSolicitacao"   => $r["data_solicitacao"],
+                "expiraEm"          => $r["expires_at"],
+                "expirado"          => $expirado,
+                "lida"              => !empty($r["lida_em"]),
+                "lidaEm"            => $r["lida_em"],
+                "url"               => $base . "/assinar_via_link.php?token=" . urlencode((string)$r["token"]),
+            ];
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode($out);
+        exit;
+    }
+
+    function get_signatures_count($userId = null){
+        signatures_ensure_schema();
+        $userId = signatures_user_from_token();
+        $nowUtc = gmdate("Y-m-d H:i:s");
+
+        $rows = get_data(signatures_pending_query(), [$userId]);
+        $pendentes = 0; $naoLidas = 0;
+        foreach($rows as $r){
+            $expirado = !empty($r["expires_at"]) && $r["expires_at"] !== "0000-00-00 00:00:00" && $r["expires_at"] < $nowUtc;
+            if($expirado) continue;
+            $pendentes++;
+            if(empty($r["lida_em"])) $naoLidas++;
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode(["pendentes" => $pendentes, "naoLidas" => $naoLidas]);
+        exit;
+    }
+
+    function mark_signature_read($assinanteId){
+        signatures_ensure_schema();
+        $userId = signatures_user_from_token();
+        $assinanteId = intval($assinanteId);
+        if($assinanteId <= 0){
+            http_response_code(400);
+            header('Content-Type: application/json');
+            echo json_encode(["status" => "error", "message" => "assinanteId inválido"]);
+            exit;
+        }
+
+        // Só marca se o assinante pertence ao usuário do token
+        $connect = new PDO("mysql:host=".$_ENV["DB_HOST"].";dbname=".$_ENV["DB_NAME"].";charset=utf8mb4", $_ENV["DB_USER"], $_ENV["DB_PASSWORD"]);
+        $st = $connect->prepare(
+            "UPDATE assinantes a
+             JOIN user u ON u.user_nb_entidade = a.enti_nb_id
+             SET a.app_lida_em = COALESCE(a.app_lida_em, NOW())
+             WHERE a.id = ? AND u.user_nb_id = ?"
+        );
+        $st->execute([$assinanteId, $userId]);
+        $ok = $st->rowCount() >= 0;
+
+        header('Content-Type: application/json');
+        echo json_encode(["status" => "success", "id" => $assinanteId, "updated" => $ok]);
+        exit;
+    }
