@@ -42,7 +42,7 @@
         "HARMONY VET"           => "harmonyvet",
         "TRANS ROCHA"           => "transrocha",
         "TRANSP RAISSA"         => "trans_raissa",
-        "SIMBAIBA"              => "simbaiba",
+        "SAMBAIBA"              => "sambaiba",
 
     ];
 
@@ -82,7 +82,7 @@
         "harmonyvet"        => "HARMONY VET",
         "transrocha"        => "TRANS ROCHA",
         "trans_raissa"      => "TRANSP RAISSA",
-        "simbaiba"          => "SIMBAIBA",
+        "sambaiba"          => "SAMBAIBA",
     ];
 
     $empresa_array = array_values($empresas); //Utilizado nos arquivos que importam este.
