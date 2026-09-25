@@ -41,7 +41,8 @@
         "ARMAPLAST"             => "armaplast",
         "HARMONY VET"           => "harmonyvet",
         "TRANS ROCHA"           => "transrocha",
-        "TRANSP RAISSA"           => "trans_raissa",
+        "TRANSP RAISSA"         => "trans_raissa",
+        "SIMBAIBA"              => "simbaiba",
 
     ];
 
@@ -78,9 +79,10 @@
         "demo"              => "Demo",
         "gst"               => "GST",
         "armaplast"         => "ARMAPLAST",
-        "harmonyvet"         => "HARMONY VET",
-        "transrocha"         => "TRANS ROCHA",
-        "trans_raissa"         => "TRANSP RAISSA",
+        "harmonyvet"        => "HARMONY VET",
+        "transrocha"        => "TRANS ROCHA",
+        "trans_raissa"      => "TRANSP RAISSA",
+        "simbaiba"          => "SIMBAIBA",
     ];
 
     $empresa_array = array_values($empresas); //Utilizado nos arquivos que importam este.
