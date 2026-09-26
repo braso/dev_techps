@@ -65,6 +65,13 @@
 
   let stream = null, loop = null, busy = false, done = false;
   let blinkSeen = false, eyesOpenFrames = 0, startedAt = 0, stableFrames = 0;
+  // Prova de vida (piscada) adaptativa: compara com a maior abertura vista do olho
+  let earMax = 0, faceSince = 0;
+  const DEBUG = qs.get('debug') === '1';
+  // Se não detectar piscada em LIVENESS_TIMEOUT ms com o rosto estável, segue mesmo assim
+  const LIVENESS_REQUIRED = qs.get('liveness') === '1';
+  const LIVENESS_TIMEOUT = 8000;
+  const log = (...a) => { try { console.log('[facial]', ...a); } catch (e) {} };
 
   const RN = window.ReactNativeWebView;
   const send = (obj) => { try { if (RN) RN.postMessage(JSON.stringify(obj)); } catch (e) {} };
@@ -104,7 +111,8 @@
   }
 
   async function start(){
-    done = false; busy = false; blinkSeen = false; eyesOpenFrames = 0; stableFrames = 0;
+    done = false; busy = false; blinkSeen = false; eyesOpenFrames = 0; stableFrames = 0; earMax = 0; faceSince = 0;
+    log('start', { MODEL_URL, ENDPOINT });
     try {
       if (!stream) {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
@@ -120,7 +128,7 @@
     setStatus('Posicione o rosto dentro do contorno', 'Pisque os olhos para confirmar que é você.');
     startedAt = Date.now();
     if (loop) clearInterval(loop);
-    loop = setInterval(tick, 200);
+    loop = setInterval(tick, 150);
   }
 
   async function tick(){
@@ -128,13 +136,13 @@
     busy = true;
     try {
       const det = await faceapi
-        .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 }))
+        .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.4 }))
         .withFaceLandmarks()
         .withFaceDescriptor();
 
       if (!det) {
         oval.className = 'oval';
-        stableFrames = 0;
+        stableFrames = 0; faceSince = 0;
         setStatus('Posicione o rosto dentro do contorno', 'Aproxime-se e mantenha o rosto iluminado.');
         return;
       }
@@ -142,24 +150,33 @@
       // Tamanho mínimo do rosto no quadro
       const box = det.detection.box;
       const rel = box.width / (video.videoWidth || 640);
-      if (rel < 0.28) {
+      if (rel < 0.22) {
         oval.className = 'oval';
+        stableFrames = 0; faceSince = 0;
         setStatus('Aproxime o rosto da câmera', '');
         return;
       }
+      if (!faceSince) faceSince = Date.now();
 
-      // Prova de vida: exige ao menos uma piscada
+      // Prova de vida adaptativa: piscada = queda de ~35% em relação à maior abertura vista
       const lm = det.landmarks;
       const e = (ear(lm.getLeftEye()) + ear(lm.getRightEye())) / 2;
-      if (e > 0.25) eyesOpenFrames++;
-      if (e < 0.19 && eyesOpenFrames >= 2) blinkSeen = true;
+      if (e > earMax) earMax = e;
+      if (earMax > 0 && e > earMax * 0.85) eyesOpenFrames++;
+      if (eyesOpenFrames >= 2 && earMax > 0 && e < earMax * 0.65) blinkSeen = true;
+      if (DEBUG) elSub.textContent = 'EAR ' + e.toFixed(3) + ' / max ' + earMax.toFixed(3) + ' rel ' + rel.toFixed(2) + (blinkSeen ? ' BLINK' : '');
+      log('tick', { ear: +e.toFixed(3), earMax: +earMax.toFixed(3), rel: +rel.toFixed(2), blinkSeen });
 
       stableFrames++;
+      const sinceFace = Date.now() - faceSince;
       if (!blinkSeen) {
-        oval.className = 'oval';
-        const waited = Date.now() - startedAt;
-        setStatus('Rosto detectado', waited > 3000 ? 'Pisque os olhos para continuar.' : 'Mantenha o rosto parado e pisque.');
-        return;
+        if (!LIVENESS_REQUIRED && sinceFace > LIVENESS_TIMEOUT && stableFrames >= 5) {
+          log('liveness timeout: seguindo sem piscada');
+        } else {
+          oval.className = 'oval';
+          if (!DEBUG) setStatus('Rosto detectado', sinceFace > 2500 ? 'Pisque os olhos para continuar.' : 'Mantenha o rosto parado e pisque.');
+          return;
+        }
       }
       if (stableFrames < 3) return;
 
@@ -169,7 +186,7 @@
       setStatus('<span class="spinner"></span>Verificando...', '');
       await autenticar(Array.from(det.descriptor));
     } catch (err) {
-      console.warn(err);
+      log('erro no tick', String(err && err.message || err));
     } finally {
       busy = false;
     }
@@ -179,8 +196,10 @@
     try {
       const fd = new FormData();
       fd.append('descritor', JSON.stringify(descriptor));
+      log('POST', ENDPOINT);
       const res = await fetch(ENDPOINT, { method: 'POST', body: fd });
       const data = await res.json().catch(() => null);
+      log('resposta', res.status, data);
       if (res.ok && data && data.status === 'success') {
         oval.className = 'oval ok';
         setStatus('Reconhecido: <b>' + (data.nome || '') + '</b>', 'Entrando...');

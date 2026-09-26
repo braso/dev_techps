@@ -516,15 +516,18 @@ cabecalho("Cadastro de Biometria Facial");
                 }else{
                     msgRes.innerHTML="<div class='alert alert-danger'><i class='fa fa-times-circle'></i> "+json.msg+"</div>";
                 }
-            }).fail(function(){
-                msgRes.innerHTML="<div class='alert alert-danger'>Erro de comunicação com o servidor.</div>";
+            }).fail(function(xhr){
+                var det = 'HTTP ' + (xhr && xhr.status) + ' ' + (xhr && xhr.statusText || '') + '<br><small style="word-break:break-all">' + String((xhr && xhr.responseText) || '').replace(/</g,'&lt;').substring(0, 400) + '</small>';
+                msgRes.innerHTML="<div class='alert alert-danger'>Erro de comunicação com o servidor (salvar).<br>"+det+"</div>";
+                try { console.error('salvarDescritor fail', xhr); } catch(e){}
             }).always(function(){
                 btnSalvar.innerHTML='<i class="fa fa-check"></i> Salvar Biometria';
                 btnSalvar.disabled=false;
             });
-        }).fail(function(){
-            // Se falhar a verificação, deixa salvar mesmo assim
-            msgRes.innerHTML='';
+        }).fail(function(xhr){
+            // Se falhar a verificação, deixa salvar mesmo assim (mostra o motivo)
+            var det = 'HTTP ' + (xhr && xhr.status) + ' ' + String((xhr && xhr.responseText) || '').replace(/</g,'&lt;').substring(0, 200);
+            msgRes.innerHTML="<div class='alert alert-warning'>Verificação de duplicidade indisponível ("+det+"). Clique em Salvar novamente.</div>";
             btnSalvar.innerHTML='<i class="fa fa-check"></i> Salvar Biometria';
             btnSalvar.disabled=false;
         });
