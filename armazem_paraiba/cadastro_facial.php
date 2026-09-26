@@ -19,7 +19,7 @@ function facialJsonResponse($data){
 function listarFuncionarios(){
     ob_start();
     $interno = true;
-    include "conecta.php";
+    include_once "conecta.php";
 
     $empresaId = intval($_GET["empresa_id"] ?? $_POST["empresa_id"] ?? $_POST["busca_empresa"] ?? 0);
     if ($empresaId <= 0) { facialJsonResponse([]); }
@@ -63,7 +63,7 @@ function listarFuncionarios(){
 function salvarDescritor(){
     ob_start();
     $interno = true;
-    include "conecta.php";
+    include_once "conecta.php";
 
     $userId    = intval($_POST["user_id"] ?? 0);
     $descritor = $_POST["descritor"] ?? "";
@@ -78,7 +78,7 @@ function salvarDescritor(){
 function removerBiometria(){
     ob_start();
     $interno = true;
-    include "conecta.php";
+    include_once "conecta.php";
 
     $userId = intval($_POST["user_id"] ?? 0);
     if ($userId <= 0) { facialJsonResponse(["ok"=>false,"msg"=>"ID inválido."]); }
@@ -89,7 +89,7 @@ function removerBiometria(){
 function verificarDuplicata(){
     ob_start();
     $interno = true;
-    include "conecta.php";
+    include_once "conecta.php";
 
     $empresaId    = intval($_POST["empresa_id"] ?? 0);
     $userIdAtual  = intval($_POST["user_id"] ?? 0);  // exclui o próprio usuário da comparação
