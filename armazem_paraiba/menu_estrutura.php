@@ -74,6 +74,7 @@
 					"/cadastro_habilidade_comportamental.php" 	=> "Habilidades Comportamentais",
 					"/cadastro_perfil_acesso.php" 	=> "Perfil de Acesso",
 					"/cadastro_usuario_perfil.php" 	=> "Permisoes de usuarios",
+					"/app_versao.php" 	=> "Versões do App",
 				   // "/cadastro_comunicado_interno.php" 	=> "Comunicado Interno",
 				],
 				"ponto" => [

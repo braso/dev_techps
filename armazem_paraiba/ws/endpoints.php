@@ -1074,3 +1074,55 @@
         readfile($file);
         exit;
     }
+
+
+
+    // =====================================================================
+    // ATUALIZAÇÃO DO APP (Android)
+    //   GET /ws/app/version -> versão ativa publicada em app_versao.php
+    //   Os APKs ficam em ws/app/<arquivo> (servidos como arquivo estático)
+    // =====================================================================
+    function get_app_version(){
+        header('Content-Type: application/json');
+        header('Cache-Control: no-store');
+        try{
+            $tb = get_data("SHOW TABLES LIKE 'app_versao'");
+            if(empty($tb)){
+                echo json_encode(["status" => "success", "available" => false]);
+                exit;
+            }
+            $rows = get_data(
+                "SELECT apve_nb_versionCode, apve_tx_versionName, apve_tx_arquivo, apve_nb_tamanho, apve_tx_notas, apve_tx_obrigatoria, apve_tx_dataCadastro
+                 FROM app_versao WHERE apve_tx_status = 'ativo' ORDER BY apve_nb_versionCode DESC LIMIT 1"
+            );
+            if(empty($rows)){
+                echo json_encode(["status" => "success", "available" => false]);
+                exit;
+            }
+            $v = $rows[0];
+            $arquivo = basename(strval($v["apve_tx_arquivo"]));
+            $path = __DIR__ . "/app/" . $arquivo;
+            if(!is_file($path)){
+                echo json_encode(["status" => "success", "available" => false, "message" => "APK não encontrado no servidor"]);
+                exit;
+            }
+            $proto = $_SERVER["HTTP_X_FORWARDED_PROTO"] ?? ($_SERVER["REQUEST_SCHEME"] ?? "http");
+            $host = $_SERVER["HTTP_X_FORWARDED_HOST"] ?? ($_SERVER["HTTP_HOST"] ?? "localhost");
+            $base = "{$proto}://{$host}" . rtrim((string)($_ENV["APP_PATH"] ?? ""), "/") . rtrim((string)($_ENV["CONTEX_PATH"] ?? ""), "/") . "/ws/app/";
+            echo json_encode([
+                "status"      => "success",
+                "available"   => true,
+                "versionCode" => intval($v["apve_nb_versionCode"]),
+                "versionName" => $v["apve_tx_versionName"],
+                "url"         => $base . rawurlencode($arquivo),
+                "size"        => intval($v["apve_nb_tamanho"] ?: filesize($path)),
+                "sha256"      => hash_file('sha256', $path),
+                "notes"       => $v["apve_tx_notas"],
+                "mandatory"   => ($v["apve_tx_obrigatoria"] === 'sim'),
+                "publishedAt" => $v["apve_tx_dataCadastro"],
+            ]);
+        }catch(Exception $e){
+            echo json_encode(["status" => "error", "available" => false, "message" => $e->getMessage()]);
+        }
+        exit;
+    }

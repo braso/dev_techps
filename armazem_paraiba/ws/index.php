@@ -8,7 +8,7 @@
     $elements = explode('/', $path);
     //após a linha acima temos elements[0]=api e o elements[1]=login
     
-    if(empty($elements[0]) || empty($elements[1]) || !in_array($elements[1], ['login', 'login_step1', 'login_step2', 'login_rfid', 'login_digital', 'refresh', 'users', 'journeys', 'delLastRegister', 'loginRfid', 'loginSE', 'plates', 'signatures', 'loginFacial', 'facial'])){
+    if(empty($elements[0]) || empty($elements[1]) || !in_array($elements[1], ['login', 'login_step1', 'login_step2', 'login_rfid', 'login_digital', 'refresh', 'users', 'journeys', 'delLastRegister', 'loginRfid', 'loginSE', 'plates', 'signatures', 'loginFacial', 'facial', 'app'])){
         echo "not found";
         exit;
     }
@@ -116,6 +116,16 @@
         break;
         case 'facial':
             serve_facial_page();
+        break;
+
+        // Atualização do app: GET /app/version
+        case 'app':
+            $sub = isset($elements[2]) ? strtok($elements[2], '?') : '';
+            if($_SERVER['REQUEST_METHOD'] === 'GET' && $sub === 'version'){
+                get_app_version();
+            }else{
+                echo "not found";
+            }
         break;
 
     }
