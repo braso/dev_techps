@@ -18,6 +18,7 @@ function facialJsonResponse($data){
 
 function listarFuncionarios(){
     ob_start();
+    global $conn; // conecta.php pode já ter sido carregado (despacho por acao em funcoes.php); usa a conexão global
     $interno = true;
     include_once "conecta.php";
 
@@ -62,6 +63,7 @@ function listarFuncionarios(){
 
 function salvarDescritor(){
     ob_start();
+    global $conn; // conecta.php pode já ter sido carregado (despacho por acao em funcoes.php); usa a conexão global
     $interno = true;
     include_once "conecta.php";
 
@@ -77,6 +79,7 @@ function salvarDescritor(){
 
 function removerBiometria(){
     ob_start();
+    global $conn; // conecta.php pode já ter sido carregado (despacho por acao em funcoes.php); usa a conexão global
     $interno = true;
     include_once "conecta.php";
 
@@ -88,6 +91,7 @@ function removerBiometria(){
 
 function verificarDuplicata(){
     ob_start();
+    global $conn; // conecta.php pode já ter sido carregado (despacho por acao em funcoes.php); usa a conexão global
     $interno = true;
     include_once "conecta.php";
 
