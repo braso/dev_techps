@@ -81,6 +81,10 @@ foreach ($ids as $idSol) {
         continue;
     }
 
+    // Se estava expirada, reabre: 'em_progresso' se alguém já assinou, senão 'pendente'
+    @mysqli_query($conn, "UPDATE solicitacoes_assinatura s
+        SET s.status = IF((SELECT COUNT(*) FROM assinantes a WHERE a.id_solicitacao = s.id AND LOWER(TRIM(a.status)) = 'assinado') > 0, 'em_progresso', 'pendente')
+        WHERE s.id = " . intval($idSol) . " AND LOWER(TRIM(s.status)) = 'expirado'");
     $stmtUpd = mysqli_prepare($conn, "UPDATE solicitacoes_assinatura SET expires_at = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY), prazo_expiracao_dias = ? WHERE id = ?");
     if (!$stmtUpd) {
         $erros++;

@@ -16,6 +16,11 @@
 	if(!is_string($chkRfidUserCol) && $chkRfidUserCol && mysqli_num_rows($chkRfidUserCol) == 0){
 		@query("ALTER TABLE rfids ADD COLUMN rfids_nb_user_id INT(11) DEFAULT NULL AFTER rfids_tx_uid;");
 	}
+	// Rubrica do funcionário (imagem com fundo branco) usada na assinatura eletrônica
+	$chkRubricaCol = query("SHOW COLUMNS FROM entidade LIKE 'enti_tx_rubrica';");
+	if(!is_string($chkRubricaCol) && $chkRubricaCol && mysqli_num_rows($chkRubricaCol) == 0){
+		@query("ALTER TABLE entidade ADD COLUMN enti_tx_rubrica VARCHAR(255) DEFAULT NULL;");
+	}
 	
 
 	function carregarJS(){
@@ -974,6 +979,18 @@
 			}
 		}
 
+		// Rubrica (imagem com fundo branco) para assinatura eletrônica
+		$rubricaType = $_FILES["rubrica"]["type"] ?? "";
+		if (in_array($rubricaType, ["image/jpeg", "image/png"]) && !empty($_FILES["rubrica"]["name"])) {
+			if (!is_dir("arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}")) {
+				mkdir("arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}", 0777, true);
+			}
+			$arqRub = enviar("rubrica", "arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}/", "RUBRICA_{$id}_{$_POST["postMatricula"]}");
+			if($arqRub){
+				atualizar("entidade", ["enti_tx_rubrica"], [$arqRub], $id);
+			}
+		}
+
 		include_once __DIR__."/suporte/_membros_sync.php";
 		if(suporte_dominio_mestre()){ suporte_sincronizar_membros(5); } // quem recebe chamados de suporte
 		$_POST["id"] = $id;
@@ -1046,6 +1063,15 @@
 		// Após excluir, apenas recarrega a tela do funcionário
 		$_POST["id"] = $_POST["idEntidade"];
 		modificarMotorista();
+		exit;
+	}
+
+	function excluirRubrica(){
+		$caminho = $_POST["nome_arquivo"] ?? "";
+		if (!empty($caminho) && file_exists($caminho)) { @unlink($caminho); }
+		atualizar("entidade", ["enti_tx_rubrica"], [""], $_POST["idEntidade"]);
+		$_POST["id"] = $_POST["idEntidade"];
+		editarMotorista();
 		exit;
 	}
 
@@ -1569,9 +1595,24 @@
 			$btnAlterarRfid = "&nbsp;&nbsp;<small style='color:red;'>(Ative o usuário para vincular crachá)</small>";
 		}
 
+		if(!empty($a_mod["enti_tx_rubrica"])){
+			$imgRubrica = texto(
+				"<a style='color:gray' onclick='javascript:remover_foto(\"".($a_mod["enti_nb_id"]?? "")."\",\"excluirRubrica\",\"".($a_mod["enti_tx_rubrica"]?? "")."\");' >
+					<spam class='glyphicon glyphicon-remove'></spam>
+					Excluir rubrica
+				</a>",
+				"<img style='width: 100%; background:#fff; border:1px solid #ddd; padding:4px;' src='".($a_mod["enti_tx_rubrica"]?? "")."' />",
+				2
+			);
+		}else{
+			$imgRubrica = texto("Rubrica", "<small style='color:#888'>Nenhuma rubrica cadastrada</small>", 2);
+		}
+
 		$camposImg = [
 			$img,
-			arquivo("Arquivo (.png, .jpg)", "foto", ($a_mod["enti_tx_foto"]?? ""), 4, "tabindex=".sprintf("%02d", $tabIndex++))
+			arquivo("Arquivo (.png, .jpg)", "foto", ($a_mod["enti_tx_foto"]?? ""), 4, "tabindex=".sprintf("%02d", $tabIndex++)),
+			$imgRubrica,
+			arquivo("Rubrica (.png, .jpg, fundo branco)", "rubrica", ($a_mod["enti_tx_rubrica"]?? ""), 4, "tabindex=".sprintf("%02d", $tabIndex++))
 		];
 
 		$statusOpt = ["ativo" => "Ativo", "inativo" => "Inativo"];
@@ -1991,7 +2032,7 @@
 		fieldset("Dados Pessoais");
 		echo linha_form($camposPessoais);
 		echo "<br>";
-		fieldset("Foto");
+		fieldset("Foto e Rubrica");
 		echo "<div class='imageForm'>";
 		echo linha_form($camposImg);
 		echo "</div>";

@@ -194,11 +194,26 @@ document.addEventListener('DOMContentLoaded', function() {
             const rg = document.getElementById('rg').value;
             const aceite = document.getElementById('aceite').checked;
 
-            if (!nome || !cpf || !rg || !aceite) {
+            // Tipo de assinatura configurado no cadastro da empresa
+            const exigeCpfRg = window.ASSINATURA_EXIGE_CPF_RG !== false;
+            const exigeRubrica = window.ASSINATURA_EXIGE_RUBRICA === true;
+            const rubricaInput = document.getElementById('rubrica');
+            const rubricaDataUrl = rubricaInput ? String(rubricaInput.value || '') : '';
+
+            if (!nome || !aceite || (exigeCpfRg && (!cpf || !rg))) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'Campos obrigatórios',
-                    text: 'Por favor, preencha todos os campos e aceite os termos.',
+                    text: exigeCpfRg ? 'Por favor, preencha todos os campos e aceite os termos.' : 'Por favor, aceite os termos para continuar.',
+                    confirmButtonColor: '#f59e0b'
+                });
+                return;
+            }
+            if (exigeRubrica && !rubricaDataUrl.startsWith('data:image/png;base64,')) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Rubrica obrigatória',
+                    text: 'Desenhe sua rubrica no quadro indicado antes de assinar.',
                     confirmButtonColor: '#f59e0b'
                 });
                 return;
@@ -229,6 +244,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     logoImage = await pdfDoc.embedPng(logoBytes);
                 } catch (e) {
                     console.warn("Logo não encontrada ou erro ao carregar:", e);
+                }
+
+                // Rubrica desenhada (PNG) para carimbar no PDF
+                let rubricaImage = null;
+                if (rubricaDataUrl) {
+                    try {
+                        const rb = await fetch(rubricaDataUrl).then(r => r.arrayBuffer());
+                        rubricaImage = await pdfDoc.embedPng(rb);
+                    } catch (e) {
+                        console.warn('Falha ao incorporar rubrica:', e);
+                    }
                 }
 
                 // Incorpora fonte
@@ -352,8 +378,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     ip: String(clientIp || ''),
                     user_agent: String(navigator.userAgent || ''),
                     hash: String(protocolHash || ''),
-                    papel: String(papelUsuario || '')
+                    papel: String(papelUsuario || ''),
+                    rubrica: rubricaDataUrl ? String(rubricaDataUrl) : '',
+                    tipo_assinatura: String(window.ASSINATURA_TIPO || 'cpf_rg')
                 }]);
+
+                // Incorpora as rubricas de todos os signatários (as anteriores vêm do estado de auditoria)
+                const rubricaImages = {};
+                for (let i = 0; i < entries.length; i++) {
+                    const du = entries[i] && entries[i].rubrica ? String(entries[i].rubrica) : '';
+                    if (!du) continue;
+                    if (i === entries.length - 1 && rubricaImage) { rubricaImages[i] = rubricaImage; continue; }
+                    try {
+                        const rb = await fetch(du).then(r => r.arrayBuffer());
+                        rubricaImages[i] = await pdfDoc.embedPng(rb);
+                    } catch (e) {}
+                }
+
+                // A rubrica aparece apenas na página de comprovantes (card do signatário), não no documento original.
 
                 const renderAuditPages = () => {
                     const pageMargin = 36;
@@ -424,12 +466,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     const drawCard = (entry, idx) => {
                         const headerText = `${idx + 1}. ${entry.nome} (${entry.papel || 'Signatário'})`;
-                        const innerW = contentW - (cardPad * 2);
-                        const linesUA = wrapText(entry.user_agent || '', helveticaFont, smallFontSize, innerW, 2);
+                        const rubricaImg = rubricaImages[idx] || null;
+                        const rubricaBoxW = rubricaImg ? 150 : 0;
+                        const rubricaGap = rubricaImg ? 12 : 0;
+                        // Largura útil do texto: desconta a coluna da rubrica para não sobrepor
+                        const innerW = contentW - (cardPad * 2) - rubricaBoxW - rubricaGap;
+                        const linesUA = wrapText(entry.user_agent || '', helveticaFont, smallFontSize, innerW, 3);
                         const linesHash = wrapText(entry.hash || '', courierFont, smallFontSize, innerW, 2);
 
                         const rowLines = 6 + linesUA.length + linesHash.length;
-                        const cardH = cardPad * 2 + rowLines * (lineH - 0.5) + 6;
+                        // Coluna da rubrica: título + imagem (46) + 3 linhas (nome, CPF, RG)
+                        const rubricaImgH = 46;
+                        const rubricaInfoLines = 3;
+                        const rubricaBoxH = rubricaImg ? (12 + rubricaImgH + 6 + rubricaInfoLines * 9 + 6) : 0;
+                        const cardH = Math.max(cardPad * 2 + rowLines * (lineH - 0.5) + 6, rubricaImg ? rubricaBoxH + cardPad * 2 : 0);
                         ensureSpace(cardH + cardGap);
 
                         const x = pageMargin;
@@ -439,6 +489,38 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         page.drawRectangle({ x, y: bottomY, width: w, height: cardH, borderWidth: 1, borderColor: rgb(0.88, 0.88, 0.88), color: rgb(0.98, 0.98, 0.98) });
 
+                        if (rubricaImg) {
+                            const boxX = x + w - cardPad - rubricaBoxW;
+                            const boxTop = topY - cardPad;
+                            const boxY = boxTop - rubricaBoxH;
+                            page.drawRectangle({ x: boxX, y: boxY, width: rubricaBoxW, height: rubricaBoxH, borderWidth: 0.5, borderColor: rgb(0.8, 0.8, 0.8), color: rgb(1, 1, 1) });
+
+                            // Título
+                            page.drawText('RUBRICA', { x: boxX + 6, y: boxTop - 9, size: 6, font: helveticaBold, color: rgb(0.4, 0.4, 0.4) });
+
+                            // Imagem centralizada
+                            const maxW = rubricaBoxW - 16, maxH = rubricaImgH;
+                            let iw = maxW, ih = iw * (rubricaImg.height / rubricaImg.width);
+                            if (ih > maxH) { ih = maxH; iw = ih * (rubricaImg.width / rubricaImg.height); }
+                            const imgAreaTop = boxTop - 12;
+                            page.drawImage(rubricaImg, { x: boxX + (rubricaBoxW - iw) / 2, y: imgAreaTop - maxH + (maxH - ih) / 2, width: iw, height: ih });
+
+                            // Linha separadora
+                            const sepY = imgAreaTop - maxH - 3;
+                            page.drawLine({ start: { x: boxX + 6, y: sepY }, end: { x: boxX + rubricaBoxW - 6, y: sepY }, thickness: 0.5, color: rgb(0.75, 0.75, 0.75) });
+
+                            // Nome completo, CPF e RG abaixo da rubrica
+                            const infoSize = 6.5;
+                            const infoMaxW = rubricaBoxW - 12;
+                            const nomeLines = wrapText(entry.nome || '', helveticaBold, infoSize, infoMaxW, 1);
+                            let iy = sepY - 9;
+                            page.drawText(winAnsiSafe(nomeLines[0] || (entry.nome || '—')), { x: boxX + 6, y: iy, size: infoSize, font: helveticaBold, color: rgb(0.1, 0.1, 0.1) });
+                            iy -= 9;
+                            page.drawText(winAnsiSafe('CPF: ' + (entry.cpf || '—')), { x: boxX + 6, y: iy, size: infoSize, font: helveticaFont, color: rgb(0.25, 0.25, 0.25) });
+                            iy -= 9;
+                            page.drawText(winAnsiSafe('RG: ' + (entry.rg || '—')), { x: boxX + 6, y: iy, size: infoSize, font: helveticaFont, color: rgb(0.25, 0.25, 0.25) });
+                        }
+
                         let cy = topY - cardPad - 2;
                         page.drawText(winAnsiSafe(headerText), { x: x + cardPad, y: cy, size: baseFontSize, font: helveticaBold, color: rgb(0, 0, 0) });
                         cy -= (lineH - 1);
@@ -446,7 +528,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         const leftX = x + cardPad;
                         const cpfText = entry.cpf ? `CPF: ${entry.cpf}` : '';
                         const rgText = entry.rg ? `RG: ${entry.rg}` : '';
-                        const cpfRg = (cpfText && rgText) ? `${cpfText} • ${rgText}` : (cpfText || rgText || '—');
+                        const tipoTxt = entry.tipo_assinatura === 'rubrica' ? 'Assinatura por rubrica' : (entry.tipo_assinatura === 'ambos' ? 'CPF/RG + rubrica' : '');
+                        const cpfRg = ((cpfText && rgText) ? `${cpfText} • ${rgText}` : (cpfText || rgText || '—')) + (tipoTxt ? ` • ${tipoTxt}` : '');
                         page.drawText(winAnsiSafe(cpfRg), { x: leftX, y: cy, size: smallFontSize, font: helveticaFont, color: rgb(0.2, 0.2, 0.2) });
                         cy -= (lineH - 1);
 

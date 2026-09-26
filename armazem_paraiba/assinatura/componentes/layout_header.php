@@ -17,6 +17,12 @@ if($hasEnvPaths){
     $baseContex = rtrim($urlBase, "/") . rtrim(dirname($assinaturaDir), "/");
 }
 
+// Expira solicitações pendentes com prazo vencido (status -> 'expirado')
+if (isset($conn) && ($conn instanceof mysqli)) {
+    include_once __DIR__ . "/../tipo_assinatura_helper.php";
+    if (function_exists('assinatura_expirarPendentes')) { assinatura_expirarPendentes($conn); }
+}
+
 $empresaTitulo = trim(strval($_SESSION["empr_tx_nome"] ?? ""));
 if($empresaTitulo === "" && isset($conn) && ($conn instanceof mysqli)){
     $resEmp = @mysqli_query($conn, "SELECT empr_tx_nome FROM empresa LIMIT 1");

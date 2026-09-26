@@ -125,7 +125,7 @@ if ($filtro_status) {
         $where_clauses[] = "(SELECT COUNT(*) FROM assinantes a WHERE a.id_solicitacao = s.id) = (SELECT COUNT(*) FROM assinantes a WHERE a.id_solicitacao = s.id AND a.status = 'assinado')";
     } elseif ($filtro_status == 'expirado') {
         if ($hasExpiresAt) {
-            $where_clauses[] = "(s.expires_at IS NOT NULL AND s.expires_at <> '0000-00-00 00:00:00' AND UTC_TIMESTAMP() > s.expires_at) AND ((SELECT COUNT(*) FROM assinantes a WHERE a.id_solicitacao = s.id AND a.status = 'assinado') < (SELECT COUNT(*) FROM assinantes a WHERE a.id_solicitacao = s.id))";
+            $where_clauses[] = "(LOWER(TRIM(s.status)) = 'expirado' OR ((s.expires_at IS NOT NULL AND s.expires_at <> '0000-00-00 00:00:00' AND UTC_TIMESTAMP() > s.expires_at) AND ((SELECT COUNT(*) FROM assinantes a WHERE a.id_solicitacao = s.id AND a.status = 'assinado') < (SELECT COUNT(*) FROM assinantes a WHERE a.id_solicitacao = s.id))))";
         } else {
             $where_clauses[] = "0=1";
         }

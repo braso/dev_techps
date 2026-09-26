@@ -16,3 +16,7 @@ CREATE TABLE IF NOT EXISTS notificacoes (
   PRIMARY KEY (notf_nb_id),
   KEY idx_notf_entidade (notf_nb_entidade, notf_tx_status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Status 'expirado' nas solicitacoes de assinatura (se a coluna for ENUM, o helper/endpoint amplia automaticamente).
+-- Exemplo manual, ajustando a lista atual de valores:
+-- ALTER TABLE solicitacoes_assinatura MODIFY COLUMN status ENUM('pendente','em_progresso','assinado','cancelado','expirado') NOT NULL DEFAULT 'pendente';

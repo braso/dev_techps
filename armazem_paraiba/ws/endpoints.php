@@ -818,6 +818,22 @@
                 insert_data("ALTER TABLE assinantes ADD COLUMN app_lida_em DATETIME NULL DEFAULT NULL", []);
             }
         }catch(Exception $e){}
+        // Marca como 'expirado' solicitações pendentes com prazo vencido
+        try{
+            $st = get_data("SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'status'");
+            $type = strval($st[0]["Type"] ?? "");
+            if(stripos($type, "enum(") === 0 && stripos($type, "'expirado'") === false){
+                $novo = substr($type, 0, -1) . ",'expirado')";
+                $null = (strtoupper(strval($st[0]["Null"] ?? "")) === "YES") ? "NULL" : "NOT NULL";
+                $def = isset($st[0]["Default"]) && $st[0]["Default"] !== null ? " DEFAULT '" . addslashes(strval($st[0]["Default"])) . "'" : "";
+                insert_data("ALTER TABLE solicitacoes_assinatura MODIFY COLUMN status {$novo} {$null}{$def}", []);
+            }
+            insert_data(
+                "UPDATE solicitacoes_assinatura SET status = 'expirado'
+                 WHERE LOWER(TRIM(status)) IN ('pendente','em_progresso')
+                   AND expires_at IS NOT NULL AND expires_at <> '0000-00-00 00:00:00'
+                   AND expires_at < UTC_TIMESTAMP()", []);
+        }catch(Exception $e){}
     }
 
     // URL pública da pasta assinatura desta empresa.
@@ -893,6 +909,8 @@
         $out = [];
         foreach($rows as $r){
             $expirado = !empty($r["expires_at"]) && $r["expires_at"] !== "0000-00-00 00:00:00" && $r["expires_at"] < $nowUtc;
+            // Só documentos com prazo válido entram nas notificações do app
+            if($expirado) continue;
             $titulo = trim((string)($r["tipo"] ?? ""));
             if($titulo === "") $titulo = trim((string)($r["arquivo"] ?? ""));
             if($titulo === "") $titulo = "Documento " . $r["id_documento"];
@@ -963,5 +981,96 @@
 
         header('Content-Type: application/json');
         echo json_encode(["status" => "success", "id" => $assinanteId, "updated" => $ok]);
+        exit;
+    }
+
+
+    // =====================================================================
+    // LOGIN POR RECONHECIMENTO FACIAL (app)
+    //   POST /ws/loginFacial   campo: descritor (JSON array de 128 floats, gerado pelo face-api.js)
+    //   Compara com user.user_tx_face_descriptor (mesmo cadastro facial do totem) e devolve {status,id,token,nome,username}
+    //   GET  /ws/facial        página HTML (câmera + face-api.js) usada pela WebView do app
+    // =====================================================================
+
+    function make_login_facial(){
+        header('Content-Type: application/json');
+
+        $raw = trim(strval($_POST["descritor"] ?? ""));
+        if($raw === ""){
+            $json = json_decode(file_get_contents('php://input'), true);
+            if(is_array($json) && isset($json["descritor"])){
+                $raw = is_array($json["descritor"]) ? json_encode($json["descritor"]) : strval($json["descritor"]);
+            }
+        }
+        $descritor = json_decode($raw, true);
+        if(!is_array($descritor) || count($descritor) < 64){
+            http_response_code(400);
+            echo json_encode(["status" => "error", "message" => "Descritor facial inválido."]);
+            exit;
+        }
+        $descritor = array_map('floatval', array_values($descritor));
+
+        try{
+            $col = get_data("SHOW COLUMNS FROM user LIKE 'user_tx_face_descriptor'");
+            if(empty($col)){
+                http_response_code(404);
+                echo json_encode(["status" => "error", "message" => "Reconhecimento facial não configurado nesta empresa."]);
+                exit;
+            }
+        }catch(Exception $e){}
+
+        $rows = get_data(
+            "SELECT user_nb_id, user_tx_nome, user_tx_login, user_tx_face_descriptor
+             FROM user
+             WHERE user_tx_status = 'ativo'
+               AND user_tx_face_descriptor IS NOT NULL AND user_tx_face_descriptor <> ''
+             LIMIT 5000"
+        );
+
+        // Mesmo critério do login_facial.php do totem
+        $THRESHOLD = 0.38;
+        $melhor = null; $melhorDist = PHP_FLOAT_MAX;
+        $n = count($descritor);
+        foreach($rows as $row){
+            $banco = json_decode($row["user_tx_face_descriptor"], true);
+            if(!is_array($banco) || count($banco) !== $n) continue;
+            $soma = 0.0;
+            foreach($banco as $i => $v){
+                $d = floatval($v) - $descritor[$i];
+                $soma += $d * $d;
+            }
+            $dist = sqrt($soma);
+            if($dist < $melhorDist){ $melhorDist = $dist; $melhor = $row; }
+        }
+
+        if(!$melhor || $melhorDist > $THRESHOLD){
+            http_response_code(401);
+            echo json_encode([
+                "status" => "error",
+                "message" => "Rosto não reconhecido. Tente novamente ou use matrícula e senha.",
+                "distancia" => $melhorDist === PHP_FLOAT_MAX ? null : round($melhorDist, 4)
+            ]);
+            exit;
+        }
+
+        $token = makeToken((object)$melhor, $_ENV["APP_KEY"]);
+        http_response_code(200);
+        echo json_encode([
+            "status"    => "success",
+            "id"        => intval($melhor["user_nb_id"]),
+            "token"     => $token,
+            "nome"      => $melhor["user_tx_nome"],
+            "username"  => $melhor["user_tx_login"],
+            "distancia" => round($melhorDist, 4)
+        ]);
+        exit;
+    }
+
+    function serve_facial_page(){
+        $file = __DIR__ . "/facial.html";
+        if(!file_exists($file)){ http_response_code(404); echo "facial.html not found"; exit; }
+        header('Content-Type: text/html; charset=utf-8');
+        header('Cache-Control: no-store');
+        readfile($file);
         exit;
     }

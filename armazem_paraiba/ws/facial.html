@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Reconhecimento Facial</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #172643; color: #fff; font-family: -apple-system, Roboto, Arial, sans-serif; overflow: hidden; }
+  #wrap { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; }
+  #cam { position: relative; flex: 1; background: #000; overflow: hidden; }
+  video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+  #mask { position: absolute; inset: 0; pointer-events: none; }
+  #mask .oval { position: absolute; left: 50%; top: 46%; width: 62vw; max-width: 300px; height: 78vw; max-height: 380px;
+    transform: translate(-50%, -50%); border-radius: 50%; border: 3px solid rgba(53,164,188,0.9);
+    box-shadow: 0 0 0 9999px rgba(23,38,67,0.55); transition: border-color .2s; }
+  #mask .oval.ok { border-color: #2ecc71; }
+  #mask .oval.err { border-color: #e74c3c; }
+  #panel { padding: 16px 18px 22px; background: #172643; text-align: center; }
+  #status { font-size: 15px; line-height: 1.35; min-height: 40px; }
+  #sub { font-size: 12px; color: #8a9bb5; margin-top: 4px; min-height: 16px; }
+  .btns { display: flex; gap: 10px; margin-top: 14px; }
+  button { flex: 1; padding: 12px; border: 0; border-radius: 8px; font-size: 14px; font-weight: 600; color: #fff; }
+  #btnRetry { background: #35A4BC; display: none; }
+  #btnCancel { background: #555; }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff;
+    border-radius: 50%; animation: sp .8s linear infinite; vertical-align: -2px; margin-right: 6px; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="cam">
+    <video id="video" autoplay muted playsinline></video>
+    <div id="mask"><div class="oval" id="oval"></div></div>
+  </div>
+  <div id="panel">
+    <div id="status"><span class="spinner"></span>Carregando reconhecimento facial...</div>
+    <div id="sub"></div>
+    <div class="btns">
+      <button id="btnRetry">Tentar novamente</button>
+      <button id="btnCancel">Usar matrícula e senha</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script>
+(function(){
+  const qs = new URLSearchParams(location.search);
+  // Modelos ficam na raiz do sistema (mesmos do totem): /<app>/face_models
+  // Candidatos para a pasta dos modelos: raiz do sistema (como no totem), pasta da empresa, ou ?models=
+  const MODEL_CANDIDATES = qs.get('models')
+    ? [qs.get('models')]
+    : ['../../face_models', '../face_models', '../assinatura/../face_models', '/face_models'].map(p => new URL(p, location.href).href.replace(/\/$/, ''));
+  let MODEL_URL = MODEL_CANDIDATES[0];
+  const ENDPOINT  = new URL('loginFacial', location.href.replace(/facial\/?(\?.*)?$/, '')).href;
+
+  const video = document.getElementById('video');
+  const oval = document.getElementById('oval');
+  const elStatus = document.getElementById('status');
+  const elSub = document.getElementById('sub');
+  const btnRetry = document.getElementById('btnRetry');
+  const btnCancel = document.getElementById('btnCancel');
+
+  let stream = null, loop = null, busy = false, done = false;
+  let blinkSeen = false, eyesOpenFrames = 0, startedAt = 0, stableFrames = 0;
+
+  const RN = window.ReactNativeWebView;
+  const send = (obj) => { try { if (RN) RN.postMessage(JSON.stringify(obj)); } catch (e) {} };
+  const setStatus = (html, sub) => { elStatus.innerHTML = html; elSub.textContent = sub || ''; };
+
+  btnCancel.addEventListener('click', () => { stop(); send({ type: 'facial', action: 'cancel' }); });
+  btnRetry.addEventListener('click', () => { btnRetry.style.display = 'none'; oval.className = 'oval'; start(); });
+
+  function stop(){
+    if (loop) { clearInterval(loop); loop = null; }
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  }
+
+  // EAR (eye aspect ratio) para prova de vida por piscada
+  function dist(a, b){ return Math.hypot(a.x - b.x, a.y - b.y); }
+  function ear(eye){
+    const v1 = dist(eye[1], eye[5]), v2 = dist(eye[2], eye[4]), h = dist(eye[0], eye[3]);
+    return h ? (v1 + v2) / (2 * h) : 1;
+  }
+
+  async function loadModels(){
+    let lastErr = null;
+    for (const url of MODEL_CANDIDATES) {
+      try {
+        const chk = await fetch(url + '/tiny_face_detector_model-weights_manifest.json', { cache: 'force-cache' });
+        if (!chk.ok) { lastErr = new Error('HTTP ' + chk.status + ' em ' + url); continue; }
+        MODEL_URL = url;
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+        ]);
+        return;
+      } catch (e) { lastErr = e; }
+    }
+    throw lastErr || new Error('Modelos não encontrados');
+  }
+
+  async function start(){
+    done = false; busy = false; blinkSeen = false; eyesOpenFrames = 0; stableFrames = 0;
+    try {
+      if (!stream) {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+        video.srcObject = stream;
+        await new Promise(r => { video.onloadedmetadata = () => { video.play(); r(); }; });
+      }
+    } catch (e) {
+      setStatus('Não foi possível acessar a câmera.', 'Verifique a permissão de câmera do aplicativo.');
+      btnRetry.style.display = 'block';
+      send({ type: 'facial', action: 'error', message: 'camera', detail: String(e && e.message || e) });
+      return;
+    }
+    setStatus('Posicione o rosto dentro do contorno', 'Pisque os olhos para confirmar que é você.');
+    startedAt = Date.now();
+    if (loop) clearInterval(loop);
+    loop = setInterval(tick, 200);
+  }
+
+  async function tick(){
+    if (busy || done || !stream) return;
+    busy = true;
+    try {
+      const det = await faceapi
+        .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 }))
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+
+      if (!det) {
+        oval.className = 'oval';
+        stableFrames = 0;
+        setStatus('Posicione o rosto dentro do contorno', 'Aproxime-se e mantenha o rosto iluminado.');
+        return;
+      }
+
+      // Tamanho mínimo do rosto no quadro
+      const box = det.detection.box;
+      const rel = box.width / (video.videoWidth || 640);
+      if (rel < 0.28) {
+        oval.className = 'oval';
+        setStatus('Aproxime o rosto da câmera', '');
+        return;
+      }
+
+      // Prova de vida: exige ao menos uma piscada
+      const lm = det.landmarks;
+      const e = (ear(lm.getLeftEye()) + ear(lm.getRightEye())) / 2;
+      if (e > 0.25) eyesOpenFrames++;
+      if (e < 0.19 && eyesOpenFrames >= 2) blinkSeen = true;
+
+      stableFrames++;
+      if (!blinkSeen) {
+        oval.className = 'oval';
+        const waited = Date.now() - startedAt;
+        setStatus('Rosto detectado', waited > 3000 ? 'Pisque os olhos para continuar.' : 'Mantenha o rosto parado e pisque.');
+        return;
+      }
+      if (stableFrames < 3) return;
+
+      oval.className = 'oval ok';
+      done = true;
+      clearInterval(loop); loop = null;
+      setStatus('<span class="spinner"></span>Verificando...', '');
+      await autenticar(Array.from(det.descriptor));
+    } catch (err) {
+      console.warn(err);
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function autenticar(descriptor){
+    try {
+      const fd = new FormData();
+      fd.append('descritor', JSON.stringify(descriptor));
+      const res = await fetch(ENDPOINT, { method: 'POST', body: fd });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data && data.status === 'success') {
+        oval.className = 'oval ok';
+        setStatus('Reconhecido: <b>' + (data.nome || '') + '</b>', 'Entrando...');
+        stop();
+        send({ type: 'facial', action: 'success', id: data.id, token: data.token, nome: data.nome, username: data.username, distancia: data.distancia });
+      } else {
+        oval.className = 'oval err';
+        const msg = (data && data.message) || 'Rosto não reconhecido.';
+        setStatus(msg, data && data.distancia != null ? 'Distância: ' + data.distancia : '');
+        btnRetry.style.display = 'block';
+        send({ type: 'facial', action: 'fail', message: msg, distancia: data && data.distancia });
+      }
+    } catch (e) {
+      oval.className = 'oval err';
+      setStatus('Falha ao comunicar com o servidor.', String(e && e.message || e));
+      btnRetry.style.display = 'block';
+      send({ type: 'facial', action: 'error', message: 'network', detail: String(e && e.message || e) });
+    }
+  }
+
+  (async () => {
+    try {
+      await loadModels();
+    } catch (e) {
+      setStatus('Não foi possível carregar os modelos de reconhecimento.', MODEL_URL);
+      btnRetry.style.display = 'block';
+      send({ type: 'facial', action: 'error', message: 'models', detail: String(e && e.message || e) });
+      return;
+    }
+    start();
+  })();
+})();
+</script>
+</body>
+</html>

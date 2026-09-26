@@ -4,6 +4,8 @@ $interno = true;
 
 include "../conecta.php";
 include "email_config.php";
+include_once "tipo_assinatura_helper.php";
+assinatura_expirarPendentes($conn);
 
 $token = isset($_GET['token']) ? $_GET['token'] : '';
 
@@ -449,6 +451,32 @@ $rgNormCad = assinatura_normalizarRg($rg_cadastro);
 $cpf_cadastro_mask = assinatura_mascararCpf($cpfDigitsCad);
 $rg_cadastro_mask = assinatura_mascararRg($rgNormCad);
 $cadastro_ok = (strlen($cpfDigitsCad) === 11 && $rgNormCad !== '');
+
+// Tipo de assinatura exigido pela empresa do signatário (cadastro de empresa)
+$tipoAssinatura = assinatura_obterTipoAssinatura($conn, $entiId, strval($email_usuario ?? ''), intval($assinante['empresa_id'] ?? 0));
+$exigeCpfRg = assinatura_tipoExigeCpfRg($tipoAssinatura);
+$exigeRubrica = assinatura_tipoExigeRubrica($tipoAssinatura);
+// Rubrica cadastrada no funcionário (imagem): pré-carrega o quadro de rubrica
+$rubricaCadastroUrl = '';
+if ($exigeRubrica && $entiId > 0) {
+    $chkR = @mysqli_query($conn, "SHOW COLUMNS FROM entidade LIKE 'enti_tx_rubrica'");
+    if ($chkR && mysqli_num_rows($chkR) > 0) {
+        $stR = mysqli_prepare($conn, "SELECT enti_tx_rubrica FROM entidade WHERE enti_nb_id = ? LIMIT 1");
+        if ($stR) {
+            mysqli_stmt_bind_param($stR, "i", $entiId);
+            mysqli_stmt_execute($stR);
+            $rowR = mysqli_fetch_assoc(mysqli_stmt_get_result($stR));
+            mysqli_stmt_close($stR);
+            $relR = trim(strval($rowR["enti_tx_rubrica"] ?? ""));
+            if ($relR !== "" && file_exists(dirname(__DIR__) . "/" . ltrim($relR, "/"))) {
+                $rubricaCadastroUrl = "../" . ltrim($relR, "/");
+            }
+        }
+    }
+}
+$cadastro_cpf_rg_ok = $cadastro_ok;
+// Se a empresa não exige CPF/RG, o cadastro não bloqueia a assinatura
+$cadastro_ok = $exigeCpfRg ? $cadastro_cpf_rg_ok : true;
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -610,6 +638,7 @@ $cadastro_ok = (strlen($cpfDigitsCad) === 11 && $rgNormCad !== '');
                         <span class="block text-xs text-gray-500">Para: <?php echo htmlspecialchars($email_usuario); ?></span>
                         <span class="block text-xs text-gray-500">CPF cadastrado: <span class="font-mono text-gray-700"><?php echo htmlspecialchars($cpf_cadastro_mask !== '' ? $cpf_cadastro_mask : 'não cadastrado'); ?></span></span>
                         <span class="block text-xs text-gray-500">RG cadastrado: <span class="font-mono text-gray-700"><?php echo htmlspecialchars($rg_cadastro_mask !== '' ? $rg_cadastro_mask : 'não cadastrado'); ?></span></span>
+                        <span class="block text-xs text-gray-500">Assinatura exigida: <span class="font-semibold text-gray-700"><?php echo htmlspecialchars(assinatura_tipoDescricao($tipoAssinatura)); ?></span></span>
                     </div>
                 </div>
                 <span class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded font-medium border border-gray-200">
@@ -641,7 +670,8 @@ $cadastro_ok = (strlen($cpfDigitsCad) === 11 && $rgNormCad !== '');
                         <input type="hidden" id="token_solicitacao" name="token_solicitacao" value="<?php echo htmlspecialchars($token); ?>">
                         <input type="hidden" id="papel_usuario" name="papel_usuario" value="<?php echo htmlspecialchars($papel_usuario); ?>">
                         
-                        <?php if (!$cadastro_ok): ?>
+                        <input type="hidden" id="tipo_assinatura" name="tipo_assinatura" value="<?php echo htmlspecialchars($tipoAssinatura); ?>">
+                        <?php if ($exigeCpfRg && !$cadastro_cpf_rg_ok): ?>
                             <div class="mb-4 bg-yellow-50 border border-yellow-200 text-yellow-900 rounded-lg p-3 text-xs leading-relaxed">
                                 Não foi possível validar CPF e RG com o cadastro. Verifique se CPF e RG estão preenchidos no cadastro antes de assinar.
                             </div>
@@ -655,6 +685,7 @@ $cadastro_ok = (strlen($cpfDigitsCad) === 11 && $rgNormCad !== '');
                                 <input type="hidden" name="nome" value="<?php echo htmlspecialchars($nome_usuario); ?>">
                             </div>
 
+                            <?php if ($exigeCpfRg): ?>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label for="cpf" class="block text-xs font-medium text-gray-700 mb-1">CPF</label>
@@ -667,13 +698,63 @@ $cadastro_ok = (strlen($cpfDigitsCad) === 11 && $rgNormCad !== '');
                                         class="w-full text-sm rounded border-gray-300 focus:border-blue-500 focus:ring-blue-500 py-1.5 px-3 bg-gray-50">
                                 </div>
                             </div>
+                            <?php else: ?>
+                            <?php
+                                // Só rubrica: CPF e RG vêm do cadastro do funcionário para constar na rubrica/comprovante
+                                $cpfCadFmt = strlen($cpfDigitsCad) === 11
+                                    ? substr($cpfDigitsCad,0,3).'.'.substr($cpfDigitsCad,3,3).'.'.substr($cpfDigitsCad,6,3).'-'.substr($cpfDigitsCad,9,2)
+                                    : $cpfDigitsCad;
+                            ?>
+                            <input type="hidden" id="cpf" name="cpf" value="<?php echo htmlspecialchars($cpfCadFmt); ?>">
+                            <input type="hidden" id="rg" name="rg" value="<?php echo htmlspecialchars($rgNormCad); ?>">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <span class="block text-xs font-medium text-gray-700 mb-1">CPF (cadastro)</span>
+                                    <div class="w-full text-sm rounded border border-gray-200 py-1.5 px-3 bg-gray-100 text-gray-600 font-mono"><?php echo htmlspecialchars($cpf_cadastro_mask !== '' ? $cpf_cadastro_mask : '—'); ?></div>
+                                </div>
+                                <div>
+                                    <span class="block text-xs font-medium text-gray-700 mb-1">RG (cadastro)</span>
+                                    <div class="w-full text-sm rounded border border-gray-200 py-1.5 px-3 bg-gray-100 text-gray-600 font-mono"><?php echo htmlspecialchars($rg_cadastro_mask !== '' ? $rg_cadastro_mask : '—'); ?></div>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+
+                            <?php if ($exigeRubrica): ?>
+                            <div id="rubricaBox">
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="block text-xs font-medium text-gray-700">
+                                        <i class="fas fa-pencil-alt text-blue-600 mr-1"></i>Rubrica <span class="text-gray-400 font-normal">(desenhe com o dedo ou mouse)</span>
+                                    </label>
+                                    <span class="flex items-center gap-3">
+                                        <?php if ($rubricaCadastroUrl !== ''): ?>
+                                        <button type="button" id="rubricaUsarCadastro" class="text-xs font-semibold text-blue-600 hover:text-blue-800">
+                                            <i class="fas fa-user-check mr-1"></i>Usar rubrica do cadastro
+                                        </button>
+                                        <?php endif; ?>
+                                        <button type="button" id="rubricaLimpar" class="text-xs font-semibold text-red-600 hover:text-red-800">
+                                            <i class="fas fa-eraser mr-1"></i>Limpar
+                                        </button>
+                                    </span>
+                                </div>
+                                <?php if ($rubricaCadastroUrl !== ''): ?>
+                                <p class="text-[11px] text-gray-500 mb-1"><i class="fas fa-info-circle mr-1"></i>Sua rubrica cadastrada foi carregada. Você pode mantê-la ou limpar e desenhar outra.</p>
+                                <?php endif; ?>
+                                <div id="rubricaWrap" class="relative border-2 border-dashed border-gray-300 rounded-lg bg-white overflow-hidden" style="height:140px;touch-action:none;">
+                                    <canvas id="rubricaCanvas" class="w-full h-full block" style="touch-action:none;cursor:crosshair;"></canvas>
+                                    <div id="rubricaHint" class="absolute inset-0 flex items-center justify-center pointer-events-none text-gray-300 text-sm select-none">
+                                        <i class="fas fa-pencil-alt mr-2"></i>Assine aqui
+                                    </div>
+                                </div>
+                                <input type="hidden" id="rubrica" name="rubrica" value="">
+                            </div>
+                            <?php endif; ?>
                         </div>
 
                         <!-- Termo Compacto -->
                         <div class="flex-1 min-h-0 flex flex-col mb-4">
                             <label class="block text-xs font-medium text-gray-700 mb-1">Termo de Aceite</label>
                             <div class="bg-gray-50 p-3 rounded border border-gray-200 text-xs text-gray-600 text-justify overflow-y-auto h-32 scrollbar-thin leading-relaxed mb-2">
-                                <p class="mb-2">Eu, <span id="nome_termo" class="font-bold text-gray-800">[Nome]</span>, portador(a) do CPF nº <span id="cpf_termo" class="font-bold text-gray-800">[CPF]</span>, declaro ciência da MP 2.200-2/2001.</p>
+                                <p class="mb-2">Eu, <span id="nome_termo" class="font-bold text-gray-800">[Nome]</span><?php if ($exigeCpfRg): ?>, portador(a) do CPF nº <span id="cpf_termo" class="font-bold text-gray-800">[CPF]</span><?php else: ?><span id="cpf_termo" class="hidden"></span><?php endif; ?>, declaro ciência da MP 2.200-2/2001<?php if ($exigeRubrica): ?> e que a rubrica desenhada acima é de minha autoria<?php endif; ?>.</p>
                                 <p class="mb-2">A concordância é manifesta e inequívoca, garantindo validade jurídica, autenticidade e integridade.</p>
                                 <p>"A assinatura digital terá validade quando houver concordância expressa."</p>
                             </div>
@@ -705,7 +786,122 @@ $cadastro_ok = (strlen($cpfDigitsCad) === 11 && $rgNormCad !== '');
             <script src="script.js?v=<?php echo $scriptV ? $scriptV : time(); ?>"></script>
             <script>
                 window.PDF_URL_TO_LOAD = <?php echo json_encode("assinar_via_link.php?token=" . urlencode($token) . "&arquivo=1"); ?>;
+                window.ASSINATURA_TIPO = <?php echo json_encode($tipoAssinatura); ?>;
+                window.ASSINATURA_EXIGE_CPF_RG = <?php echo $exigeCpfRg ? 'true' : 'false'; ?>;
+                window.ASSINATURA_EXIGE_RUBRICA = <?php echo $exigeRubrica ? 'true' : 'false'; ?>;
+                window.RUBRICA_CADASTRO_URL = <?php echo json_encode($rubricaCadastroUrl); ?>;
             </script>
+            <?php if ($exigeRubrica): ?>
+            <script>
+            // Quadro de rubrica (desenho à mão) - exporta PNG transparente para o input #rubrica
+            (function(){
+                const canvas = document.getElementById('rubricaCanvas');
+                const wrap = document.getElementById('rubricaWrap');
+                const hint = document.getElementById('rubricaHint');
+                const out = document.getElementById('rubrica');
+                const btnLimpar = document.getElementById('rubricaLimpar');
+                if (!canvas || !wrap || !out) return;
+                const ctx = canvas.getContext('2d');
+                let drawing = false, hasInk = false, last = null;
+                const dpr = Math.max(1, window.devicePixelRatio || 1);
+
+                function resize(){
+                    const snapshot = hasInk ? canvas.toDataURL('image/png') : null;
+                    const w = wrap.clientWidth, h = wrap.clientHeight;
+                    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+                    canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+                    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                    ctx.strokeStyle = '#1e3a8a'; ctx.lineWidth = 2.2;
+                    if (snapshot) { const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0, w, h); img.src = snapshot; }
+                }
+                function pos(e){
+                    const r = canvas.getBoundingClientRect();
+                    return { x: e.clientX - r.left, y: e.clientY - r.top };
+                }
+                function start(e){ e.preventDefault(); drawing = true; last = pos(e); canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId); }
+                function move(e){
+                    if (!drawing) return; e.preventDefault();
+                    const p = pos(e);
+                    ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+                    last = p; hasInk = true; if (hint) hint.style.display = 'none';
+                }
+                function end(e){ if (!drawing) return; drawing = false; exportPng(); }
+                function exportPng(){
+                    if (!hasInk) { out.value = ''; return; }
+                    // Recorta a área desenhada e reduz para no máximo 480x160 px (mantém o PDF leve)
+                    const w = canvas.width, h = canvas.height;
+                    const data = ctx.getImageData(0, 0, w, h).data;
+                    let minX = w, minY = h, maxX = -1, maxY = -1;
+                    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+                        if (data[(y * w + x) * 4 + 3] > 10) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+                    }
+                    if (maxX < 0) { out.value = ''; return; }
+                    const pad = 6 * dpr;
+                    minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
+                    maxX = Math.min(w - 1, maxX + pad); maxY = Math.min(h - 1, maxY + pad);
+                    const cw = maxX - minX + 1, ch = maxY - minY + 1;
+                    const scale = Math.min(1, 480 / cw, 160 / ch);
+                    const oc = document.createElement('canvas');
+                    oc.width = Math.max(1, Math.round(cw * scale)); oc.height = Math.max(1, Math.round(ch * scale));
+                    oc.getContext('2d').drawImage(canvas, minX, minY, cw, ch, 0, 0, oc.width, oc.height);
+                    out.value = oc.toDataURL('image/png');
+                }
+                function clear(){
+                    ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.restore();
+                    hasInk = false; out.value = ''; if (hint) hint.style.display = '';
+                }
+                canvas.addEventListener('pointerdown', start);
+                canvas.addEventListener('pointermove', move);
+                canvas.addEventListener('pointerup', end);
+                canvas.addEventListener('pointercancel', end);
+                canvas.addEventListener('pointerleave', end);
+                if (btnLimpar) btnLimpar.addEventListener('click', clear);
+                window.addEventListener('resize', resize);
+                resize();
+                window.rubricaLimpar = clear;
+
+                // Rubrica do cadastro do funcionário: desenha no quadro removendo o fundo branco
+                function carregarRubricaCadastro(){
+                    const url = window.RUBRICA_CADASTRO_URL || '';
+                    if (!url) return;
+                    const img = new Image();
+                    img.onload = function(){
+                        clear();
+                        const w = wrap.clientWidth, h = wrap.clientHeight;
+                        const pad = 10;
+                        const scale = Math.min((w - pad * 2) / img.width, (h - pad * 2) / img.height);
+                        const dw = img.width * scale, dh = img.height * scale;
+                        const dx = (w - dw) / 2, dy = (h - dh) / 2;
+                        // Desenha em canvas temporário para tratar o fundo branco
+                        const tc = document.createElement('canvas');
+                        tc.width = Math.max(1, Math.round(dw * dpr)); tc.height = Math.max(1, Math.round(dh * dpr));
+                        const tctx = tc.getContext('2d');
+                        tctx.drawImage(img, 0, 0, tc.width, tc.height);
+                        try {
+                            const id = tctx.getImageData(0, 0, tc.width, tc.height);
+                            const d = id.data;
+                            for (let i = 0; i < d.length; i += 4) {
+                                const r = d[i], g = d[i+1], b = d[i+2];
+                                const lum = (r + g + b) / 3;
+                                if (lum > 235) { d[i+3] = 0; }               // branco -> transparente
+                                else if (lum > 170) { d[i+3] = Math.round(d[i+3] * (235 - lum) / 65); } // suaviza borda
+                            }
+                            tctx.putImageData(id, 0, 0);
+                        } catch (e) {}
+                        ctx.drawImage(tc, dx, dy, dw, dh);
+                        hasInk = true; if (hint) hint.style.display = 'none';
+                        exportPng();
+                    };
+                    img.onerror = function(){ console.warn('Não foi possível carregar a rubrica cadastrada.'); };
+                    img.src = url;
+                }
+                const btnUsar = document.getElementById('rubricaUsarCadastro');
+                if (btnUsar) btnUsar.addEventListener('click', carregarRubricaCadastro);
+                carregarRubricaCadastro();
+            })();
+            </script>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
 </div>

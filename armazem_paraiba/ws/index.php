@@ -8,7 +8,7 @@
     $elements = explode('/', $path);
     //após a linha acima temos elements[0]=api e o elements[1]=login
     
-    if(empty($elements[0]) || empty($elements[1]) || !in_array($elements[1], ['login', 'login_step1', 'login_step2', 'login_rfid', 'login_digital', 'refresh', 'users', 'journeys', 'delLastRegister', 'loginRfid', 'loginSE', 'plates', 'signatures'])){
+    if(empty($elements[0]) || empty($elements[1]) || !in_array($elements[1], ['login', 'login_step1', 'login_step2', 'login_rfid', 'login_digital', 'refresh', 'users', 'journeys', 'delLastRegister', 'loginRfid', 'loginSE', 'plates', 'signatures', 'loginFacial', 'facial'])){
         echo "not found";
         exit;
     }
@@ -104,6 +104,18 @@
             if($_SERVER['REQUEST_METHOD'] == "POST"){
                 make_login_se();
             }
+        break;
+
+        // Reconhecimento facial (app)
+        case 'loginFacial':
+            if($_SERVER['REQUEST_METHOD'] == "POST"){
+                make_login_facial();
+            }else{
+                echo "not found";
+            }
+        break;
+        case 'facial':
+            serve_facial_page();
         break;
 
     }

@@ -8,6 +8,18 @@
     include_once "load_env.php";
     include_once "conecta.php";
 
+	// Tipo de assinatura eletrônica exigido nos documentos da empresa
+	// cpf_rg = CPF e RG (padrão) | rubrica = desenho da rubrica | ambos = CPF/RG + rubrica
+	function empresa_garantirColunaTipoAssinatura(){
+		global $conn;
+		if(!isset($conn) || !($conn instanceof mysqli)) return;
+		$r = mysqli_query($conn, "SHOW COLUMNS FROM empresa LIKE 'empr_tx_tipoAssinatura'");
+		if($r && mysqli_num_rows($r) === 0){
+			mysqli_query($conn, "ALTER TABLE empresa ADD COLUMN empr_tx_tipoAssinatura ENUM('cpf_rg','rubrica','ambos') NOT NULL DEFAULT 'cpf_rg'");
+		}
+	}
+	empresa_garantirColunaTipoAssinatura();
+
 	function excluirEmpresa(){
 		remover("empresa",$_POST["id"]);
 		index();
@@ -337,7 +349,8 @@
 			"nome", "fantasia", "cnpj", "cep", "endereco", "bairro", "numero", "complemento",
 			"referencia", "fone1", "fone2", "email", "inscricaoEstadual", "inscricaoMunicipal",
 			"regimeTributario", "status", "contato",
-			"ftpServer", "ftpUsername", "ftpUserpass", "dataRegistroCNPJ"
+			"ftpServer", "ftpUsername", "ftpUserpass", "dataRegistroCNPJ",
+			"tipoAssinatura"
 		];
 
 		foreach($campos as $campo){
@@ -604,7 +617,7 @@
 			"nome", "fantasia", "complemento", "referencia", "fone1",
 			"fone2", "contato", "email", "inscricaoEstadual", "inscricaoMunicipal",
 			"regimeTributario", "logo", "domain", "Ehmatriz",
-			"ftpServer", "ftpUsername"
+			"ftpServer", "ftpUsername", "tipoAssinatura"
 		];
 		foreach($campos as $campo){
 			if(empty($input_values[$campo])){
@@ -626,6 +639,11 @@
         $existeMatrizQtd = mysqli_fetch_assoc(query("SELECT COUNT(*) AS qtd FROM empresa WHERE empr_tx_Ehmatriz = 'sim';"));
         $ehMatrizDefault = !empty($input_values["Ehmatriz"]) ? $input_values["Ehmatriz"] : ((intval($existeMatrizQtd["qtd"]?? 0) > 0) ? "nao" : "sim");
         $campo_Ehmatriz = combo("É matriz?","matriz", $ehMatrizDefault, 2, ["sim" => "Sim", "nao" => "Não"]);
+
+        $tiposAssinatura = ["cpf_rg" => "CPF e RG", "rubrica" => "Rubrica (desenho)", "ambos" => "CPF, RG e Rubrica"];
+        $tipoAssinaturaAtual = !empty($input_values["tipoAssinatura"]) && isset($tiposAssinatura[$input_values["tipoAssinatura"]]) ? $input_values["tipoAssinatura"] : "cpf_rg";
+        $campo_tipoAssinatura = combo("Assinatura eletrônica","tipoAssinatura", $tipoAssinaturaAtual, 3, $tiposAssinatura);
+        $texto_tipoAssinatura = texto("Assinatura eletrônica", $tiposAssinatura[$tipoAssinaturaAtual], 3);
 
 		$cidade = [
 			"cida_tx_uf" => "",
@@ -663,6 +681,7 @@
 				texto("Data Reg. CNPJ",			$input_values["dataRegistroCNPJ"],3),
 				$campo_dominio,
 				$campo_Ehmatriz,
+				$texto_tipoAssinatura,
 				
 				texto("Servidor FTP",$input_values["ftpServer"], 3),
 				texto("Usuário FTP",$input_values["ftpUsername"], 3)
@@ -693,6 +712,7 @@
 				arquivo("Logo (.png, .jpeg)".$iconeExcluirLogo,"logo",$input_values["logo"],4),
 				$campo_dominio,
 				$campo_Ehmatriz,
+				$campo_tipoAssinatura,
 				
 				campo("Servidor FTP","ftpServer",$input_values["ftpServer"],3),
 				campo("Usuário FTP","ftpUsername",$input_values["ftpUsername"],3),

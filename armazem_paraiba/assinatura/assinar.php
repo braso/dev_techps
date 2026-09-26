@@ -444,6 +444,8 @@ if (($_SERVER["REQUEST_METHOD"] ?? "") !== "POST") {
 }
 
 ensureAssinaturaTables($conn);
+require_once __DIR__ . "/tipo_assinatura_helper.php";
+assinatura_garantirColunasRubrica($conn);
 
 $token = trim(strval($_POST["token_solicitacao"] ?? ""));
 if ($token === "") {
@@ -458,6 +460,7 @@ $longitude = trim(strval($_POST["longitude"] ?? ""));
 $deviceInfo = trim(strval($_POST["device_info"] ?? ""));
 $hash = trim(strval($_POST["hash_assinatura"] ?? ""));
 $dataHora = parseDataHora(strval($_POST["data_hora"] ?? ""));
+$rubricaDataUrl = strval($_POST["rubrica"] ?? "");
 
 $arquivo = $_FILES["arquivo_assinado"] ?? null;
 
@@ -598,15 +601,29 @@ if (!$jaAssinado) {
         }
     }
 
+    // Tipo de assinatura exigido pela empresa (cadastro de empresa): cpf_rg | rubrica | ambos
+    $tipoAssinatura = assinatura_obterTipoAssinatura($conn, $entiId, strval($emailSolicitacao ?? ""), intval($row["empresa_id"] ?? 0));
+    $exigeCpfRg = assinatura_tipoExigeCpfRg($tipoAssinatura);
+    $exigeRubrica = assinatura_tipoExigeRubrica($tipoAssinatura);
+
     $cpfDigitsCad = normalizarCpf($cpfCad);
     $rgNormCad = normalizarRg($rgCad);
-    if (strlen($cpfDigitsCad) !== 11 || $rgNormCad === "") {
-        jsonError("Não foi possível validar CPF e RG com o cadastro. Verifique se CPF e RG estão preenchidos no cadastro antes de assinar.", 422);
+    if ($exigeCpfRg) {
+        if (strlen($cpfDigitsCad) !== 11 || $rgNormCad === "") {
+            jsonError("Não foi possível validar CPF e RG com o cadastro. Verifique se CPF e RG estão preenchidos no cadastro antes de assinar.", 422);
+        }
+        $cpfDigitsInput = normalizarCpf($cpf);
+        $rgNormInput = normalizarRg($rg);
+        if ($cpfDigitsInput !== $cpfDigitsCad || $rgNormInput !== $rgNormCad) {
+            jsonError("CPF e RG informados não conferem com o cadastro. Revise os dados e tente novamente.", 422);
+        }
+    } else {
+        // Assinatura só por rubrica: registra os dados do cadastro para auditoria
+        if (normalizarCpf($cpf) === "") $cpf = $cpfCad;
+        if (normalizarRg($rg) === "") $rg = $rgCad;
     }
-    $cpfDigitsInput = normalizarCpf($cpf);
-    $rgNormInput = normalizarRg($rg);
-    if ($cpfDigitsInput !== $cpfDigitsCad || $rgNormInput !== $rgNormCad) {
-        jsonError("CPF e RG informados não conferem com o cadastro. Revise os dados e tente novamente.", 422);
+    if ($exigeRubrica && !preg_match('#^data:image/png;base64,#i', trim($rubricaDataUrl))) {
+        jsonError("A rubrica é obrigatória. Desenhe sua rubrica no quadro indicado.", 422);
     }
     if (!$arquivo || !is_array($arquivo) || ($arquivo["error"] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
         jsonError("Arquivo assinado não enviado.");
@@ -631,6 +648,14 @@ if (!$jaAssinado) {
 
     $caminhoRel = "docAssinado/" . $fileName;
 
+    $rubricaPath = "";
+    if ($exigeRubrica) {
+        $rubricaPath = assinatura_salvarRubricaBase64($rubricaDataUrl, $protocolo);
+        if ($rubricaPath === "") {
+            jsonError("Rubrica inválida. Limpe o quadro e desenhe novamente.", 422);
+        }
+    }
+
     $ip = trim(strval($_SERVER["REMOTE_ADDR"] ?? ""));
     $ua = trim(strval($_SERVER["HTTP_USER_AGENT"] ?? ""));
 
@@ -639,14 +664,17 @@ if (!$jaAssinado) {
         "rg" => $rg,
         "latitude" => $latitude,
         "longitude" => $longitude,
-        "device_info" => $deviceInfo
+        "device_info" => $deviceInfo,
+        "tipo_assinatura" => $tipoAssinatura,
+        "rubrica_path" => $rubricaPath
     ];
     $metadadosJson = json_encode($metadados, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
     $cpfDigits = normalizarCpf($cpf);
-    $stmtUpd = mysqli_prepare($conn, "UPDATE assinantes SET status = 'assinado', data_assinatura = ?, ip = ?, metadados = ?, cpf = ? WHERE token = ? LIMIT 1");
+    $rubricaPathDb = $rubricaPath !== "" ? $rubricaPath : null;
+    $stmtUpd = mysqli_prepare($conn, "UPDATE assinantes SET status = 'assinado', data_assinatura = ?, ip = ?, metadados = ?, cpf = ?, rubrica_path = ? WHERE token = ? LIMIT 1");
     if ($stmtUpd) {
-        mysqli_stmt_bind_param($stmtUpd, "sssss", $dataHora, $ip, $metadadosJson, $cpfDigits, $token);
+        mysqli_stmt_bind_param($stmtUpd, "ssssss", $dataHora, $ip, $metadadosJson, $cpfDigits, $rubricaPathDb, $token);
         mysqli_stmt_execute($stmtUpd);
         mysqli_stmt_close($stmtUpd);
     }
