@@ -147,6 +147,11 @@
 				$paginas["cadastros"]["/cadastro_comunicado.php"] = "Comunicado";
 			}
 
+			// Criação automática de empresas: só no domínio mestre (PROVISIONAMENTO_HABILITADO=1 no .env)
+			if (trim(strval($_ENV["PROVISIONAMENTO_HABILITADO"] ?? "")) === "1") {
+				$paginas["cadastros"]["/provisionamento_empresa.php"] = "Nova Empresa (automático)";
+			}
+
 			// Perfil vinculado ao usuário (se existir)
 			$perfilId = 0;
 			if(!empty($_SESSION["user_nb_id"])){

@@ -1,0 +1,6 @@
+# Provisionador: somente linha de comando (cron). Nada aqui deve ser acessado pela web.
+Require all denied
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Deny from all
+</IfModule>

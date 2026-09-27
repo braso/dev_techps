@@ -85,7 +85,7 @@
 			"ississi",
 			[$versionCode, $versionName, $arquivo, $tamanho, $notas, $obrig, intval($_SESSION["user_nb_id"] ?? 0)]
 		);
-		set_status("Versão {$versionName} (código {$versionCode}) publicada. Os aparelhos receberão o aviso de atualização.");
+		set_status("Versão ".htmlspecialchars($versionName)." (código {$versionCode}) publicada. Os aparelhos receberão o aviso de atualização.");
 		index(); exit;
 	}
 
@@ -97,11 +97,11 @@
 		if(!$row){ set_status("ERRO: versão não encontrada."); index(); exit; }
 		if($row["apve_tx_status"] === "ativo"){
 			query("UPDATE app_versao SET apve_tx_status = 'inativo' WHERE apve_nb_id = ?", "i", [$id]);
-			set_status("Versão {$row["apve_tx_versionName"]} desativada. O app deixa de oferecer essa atualização.");
+			set_status("Versão ".htmlspecialchars($row["apve_tx_versionName"])." desativada. O app deixa de oferecer essa atualização.");
 		}else{
 			query("UPDATE app_versao SET apve_tx_status = 'inativo'");
 			query("UPDATE app_versao SET apve_tx_status = 'ativo' WHERE apve_nb_id = ?", "i", [$id]);
-			set_status("Versão {$row["apve_tx_versionName"]} ativada.");
+			set_status("Versão ".htmlspecialchars($row["apve_tx_versionName"])." ativada.");
 		}
 		index(); exit;
 	}
@@ -115,7 +115,7 @@
 			$path = APP_VERSAO_DIR . basename(strval($row["apve_tx_arquivo"]));
 			if(is_file($path)) @unlink($path);
 			query("DELETE FROM app_versao WHERE apve_nb_id = ?", "i", [$id]);
-			set_status("Versão {$row["apve_tx_versionName"]} excluída.");
+			set_status("Versão ".htmlspecialchars($row["apve_tx_versionName"])." excluída.");
 		}
 		index(); exit;
 	}
@@ -134,6 +134,10 @@
 
 		cabecalho("Versões do App (Android)");
 ?>
+<?php if(!empty($_POST["msg_status"])): $__erro = is_int(strpos(strval($_POST["msg_status"]), "ERRO")); ?>
+<div class="alert <?php echo $__erro ? "alert-danger" : "alert-success"; ?>" style="margin-bottom:16px;font-size:13.5px"><?php echo $_POST["msg_status"]; ?></div>
+<?php endif; ?>
+
 <style>
 .apv-wrap{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap}
 .apv-card{background:#fff;border:1px solid #e2e2e2;border-radius:8px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:14px}

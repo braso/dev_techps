@@ -31,3 +31,6 @@ node_modules/
 # Ignorar arquivos de configuração de dependências (se não quiser versionar)
 package-lock.json
 package.json
+
+# Provisionador: dados gerados no servidor
+/empresas.json
