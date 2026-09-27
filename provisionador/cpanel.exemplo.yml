@@ -1,0 +1,7 @@
+# EXEMPLO (não está em uso). Substitui os ~40 "export" + "cp" do .cpanel.yml por uma varredura.
+# Só trocar o .cpanel.yml por este conteúdo depois de validar o teste.
+deployment:
+  tasks:
+    - export REPO=/home/tech1694/repositories/prod
+    - export DESTINO=/home/tech1694/public_html/gestaodeponto
+    - /bin/bash $REPO/provisionador/deploy_empresas.sh $REPO $REPO/armazem_paraiba $DESTINO

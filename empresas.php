@@ -85,6 +85,22 @@
         "sambaiba"          => "SAMBAIBA",
     ];
 
+    // Empresas criadas pelo provisionador (empresas.json). Sem o arquivo, vale só a lista acima.
+    $__empresasJson = __DIR__."/empresas.json";
+    if(is_file($__empresasJson)){
+        $__extras = json_decode((string)@file_get_contents($__empresasJson), true);
+        if(is_array($__extras)){
+            foreach($__extras as $__e){
+                $__sigla = strtoupper(trim(strval($__e["sigla"] ?? "")));
+                $__pasta = trim(strval($__e["pasta"] ?? ""));
+                if($__sigla === "" || !preg_match('/^[a-z][a-z0-9_]{2,39}$/', $__pasta)){ continue; }
+                if(isset($empresas[$__sigla]) || in_array($__pasta, $empresas, true)){ continue; } // nunca sobrescreve a lista fixa
+                $empresas[$__sigla] = $__pasta;
+                $empresasNomes[$__pasta] = trim(strval($__e["nome"] ?? $__pasta));
+            }
+        }
+    }
+
     $empresa_array = array_values($empresas); //Utilizado nos arquivos que importam este.
 
     if(empty($_POST["empresa"]) && !empty($_GET["empresa"])){
