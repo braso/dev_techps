@@ -18,7 +18,6 @@
 			mysqli_query($conn, "ALTER TABLE empresa ADD COLUMN empr_tx_tipoAssinatura ENUM('cpf_rg','rubrica','ambos') NOT NULL DEFAULT 'cpf_rg'");
 		}
 	}
-	empresa_garantirColunaTipoAssinatura();
 
 	function excluirEmpresa(){
 		remover("empresa",$_POST["id"]);
@@ -304,6 +303,7 @@
 	}
 
 	function cadastrarEmpresa(){
+		empresa_garantirColunaTipoAssinatura();
 
 		$camposObrig = [
 			"cnpj" => "CNPJ",
@@ -357,6 +357,9 @@
 			if (!empty($_POST[$campo])) {
 				$empresa["empr_tx_".$campo] = $_POST[$campo];
 			}
+		}
+		if(isset($empresa["empr_tx_tipoAssinatura"]) && !in_array($empresa["empr_tx_tipoAssinatura"], ["cpf_rg", "rubrica", "ambos"], true)){
+			$empresa["empr_tx_tipoAssinatura"] = "cpf_rg";
 		}
 		if(empty($_POST["id"])){
 			$empresa = array_merge($empresa, [
@@ -568,6 +571,7 @@
 	}
 
 	function visualizarCadastro(){
+		empresa_garantirColunaTipoAssinatura();
 		global $a_mod;
 
 		cabecalho("Cadastro Empresa/Filial");
