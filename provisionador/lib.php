@@ -63,7 +63,7 @@ function prov_config(): array {
         'exclude_paths'    => ['.env', '.provisionado', 'arquivos', 'assinatura/uploads', 'assinatura/docAssinado', 'assinatura/docFinalizado',
                                'assinatura/rubricas', 'assinatura/pfx', 'assinatura/docs', 'treinamento/uploads', 'ws/app'],
         // Pastas vazias que a empresa nova precisa ter
-        'empty_dirs'       => ['arquivos', 'assinatura/uploads', 'assinatura/docAssinado', 'assinatura/docFinalizado', 'assinatura/rubricas', 'ws/app'],
+        'empty_dirs'       => ['arquivos', 'assinatura/uploads', 'assinatura/docAssinado', 'assinatura/docFinalizado', 'assinatura/rubricas', 'treinamento/uploads', 'ws/app'],
     ];
     return $cfg;
 }
