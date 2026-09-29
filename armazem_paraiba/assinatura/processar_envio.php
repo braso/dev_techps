@@ -152,6 +152,22 @@ function ensureAssinaturaTables($conn): void {
         if ($checkSalvarDoc && mysqli_num_rows($checkSalvarDoc) == 0) {
             mysqli_query($conn, "ALTER TABLE assinantes ADD COLUMN salvar_documento_funcionario ENUM('sim','nao') NOT NULL DEFAULT 'nao'");
         }
+
+        // Corrige assinantes antigos criados sem o vínculo (modo lote/separar páginas):
+        // quando o e-mail identifica um único funcionário ativo, recupera o enti_nb_id
+        // para o documento voltar a aparecer no sino, em pendentes.php e no app.
+        @mysqli_query($conn,
+            "UPDATE assinantes a
+             JOIN (
+                 SELECT LOWER(TRIM(enti_tx_email)) AS email, MIN(enti_nb_id) AS enti_nb_id
+                 FROM entidade
+                 WHERE enti_tx_status = 'ativo' AND COALESCE(TRIM(enti_tx_email), '') <> ''
+                 GROUP BY LOWER(TRIM(enti_tx_email))
+                 HAVING COUNT(*) = 1
+             ) e ON e.email = LOWER(TRIM(a.email))
+             SET a.enti_nb_id = e.enti_nb_id
+             WHERE a.enti_nb_id IS NULL AND COALESCE(TRIM(a.email), '') <> ''"
+        );
     }
 }
 
@@ -600,14 +616,17 @@ if($modo_envio === "separar_paginas"){
             $tokenAssinante = bin2hex(random_bytes(32));
             $funcao = "Funcionário";
 
-            $sqlAssinante = "INSERT INTO assinantes (id_solicitacao, nome, email, funcao, ordem, token, status)
-                VALUES (?, ?, ?, ?, 1, ?, 'pendente')";
+            // Grava o vínculo com o funcionário ($idEntidade): é por ele que o sino de
+            // notificações, a tela de pendentes e o app encontram o documento. Sem isso o
+            // aviso nunca chega para quem tem login no sistema.
+            $sqlAssinante = "INSERT INTO assinantes (id_solicitacao, enti_nb_id, nome, email, funcao, ordem, token, status)
+                VALUES (?, NULLIF(?,0), ?, ?, ?, 1, ?, 'pendente')";
             $stmtAssinante = mysqli_prepare($conn, $sqlAssinante);
             if(!$stmtAssinante){
                 $erros++;
                 continue;
             }
-            mysqli_stmt_bind_param($stmtAssinante, "issss", $id_solicitacao, $nome, $email, $funcao, $tokenAssinante);
+            mysqli_stmt_bind_param($stmtAssinante, "iissss", $id_solicitacao, $idEntidade, $nome, $email, $funcao, $tokenAssinante);
             if(!mysqli_stmt_execute($stmtAssinante)){
                 $erros++;
                 continue;
