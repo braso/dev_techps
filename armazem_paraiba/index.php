@@ -42,17 +42,17 @@
 	function showWelcome($usuario, $turnoAtual, $horaEntrada) {
 		global $turnoAtual;
 
-		// Só quem é Administrador/Super Administrador, ou tem permissão explícita de
-		// telas de gestão (empresa ou funcionário), enxerga a Torre de Comando. Quem
-		// bate ponto cai na batida; quem não tem nem essa permissão vai para a tela de
-		// boas-vindas (antes ia para a batida de ponto de qualquer jeito).
+		// A Torre de Comando embutida aqui só aparece para quem tem a flag
+		// "Torre de Comando" (/dashboard.php) liberada no perfil de acesso, ou
+		// para Administrador/Super Administrador. Quem não tem segue para a tela
+		// inicial que o perfil permite: batida de ponto para quem bate ponto,
+		// boas-vindas (bem_vindo.php) para quem não bate.
 		include_once __DIR__."/check_permission.php";
 		$nivel = $_SESSION["user_tx_nivel"] ?? "";
 		$isAdmin = (bool) preg_match('/administrador/i', $nivel);
-		$temPermissaoGestao = function_exists('temPermissaoMenu')
-			&& (temPermissaoMenu('/cadastro_empresa.php') || temPermissaoMenu('/cadastro_funcionario.php'));
+		$temTorreComando = function_exists('temPermissaoMenu') && temPermissaoMenu('/dashboard.php');
 
-		if (!$isAdmin && !$temPermissaoGestao) {
+		if (!$isAdmin && !$temTorreComando) {
 			echo "<meta http-equiv='refresh' content='0; url=.".paginaInicialPermitida()."'/>";
 			exit;
 		}
@@ -134,11 +134,13 @@
 					echo json_encode($_SESSION);
 					exit;
 				}
-				// Perfis operacionais vão para a tela inicial que o perfil deles permite:
-				// batida de ponto para quem bate ponto, boas-vindas para quem não bate.
-				// Admin/Super Admin continuam no fluxo padrão abaixo (showWelcome).
-				if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário", "Terceirizado"])){
-					include_once __DIR__."/check_permission.php";
+				// Quem tem a flag da Torre de Comando (/dashboard.php) liberada no
+				// perfil de acesso entra nela (showWelcome, abaixo). Os demais seguem
+				// para a tela inicial que o perfil permite: batida de ponto para quem
+				// bate ponto, boas-vindas (bem_vindo.php) para quem não bate.
+				include_once __DIR__."/check_permission.php";
+				$temTorreComando = temPermissaoMenu('/dashboard.php');
+				if(!$temTorreComando && in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário", "Terceirizado"])){
 					$paginaInicial = paginaInicialPermitida();
 					if ($paginaInicial !== ""){
 						echo "<meta http-equiv='refresh' content='0; url=.".$paginaInicial."'/>";

@@ -1,0 +1,1 @@
+[2026-09-29 09:23:15] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=1 entidade=16 termo=7 solicitacao=3

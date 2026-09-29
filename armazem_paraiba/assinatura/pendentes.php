@@ -170,7 +170,24 @@ if($tab === "pendentes"){
 	echo "</div>";
 
 	if($countPend > 0){
-		echo "<div class='table-responsive'><table class='table table-striped table-bordered table-hover'>";
+		// No celular a tabela rola na horizontal e a coluna da ação (Assinar) ficava
+		// escondida no fim da rolagem. Aqui ela fica fixa à direita, sempre visível.
+		echo "<style>
+			@media (max-width: 991px){
+				table.assin-pendentes th:last-child,
+				table.assin-pendentes td:last-child{
+					position: sticky;
+					right: 0;
+					background-color: #fff;
+					z-index: 2;
+					box-shadow: -6px 0 8px -6px rgba(0,0,0,.18);
+				}
+				table.assin-pendentes thead th:last-child{ z-index: 3; }
+				table.assin-pendentes.table-striped > tbody > tr:nth-of-type(odd) > td:last-child{ background-color: #f9f9f9; }
+				table.assin-pendentes.table-hover > tbody > tr:hover > td:last-child{ background-color: #f5f5f5; }
+			}
+		</style>";
+		echo "<div class='table-responsive'><table class='table table-striped table-bordered table-hover assin-pendentes'>";
 		echo "<thead><tr>";
 		echo "<th><i class='fa fa-file-pdf-o'></i> Documento</th>";
 		echo "<th><i class='fa fa-tag'></i> Tipo</th>";
