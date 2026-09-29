@@ -104,6 +104,22 @@
 			width: -webkit-fill-available;
 		}
 
+		/* ── Painel do sino de notificações ──
+		   No computador é uma caixa de 320px; no celular ocupa a largura da tela
+		   (posicionado por JS logo abaixo do sino) em vez de ficar cortado. */
+		.notif-sino-menu{
+			width: 320px;
+			max-width: calc(100vw - 20px);
+			max-height: 420px;
+			overflow-y: auto;
+			padding: 0;
+		}
+
+		.notif-sino-menu > li > a{
+			white-space: normal !important;   /* texto longo quebra linha em vez de ser cortado */
+			word-break: break-word;
+		}
+
 		.form-actions {
 			display: flex;
 			flex-wrap: wrap;
@@ -162,6 +178,47 @@
 			
 			.page-header-top .top-menu .navbar-nav > li > a{
 				padding: 12px 6px !important;
+			}
+
+			/* Nenhum menu do cabeçalho pode passar da largura da tela. */
+			.page-header-top .top-menu .dropdown-menu{
+				max-width: calc(100vw - 20px);
+			}
+
+		}
+
+		/* Celular e tablet: o painel do sino sai do fluxo do cabeçalho para não ser cortado. */
+		@media(max-width:991px) {
+			/* Painel do sino: fixo na tela, da borda esquerda à direita. */
+			.notif-sino-menu{
+				position: fixed !important;
+				left: 10px !important;
+				right: 10px !important;
+				width: auto !important;
+				max-width: none !important;
+				max-height: calc(100vh - 130px);
+				overflow-y: auto;
+				overflow-x: hidden;
+				z-index: 10001;
+				border-radius: 8px;
+				box-shadow: 0 6px 24px rgba(0,0,0,.25);
+				margin: 0 !important;   /* o tema empurra o menu 7px para a esquerda */
+			}
+
+			/* A setinha do tema aponta para o canto: não faz sentido no painel largo. */
+			.notif-sino-menu:before,
+			.notif-sino-menu:after{
+				display: none !important;
+			}
+
+			/* Modal de configuração do sino: margem pequena e rolagem própria. */
+			#modalConfigurarNotificacoes .modal-dialog{
+				margin: 10px;
+			}
+
+			#modalConfigurarNotificacoes .modal-body{
+				max-height: calc(100vh - 200px);
+				overflow-y: auto;
 			}
 		}
 
@@ -442,13 +499,13 @@
 							<?php if(!empty($__notifCategorias)): ?>
 							<!-- INICIO SINO DE NOTIFICAÇÕES (gestão) -->
 							<li class="dropdown dropdown-separator">
-								<a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true" style="text-decoration: none; margin: 0px 5px; display: flex; align-items: center; justify-content: center; position: relative;" title="Notificações">
+								<a href="javascript:;" id="notifSinoToggle" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true" style="text-decoration: none; margin: 0px 5px; display: flex; align-items: center; justify-content: center; position: relative;" title="Notificações">
 									<i class="fa fa-bell" style="font-size: 18px; color: <?=($__notifTotal > 0 ? "#F3C200" : "#9aa3ad")?>;"></i>
 									<?php if($__notifTotal > 0): ?>
 										<span class="badge badge-danger" style="position:absolute; top:-2px; right:-4px; font-size:10px; padding:2px 5px; border-radius:10px;"><?=intval($__notifTotal)?></span>
 									<?php endif; ?>
 								</a>
-								<ul class="dropdown-menu dropdown-menu-default" style="width:320px; max-height:420px; overflow-y:auto; padding:0;">
+								<ul id="notifSinoMenu" class="dropdown-menu dropdown-menu-default notif-sino-menu">
 									<li style="padding:10px 14px; border-bottom:1px solid #eee; font-weight:600; color:#333;">Notificações</li>
 									<?php if($assinPendCount > 0): ?>
 										<li>
@@ -477,6 +534,69 @@
 								</ul>
 							</li>
 							<!-- FIM SINO DE NOTIFICAÇÕES (gestão) -->
+							<script>
+							/* Sino no celular/tablet:
+							   1) o abre-e-fecha sozinho vinha do plugin de "hover" do tema (data-hover),
+							      que abria no toque e o clique em seguida fechava. Em tela pequena o
+							      clique passa a ser controlado aqui, sem o Bootstrap nem o hover;
+							   2) o painel é posicionado fixo na tela, logo abaixo do sino, para não
+							      ser cortado pelas bordas do cabeçalho. */
+							(function(){
+								if(!window.jQuery) return;
+								jQuery(function($){
+									var $sino = $("#notifSinoToggle");
+									var $menu = $("#notifSinoMenu");
+									if(!$sino.length || !$menu.length) return;
+									var $item = $sino.closest("li");
+
+									function telaPequena(){
+										return window.innerWidth <= 991;
+									}
+
+									function posicionarMenuSino(){
+										if(!telaPequena()){
+											$menu.css("top", "");
+											return;
+										}
+										var area = $sino[0].getBoundingClientRect();
+										$menu.css("top", Math.round(area.bottom + 6) + "px");
+									}
+
+									// Em tela pequena, tira o sino das mãos do Bootstrap e do plugin de hover.
+									if(telaPequena()){
+										$sino.removeAttr("data-toggle").removeAttr("data-hover").attr("data-close-others", "false");
+									}
+
+									$sino.on("click", function(evento){
+										if(!telaPequena()){
+											setTimeout(posicionarMenuSino, 0);
+											return;
+										}
+										evento.preventDefault();
+										evento.stopPropagation();
+										var vaiAbrir = !$item.hasClass("open");
+										$(".dropdown.open").removeClass("open");
+										$item.toggleClass("open", vaiAbrir);
+										if(vaiAbrir) posicionarMenuSino();
+									});
+
+									// Fecha ao tocar fora, ao rolar a página ou com Esc.
+									$(document).on("click touchstart", function(evento){
+										if(!telaPequena() || !$item.hasClass("open")) return;
+										if(!$(evento.target).closest($item).length) $item.removeClass("open");
+									});
+									$(document).on("keyup", function(evento){
+										if(evento.key === "Escape") $item.removeClass("open");
+									});
+
+									$item.on("shown.bs.dropdown", posicionarMenuSino);
+									$(window).on("resize orientationchange", function(){
+										if(!telaPequena()) $item.removeClass("open");
+										posicionarMenuSino();
+									});
+								});
+							})();
+							</script>
 							<?php else: ?>
 							<li class="dropdown dropdown-separator ">
 								<a href="<?=$CONTEX["path"]?>/assinatura/pendentes.php" style="text-decoration: none; margin: 0px 5px; display: flex; align-items: center; justify-content: center; position: relative;" title="Documentos pendentes de assinatura">
