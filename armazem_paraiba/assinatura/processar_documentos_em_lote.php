@@ -186,6 +186,7 @@ function ensureAssinaturaTables($conn): void {
 		$sqlCreateTableAssinantes = "CREATE TABLE IF NOT EXISTS assinantes (
 			id INT AUTO_INCREMENT PRIMARY KEY,
 			id_solicitacao INT NOT NULL,
+			enti_nb_id INT NULL,
 			nome VARCHAR(255) NOT NULL,
 			email VARCHAR(255) NOT NULL,
 			cpf VARCHAR(20),
@@ -200,12 +201,18 @@ function ensureAssinaturaTables($conn): void {
 			INDEX (token)
 		)";
 		mysqli_query($conn, $sqlCreateTableAssinantes);
+	} else {
+		$checkEnti = mysqli_query($conn, "SHOW COLUMNS FROM assinantes LIKE 'enti_nb_id'");
+		if($checkEnti && mysqli_num_rows($checkEnti) == 0){
+			mysqli_query($conn, "ALTER TABLE assinantes ADD COLUMN enti_nb_id INT NULL AFTER id_solicitacao");
+		}
 	}
 }
 
 function criarSolicitacaoAssinatura($conn, array $entidade, string $caminhoArquivo, string $nomeArquivoOriginal, string $funcao): array {
 	$email = trim(strval($entidade["enti_tx_email"] ?? ""));
 	$nome = trim(strval($entidade["enti_tx_nome"] ?? ""));
+	$entiNbId = intval($entidade["enti_nb_id"] ?? 0);
 	if($email === ""){
 		return ["ok" => false, "error" => "Funcionário sem e-mail."];
 	}
@@ -226,13 +233,13 @@ function criarSolicitacaoAssinatura($conn, array $entidade, string $caminhoArqui
 	}
 	$idSolicitacao = mysqli_insert_id($conn);
 
-	$sqlAssinante = "INSERT INTO assinantes (id_solicitacao, nome, email, funcao, ordem, token, status)
-		VALUES (?, ?, ?, ?, 1, ?, 'pendente')";
+	$sqlAssinante = "INSERT INTO assinantes (id_solicitacao, enti_nb_id, nome, email, funcao, ordem, token, status)
+		VALUES (?, NULLIF(?,0), ?, ?, ?, 1, ?, 'pendente')";
 	$stmtA = mysqli_prepare($conn, $sqlAssinante);
 	if(!$stmtA){
 		return ["ok" => false, "error" => "Falha ao preparar assinante."];
 	}
-	mysqli_stmt_bind_param($stmtA, "issss", $idSolicitacao, $nome, $email, $funcao, $tokenAssinante);
+	mysqli_stmt_bind_param($stmtA, "iissss", $idSolicitacao, $entiNbId, $nome, $email, $funcao, $tokenAssinante);
 	if(!mysqli_stmt_execute($stmtA)){
 		return ["ok" => false, "error" => "Falha ao criar assinante."];
 	}
