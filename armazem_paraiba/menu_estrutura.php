@@ -265,18 +265,8 @@
 				return $todas;
 			}
 			if ($perfilId > 0) {
-				// Garante o acesso rápido ao espelho para níveis operacionais quando o perfil não o trouxer explicitamente.
-				$temEspelho = false;
-				foreach($todas as $sec){
-					foreach($sec["itens"] as $item){
-						if($item["path"] === "/espelho_ponto.php"){
-							$temEspelho = true;
-						}
-					}
-				}
-				if(in_array($nivel, $niveisOperacionais) && !$temEspelho){
-					$todas[] = ["tipo" => "link", "path" => "/espelho_ponto.php", "label" => $rotuloMenuPonto("Espelhos de Ponto")];
-				}
+				// Tendo perfil, o menu mostra exatamente o que o perfil libera — inclusive
+				// o espelho de ponto, que antes entrava por nível mesmo sem permissão.
 				return $todas;
 			}
 			if ($isAdmin) {
