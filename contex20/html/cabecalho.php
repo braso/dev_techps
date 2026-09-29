@@ -620,6 +620,12 @@
 										<a href="<?=$CONTEX["path"]?>/cadastro_usuario.php?id=<?=$_SESSION["user_nb_id"]?>">
 											<i class="icon-user"></i> Perfil </a>
 									</li>
+									<?php if(file_exists($_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"].$_ENV["CONTEX_PATH"]."/meus_documentos.php")): ?>
+									<li>
+										<a href="<?=$CONTEX["path"]?>/meus_documentos.php">
+											<i class="icon-docs"></i> Meus documentos </a>
+									</li>
+									<?php endif; ?>
 									<li class="divider"> </li>
 									<li>
 										<a href="<?=$CONTEX["path"]?>/logout.php">
