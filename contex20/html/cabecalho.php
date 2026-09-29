@@ -185,6 +185,10 @@
 				max-width: calc(100vw - 20px);
 			}
 
+		}
+
+		/* Celular e tablet: o painel do sino sai do fluxo do cabeçalho para não ser cortado. */
+		@media(max-width:991px) {
 			/* Painel do sino: fixo na tela, da borda esquerda à direita. */
 			.notif-sino-menu{
 				position: fixed !important;
@@ -198,6 +202,13 @@
 				z-index: 10001;
 				border-radius: 8px;
 				box-shadow: 0 6px 24px rgba(0,0,0,.25);
+				margin: 0 !important;   /* o tema empurra o menu 7px para a esquerda */
+			}
+
+			/* A setinha do tema aponta para o canto: não faz sentido no painel largo. */
+			.notif-sino-menu:before,
+			.notif-sino-menu:after{
+				display: none !important;
 			}
 
 			/* Modal de configuração do sino: margem pequena e rolagem própria. */
@@ -524,17 +535,26 @@
 							</li>
 							<!-- FIM SINO DE NOTIFICAÇÕES (gestão) -->
 							<script>
-							/* No celular o painel do sino é posicionado fixo na tela (logo abaixo do sino),
-							   para não ser cortado pelas bordas do cabeçalho. */
+							/* Sino no celular/tablet:
+							   1) o abre-e-fecha sozinho vinha do plugin de "hover" do tema (data-hover),
+							      que abria no toque e o clique em seguida fechava. Em tela pequena o
+							      clique passa a ser controlado aqui, sem o Bootstrap nem o hover;
+							   2) o painel é posicionado fixo na tela, logo abaixo do sino, para não
+							      ser cortado pelas bordas do cabeçalho. */
 							(function(){
 								if(!window.jQuery) return;
 								jQuery(function($){
 									var $sino = $("#notifSinoToggle");
 									var $menu = $("#notifSinoMenu");
 									if(!$sino.length || !$menu.length) return;
+									var $item = $sino.closest("li");
+
+									function telaPequena(){
+										return window.innerWidth <= 991;
+									}
 
 									function posicionarMenuSino(){
-										if(window.innerWidth > 768){
+										if(!telaPequena()){
 											$menu.css("top", "");
 											return;
 										}
@@ -542,9 +562,38 @@
 										$menu.css("top", Math.round(area.bottom + 6) + "px");
 									}
 
-									$sino.on("click", function(){ setTimeout(posicionarMenuSino, 0); });
-									$sino.closest("li").on("shown.bs.dropdown", posicionarMenuSino);
-									$(window).on("resize orientationchange", posicionarMenuSino);
+									// Em tela pequena, tira o sino das mãos do Bootstrap e do plugin de hover.
+									if(telaPequena()){
+										$sino.removeAttr("data-toggle").removeAttr("data-hover").attr("data-close-others", "false");
+									}
+
+									$sino.on("click", function(evento){
+										if(!telaPequena()){
+											setTimeout(posicionarMenuSino, 0);
+											return;
+										}
+										evento.preventDefault();
+										evento.stopPropagation();
+										var vaiAbrir = !$item.hasClass("open");
+										$(".dropdown.open").removeClass("open");
+										$item.toggleClass("open", vaiAbrir);
+										if(vaiAbrir) posicionarMenuSino();
+									});
+
+									// Fecha ao tocar fora, ao rolar a página ou com Esc.
+									$(document).on("click touchstart", function(evento){
+										if(!telaPequena() || !$item.hasClass("open")) return;
+										if(!$(evento.target).closest($item).length) $item.removeClass("open");
+									});
+									$(document).on("keyup", function(evento){
+										if(evento.key === "Escape") $item.removeClass("open");
+									});
+
+									$item.on("shown.bs.dropdown", posicionarMenuSino);
+									$(window).on("resize orientationchange", function(){
+										if(!telaPequena()) $item.removeClass("open");
+										posicionarMenuSino();
+									});
 								});
 							})();
 							</script>
