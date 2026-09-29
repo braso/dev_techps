@@ -43,9 +43,9 @@
 		global $turnoAtual;
 
 		// Só quem é Administrador/Super Administrador, ou tem permissão explícita de
-		// telas de gestão (empresa ou funcionário), enxerga a Torre de Comando. Todo o
-		// resto (motorista, ajudante, funcionário operacional etc.) cai direto na
-		// batida de ponto, que passa a ser a tela inicial dele.
+		// telas de gestão (empresa ou funcionário), enxerga a Torre de Comando. Quem
+		// bate ponto cai na batida; quem não tem nem essa permissão vai para a tela de
+		// boas-vindas (antes ia para a batida de ponto de qualquer jeito).
 		include_once __DIR__."/check_permission.php";
 		$nivel = $_SESSION["user_tx_nivel"] ?? "";
 		$isAdmin = (bool) preg_match('/administrador/i', $nivel);
@@ -53,7 +53,7 @@
 			&& (temPermissaoMenu('/cadastro_empresa.php') || temPermissaoMenu('/cadastro_funcionario.php'));
 
 		if (!$isAdmin && !$temPermissaoGestao) {
-			echo "<meta http-equiv='refresh' content='0; url=./batida_ponto.php'/>";
+			echo "<meta http-equiv='refresh' content='0; url=.".paginaInicialPermitida()."'/>";
 			exit;
 		}
 
@@ -134,12 +134,14 @@
 					echo json_encode($_SESSION);
 					exit;
 				}
-				// Perfis operacionais devem cair direto na batida quando tiverem permissão do menu.
+				// Perfis operacionais vão para a tela inicial que o perfil deles permite:
+				// batida de ponto para quem bate ponto, boas-vindas para quem não bate.
 				// Admin/Super Admin continuam no fluxo padrão abaixo (showWelcome).
 				if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário", "Terceirizado"])){
 					include_once __DIR__."/check_permission.php";
-					if (function_exists('temPermissaoMenu') && temPermissaoMenu('/batida_ponto.php')){
-						echo "<meta http-equiv='refresh' content='0; url=./batida_ponto.php'/>";
+					$paginaInicial = paginaInicialPermitida();
+					if ($paginaInicial !== ""){
+						echo "<meta http-equiv='refresh' content='0; url=.".$paginaInicial."'/>";
 						exit;
 					}
 					cabecalho("");
