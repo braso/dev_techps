@@ -32,12 +32,12 @@ Status acompanhado em "Termos Gerados" e em Assinatura > Documentos
 
 | Arquivo | Função |
 |---|---|
-| `modelos_termo.php` | CRUD de modelos (nome, tipo de documento, status e texto padrão com placeholders). No grid, ícone **Enviar para Assinatura** abre o modal de seleção em lote |
+| `modelos_termo.php` | CRUD de modelos (nome, tipo de documento, status e texto padrão com placeholders). No grid: **Enviar para Assinatura** (modal de seleção em lote) e **Clonar** (duplica um ou mais modelos existentes) |
 | `buscar_funcionarios.php` | Endpoint AJAX do modal: lista funcionários conforme empresas, cargos, setores e busca (inclui indicador de termo já existente) |
 | `gerar_termos.php` | Tela alternativa de geração em lote com filtros multi-seleção (empresa/cargo/setor), opções (ICP, e-mail, forçar, lote) e barra de progresso |
 | `processar_termos.php` | Endpoint AJAX: processa cada funcionário, gera PDF e envia para assinatura |
 | `preview_termo.php` | Pré-visualização do texto do modelo: mostra o documento com as tags (`{{...}}`) **destacadas em amarelo** e a lista dos campos que serão preenchidos |
-| `listar_termos.php` | Lista dos termos gerados com status, sincronização manual/em massa, cancelamento e botão Voltar |
+| `listar_termos.php` | Lista dos termos gerados com status, sincronização manual/em massa, cancelamento (bloqueado para assinados) e botão Voltar |
 | `funcoes_termos.php` | Funções compartilhadas: tabelas, placeholders, PDF (logos e cabeçalho), logs, sincronização |
 | `logs/` | Logs diários em TXT com retenção automática de 30 dias (pasta bloqueada via `.htaccess`) |
 | `README.md` | Este documento |
@@ -137,6 +137,11 @@ Tudo entre `{{ }}` que não for reconhecido permanece no texto e é registrado n
    - Tipo com **Assinatura = Sim**: cada funcionário recebe o e-mail com o link para assinar o próprio documento; ao assinar, o PDF retorna para `arquivos/Funcionarios/{id}/` e aparece na **aba Documentos** e em **Assinatura > Documentos**.
    - Tipo com **Assinatura = Não**: o PDF é gerado e salvo direto no prontuário (sem e-mail, sem solicitação).
 
+### Passo 3.1 — Clonar modelos
+1. No grid de **Modelos de Termos**, clique em **Clonar** (qualquer linha).
+2. No modal, selecione **um ou mais** modelos (todos aparecem, inclusive o da linha clicada).
+3. Clique **Clonar Selecionados**: cada modelo vira **"<nome> (cópia)"** com o mesmo texto, tipo de documento e assinantes — pronto para editar/ajustar sem alterar o original.
+
 ### Passo 4 — Acompanhar
 - **Termos Gerados**: status de cada termo, sincronizar (manual ou em massa), cancelar e **Voltar** para a página de Modelos.
 - **Aba Documentos do funcionário**: o PDF (gerado ou assinado) aparece lá automaticamente.
@@ -154,6 +159,8 @@ Tudo entre `{{ }}` que não for reconhecido permanece no texto e é registrado n
 - **Enviar e-mail = Não**: o e-mail cadastrado é **desconsiderado** — a solicitação é criada com um e-mail interno (ex.: `sememail.<id>@techps.com.br`) e o funcionário assina pelo sistema (sino/pendências). Com **Sim**, exige e-mail válido.
 - **Duplicidade**: o sistema avisa quem já possui termo (badges) e pula quem já tem (`gerado`/`aguardando_assinatura`/`assinado`); só regera com **Forçar regeração = Sim** (status `erro`/`cancelado` não bloqueiam).
 - **Pré-visualização**: mostra o texto do modelo com as tags destacadas + painel "Campos usados neste documento"; não gera PDF e nunca salva nada.
+- **Clonagem**: o botão **Clonar** duplica um ou mais modelos (nome "&lt;original&gt; (cópia)", texto/tipo/assinantes preservados) — útil para criar variantes por cargo sem recomeçar do zero.
+- **Cancelamento** (`listar_termos.php`): **termos assinados não podem ser cancelados** (botão oculto + bloqueio no servidor). Ao cancelar um termo em andamento, a **solicitação de assinatura é cancelada** (`status='cancelada'`, link expirado, assinantes pendentes `dispensado`) — o documento sai do sino/pendências do funcionário e ninguém consegue mais assinar pelo link antigo.
 - **PDF (visual)**: cabeçalho com logo da empresa do funcionário à **direita** e logo do tipo/sistema à **esquerda** (fallback `imagens/logo_topo_cliente.png`), título centralizado **abaixo** das logos e linha separadora; margens e rodapé com paginação.
 - **Exclusão de modelo**: botão Excluir remove o modelo **permanentemente** (e assinantes vinculados). Ativar/Desativar apenas muda o status.
 
@@ -188,6 +195,7 @@ Tudo entre `{{ }}` que não for reconhecido permanece no texto e é registrado n
 - **Tokens desconhecidos**: aparecem literalmente no texto e são registrados nos logs (`pdf_tokens_desconhecidos`).
 - **Filtros não retornam funcionários**: verifique se ao menos uma empresa está marcada (sem empresa o modal não lista).
 - **Botões de marcação sem efeito visual**: a sincronização do Uniform é automática; se algum checkbox parecer não marcar, recarregue a página (Cache-Control já evita cache das telas do módulo).
+- **Não consigo cancelar um termo**: se o status estiver `assinado` ou `cancelado`, o cancelamento é bloqueado por regra — é o comportamento esperado (proteção do documento assinado).
 
 ## 10. Referências técnicas
 

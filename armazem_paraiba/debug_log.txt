@@ -167,3 +167,16 @@ TEST_2026-05-20 01:08:23_6a0d098748455
     [id] => 383
 )
 
+2026-09-24 10:49:35 POST: Array
+(
+    [HTTP_REFERER] => http://localhost/braso/armazem_paraiba/cadastro_tipo_doc.php
+    [nome] => Termos de ponto Eletrônico - Ajudante
+    [setor] => 7
+    [sub-setor] => 
+    [vencimento] => nao
+    [assinatura] => sim
+    [acao] => cadastra_tipo_doc()
+    [returnValues] => {"id":142,"acao":"modificarTipoDoc()","nome":"Termos de ponto Eletr\u00f4nico - Ajudante","setor":7,"vencimento":"nao","assinatura":"nao","sub-setor":null,"status":"ativo","HTTP_REFERER":"http:\/\/localhost\/braso\/armazem_paraiba\/cadastro_tipo_doc.php","acaoPrevia":"index"}
+    [id] => 142
+)
+

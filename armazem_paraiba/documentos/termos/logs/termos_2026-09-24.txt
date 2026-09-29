@@ -1,0 +1,8 @@
+[2026-09-24 10:39:03] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=modelo_criado detalhe=Modelo #1 criado nome=Termo_de_Compromisso_no_Ponto_Eletrônico
+[2026-09-24 10:40:35] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado (PDF local) modelo=1 entidade=30 termo=1 caminho=arquivos/Funcionarios/30/Termo_de_Compromisso_no_Ponto_Eletrônico_-_Allysson_Brenner_da_Costa_Rodrigues.pdf
+[2026-09-24 10:40:35] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado (PDF local) modelo=1 entidade=19 termo=2 caminho=arquivos/Funcionarios/19/Termo_de_Compromisso_no_Ponto_Eletrônico_-_Anderson_de_Oliveira_Souza.pdf
+[2026-09-24 10:40:35] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado (PDF local) modelo=1 entidade=26 termo=3 caminho=arquivos/Funcionarios/26/Termo_de_Compromisso_no_Ponto_Eletrônico_-_Anderson_Fellipe_Lima_da_Silva.pdf
+[2026-09-24 10:40:35] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado (PDF local) modelo=1 entidade=2 termo=4 caminho=arquivos/Funcionarios/2/Termo_de_Compromisso_no_Ponto_Eletrônico_-_Antônio_Samuel_da_Silva.pdf
+[2026-09-24 10:46:20] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=modelo_atualizado detalhe=Modelo #1 atualizado nome=Termo_de_Compromisso_no_Ponto_Eletrônico
+[2026-09-24 10:48:33] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado (PDF local) modelo=1 entidade=2 termo=5 caminho=arquivos/Funcionarios/2/Termo_de_Compromisso_no_Ponto_Eletrônico_-_Antônio_Samuel_da_Silva_20260924104832.pdf
+[2026-09-24 10:50:48] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=1 entidade=2 termo=6 solicitacao=2
