@@ -235,13 +235,17 @@
                 user_tx_nivel							AS role,
                 user_tx_foto							AS avatar,
                 user_tx_nascimento						AS birthdate,
-                cida_tx_nome							AS city
+                CASE
+					WHEN ce.cida_nb_id IS NOT NULL THEN CONCAT(ce.cida_tx_nome, '/', ce.cida_tx_uf)
+					WHEN cu.cida_nb_id IS NOT NULL THEN CONCAT(cu.cida_tx_nome, '/', cu.cida_tx_uf)
+				END										AS city
             FROM user u
                 LEFT JOIN entidade enti ON u.user_nb_entidade = enti.enti_nb_id
                     AND u.user_nb_entidade IS NOT NULL
                 LEFT JOIN empresa e ON enti_nb_empresa = e.empr_nb_id
                     AND u.user_nb_entidade IS NOT NULL
-                LEFT JOIN cidade ON user_nb_cidade = cida_nb_id
+                LEFT JOIN cidade ce ON enti.enti_nb_cidade = ce.cida_nb_id
+                LEFT JOIN cidade cu ON u.user_nb_cidade = cu.cida_nb_id
                 WHERE u.user_tx_status = 'ativo'
                 	AND u.user_nb_id = {$userid}"
         ;
