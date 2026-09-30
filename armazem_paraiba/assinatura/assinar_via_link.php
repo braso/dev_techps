@@ -179,6 +179,12 @@ if ($checkExp && mysqli_num_rows($checkExp) > 0) {
     @mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN expires_at DATETIME NULL");
     $hasExpiresAt = true;
 }
+
+$checkPrazoLink = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'prazo_expiracao_dias'");
+if ($checkPrazoLink && mysqli_num_rows($checkPrazoLink) == 0) {
+    @mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN prazo_expiracao_dias INT NOT NULL DEFAULT 1");
+}
+
 if ($hasExpiresAt) {
     $hasCreatedAt = false;
     $chkCreatedAt = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'created_at'");
@@ -198,7 +204,15 @@ if ($hasExpiresAt) {
         $parts[] = "NULLIF(data_solicitacao,'0000-00-00 00:00:00')";
     }
     $baseExpr = !empty($parts) ? ("COALESCE(" . implode(", ", $parts) . ")") : "NULL";
-    @mysqli_query($conn, "UPDATE solicitacoes_assinatura SET expires_at = DATE_ADD($baseExpr, INTERVAL 24 HOUR) WHERE (expires_at IS NULL OR expires_at = '0000-00-00 00:00:00') AND $baseExpr IS NOT NULL");
+    @mysqli_query($conn, "UPDATE solicitacoes_assinatura SET expires_at = DATE_ADD($baseExpr, INTERVAL 24 HOUR) WHERE (expires_at IS NULL OR expires_at = '0000-00-00 00:00:00') AND $baseExpr IS NOT NULL AND (prazo_expiracao_dias IS NULL OR prazo_expiracao_dias <> 0)");
+}
+
+function assinaturaMensagemPrazoExcedido($prazoDias): string {
+    $prazoDias = intval($prazoDias);
+    if ($prazoDias > 0) {
+        return "O prazo de " . $prazoDias . " dia" . ($prazoDias > 1 ? "s" : "") . " para assinatura foi excedido. Solicite um novo envio.";
+    }
+    return "O prazo para assinatura foi excedido. Solicite um novo envio.";
 }
 
 // Inicializa variáveis
@@ -218,7 +232,7 @@ $rg_cadastro_mask = '';
 $cadastro_ok = false;
 
 // 1. Tenta buscar na tabela nova de Assinantes
-$sqlAssinante = "SELECT a.*, s.caminho_arquivo, s.nome_arquivo_original, s.id_documento as doc_id_global, s.expires_at, s.modo_envio 
+$sqlAssinante = "SELECT a.*, s.caminho_arquivo, s.nome_arquivo_original, s.id_documento as doc_id_global, s.expires_at, s.prazo_expiracao_dias, s.modo_envio 
                  FROM assinantes a 
                  JOIN solicitacoes_assinatura s ON a.id_solicitacao = s.id 
                  WHERE a.token = ?";
@@ -246,12 +260,12 @@ if ($assinante) {
             $exp = new DateTimeImmutable($expiresRaw, new DateTimeZone("UTC"));
             $now = new DateTimeImmutable("now", new DateTimeZone("UTC"));
             if ($now > $exp) {
-                assinaturaRenderMensagemPage("Link expirado", "O prazo de 24 horas para assinatura foi excedido. Solicite um novo envio.");
+                assinaturaRenderMensagemPage("Link expirado", assinaturaMensagemPrazoExcedido($assinante["prazo_expiracao_dias"] ?? 0));
             }
         } catch (Throwable $e) {
             $expTs = strtotime($expiresRaw . " UTC");
             if ($expTs && time() > $expTs) {
-                assinaturaRenderMensagemPage("Link expirado", "O prazo de 24 horas para assinatura foi excedido. Solicite um novo envio.");
+                assinaturaRenderMensagemPage("Link expirado", assinaturaMensagemPrazoExcedido($assinante["prazo_expiracao_dias"] ?? 0));
             }
         }
     }
@@ -311,12 +325,12 @@ if ($assinante) {
             $exp = new DateTimeImmutable($expiresRaw, new DateTimeZone("UTC"));
             $now = new DateTimeImmutable("now", new DateTimeZone("UTC"));
             if ($now > $exp && ($solicitacao['status'] !== 'assinado' && $solicitacao['status'] !== 'concluido')) {
-                assinaturaRenderMensagemPage("Link expirado", "O prazo de 24 horas para assinatura foi excedido. Solicite um novo envio.");
+                assinaturaRenderMensagemPage("Link expirado", assinaturaMensagemPrazoExcedido($solicitacao["prazo_expiracao_dias"] ?? 0));
             }
         } catch (Throwable $e) {
             $expTs = strtotime($expiresRaw . " UTC");
             if ($expTs && time() > $expTs && ($solicitacao['status'] !== 'assinado' && $solicitacao['status'] !== 'concluido')) {
-                assinaturaRenderMensagemPage("Link expirado", "O prazo de 24 horas para assinatura foi excedido. Solicite um novo envio.");
+                assinaturaRenderMensagemPage("Link expirado", assinaturaMensagemPrazoExcedido($solicitacao["prazo_expiracao_dias"] ?? 0));
             }
         }
     }

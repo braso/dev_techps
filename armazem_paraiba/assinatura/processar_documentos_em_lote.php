@@ -169,6 +169,11 @@ function ensureAssinaturaTables($conn): void {
 			mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN expires_at DATETIME NULL");
 		}
 
+		$checkPrazoLote = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'prazo_expiracao_dias'");
+		if($checkPrazoLote && mysqli_num_rows($checkPrazoLote) == 0){
+			mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN prazo_expiracao_dias INT NOT NULL DEFAULT 1");
+		}
+
 		$hasCreatedAt = false;
 		$chkCreatedAt = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'created_at'");
 		if($chkCreatedAt && mysqli_num_rows($chkCreatedAt) > 0){
@@ -177,7 +182,7 @@ function ensureAssinaturaTables($conn): void {
 		$baseExpr = $hasCreatedAt
 			? "COALESCE(NULLIF(created_at,'0000-00-00 00:00:00'), NULLIF(data_solicitacao,'0000-00-00 00:00:00'))"
 			: "NULLIF(data_solicitacao,'0000-00-00 00:00:00')";
-		@mysqli_query($conn, "UPDATE solicitacoes_assinatura SET expires_at = DATE_ADD({$baseExpr}, INTERVAL 24 HOUR) WHERE (expires_at IS NULL OR expires_at = '0000-00-00 00:00:00') AND {$baseExpr} IS NOT NULL");
+		@mysqli_query($conn, "UPDATE solicitacoes_assinatura SET expires_at = DATE_ADD({$baseExpr}, INTERVAL 24 HOUR) WHERE (expires_at IS NULL OR expires_at = '0000-00-00 00:00:00') AND {$baseExpr} IS NOT NULL AND (prazo_expiracao_dias IS NULL OR prazo_expiracao_dias <> 0)");
 	}
 
 	$checkTableAssinantes = "SHOW TABLES LIKE 'assinantes'";

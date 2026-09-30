@@ -128,7 +128,7 @@ function ensureAssinaturaTables(mysqli $conn): void {
         $baseExpr = $hasCreatedAt
             ? "COALESCE(NULLIF(created_at,'0000-00-00 00:00:00'), NULLIF(data_solicitacao,'0000-00-00 00:00:00'))"
             : "NULLIF(data_solicitacao,'0000-00-00 00:00:00')";
-        @mysqli_query($conn, "UPDATE solicitacoes_assinatura SET expires_at = DATE_ADD({$baseExpr}, INTERVAL 24 HOUR) WHERE (expires_at IS NULL OR expires_at = '0000-00-00 00:00:00') AND {$baseExpr} IS NOT NULL");
+        @mysqli_query($conn, "UPDATE solicitacoes_assinatura SET expires_at = DATE_ADD({$baseExpr}, INTERVAL 24 HOUR) WHERE (expires_at IS NULL OR expires_at = '0000-00-00 00:00:00') AND {$baseExpr} IS NOT NULL AND (prazo_expiracao_dias IS NULL OR prazo_expiracao_dias <> 0)");
     }
 
     $resA = mysqli_query($conn, "SHOW TABLES LIKE 'assinantes'");

@@ -242,7 +242,7 @@ function cancelar() {
 	if($solId > 0){
 		$ajustesStatus = [
 			"assinantes" => "ENUM('pendente','assinado','dispensado','cancelado') NOT NULL DEFAULT 'pendente'",
-			"solicitacoes_assinatura" => "ENUM('pendente','em_progresso','concluido','assinado','finalizado','cancelada','expirada') DEFAULT 'pendente'"
+			"solicitacoes_assinatura" => "ENUM('pendente','em_progresso','concluido','assinado','finalizado','cancelada','expirada','expirado') DEFAULT 'pendente'"
 		];
 		foreach($ajustesStatus as $tabelaStatus => $tipoStatus){
 			$checkStatus = query("SHOW COLUMNS FROM {$tabelaStatus} LIKE 'status'");

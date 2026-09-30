@@ -116,8 +116,13 @@ if ($checkExp && mysqli_num_rows($checkExp) > 0) {
     $hasExpiresAt = true;
 }
 
+$checkPrazo = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'prazo_expiracao_dias'");
+if ($checkPrazo && mysqli_num_rows($checkPrazo) == 0) {
+    @mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN prazo_expiracao_dias INT NOT NULL DEFAULT 1");
+}
+
 if ($hasExpiresAt) {
-    @mysqli_query($conn, "UPDATE solicitacoes_assinatura s SET s.expires_at = DATE_ADD($dataEnvioExpr, INTERVAL 24 HOUR) WHERE (s.expires_at IS NULL OR s.expires_at = '0000-00-00 00:00:00') AND $dataEnvioExpr IS NOT NULL");
+    @mysqli_query($conn, "UPDATE solicitacoes_assinatura s SET s.expires_at = DATE_ADD($dataEnvioExpr, INTERVAL 24 HOUR) WHERE (s.expires_at IS NULL OR s.expires_at = '0000-00-00 00:00:00') AND $dataEnvioExpr IS NOT NULL AND (s.prazo_expiracao_dias IS NULL OR s.prazo_expiracao_dias <> 0)");
 }
 
 if ($filtro_status) {

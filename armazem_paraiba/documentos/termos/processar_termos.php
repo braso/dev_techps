@@ -44,7 +44,8 @@ $params = [
 	"enviar_assinatura" => strval($dados["enviar_assinatura"] ?? "sim"),
 	"validar_icp" => strval($dados["validar_icp"] ?? "nao"),
 	"enviar_email" => strval($dados["enviar_email"] ?? "sim"),
-	"forcar" => strval($dados["forcar"] ?? "nao")
+	"forcar" => strval($dados["forcar"] ?? "nao"),
+	"prazo_expiracao_dias" => intval($dados["prazo_expiracao_dias"] ?? 1)
 ];
 
 $resultados = [];

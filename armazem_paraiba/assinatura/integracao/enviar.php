@@ -48,6 +48,7 @@ $validarIcp = strtolower(trim(strval($_POST["validar_icp"] ?? "nao"))) === "sim"
 $funcao = trim(strval($_POST["funcao"] ?? "Funcionário"));
 $nomeArquivoOriginal = trim(strval($_POST["nome_arquivo_original"] ?? ""));
 $grupoEnvio = trim(strval($_POST["grupo_envio"] ?? ""));
+$prazoExpiracaoDias = intval($_POST["prazo_expiracao_dias"] ?? 1);
 $caminho = trim(strval($_POST["caminho"] ?? ""));
 $retorno = trim(strval($_POST["retorno"] ?? ""));
 
@@ -91,6 +92,7 @@ $opts = [
 	"funcao" => $funcao,
 	"grupo_envio" => $grupoEnvio,
 	"nome_arquivo_original" => $nomeArquivoOriginal,
+	"prazo_expiracao_dias" => $prazoExpiracaoDias,
 	"salvar_documento_funcionario" => "sim",
 	"apagar_origem" => ($tempToDelete !== "")
 ];

@@ -96,6 +96,7 @@ function assinatura_integracao_ensureTables(mysqli $conn): void {
 				validar_icp ENUM('sim','nao') NOT NULL DEFAULT 'nao',
 				modo_envio VARCHAR(50) DEFAULT 'avulso',
 				grupo_envio VARCHAR(100) DEFAULT '',
+				prazo_expiracao_dias INT NOT NULL DEFAULT 1,
 				data_solicitacao DATETIME DEFAULT CURRENT_TIMESTAMP,
 				expires_at DATETIME NULL,
 				status VARCHAR(50) DEFAULT 'pendente',
@@ -112,6 +113,7 @@ function assinatura_integracao_ensureTables(mysqli $conn): void {
 			"validar_icp" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN validar_icp ENUM('sim','nao') NOT NULL DEFAULT 'nao'",
 			"modo_envio" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN modo_envio VARCHAR(50) DEFAULT 'avulso'",
 			"grupo_envio" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN grupo_envio VARCHAR(100) DEFAULT ''",
+			"prazo_expiracao_dias" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN prazo_expiracao_dias INT NOT NULL DEFAULT 1",
 			"expires_at" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN expires_at DATETIME NULL",
 			"data_assinatura" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN data_assinatura DATETIME NULL",
 			"status_final" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN status_final VARCHAR(50) DEFAULT 'pendente'"
@@ -218,6 +220,17 @@ function assinatura_integracao_carregarEmail(): void {
 	}
 }
 
+function assinatura_integracao_resolverPrazo(array $opts): int {
+	$prazo = array_key_exists("prazo_expiracao_dias", $opts) ? intval($opts["prazo_expiracao_dias"]) : 1;
+	if($prazo < 0){
+		$prazo = 1;
+	}
+	if($prazo > 30){
+		$prazo = 30;
+	}
+	return $prazo;
+}
+
 function assinatura_integracao_criarSolicitacaoUnicoAssinante(
 	mysqli $conn,
 	array $entidade,
@@ -245,18 +258,24 @@ function assinatura_integracao_criarSolicitacaoUnicoAssinante(
 	$tokenMestre = bin2hex(random_bytes(32));
 	$tokenAssinante = bin2hex(random_bytes(32));
 	$idDocumento = "DOC-" . date("YmdHis") . "-" . uniqid();
+	$prazoDias = assinatura_integracao_resolverPrazo($opts);
 
-	$stmt = mysqli_prepare(
-		$conn,
-		"INSERT INTO solicitacoes_assinatura
-			(token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, modo_envio, grupo_envio, expires_at, status)
+	$sqlInsert = "INSERT INTO solicitacoes_assinatura
+			(token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, modo_envio, grupo_envio, prazo_expiracao_dias, expires_at, status)
 		VALUES
-			(?, ?, ?, ?, ?, ?, NULLIF(?,0), ?, ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 24 HOUR), 'pendente')"
-	);
+			(?, ?, ?, ?, ?, ?, NULLIF(?,0), ?, ?, ?, ?, "
+		. ($prazoDias > 0 ? "DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY)" : "NULL")
+		. ", 'pendente')";
+
+	$stmt = mysqli_prepare($conn, $sqlInsert);
 	if(!$stmt){
 		return ["ok" => false, "error" => "Falha ao preparar solicitação."];
 	}
-	mysqli_stmt_bind_param($stmt, "ssssssisss", $tokenMestre, $email, $nome, $caminhoRel, $nomeArquivoOriginal, $idDocumento, $tipoDocumentoId, $validarIcp, $modoEnvio, $grupoEnvio);
+	if($prazoDias > 0){
+		mysqli_stmt_bind_param($stmt, "ssssssisssii", $tokenMestre, $email, $nome, $caminhoRel, $nomeArquivoOriginal, $idDocumento, $tipoDocumentoId, $validarIcp, $modoEnvio, $grupoEnvio, $prazoDias, $prazoDias);
+	} else {
+		mysqli_stmt_bind_param($stmt, "ssssssisssi", $tokenMestre, $email, $nome, $caminhoRel, $nomeArquivoOriginal, $idDocumento, $tipoDocumentoId, $validarIcp, $modoEnvio, $grupoEnvio, $prazoDias);
+	}
 	if(!mysqli_stmt_execute($stmt)){
 		mysqli_stmt_close($stmt);
 		return ["ok" => false, "error" => "Falha ao criar solicitação."];
@@ -495,21 +514,27 @@ function assinatura_integracao_enviarDocumentoParaMultiplosAssinantes(
 	$validarIcp = strtolower(trim(strval($opts["validar_icp"] ?? "nao"))) === "sim" ? "sim" : "nao";
 	$modoEnvio = strtolower(trim(strval($opts["modo_envio"] ?? "avulso")));
 	$grupoEnvio = trim(strval($opts["grupo_envio"] ?? ""));
+	$prazoDias = assinatura_integracao_resolverPrazo($opts);
 
-	$stmt = mysqli_prepare(
-		$conn,
-		"INSERT INTO solicitacoes_assinatura
-			(token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, modo_envio, grupo_envio, expires_at, status)
+	$sqlInsert = "INSERT INTO solicitacoes_assinatura
+			(token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, modo_envio, grupo_envio, prazo_expiracao_dias, expires_at, status)
 		VALUES
-			(?, ?, ?, ?, ?, ?, NULLIF(?,0), ?, ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 24 HOUR), 'pendente')"
-	);
+			(?, ?, ?, ?, ?, ?, NULLIF(?,0), ?, ?, ?, ?, "
+		. ($prazoDias > 0 ? "DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY)" : "NULL")
+		. ", 'pendente')";
+
+	$stmt = mysqli_prepare($conn, $sqlInsert);
 	if(!$stmt){
 		@unlink($destAbs);
 		return ["ok" => false, "error" => "Falha ao preparar solicitação."];
 	}
 	$nomePrimeiro = strval($primeiro["nome"] ?? "");
 	$emailPrimeiro = strval($primeiro["email"] ?? "");
-	mysqli_stmt_bind_param($stmt, "ssssssisss", $tokenMestre, $emailPrimeiro, $nomePrimeiro, $destRel, $nomeOriginal, $idDocumento, $tipoDocumentoId, $validarIcp, $modoEnvio, $grupoEnvio);
+	if($prazoDias > 0){
+		mysqli_stmt_bind_param($stmt, "ssssssisssii", $tokenMestre, $emailPrimeiro, $nomePrimeiro, $destRel, $nomeOriginal, $idDocumento, $tipoDocumentoId, $validarIcp, $modoEnvio, $grupoEnvio, $prazoDias, $prazoDias);
+	} else {
+		mysqli_stmt_bind_param($stmt, "ssssssisssi", $tokenMestre, $emailPrimeiro, $nomePrimeiro, $destRel, $nomeOriginal, $idDocumento, $tipoDocumentoId, $validarIcp, $modoEnvio, $grupoEnvio, $prazoDias);
+	}
 	if(!mysqli_stmt_execute($stmt)){
 		mysqli_stmt_close($stmt);
 		@unlink($destAbs);

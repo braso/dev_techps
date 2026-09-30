@@ -734,6 +734,7 @@ function termos_enviar_assinatura(int $entiId, array $dados, array $modelo, arra
 		"grupo_envio" => "termo_" . intval($modelo["mode_nb_id"] ?? 0),
 		"nome_arquivo_original" => $nomeArquivo,
 		"enviar_email" => $enviarEmail ? "sim" : "nao",
+		"prazo_expiracao_dias" => intval($opts["prazo_expiracao_dias"] ?? 1),
 		"apagar_origem" => true
 	];
 
@@ -869,6 +870,15 @@ function termos_processar_um(int $entiId, array $params): array {
 }
 
 function termos_sincronizar_registro(array $registro): array {
+	static $expiradasVerificadas = false;
+	if(!$expiradasVerificadas){
+		$expiradasVerificadas = true;
+		require_once dirname(__DIR__) . "/../assinatura/tipo_assinatura_helper.php";
+		if(function_exists("assinatura_expirarPendentes") && isset($GLOBALS["conn"])){
+			assinatura_expirarPendentes($GLOBALS["conn"]);
+		}
+	}
+
 	$id = intval($registro["terg_nb_id"] ?? 0);
 	$statusAtual = strtolower(trim(strval($registro["terg_tx_status"] ?? "")));
 	if($id <= 0 || in_array($statusAtual, ["assinado", "cancelado"], true)){
@@ -903,10 +913,11 @@ function termos_sincronizar_registro(array $registro): array {
 		termos_log("sincronizar", "Termo #{$id} marcado como assinado", ["solicitacao" => $solId]);
 		$registro["terg_tx_status"] = "assinado";
 		$registro["terg_tx_caminho"] = $caminho;
-	}elseif(in_array($st, ["cancelada", "cancelado", "expirada", "expired"], true)){
+	}elseif(in_array($st, ["cancelada", "cancelado", "expirada", "expirado", "expired"], true)){
+		$detalheStatus = stripos($st, "expir") === 0 ? "Solicitação de assinatura expirada (prazo excedido)." : "Solicitação de assinatura " . $st . ".";
 		termos_atualizar_gerado($id, [
 			"terg_tx_status" => "erro",
-			"terg_tx_detalhe" => "Solicitação de assinatura " . $st . "."
+			"terg_tx_detalhe" => $detalheStatus
 		]);
 		termos_log("sincronizar", "Termo #{$id} — solicitação " . $st, ["solicitacao" => $solId]);
 		$registro["terg_tx_status"] = "erro";
