@@ -83,5 +83,5 @@ deployment:
     - /bin/cp -R $DOMAIN $TRANSRAISSA
     - /bin/cp -R $DOMAIN $SAMBAIBA
     - /bin/cp -R $DOMAIN $HELENA
-
+      
 
