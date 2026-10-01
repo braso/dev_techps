@@ -288,6 +288,13 @@ function index() {
 	if($forcar !== "sim"){
 		$forcar = "nao";
 	}
+	$prazoDias = intval($_POST["prazo_expiracao_dias"] ?? 1);
+	if($prazoDias < 0){
+		$prazoDias = 1;
+	}
+	if($prazoDias > 30){
+		$prazoDias = 30;
+	}
 	$lote = max(1, intval($_POST["tamanho_lote"] ?? 5));
 
 	if($temBusca && $filtroModelo <= 0){
@@ -357,8 +364,9 @@ function index() {
 				<div class='col-sm-2'>" . combo("Validar ICP", "validar_icp", $validarIcp, 12, ["nao" => "Não", "sim" => "Sim"]) . "</div>
 				<div class='col-sm-2'>" . combo("Enviar e-mail", "enviar_email", $enviarEmail, 12, ["sim" => "Sim", "nao" => "Não"]) . "</div>
 				<div class='col-sm-2'>" . combo("Forçar regeração", "forcar", $forcar, 12, ["nao" => "Não", "sim" => "Sim"]) . "</div>
+				<div class='col-sm-2'>" . campo("Prazo p/ assinatura (dias)", "prazo_expiracao_dias", $prazoDias, 12, "MASCARA_NUMERO", "min='0' max='30'") . "</div>
 				<div class='col-sm-2'>" . campo("Func. por lote", "tamanho_lote", $lote, 12, "MASCARA_NUMERO") . "</div>
-				<div class='col-sm-4' style='padding-top:22px;'>
+				<div class='col-sm-2' style='padding-top:22px;'>
 					<button type='button' id='btn_processar' class='btn btn-success btn-block' onclick='termosProcessar()'>
 						Gerar Selecionados
 					</button>
@@ -370,6 +378,7 @@ function index() {
 					<b>Validar ICP:</b> assina o PDF final com certificado digital ICP-Brasil ao concluir as assinaturas. &nbsp;
 					<b>Enviar e-mail:</b> envia para cada funcionário o e-mail com o link do documento dele. &nbsp;
 					<b>Forçar regeração:</b> Não pula quem já tem termo gerado/assinado; Sim gera de novo (novo PDF e nova assinatura) mesmo para quem já tem. &nbsp;
+					<b>Prazo p/ assinatura:</b> quantos dias o link de assinatura fica válido (0 = sem prazo de expiração). &nbsp;
 					<b>Func. por lote:</b> quantos funcionários são processados por requisição.
 				</div>
 			</div>
@@ -425,7 +434,8 @@ function index() {
 					modelo_id: TERMOS_MODELO_ID,
 					validar_icp: $('select[name=validar_icp]').val(),
 					enviar_email: $('select[name=enviar_email]').val(),
-					forcar: $('select[name=forcar]').val()
+					forcar: $('select[name=forcar]').val(),
+					prazo_expiracao_dias: parseInt($('input[name=prazo_expiracao_dias]').val(), 10) || 0
 				};
 				$('#btn_processar').prop('disabled', true);
 				$('#termos_progresso').show();

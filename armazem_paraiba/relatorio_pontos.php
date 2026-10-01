@@ -114,9 +114,9 @@ function buscarEspelho(){
             }
             
             if(!empty($_POST["busca_empresa"]) && !empty($_POST["busca_motorista"])){
-                if($_POST["busca_periodo"][0] > date("Y-m-d") || $_POST["busca_periodo"][1] > date("Y-m-d")){
+                if($_POST["busca_periodo"][0] > date("Y-m-t") || $_POST["busca_periodo"][1] > date("Y-m-t")){
                     $_POST["errorFields"][] = "busca_periodo";
-                    throw new Exception("Data de pesquisa não pode ser após hoje (".date("d/m/Y").").");
+                    throw new Exception("Data de pesquisa não pode ser após o mês atual (".date("m/Y").").");
                 }else{
                     $motorista = mysqli_fetch_assoc(query(
                         "SELECT enti_nb_id, enti_tx_nome, enti_tx_admissao FROM entidade"
@@ -238,7 +238,7 @@ function index() {
         "busca_periodo",
         (!empty($_POST["busca_periodo"]) ? $_POST["busca_periodo"] : [date("Y-m-01"), date("Y-m-d")]),
         2,
-        "MASCARA_PERIODO"
+        "MASCARA_PERIODO_MES_ATUAL"
     );
     //}
 

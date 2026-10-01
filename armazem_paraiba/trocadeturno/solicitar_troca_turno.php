@@ -286,11 +286,11 @@ $fieldsTroca = array(
     "<div class='col-sm-3 margin-bottom-5'><label>Nome</label><input type='text' name='nome_trabalhara' id='nome_trabalhara' class='form-control input-sm' readonly></div>",
     "<div class='col-sm-2 margin-bottom-5'><label>Setor</label><input type='text' name='setor_trabalhara' id='setor_trabalhara' class='form-control input-sm' readonly></div>",
     "<div class='col-sm-2 margin-bottom-5'><label>Subsetor</label><input type='text' name='subsetor_trabalhara' id='subsetor_trabalhara' class='form-control input-sm' readonly></div>",
-    campo_data('Data da Troca', 'data_troca', '', 2, "min='$dataMinima'"),
-    combo('Turno', 'turno_troca', strval(tt_s($turnoSolicitante, 'codigo', '')), 2, $turnos),
+    campo_data('Data da Troca (voce trabalha por ele)', 'data_troca', '', 2, "min='$dataMinima'"),
+    combo('Turno da Troca (turno do colega)', 'turno_troca', '', 2, $turnos),
     "<div class='col-sm-2 margin-bottom-5'><small id='msg_turno_troca' style='color:#888;'></small></div>",
-    campo_data('Data que Pagara', 'data_pagara', '', 2, "min='$dataMinima'"),
-    combo('Turno que Pagara', 'turno_pagara', '', 2, $turnos),
+    campo_data('Data que Pagara (ele trabalha por voce)', 'data_pagara', '', 2, "min='$dataMinima'"),
+    combo('Turno que Pagara (seu turno)', 'turno_pagara', strval(tt_s($turnoSolicitante, 'codigo', '')), 2, $turnos),
     "<div class='col-sm-2 margin-bottom-5'><small id='msg_turno_pagara' style='color:#888;'></small></div>",
     textarea('Complemento', 'complemento', '', 12, "rows='3' placeholder='Observacoes ou informacoes adicionais...'")
 );
@@ -327,15 +327,15 @@ function preencherPorMatricula(){
  var nome=document.getElementById('nome_trabalhara');
  var setor=document.getElementById('setor_trabalhara');
  var subsetor=document.getElementById('subsetor_trabalhara');
- var turnoPagara=document.getElementsByName('turno_pagara')[0];
- var msgTurnoPagara=document.getElementById('msg_turno_pagara');
+ var turnoTroca=document.getElementsByName('turno_troca')[0];
+ var msgTurnoTroca=document.getElementById('msg_turno_troca');
  if(!matEl){return;}
  var matricula=(matEl.value||'').trim();
  if(matricula===''){ if(msg){msg.innerHTML='<span style=\'color:red;\'>Informe a matricula.</span>';} return; }
  if(msg){msg.innerHTML='<i class=\'fa fa-spinner fa-spin\'></i> Buscando...';}
  if(nome){nome.value='';} if(setor){setor.value='';} if(subsetor){subsetor.value='';}
- if(turnoPagara){turnoPagara.value='';}
- if(msgTurnoPagara){msgTurnoPagara.innerHTML='';}
+ if(turnoTroca){turnoTroca.value='';}
+ if(msgTurnoTroca){msgTurnoTroca.innerHTML='';}
  fetch('api_busca_matricula.php?matricula='+encodeURIComponent(matricula),{credentials:'same-origin'})
  .then(function(r){return r.text();})
  .then(function(text){
@@ -350,15 +350,15 @@ function preencherPorMatricula(){
          if(nome){nome.value=res.nome||'';}
          if(setor){setor.value=res.setor||'';}
          if(subsetor){subsetor.value=res.subsetor||'';}
-         if(turnoPagara){
+         if(turnoTroca){
              var turnoCodigo=(res.turno_codigo||'').toString().trim();
              if(turnoCodigo!==''){
-                 turnoPagara.value=turnoCodigo;
-                 if(msgTurnoPagara){msgTurnoPagara.innerHTML='<span style=\'color:green;\'>Turno preenchido automaticamente.</span>';}
+                 turnoTroca.value=turnoCodigo;
+                 if(msgTurnoTroca){msgTurnoTroca.innerHTML='<span style=\'color:green;\'>Turno do colega preenchido (voce trabalha nele na Data da Troca).</span>';}
              } else {
-                 turnoPagara.value='';
-                 tentarAbrirSelect(turnoPagara);
-                 if(msgTurnoPagara){msgTurnoPagara.innerHTML='<span style=\'color:#b35a00;\'>Sem turno cadastrado. Selecione manualmente.</span>';}
+                 turnoTroca.value='';
+                 tentarAbrirSelect(turnoTroca);
+                 if(msgTurnoTroca){msgTurnoTroca.innerHTML='<span style=\'color:#b35a00;\'>Colega sem turno cadastrado. Selecione manualmente.</span>';}
              }
          }
          if(msg){msg.innerHTML='<span style=\'color:green;\'>Encontrado</span>';}
@@ -373,16 +373,18 @@ function preencherPorMatricula(){
 document.addEventListener('DOMContentLoaded', function(){
  var btn=document.getElementById('btn_buscar_matricula');
  var input=document.getElementById('matricula_trabalhara');
- var turnoTroca=document.getElementsByName('turno_troca')[0];
+ var turnoPagara=document.getElementsByName('turno_pagara')[0];
+ var msgTurnoPagara=document.getElementById('msg_turno_pagara');
  var msgTurnoTroca=document.getElementById('msg_turno_troca');
  if(btn){btn.addEventListener('click', preencherPorMatricula);} 
  if(input){ input.addEventListener('keydown', function(ev){ if(ev.key==='Enter'){ev.preventDefault(); preencherPorMatricula();} }); }
- if(turnoTroca){
-     if((turnoTroca.value||'').trim()!==''){
-         if(msgTurnoTroca){msgTurnoTroca.innerHTML='<span style=\'color:green;\'>Turno do solicitante preenchido automaticamente.</span>';}
+ if(msgTurnoTroca){msgTurnoTroca.innerHTML='<span style=\'color:#888;\'>Preenchido com o turno do colega ao buscar a matricula.</span>';}
+ if(turnoPagara){
+     if((turnoPagara.value||'').trim()!==''){
+         if(msgTurnoPagara){msgTurnoPagara.innerHTML='<span style=\'color:green;\'>Seu turno preenchido (o colega trabalha nele na Data que Pagara).</span>';}
      } else {
-         tentarAbrirSelect(turnoTroca);
-         if(msgTurnoTroca){msgTurnoTroca.innerHTML='<span style=\'color:#b35a00;\'>Solicitante sem turno cadastrado. Selecione manualmente.</span>';}
+         tentarAbrirSelect(turnoPagara);
+         if(msgTurnoPagara){msgTurnoPagara.innerHTML='<span style=\'color:#b35a00;\'>Solicitante sem turno cadastrado. Selecione manualmente.</span>';}
      }
  }
 });

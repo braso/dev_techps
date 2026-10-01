@@ -18,7 +18,7 @@ Grid de Modelos → botão Enviar para Assinatura → MODAL
         ↓
 Sistema resolve os placeholders com os dados de cada funcionário e gera o PDF (TCPDF)
         ↓
-Assinatura = Sim → envia para o módulo de assinatura (e-mail com link, validade 24h)
+Assinatura = Sim → envia para o módulo de assinatura (e-mail com link, prazo de assinatura configurável em dias; 0 = sem prazo)
 Assinatura = Não → salva o PDF direto no prontuário do funcionário
         ↓
 PDF assinado retorna para arquivos/Funcionarios/{id}/ e aparece na aba Documentos
@@ -34,7 +34,7 @@ Status acompanhado em "Termos Gerados" e em Assinatura > Documentos
 |---|---|
 | `modelos_termo.php` | CRUD de modelos (nome, tipo de documento, status e texto padrão com placeholders). No grid: **Enviar para Assinatura** (modal de seleção em lote) e **Clonar** (duplica um ou mais modelos existentes) |
 | `buscar_funcionarios.php` | Endpoint AJAX do modal: lista funcionários conforme empresas, cargos, setores e busca (inclui indicador de termo já existente) |
-| `gerar_termos.php` | Tela alternativa de geração em lote com filtros multi-seleção (empresa/cargo/setor), opções (ICP, e-mail, forçar, lote) e barra de progresso |
+| `gerar_termos.php` | Tela alternativa de geração em lote com filtros multi-seleção (empresa/cargo/setor), opções (ICP, e-mail, forçar, prazo de assinatura, lote) e barra de progresso |
 | `processar_termos.php` | Endpoint AJAX: processa cada funcionário, gera PDF e envia para assinatura |
 | `preview_termo.php` | Pré-visualização do texto do modelo: mostra o documento com as tags (`{{...}}`) **destacadas em amarelo** e a lista dos campos que serão preenchidos |
 | `listar_termos.php` | Lista dos termos gerados com status, sincronização manual/em massa, cancelamento (bloqueado para assinados) e botão Voltar |
@@ -132,7 +132,7 @@ Tudo entre `{{ }}` que não for reconhecido permanece no texto e é registrado n
    - **Cargo / Setor**: checkboxes com multi-seleção (marcar quantos quiser) + **Marcar todos / Desmarcar todos**.
    - **Buscar funcionário**: nome, matrícula ou CPF (vazio = todos).
    - Lista de funcionários com badges de status do termo (sem termo / gerado / aguardando assinatura / assinado) e botões **Marcar todos / Desmarcar todos / Somente sem termo**.
-   - Opções: **Validar ICP**, **Enviar e-mail**, **Forçar regeração**.
+   - Opções: **Validar ICP**, **Enviar e-mail**, **Forçar regeração**, **Prazo para assinatura (dias)** (0 = sem prazo de expiração; máximo 30).
 4. Clique **Enviar para Assinatura**: um documento é gerado **para cada funcionário** com os dados dele e da empresa vinculada.
    - Tipo com **Assinatura = Sim**: cada funcionário recebe o e-mail com o link para assinar o próprio documento; ao assinar, o PDF retorna para `arquivos/Funcionarios/{id}/` e aparece na **aba Documentos** e em **Assinatura > Documentos**.
    - Tipo com **Assinatura = Não**: o PDF é gerado e salvo direto no prontuário (sem e-mail, sem solicitação).
@@ -153,7 +153,7 @@ Tudo entre `{{ }}` que não for reconhecido permanece no texto e é registrado n
 ## 6. Regras de comportamento
 
 - **Assinatura**: determinada **somente** pelo tipo de documento (`tipo_tx_assinatura`). Não existe mais opção "enviar p/ assinatura" na tela de geração — quem decide é `cadastro_tipo_doc.php`.
-  - **Sim**: o PDF é gerado temporariamente e enviado pela integração `assinatura/integracao/assinatura_integracao.php` (e-mail com link, validade de 24h). Sem assinantes configurados, o **funcionário é o único assinante**. O PDF assinado retorna a `arquivos/Funcionarios/{id}/` e é registrado em `documento_funcionario` (`docu_tx_assinado = 'sim'`).
+  - **Sim**: o PDF é gerado temporariamente e enviado pela integração `assinatura/integracao/assinatura_integracao.php` (e-mail com link). O prazo de expiração é informado no envio (`prazo_expiracao_dias`, 1 a 30 dias; **0 = sem prazo**) e segue as regras do módulo de assinatura (expiração, status `expirado`, renovação). Sem assinantes configurados, o **funcionário é o único assinante**. O PDF assinado retorna a `arquivos/Funcionarios/{id}/` e é registrado em `documento_funcionario` (`docu_tx_assinado = 'sim'`).
   - **Não**: o PDF é salvo direto em `arquivos/Funcionarios/{id}/` e registrado em `documento_funcionario` (`docu_tx_assinado = 'nao'`), status `gerado`; **Validar ICP e Enviar e-mail são ignorados** nesse caminho.
 - **Validar ICP**: aplica assinatura digital com certificado ICP-Brasil no PDF final ao concluir as assinaturas (aplica-se quando há assinatura).
 - **Enviar e-mail = Não**: o e-mail cadastrado é **desconsiderado** — a solicitação é criada com um e-mail interno (ex.: `sememail.<id>@techps.com.br`) e o funcionário assina pelo sistema (sino/pendências). Com **Sim**, exige e-mail válido.

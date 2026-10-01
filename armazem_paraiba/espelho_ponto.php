@@ -312,9 +312,9 @@ if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"
 					$_POST["busca_periodo"] = explode(" - ", $_POST["busca_periodo"]);
 				}
 
-				if($_POST["busca_periodo"][0] > date("Y-m-d") || $_POST["busca_periodo"][1] > date("Y-m-d")){
+				if($_POST["busca_periodo"][0] > date("Y-m-t") || $_POST["busca_periodo"][1] > date("Y-m-t")){
 					$_POST["errorFields"][] = "busca_periodo";
-					throw new Exception("Data de pesquisa não pode ser após hoje (".date("d/m/Y").").");
+					throw new Exception("Data de pesquisa não pode ser após o mês atual (".date("m/Y").").");
 				}else{
 					if(count($motoristasSelecionados) === 1){
 						$motorista = mysqli_fetch_assoc(query(
@@ -493,7 +493,7 @@ if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"
 				"Período", "busca_periodo",
 				(!empty($_POST["busca_periodo"])? $_POST["busca_periodo"]: [date("Y-m-01"), date("Y-m-d")]),
 				2,
-				"MASCARA_PERIODO"
+				"MASCARA_PERIODO_MES_ATUAL"
 			);
 		//}
 

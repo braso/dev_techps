@@ -1,0 +1,2 @@
+[2026-09-30 10:28:11] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=modelo_criado detalhe=Modelo #1 criado nome=sdf
+[2026-09-30 10:28:43] user=Techps.admin(138) ip=::ffff:172.18.0.1 evento=modelo_atualizado detalhe=Modelo #1 atualizado nome=sdf

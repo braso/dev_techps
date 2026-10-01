@@ -277,6 +277,13 @@ function index() {
 							<span class='help-block termos-ajuda' style='font-size:11px; margin-bottom:0;'>Badge mostra o status do termo de cada funcionário.</span>
 						</div>
 					</div>
+					<div class='row' style='margin-top:6px;'>
+						<div class='col-sm-3'>
+							<label class='control-label'>Prazo para assinatura (dias)</label>
+							<input type='number' id='termos_modal_prazo' class='form-control input-sm' min='0' max='30' step='1' value='1'>
+							<span class='help-block termos-ajuda' style='font-size:11px; margin-bottom:0;'>Quantos dias o link de assinatura fica válido. 0 = sem prazo de expiração.</span>
+						</div>
+					</div>
 					<div id='termos_modal_progresso' style='display:none; margin-top:12px;'>
 						<div class='progress' style='margin-bottom:4px;'>
 							<div id='termos_modal_barra' class='progress-bar progress-bar-success' style='width:0%'></div>
@@ -501,7 +508,8 @@ function termosModalCargosSelecionados() {
 				enviar_assinatura: 'sim',
 				validar_icp: $('#termos_modal_icp').val(),
 				enviar_email: $('#termos_modal_email').val(),
-				forcar: $('#termos_modal_forcar').val()
+				forcar: $('#termos_modal_forcar').val(),
+				prazo_expiracao_dias: parseInt($('#termos_modal_prazo').val(), 10) || 0
 			};
 			var total = ids.length, feitos = 0, okC = 0, errC = 0, resumo = [];
 			function proximo(inicio) {
