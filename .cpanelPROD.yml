@@ -40,6 +40,8 @@ deployment:
     - export HARMONYVET=/home/tech1694/public_html/gestaodeponto/harmonyvet
     - export TRANSROCHA=/home/tech1694/public_html/gestaodeponto/transrocha
     - export TRANSRAISSA=/home/tech1694/public_html/gestaodeponto/trans_raissa
+    - export SAMBAIBA=/home/tech1694/public_html/gestaodeponto/sambaiba
+    - export HELENA=/home/tech1694/public_html/gestaodeponto/helena_transportes_ltda
 
 
 
@@ -79,5 +81,7 @@ deployment:
     - /bin/cp -R $DOMAIN $HARMONYVET
     - /bin/cp -R $DOMAIN $TRANSROCHA
     - /bin/cp -R $DOMAIN $TRANSRAISSA
-
+    - /bin/cp -R $DOMAIN $SAMBAIBA
+    - /bin/cp -R $DOMAIN $HELENA
+      
 
