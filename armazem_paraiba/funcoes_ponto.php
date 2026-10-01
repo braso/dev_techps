@@ -7,6 +7,11 @@
         header("Pragma: no-cache"); // HTTP 1.0.
         header("Expires: 0");
 	//*/
+	// O helper precisa ser incluido antes do conecta.php: o contex20/funcoes.php executa a
+	// acao do POST durante o include e algumas acoes (ex.: buscarEspelho) chamam diaDetalhePonto.
+	if(file_exists(__DIR__."/trocadeturno/helpers_troca_turno.php")){
+		include_once __DIR__."/trocadeturno/helpers_troca_turno.php";
+	}
 	if(!defined('NO_CONNECTION')){
 		include_once __DIR__."/conecta.php";
 	}
@@ -793,10 +798,35 @@
 					LIMIT 1;"
 			));
 			$infoFerias = "";
-		
+
+			//TROCA DE TURNO APROVADA{
+				// A troca aprovada substitui a previsao do dia: quem trabalha assume a escala do colega
+				// e quem foi substituido fica com previsao 00:00 (sem gerar falta/saldo negativo).
+				$trocaTurnoDia = null;
+				if(empty($ferias) && !empty($motorista["enti_nb_id"]) && function_exists("tt_jornadaTrocaDia")){
+					$trocaTurnoDia = tt_jornadaTrocaDia(intval($motorista["enti_nb_id"]), $data);
+				}
+				if(!empty($trocaTurnoDia)){
+					$nomeOrigemTroca = ($trocaTurnoDia["origem_nome"] !== "")? $trocaTurnoDia["origem_nome"]: "colega";
+					if($trocaTurnoDia["modo"] == "folga"){
+						$tituloTroca = "Turno coberto por {$nomeOrigemTroca} (troca de turno #{$trocaTurnoDia["solicitacao"]})";
+					}else{
+						$tituloTroca = "Trabalhando a escala de {$nomeOrigemTroca} (troca de turno #{$trocaTurnoDia["solicitacao"]})";
+					}
+					$aRetorno["diaSemana"] .= " <a><i style='color:#3c8dbc;' title='".htmlspecialchars($tituloTroca, ENT_QUOTES, "UTF-8")."' class='fa fa-exchange'></i></a>";
+				}
+			//}
 
 			if(!empty($ferias)){
 				$jornadaPrevistaOriginal = "00:00";
+			}elseif(!empty($trocaTurnoDia) && $trocaTurnoDia["modo"] == "folga"){
+				$jornadaPrevistaOriginal = "00:00";
+				$aRetorno["inicioEscala"] = "00:00";
+				$aRetorno["fimEscala"] = "00:00";
+			}elseif(!empty($trocaTurnoDia) && $trocaTurnoDia["modo"] == "trabalha"){
+				$aRetorno["inicioEscala"] = $trocaTurnoDia["inicio"];
+				$aRetorno["fimEscala"] = $trocaTurnoDia["fim"];
+				$jornadaPrevistaOriginal = $trocaTurnoDia["jornada"];
 			}elseif($motorista["para_tx_tipo"] == "horas_por_dia"){
 				if(date("w", strtotime($data)) == "6"){
 					$jornadaPrevistaOriginal = $motorista["enti_tx_jornadaSabado"];

@@ -582,8 +582,10 @@ if(function_exists("index")){
 			case "MASCARA_MES":
 				$type = "month";
 			break;
+			case "MASCARA_PERIODO_MES_ATUAL":
+				$limite = strtotime(date("Y-m-t")." 23:59:59") * 1000;
 			case "MASCARA_PERIODO_SEM_LIMITE":
-				$limite = 'data+1';
+				$limite = !empty($limite)? $limite: 'data+1';
 			case "MASCARA_PERIODO":
 				$datas = [DateTime::createFromFormat("Y-m-d", date("Y-m-01")), DateTime::createFromFormat("Y-m-d", date("Y-m-d"))];
 

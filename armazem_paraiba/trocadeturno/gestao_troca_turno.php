@@ -78,6 +78,13 @@ function tt_processarDecisaoGestor() {
         return array('Voce nao possui solicitacao pendente para este item.', true);
     }
 
+    if ($decisao === 'aprovado') {
+        $conflitoTroca = tt_validarConflitosTroca($idSolicitacao);
+        if ($conflitoTroca !== '') {
+            return array('Conflito de escala: '.$conflitoTroca, true);
+        }
+    }
+
     $agora = date('Y-m-d H:i:s');
 
     tt_query(

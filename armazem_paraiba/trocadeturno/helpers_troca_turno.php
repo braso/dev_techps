@@ -473,6 +473,400 @@ function tt_formatarDataDocumento($valor) {
     return $ts ? date('d/m/Y', $ts) : $valor;
 }
 
+// Verifica se uma tabela existe no banco atual.
+function tt_tabelaExiste($tabela) {
+    $tabela = preg_replace('/[^a-zA-Z0-9_]/', '', (string)$tabela);
+    if ($tabela === '') {
+        return false;
+    }
+
+    $res = tt_query("SHOW TABLES LIKE '{$tabela}'");
+    return ($res instanceof mysqli_result) && mysqli_num_rows($res) > 0;
+}
+
+// Verifica se um indice existe em uma tabela.
+function tt_indiceExiste($tabela, $indice) {
+    $tabela = preg_replace('/[^a-zA-Z0-9_]/', '', (string)$tabela);
+    $indice = preg_replace('/[^a-zA-Z0-9_]/', '', (string)$indice);
+    if ($tabela === '' || $indice === '') {
+        return false;
+    }
+
+    $res = tt_query("SHOW INDEX FROM {$tabela} WHERE Key_name = '{$indice}'");
+    return ($res instanceof mysqli_result) && mysqli_num_rows($res) > 0;
+}
+
+// Cria os indices de consulta por entidade/data usados no calculo da jornada (uma vez por requisicao).
+function tt_ensureTrocaIndexes() {
+    static $executado = false;
+    if ($executado) {
+        return;
+    }
+    $executado = true;
+
+    if (!tt_tabelaExiste('solicitacao_troca_horario')) {
+        return;
+    }
+
+    $indices = array(
+        'idx_tt_sol_troca'   => 'soli_nb_entidade, soli_tx_status_gestor, soli_tx_data_troca',
+        'idx_tt_sol_pagara'  => 'soli_nb_entidade, soli_tx_status_gestor, soli_tx_data_pagara',
+        'idx_tt_dest_troca'  => 'soli_nb_entidade_destino, soli_tx_status_gestor, soli_tx_data_troca',
+        'idx_tt_dest_pagara' => 'soli_nb_entidade_destino, soli_tx_status_gestor, soli_tx_data_pagara'
+    );
+
+    foreach ($indices as $nome => $colunas) {
+        if (!tt_indiceExiste('solicitacao_troca_horario', $nome)) {
+            tt_query("ALTER TABLE solicitacao_troca_horario ADD INDEX {$nome} ({$colunas})");
+        }
+    }
+}
+
+// Monta a janela e a carga horaria prevista de uma entidade em uma data.
+// Espelha o calculo de jornadaPrevista do diaDetalhePonto para o parametro/escala do colega.
+function tt_jornadaEntidadeDia($idEntidade, $data) {
+    static $cache = array();
+
+    $idEntidade = intval($idEntidade);
+    $data = trim((string)$data);
+    if ($idEntidade <= 0 || $data === '') {
+        return array('tipo' => '', 'jornada' => '00:00', 'inicio' => '00:00', 'fim' => '00:00', 'intervalo' => '00:00');
+    }
+
+    $chave = $idEntidade.'|'.$data;
+    if (array_key_exists($chave, $cache)) {
+        return $cache[$chave];
+    }
+
+    $resultado = array(
+        'tipo' => '',
+        'jornada' => '00:00',
+        'inicio' => '00:00',
+        'fim' => '00:00',
+        'intervalo' => '00:00'
+    );
+
+    $row = tt_fetch_assoc_safe(tt_query(
+        "SELECT e.enti_tx_jornadaSemanal, e.enti_tx_jornadaSabado, e.enti_nb_parametro,
+                p.para_tx_tipo, p.para_tx_jornadaSemanal, p.para_tx_jornadaSabado,
+                esc.esca_nb_id, esc.esca_tx_dataInicio, esc.esca_nb_periodicidade
+         FROM entidade e
+         LEFT JOIN parametro p ON p.para_nb_id = e.enti_nb_parametro
+         LEFT JOIN escala esc ON esc.esca_nb_parametro = p.para_nb_id
+         WHERE e.enti_nb_id = ?
+         LIMIT 1",
+        "i",
+        array($idEntidade)
+    ));
+
+    if (empty($row)) {
+        $cache[$chave] = $resultado;
+        return $resultado;
+    }
+
+    $tipo = trim(strval(tt_val($row, 'para_tx_tipo', '')));
+    $resultado['tipo'] = $tipo;
+
+    if ($tipo === 'escala' && intval(tt_val($row, 'esca_nb_id', 0)) > 0) {
+        $periodicidade = intval(tt_val($row, 'esca_nb_periodicidade', 0));
+        if ($periodicidade <= 0) {
+            $periodicidade = 7;
+        }
+
+        $diaDoCiclo = 1;
+        $dataInicio = trim(strval(tt_val($row, 'esca_tx_dataInicio', '')));
+        if ($dataInicio !== '') {
+            $diferenca = (new DateTime($dataInicio))->diff(new DateTime($data));
+            $diferenca = $diferenca->days * ($diferenca->invert ? -1 : 1);
+            $diaDoCiclo = (int)round($periodicidade * (($diferenca / $periodicidade) - floor($diferenca / $periodicidade)) + 1);
+        }
+
+        $dia = tt_fetch_assoc_safe(tt_query(
+            "SELECT esca_tx_horaInicio, esca_tx_horaFim, esca_tx_intervaloInterno
+             FROM escala_dia
+             WHERE esca_nb_escala = ? AND esca_nb_numeroDia = ?
+             LIMIT 1",
+            "ii",
+            array(intval(tt_val($row, 'esca_nb_id', 0)), $diaDoCiclo)
+        ));
+
+        if (!empty($dia)) {
+            $inicio = trim(strval(tt_val($dia, 'esca_tx_horaInicio', '')));
+            $fim = trim(strval(tt_val($dia, 'esca_tx_horaFim', '')));
+            $intervalo = trim(strval(tt_val($dia, 'esca_tx_intervaloInterno', '')));
+
+            $inicio = ($inicio !== '') ? substr($inicio, 0, 5) : '00:00';
+            $fim = ($fim !== '') ? substr($fim, 0, 5) : '00:00';
+            $intervalo = ($intervalo !== '') ? substr($intervalo, 0, 5) : '00:00';
+
+            $jornada = operarHorarios(array($fim, $inicio), '-');
+            if ($jornada !== '' && $jornada[0] === '-') {
+                $jornada = operarHorarios(array($jornada, '24:00'), '+');
+            }
+            $jornada = operarHorarios(array($jornada, $intervalo), '-');
+
+            $resultado['inicio'] = $inicio;
+            $resultado['fim'] = $fim;
+            $resultado['intervalo'] = $intervalo;
+            $resultado['jornada'] = $jornada;
+        }
+    } elseif ($tipo === 'horas_por_dia') {
+        $diaSemana = date('w', strtotime($data));
+        if ($diaSemana === '6') {
+            $jornada = strval(tt_val($row, 'enti_tx_jornadaSabado', tt_val($row, 'para_tx_jornadaSabado', '')));
+        } elseif ($diaSemana === '0') {
+            $jornada = '00:00';
+        } else {
+            $jornada = strval(tt_val($row, 'enti_tx_jornadaSemanal', tt_val($row, 'para_tx_jornadaSemanal', '')));
+        }
+
+        $jornada = trim($jornada);
+        $resultado['jornada'] = ($jornada !== '') ? substr($jornada, 0, 5) : '00:00';
+    }
+
+    $cache[$chave] = $resultado;
+    return $resultado;
+}
+
+// Busca solicitacoes de troca ja aprovadas que envolvem a entidade na data informada.
+function tt_buscarTrocasAprovadasDia($idEntidade, $data) {
+    static $cache = array();
+
+    $idEntidade = intval($idEntidade);
+    $data = trim((string)$data);
+    if ($idEntidade <= 0 || $data === '') {
+        return array();
+    }
+
+    $chave = $idEntidade.'|'.$data;
+    if (array_key_exists($chave, $cache)) {
+        return $cache[$chave];
+    }
+
+    if (!tt_tabelaExiste('solicitacao_troca_horario')) {
+        $cache[$chave] = array();
+        return array();
+    }
+
+    tt_ensureTrocaIndexes();
+
+    $res = tt_query(
+        "SELECT soli_nb_id, soli_nb_entidade, soli_nb_entidade_destino,
+                soli_tx_data_troca, soli_tx_data_pagara, soli_tx_data_decisao, soli_tx_status_gestor
+         FROM solicitacao_troca_horario
+         WHERE soli_tx_status_gestor = 'aprovado'
+           AND (
+                (soli_nb_entidade = ? AND (soli_tx_data_troca = ? OR soli_tx_data_pagara = ?))
+                OR
+                (soli_nb_entidade_destino = ? AND (soli_tx_data_troca = ? OR soli_tx_data_pagara = ?))
+           )
+         ORDER BY soli_tx_data_decisao ASC, soli_nb_id ASC
+         LIMIT 50",
+        "ississ",
+        array($idEntidade, $data, $data, $idEntidade, $data, $data)
+    );
+
+    $trocas = ($res instanceof mysqli_result) ? mysqli_fetch_all($res, MYSQLI_ASSOC) : array();
+    $cache[$chave] = $trocas;
+    return $trocas;
+}
+
+// Resolve o efeito da troca de turno aprovada para a entidade na data.
+// Data da Troca: o solicitante trabalha no lugar do colega (destino).
+// Data que Pagara: o colega trabalha no lugar do solicitante.
+// 'trabalha': a entidade assume a escala do outro. 'folga': o outro cobre o turno dela (previsao 00:00).
+function tt_jornadaTrocaDia($idEntidade, $data) {
+    static $cache = array();
+
+    $idEntidade = intval($idEntidade);
+    $data = trim((string)$data);
+    if ($idEntidade <= 0 || $data === '') {
+        return null;
+    }
+
+    $chave = $idEntidade.'|'.$data;
+    if (array_key_exists($chave, $cache)) {
+        return $cache[$chave];
+    }
+    $cache[$chave] = null;
+
+    $trocas = tt_buscarTrocasAprovadasDia($idEntidade, $data);
+    if (empty($trocas)) {
+        return null;
+    }
+
+    $trabalhos = array();
+    $folgas = array();
+    foreach ($trocas as $t) {
+        $idSolicitante = intval(tt_val($t, 'soli_nb_entidade', 0));
+        $idDestino = intval(tt_val($t, 'soli_nb_entidade_destino', 0));
+        $dataTroca = substr(strval(tt_val($t, 'soli_tx_data_troca', '')), 0, 10);
+        $dataPagara = substr(strval(tt_val($t, 'soli_tx_data_pagara', '')), 0, 10);
+        $ordem = strval(tt_val($t, 'soli_tx_data_decisao', '')).'|'.sprintf('%010d', intval(tt_val($t, 'soli_nb_id', 0)));
+
+        if ($idEntidade === $idSolicitante) {
+            // Na Data da Troca o solicitante trabalha no lugar do colega; na Data que Pagara o colega retribui.
+            if ($dataTroca === $data) {
+                $trabalhos[$ordem] = array('troca' => $t, 'origem' => $idDestino, 'sentido' => 'troca');
+            }
+            if ($dataPagara === $data) {
+                $folgas[$ordem] = array('troca' => $t, 'origem' => $idDestino, 'sentido' => 'pagara');
+            }
+        } elseif ($idEntidade === $idDestino) {
+            if ($dataTroca === $data) {
+                $folgas[$ordem] = array('troca' => $t, 'origem' => $idSolicitante, 'sentido' => 'troca');
+            }
+            if ($dataPagara === $data) {
+                $trabalhos[$ordem] = array('troca' => $t, 'origem' => $idSolicitante, 'sentido' => 'pagara');
+            }
+        }
+    }
+
+    $resultado = null;
+
+    if (!empty($trabalhos)) {
+        krsort($trabalhos);
+        $item = reset($trabalhos);
+        $t = $item['troca'];
+        $origem = intval($item['origem']);
+        $jornadaOrigem = tt_jornadaEntidadeDia($origem, $data);
+        $entidadeOrigem = tt_buscarEntidadeBasica($origem);
+
+        $resultado = array(
+            'modo' => 'trabalha',
+            'sentido' => strval($item['sentido']),
+            'origem_entidade' => $origem,
+            'origem_nome' => trim(strval(tt_val($entidadeOrigem, 'enti_tx_nome', ''))),
+            'solicitacao' => intval(tt_val($t, 'soli_nb_id', 0)),
+            'inicio' => strval(tt_val($jornadaOrigem, 'inicio', '00:00')),
+            'fim' => strval(tt_val($jornadaOrigem, 'fim', '00:00')),
+            'intervalo' => strval(tt_val($jornadaOrigem, 'intervalo', '00:00')),
+            'jornada' => strval(tt_val($jornadaOrigem, 'jornada', '00:00'))
+        );
+    } elseif (!empty($folgas)) {
+        krsort($folgas);
+        $item = reset($folgas);
+        $t = $item['troca'];
+        $origem = intval($item['origem']);
+        $entidadeOrigem = tt_buscarEntidadeBasica($origem);
+
+        $resultado = array(
+            'modo' => 'folga',
+            'sentido' => strval($item['sentido']),
+            'origem_entidade' => $origem,
+            'origem_nome' => trim(strval(tt_val($entidadeOrigem, 'enti_tx_nome', ''))),
+            'solicitacao' => intval(tt_val($t, 'soli_nb_id', 0)),
+            'inicio' => '00:00',
+            'fim' => '00:00',
+            'intervalo' => '00:00',
+            'jornada' => '00:00'
+        );
+    }
+
+    $cache[$chave] = $resultado;
+    return $resultado;
+}
+
+// Procura outra troca aprovada que escale a entidade para trabalhar em outra escala na data.
+function tt_conflitoTrabalhoTroca($idEntidade, $data, $idSolicitacaoExcluir) {
+    $idEntidade = intval($idEntidade);
+    $idSolicitacaoExcluir = intval($idSolicitacaoExcluir);
+    $data = trim((string)$data);
+    if ($idEntidade <= 0 || $data === '') {
+        return array();
+    }
+
+    return tt_fetch_assoc_safe(tt_query(
+        "SELECT soli_nb_id, soli_tx_nome_solicitante, soli_tx_nome_trabalhara,
+                soli_tx_data_troca, soli_tx_data_pagara
+         FROM solicitacao_troca_horario
+         WHERE soli_tx_status_gestor = 'aprovado'
+           AND soli_nb_id <> ?
+           AND (
+                (soli_nb_entidade = ? AND soli_tx_data_troca = ?)
+                OR
+                (soli_nb_entidade_destino = ? AND soli_tx_data_pagara = ?)
+           )
+         ORDER BY soli_nb_id DESC
+         LIMIT 1",
+        "iisis",
+        array($idSolicitacaoExcluir, $idEntidade, $data, $idEntidade, $data)
+    ));
+}
+
+// Procura outra troca aprovada que cubra o turno da entidade na data (alguem ja trabalha por ela).
+// $leg = 'troca' (coberto = destino na data_troca) ou 'pagara' (coberto = solicitante na data_pagara).
+function tt_conflitoCoberturaTroca($idEntidadeCoberta, $data, $idSolicitacaoExcluir, $leg) {
+    $idEntidadeCoberta = intval($idEntidadeCoberta);
+    $idSolicitacaoExcluir = intval($idSolicitacaoExcluir);
+    $data = trim((string)$data);
+    if ($idEntidadeCoberta <= 0 || $data === '') {
+        return array();
+    }
+
+    if ($leg === 'pagara') {
+        $filtro = "soli_nb_entidade = ? AND soli_tx_data_pagara = ?";
+    } else {
+        $filtro = "soli_nb_entidade_destino = ? AND soli_tx_data_troca = ?";
+    }
+
+    return tt_fetch_assoc_safe(tt_query(
+        "SELECT soli_nb_id, soli_tx_nome_solicitante, soli_tx_nome_trabalhara,
+                soli_tx_data_troca, soli_tx_data_pagara
+         FROM solicitacao_troca_horario
+         WHERE soli_tx_status_gestor = 'aprovado'
+           AND soli_nb_id <> ?
+           AND {$filtro}
+         ORDER BY soli_nb_id DESC
+         LIMIT 1",
+        "iis",
+        array($idSolicitacaoExcluir, $idEntidadeCoberta, $data)
+    ));
+}
+
+// Valida conflitos de escala antes de aprovar a solicitacao. Retorna mensagem de erro ou ''.
+function tt_validarConflitosTroca($idSolicitacao) {
+    $solicitacao = tt_buscarSolicitacaoTrocaHorario($idSolicitacao);
+    if (empty($solicitacao)) {
+        return 'Solicitacao nao encontrada para validar conflitos.';
+    }
+
+    $idSolicitante = intval(tt_val($solicitacao, 'soli_nb_entidade', 0));
+    $idDestino = intval(tt_val($solicitacao, 'soli_nb_entidade_destino', 0));
+    $nomeSolicitante = trim(strval(tt_val($solicitacao, 'soli_tx_nome_solicitante', '')));
+    $nomeDestino = trim(strval(tt_val($solicitacao, 'soli_tx_nome_trabalhara', '')));
+    $dataTroca = substr(strval(tt_val($solicitacao, 'soli_tx_data_troca', '')), 0, 10);
+    $dataPagara = substr(strval(tt_val($solicitacao, 'soli_tx_data_pagara', '')), 0, 10);
+
+    $conflitos = array();
+
+    // Data da Troca: o solicitante trabalha no lugar do colega (destino).
+    if ($dataTroca !== '') {
+        $c = tt_conflitoTrabalhoTroca($idSolicitante, $dataTroca, $idSolicitacao);
+        if (!empty($c)) {
+            $conflitos[] = $nomeSolicitante.' ja esta escalado(a) para trabalhar em outra troca aprovada em '.tt_formatarDataDocumento($dataTroca).' (solicitacao #'.intval(tt_val($c, 'soli_nb_id', 0)).').';
+        }
+        $c = tt_conflitoCoberturaTroca($idDestino, $dataTroca, $idSolicitacao, 'troca');
+        if (!empty($c)) {
+            $conflitos[] = 'O turno de '.$nomeDestino.' em '.tt_formatarDataDocumento($dataTroca).' ja esta coberto por outra troca aprovada (solicitacao #'.intval(tt_val($c, 'soli_nb_id', 0)).').';
+        }
+    }
+
+    // Data que Pagara: o colega (destino) trabalha no lugar do solicitante.
+    if ($dataPagara !== '') {
+        $c = tt_conflitoTrabalhoTroca($idDestino, $dataPagara, $idSolicitacao);
+        if (!empty($c)) {
+            $conflitos[] = $nomeDestino.' ('.strval(tt_val($solicitacao, 'soli_tx_matricula_trabalhara', '')).') ja esta escalado(a) para trabalhar em outra troca aprovada em '.tt_formatarDataDocumento($dataPagara).' (solicitacao #'.intval(tt_val($c, 'soli_nb_id', 0)).').';
+        }
+        $c = tt_conflitoCoberturaTroca($idSolicitante, $dataPagara, $idSolicitacao, 'pagara');
+        if (!empty($c)) {
+            $conflitos[] = 'O turno de '.$nomeSolicitante.' em '.tt_formatarDataDocumento($dataPagara).' ja esta coberto por outra troca aprovada (solicitacao #'.intval(tt_val($c, 'soli_nb_id', 0)).').';
+        }
+    }
+
+    return implode(' ', $conflitos);
+}
+
 // Busca tipo de documento ativo para modelo de Troca de Horario.
 function tt_buscarTipoDocumentoTrocaHorario() {
     $res = tt_query(

@@ -27,7 +27,7 @@ $rootDir = dirname($appDir);
 
 $_SERVER['REQUEST_SCHEME'] = $_SERVER['REQUEST_SCHEME'] ?? 'http';
 $_SERVER['HTTP_HOST'] = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$_SERVER['DOCUMENT_ROOT'] = $_SERVER['DOCUMENT_ROOT'] ?? $rootDir;
+$_SERVER['DOCUMENT_ROOT'] = !empty($_SERVER['DOCUMENT_ROOT']) ? $_SERVER['DOCUMENT_ROOT'] : dirname($rootDir);
 $_SERVER['REQUEST_URI'] = $_SERVER['REQUEST_URI'] ?? '/';
 
 require_once $appDir . '/load_env.php';
@@ -245,6 +245,11 @@ function runnerSourceContracts(): void
             'setTotalResumo(',
             'somarTotais(',
             'montarTabelaPonto(',
+            'MASCARA_PERIODO_MES_ATUAL',
+        ],
+        'relatorio_pontos.php' => [
+            'buscarEspelho()',
+            'MASCARA_PERIODO_MES_ATUAL',
         ],
         'endosso.php' => [
             'include "funcoes_ponto.php"',
@@ -270,6 +275,17 @@ function runnerSourceContracts(): void
             'function montarEndossoMes',
             'function setTotalResumo',
             'function somarTotais',
+            'trocadeturno/helpers_troca_turno.php',
+            'tt_jornadaTrocaDia(',
+        ],
+        'trocadeturno/helpers_troca_turno.php' => [
+            'function tt_jornadaEntidadeDia',
+            'function tt_buscarTrocasAprovadasDia',
+            'function tt_jornadaTrocaDia',
+            'function tt_validarConflitosTroca',
+        ],
+        'trocadeturno/gestao_troca_turno.php' => [
+            'tt_validarConflitosTroca(',
         ],
     ];
 
@@ -279,6 +295,35 @@ function runnerSourceContracts(): void
         foreach ($needles as $needle) {
             runnerAssertContains($needle, $content, "Contrato quebrado em {$relativePath}");
         }
+    }
+
+    // O dispatcher do contex20/funcoes.php executa a acao do POST durante o include do
+    // conecta.php; por isso o helper de troca precisa ser carregado antes do conecta.
+    $funcoesPonto = runnerReadFile($appDir . '/funcoes_ponto.php');
+    $posHelperTroca = strpos($funcoesPonto, '__DIR__."/trocadeturno/helpers_troca_turno.php"');
+    $posConecta = strpos($funcoesPonto, '__DIR__."/conecta.php"');
+    runnerAssertTrue(
+        $posHelperTroca !== false && $posConecta !== false && $posHelperTroca < $posConecta,
+        'O helper de troca de turno deve ser incluido antes do conecta.php em funcoes_ponto.php.'
+    );
+    runnerAssertContains(
+        'function_exists("tt_jornadaTrocaDia")',
+        $funcoesPonto,
+        'diaDetalhePonto deve tolerar a ausencia do helper de troca de turno.'
+    );
+
+    // Consulta de ponto/relatorio limitada ao mes atual (pode ver o mes inteiro, nao so ate hoje).
+    foreach (['espelho_ponto.php', 'relatorio_pontos.php'] as $arquivoPeriodo) {
+        $conteudoPeriodo = runnerReadFile($appDir . '/' . $arquivoPeriodo);
+        runnerAssertContains(
+            'MASCARA_PERIODO_MES_ATUAL',
+            $conteudoPeriodo,
+            "{$arquivoPeriodo} deve permitir consultar o mes atual inteiro."
+        );
+        runnerAssertTrue(
+            strpos($conteudoPeriodo, '$_POST["busca_periodo"][1] > date("Y-m-d")') === false,
+            "{$arquivoPeriodo} ainda limita a consulta ao dia de hoje."
+        );
     }
 }
 
@@ -483,6 +528,8 @@ function runnerOptionalEndossoRuntimeTests(array &$summary): void
 
 function runnerIntegrationTests(array &$summary): void
 {
+    global $appDir;
+
     runnerRunCase('integration', 'diaDetalhePonto retorna estrutura completa', function (): void {
         $motorista = runnerFetchOne(
             "SELECT * FROM entidade WHERE enti_tx_status = 'ativo' AND enti_tx_ocupacao IN ('Motorista', 'Ajudante', 'Funcionário', 'Terceirizado', 'Tercerizado') ORDER BY enti_nb_id ASC LIMIT 1"
@@ -539,6 +586,8 @@ function runnerIntegrationTests(array &$summary): void
     }, $summary);
 
     runnerRunCase('integration', 'contratos de permissao e menu continuam coerentes', function (): void {
+        global $appDir;
+
         $checkPermission = runnerReadFile($appDir . '/check_permission.php');
         runnerAssertContains('/batida_ponto.php', $checkPermission, 'Regra especial de batida foi removida.');
         runnerAssertContains('/espelho_ponto.php', $checkPermission, 'Regra especial de espelho foi removida.');
