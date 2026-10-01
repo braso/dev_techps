@@ -37,6 +37,8 @@
 
 	$titulo = htmlspecialchars($treinamento["trei_tx_titulo"]);
 	$ehSerie = ($treinamento["trei_tx_serie"] ?? "nao") === "sim";
+	// Treinamento de vídeo único com avaliação: "concluído" só após aprovação.
+	$temQuestoesTreinamento = $ehSerie ? false : treinamento_certificado_temQuestoes($treinamentoId);
 	$perfisPermitidos = !empty($treinamento["trei_tx_tipo_usuario_permitido"])
 		? json_decode($treinamento["trei_tx_tipo_usuario_permitido"], true)
 		: [];
@@ -102,9 +104,48 @@
 	}
 
 	// =====================================================
+	// AJAX: GERAR O CERTIFICADO DE UM ÚNICO USUÁRIO
+	// =====================================================
+	if (isset($_GET["acao_acomp"]) && $_GET["acao_acomp"] === "certificado_usuario") {
+		header('Content-Type: application/json');
+		@set_time_limit(300);
+		$uId = (int)($_GET["usuario_id"] ?? 0);
+		$tId = (int)($_GET["treinamento_id"] ?? 0);
+		if ($uId <= 0 || $tId <= 0) {
+			echo json_encode(["success" => false, "message" => "Dados inválidos."]);
+			exit;
+		}
+		try {
+			$forcar = (int)($_GET["forcar"] ?? 0) === 1;
+			$resultado = treinamento_certificado_gerar($tId, $uId, $forcar);
+		} catch (Throwable $e) {
+			$resultado = ["ok" => false, "message" => "Erro ao gerar o certificado."];
+		}
+		if (empty($resultado["ok"])) {
+			echo json_encode(["success" => false, "message" => strval($resultado["message"] ?? "Não foi possível gerar o certificado.")]);
+			exit;
+		}
+		$registro = !empty($resultado["registro"])
+			? $resultado["registro"]
+			: treinamento_certificado_buscarRegistro($tId, $uId);
+		$registro = treinamento_certificado_sincronizar($registro);
+		$caminho = !empty($registro) ? treinamento_certificado_arquivo($registro) : "";
+		$caminho = trim(strval($caminho));
+		echo json_encode([
+			"success" => true,
+			"status" => strval($registro["trece_tx_status"] ?? ""),
+			"url" => $caminho !== ""
+				? (rtrim($_ENV["URL_BASE"] ?? "", "/") . ($CONTEX["path"] ?? "") . "/" . ltrim($caminho, "/"))
+				: "",
+			"message" => strval($resultado["message"] ?? "")
+		]);
+		exit;
+	}
+
+	// =====================================================
 	// AJAX: LOG DE AUDITORIA DE UM USUÁRIO NO TREINAMENTO
 	// =====================================================
-	if (isset($_GET["acao"]) && $_GET["acao"] === "log_usuario") {
+	if (isset($_GET["acao_acomp"]) && $_GET["acao_acomp"] === "log_usuario") {
 		header('Content-Type: application/json');
 		$uId = (int)($_GET["usuario_id"] ?? 0);
 		$tId = (int)($_GET["treinamento_id"] ?? 0);
@@ -135,7 +176,7 @@
 	// =====================================================
 	// FILTROS
 	// =====================================================
-	$filtroStatus = in_array($_GET["filtro_status"] ?? "", ["nao_iniciado", "em_andamento", "concluido", "bloqueado"], true) ? $_GET["filtro_status"] : "";
+	$filtroStatus = in_array($_GET["filtro_status"] ?? "", ["nao_iniciado", "em_andamento", "aguardando_avaliacao", "concluido", "bloqueado"], true) ? $_GET["filtro_status"] : "";
 	$filtroEmpresa = (int)($_GET["filtro_empresa"] ?? 0);
 	$filtroDataInicio = $_GET["filtro_data_inicio"] ?? "";
 	$filtroDataFim = $_GET["filtro_data_fim"] ?? "";
@@ -210,18 +251,39 @@
 				"percent" => (float)($rTemp["max_percent"] ?? 0)
 			];
 		}
-		// Para séries: episódios aprovados e iniciados por usuário
+		// Para séries: episódios concluídos e iniciados por usuário.
+		// Regra por episódio: com avaliação exige aprovação; sem avaliação basta
+		// o vídeo concluído (mesma regra usada na emissão do certificado).
 		$mapaEpiAprov = [];
 		$mapaEpiInic = [];
 		if ($ehSerie) {
-			$rsAprov = query(
-				"SELECT trepr_nb_usuario_id, COUNT(*) AS c FROM treinamento_progresso
-				 WHERE trepr_nb_treinamento_id = ? AND trepr_nb_episodio_id IS NOT NULL AND trepr_nb_avaliacao_aprovada = 1
-				 GROUP BY trepr_nb_usuario_id",
+			$epiTemQuestoes = [];
+			$rsEpiQ = query(
+				"SELECT e.trepi_nb_id,
+					(SELECT COUNT(*) FROM treinamento_episodio_questao q
+					 WHERE q.trepq_nb_episodio_id = e.trepi_nb_id AND q.trepq_tx_status = 'ativo') AS tem_questoes
+				 FROM treinamento_episodio e
+				 WHERE e.trepi_nb_treinamento_id = ? AND e.trepi_tx_status = 'ativo'",
 				"i", [$treinamentoId]
 			);
-			while ($rsAprov && ($rA = mysqli_fetch_assoc($rsAprov))) {
-				$mapaEpiAprov[(int)$rA["trepr_nb_usuario_id"]] = (int)($rA["c"] ?? 0);
+			while ($rsEpiQ && ($rEpiQ = mysqli_fetch_assoc($rsEpiQ))) {
+				$epiTemQuestoes[(int)$rEpiQ["trepi_nb_id"]] = ((int)($rEpiQ["tem_questoes"] ?? 0)) > 0;
+			}
+			$rsProgEpi = query(
+				"SELECT trepr_nb_usuario_id, trepr_nb_episodio_id, trepr_nb_avaliacao_aprovada, trepr_nb_concluido
+				 FROM treinamento_progresso
+				 WHERE trepr_nb_treinamento_id = ? AND trepr_nb_episodio_id IS NOT NULL",
+				"i", [$treinamentoId]
+			);
+			while ($rsProgEpi && ($rProgEpi = mysqli_fetch_assoc($rsProgEpi))) {
+				$epiId = (int)$rProgEpi["trepr_nb_episodio_id"];
+				$epiOk = !empty($epiTemQuestoes[$epiId])
+					? ((int)($rProgEpi["trepr_nb_avaliacao_aprovada"] ?? 0) === 1)
+					: ((int)($rProgEpi["trepr_nb_concluido"] ?? 0) === 1);
+				if ($epiOk) {
+					$epiUsuario = (int)$rProgEpi["trepr_nb_usuario_id"];
+					$mapaEpiAprov[$epiUsuario] = ($mapaEpiAprov[$epiUsuario] ?? 0) + 1;
+				}
 			}
 			$rsInic = query(
 				"SELECT trepr_nb_usuario_id, COUNT(*) AS c FROM treinamento_progresso
@@ -260,8 +322,21 @@
 				}
 			} else {
 				$concluidoGeral = (int)($row["trepr_nb_concluido"] ?? 0) == 1;
+				$aprovadoGeral = (int)($row["trepr_nb_avaliacao_aprovada"] ?? 0) === 1;
 				$iniciou = !empty($row["trepr_dt_data_inicio"]);
-				if ($concluidoGeral) {
+				if ($temQuestoesTreinamento) {
+					// Com avaliação: aprovado = concluído; vídeo concluído sem
+					// aprovação = aguardando avaliação.
+					if ($aprovadoGeral) {
+						$status = "concluido";
+					} elseif ($concluidoGeral) {
+						$status = "aguardando_avaliacao";
+					} elseif ($iniciou) {
+						$status = "em_andamento";
+					} else {
+						$status = "nao_iniciado";
+					}
+				} elseif ($concluidoGeral) {
 					$status = "concluido";
 				} elseif ($iniciou) {
 					$status = "em_andamento";
@@ -286,7 +361,7 @@
 	// KPIs (sobre o resultado filtrado)
 	// =====================================================
 	$kpi = [
-		"total" => 0, "nao_iniciado" => 0, "em_andamento" => 0, "concluido" => 0, "bloqueado" => 0,
+		"total" => 0, "nao_iniciado" => 0, "em_andamento" => 0, "aguardando_avaliacao" => 0, "concluido" => 0, "bloqueado" => 0,
 		"tempo_total" => 0, "soma_notas" => 0, "notas_count" => 0, "tentativas" => 0, "reprovacoes" => 0,
 		"avaliacoes_feitas" => 0
 	];
@@ -314,9 +389,24 @@
 	$statusInfo = [
 		"nao_iniciado" => ["label" => "Não Iniciado", "bg" => "#95a5a6", "icon" => "fa-clock-o"],
 		"em_andamento" => ["label" => "Em Andamento", "bg" => "#f39c12", "icon" => "fa-play-circle"],
+		"aguardando_avaliacao" => ["label" => "Aguard. Avaliação", "bg" => "#9b59b6", "icon" => "fa-pencil-square-o"],
 		"concluido" => ["label" => "Concluído", "bg" => "#27ae60", "icon" => "fa-check-circle"],
 		"bloqueado" => ["label" => "Bloqueado", "bg" => "#d9534f", "icon" => "fa-lock"],
 	];
+
+	// =====================================================
+	// CERTIFICADOS: mapa por usuário (status + arquivo)
+	// =====================================================
+	$mapaCertificados = [];
+	$rsCertAcomp = query(
+		"SELECT * FROM treinamento_certificado WHERE trece_nb_treinamento_id = ?",
+		"i",
+		[$treinamentoId]
+	);
+	while ($rsCertAcomp && ($rCertAcomp = mysqli_fetch_assoc($rsCertAcomp))) {
+		$mapaCertificados[(int)$rCertAcomp["trece_nb_usuario_id"]] = treinamento_certificado_sincronizar($rCertAcomp);
+	}
+	$certificadoUrlBase = rtrim($_ENV["URL_BASE"] ?? "", "/") . ($CONTEX["path"] ?? "");
 
 	cabecalho("Acompanhamento e Auditoria: " . $titulo);
 	echo "
@@ -332,6 +422,7 @@
 		.kpi-total { background:linear-gradient(135deg,#2c3e50,#3c8dbc); }
 		.kpi-pendente { background:linear-gradient(135deg,#7f8c8d,#95a5a6); }
 		.kpi-andamento { background:linear-gradient(135deg,#e67e22,#f39c12); }
+		.kpi-aguardando { background:linear-gradient(135deg,#6c3483,#9b59b6); }
 		.kpi-concluido { background:linear-gradient(135deg,#1e8449,#27ae60); }
 		.kpi-bloqueado { background:linear-gradient(135deg,#c0392b,#e74c3c); }
 		.kpi-taxa { background:linear-gradient(135deg,#2980b9,#3498db); }
@@ -367,7 +458,7 @@
 			.kpi-grid { grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); }
 			.kpi-card .kpi-num { font-size:22px; }
 			.acomp-table thead th, .acomp-table tbody td { padding:10px; }
-			#tabelaAcomp { min-width:820px; }
+			#tabelaAcomp { min-width:900px; }
 			.modal-dialog { margin:10px; }
 		}
 	</style>
@@ -410,6 +501,7 @@
 						<option value=''>Todos</option>
 						<option value='nao_iniciado' " . ($filtroStatus === "nao_iniciado" ? "selected" : "") . ">Não Iniciado</option>
 						<option value='em_andamento' " . ($filtroStatus === "em_andamento" ? "selected" : "") . ">Em Andamento</option>
+						<option value='aguardando_avaliacao' " . ($filtroStatus === "aguardando_avaliacao" ? "selected" : "") . ">Aguardando Avaliação</option>
 						<option value='concluido' " . ($filtroStatus === "concluido" ? "selected" : "") . ">Concluído</option>
 						<option value='bloqueado' " . ($filtroStatus === "bloqueado" ? "selected" : "") . ">Bloqueado</option>
 					</select>
@@ -435,6 +527,7 @@
 			<div class='kpi-card kpi-total'><i class='fa fa-users kpi-icon'></i><div class='kpi-num'>{$kpi["total"]}</div><div class='kpi-label'>Usuários com acesso</div></div>
 			<div class='kpi-card kpi-pendente'><i class='fa fa-clock-o kpi-icon'></i><div class='kpi-num'>{$kpi["nao_iniciado"]}</div><div class='kpi-label'>Não iniciados</div></div>
 			<div class='kpi-card kpi-andamento'><i class='fa fa-play-circle kpi-icon'></i><div class='kpi-num'>{$kpi["em_andamento"]}</div><div class='kpi-label'>Em andamento</div></div>
+			<div class='kpi-card kpi-aguardando'><i class='fa fa-pencil-square-o kpi-icon'></i><div class='kpi-num'>{$kpi["aguardando_avaliacao"]}</div><div class='kpi-label'>Aguard. avaliação</div></div>
 			<div class='kpi-card kpi-concluido'><i class='fa fa-check-circle kpi-icon'></i><div class='kpi-num'>{$kpi["concluido"]}</div><div class='kpi-label'>Concluídos</div></div>
 			<div class='kpi-card kpi-bloqueado'><i class='fa fa-lock kpi-icon'></i><div class='kpi-num'>{$kpi["bloqueado"]}</div><div class='kpi-label'>Bloqueados</div></div>
 			<div class='kpi-card kpi-taxa'><i class='fa fa-percent kpi-icon'></i><div class='kpi-num'>{$kpi["taxa_conclusao"]}%</div><div class='kpi-label'>Taxa de conclusão</div></div>
@@ -452,7 +545,7 @@
 					<input type='text' id='buscaUsuario' class='form-control input-sm' placeholder='Digite para filtrar a tabela...' onkeyup='filtrarTabelaAcomp()'>
 				</div>
 				<div class='col-md-6 text-right' style='padding-top:24px;'>
-					<span class='text-muted'><i class='fa fa-info-circle'></i> Clique em <strong>Auditar</strong> para ver o histórico completo do usuário (IP, eventos, datas).</span>
+					<span class='text-muted'><i class='fa fa-info-circle'></i> Clique em <strong>Auditar</strong> para ver o histórico completo (IP, eventos, datas) e em <strong>Certificado</strong> para abrir ou gerar o certificado de participação e conclusão.</span>
 				</div>
 			</div>
 		</div>
@@ -471,13 +564,14 @@
 						<th>Tentativas</th>
 						<th>Início</th>
 						<th>Conclusão</th>
+						<th>Certificado</th>
 						<th>Auditoria</th>
 					</tr>
 				</thead>
 				<tbody>";
 
 	if (empty($usuarios)) {
-		echo "<tr><td colspan='11' class='acomp-empty'>Nenhum usuário encontrado para os filtros aplicados.</td></tr>";
+		echo "<tr><td colspan='12' class='acomp-empty'>Nenhum usuário encontrado para os filtros aplicados.</td></tr>";
 	} else {
 		foreach ($usuarios as $u) {
 			$st = $u["status_acompanhamento"];
@@ -491,11 +585,39 @@
 			$tentativas = (int)($u["trepr_nb_avaliacao_tentativas"] ?? 0);
 			$dataInicio = !empty($u["trepr_dt_data_inicio"]) ? date("d/m/Y H:i", strtotime($u["trepr_dt_data_inicio"])) : "-";
 			$dataConclusao = !empty($u["trepr_dt_data_conclusao"]) ? date("d/m/Y H:i", strtotime($u["trepr_dt_data_conclusao"])) : "-";
-			$extraSerie = ($ehSerie && $st !== "nao_iniciado") ? " <small class='text-muted'>(ep. " . $u["epi_aprovados"] . "/" . ($totalEpiSerie ?: 0) . " aprovados)</small>" : "";
+			$extraSerie = ($ehSerie && $st !== "nao_iniciado") ? " <small class='text-muted'>(ep. " . $u["epi_aprovados"] . "/" . ($totalEpiSerie ?: 0) . " concluídos)</small>" : "";
 			$corBarra = $st === "concluido" ? "#27ae60" : ($st === "em_andamento" ? "#f39c12" : "#bdc3c7");
 			$notaLabel = $nota > 0
 				? "<span style='color:" . ($aprovado ? "#27ae60" : "#d9534f") . ";font-weight:700;'>" . $nota . "%</span> " . ($aprovado ? "<i class='fa fa-check-circle text-success'></i>" : "<i class='fa fa-times-circle' style='color:#d9534f;'></i>")
 				: "-";
+
+			// Certificado: disponível para conclusão do treinamento
+			$usuarioIdCert = (int)$u["user_nb_id"];
+			$certReg = $mapaCertificados[$usuarioIdCert] ?? [];
+			$certStatus = strval($certReg["trece_tx_status"] ?? "");
+			$certCaminho = !empty($certReg) ? trim(strval(treinamento_certificado_arquivo($certReg))) : "";
+			$certUrl = $certCaminho !== "" ? $certificadoUrlBase . "/" . ltrim($certCaminho, "/") : "";
+			$nomeJs = htmlspecialchars(addslashes($u["user_tx_nome"]));
+			if ($st === "concluido") {
+				if ($certUrl !== "") {
+					$certRotulo = ($certStatus === "assinado") ? "Assinado" : "Abrir";
+					$certificadoCel = "<a href='{$certUrl}' target='_blank' class='btn btn-xs btn-success'><i class='fa fa-certificate'></i> {$certRotulo}</a>";
+					if ($certStatus !== "assinado") {
+						$certificadoCel .= " <a href='javascript:void(0);' class='btn btn-xs btn-default' title='Regerar certificado (atualiza o arquivo)' onclick=\"gerarCertificadoUsuario({$usuarioIdCert}, '{$nomeJs}', true)\"><i class='fa fa-refresh'></i></a>";
+					}
+				} elseif ($certStatus === "aguardando_assinatura") {
+					$certificadoCel = "<span class='badge-status' style='background:#3498db;'><i class='fa fa-pencil-square-o'></i> Assinatura</span>";
+				} elseif ($certStatus === "erro") {
+					$certDetalhe = htmlspecialchars(strval($certReg["trece_tx_detalhe"] ?? "Erro ao gerar o certificado."), ENT_QUOTES, "UTF-8");
+					$certificadoCel = "<a href='javascript:void(0);' class='btn btn-xs btn-warning' title='{$certDetalhe}' onclick=\"gerarCertificadoUsuario({$usuarioIdCert}, '{$nomeJs}')\"><i class='fa fa-refresh'></i> Regerar</a>";
+				} else {
+					$certificadoCel = "<a href='javascript:void(0);' class='btn btn-xs btn-primary' onclick=\"gerarCertificadoUsuario({$usuarioIdCert}, '{$nomeJs}')\"><i class='fa fa-certificate'></i> Gerar</a>";
+				}
+			} elseif ($st === "aguardando_avaliacao") {
+				$certificadoCel = "<span class='badge-status' style='background:#9b59b6;' title='Aprove a avaliação para emitir o certificado'><i class='fa fa-pencil-square-o'></i> Avaliação</span>";
+			} else {
+				$certificadoCel = "<span class='text-muted'>-</span>";
+			}
 
 			echo "
 				<tr data-nome=\"" . strtolower($u["user_tx_nome"]) . "\" data-login=\"" . strtolower($u["user_tx_login"]) . "\">
@@ -522,6 +644,7 @@
 					<td>" . ($tentativas > 0 ? $tentativas : "-") . "</td>
 					<td style='white-space:nowrap;'>{$dataInicio}</td>
 					<td style='white-space:nowrap;'>{$dataConclusao}</td>
+					<td style='white-space:nowrap;'>{$certificadoCel}</td>
 					<td>
 						<a href='javascript:void(0);' class='btn-auditar' onclick=\"abrirAuditoria({$u["user_nb_id"]}, '" . htmlspecialchars(addslashes($u["user_tx_nome"])) . "')\"><i class='fa fa-search'></i> Auditar</a>
 					</td>
@@ -574,7 +697,7 @@
 			$('#audCorpo').html('<p class=\"text-muted\"><i class=\"fa fa-spinner fa-spin\"></i> Carregando histórico...</p>');
 			$('#modalAuditoria').modal('show');
 			$.get(window.location.pathname, {
-				acao: 'log_usuario',
+				acao_acomp: 'log_usuario',
 				usuario_id: usuarioId,
 				treinamento_id: acompTreinamentoId
 			}, function(data) {
@@ -627,6 +750,61 @@
 						texto += '<br><br><small>' + data.erros.slice(0, 5).join('<br>') + (data.erros.length > 5 ? '<br>...' : '') + '</small>';
 					}
 					Swal.fire({ icon: 'success', title: 'Concluído', html: texto }).then(() => window.location.reload());
+				}, 'json').fail(function() {
+					Swal.fire({ icon: 'error', title: 'Erro', text: 'Erro ao conectar com o servidor.' });
+				});
+			});
+		}
+
+		function gerarCertificadoUsuario(usuarioId, nomeUsuario, forcar) {
+			var nomeSeguro = $('<span>').text(nomeUsuario || ('Usuário #' + usuarioId)).html();
+			Swal.fire({
+				title: forcar ? 'Regerar certificado?' : 'Gerar certificado?',
+				html: (forcar
+					? 'O certificado de <strong>' + nomeSeguro + '</strong> será emitido novamente com os dados atuais.'
+					: 'Será gerado o certificado de participação e conclusão de <strong>' + nomeSeguro + '</strong>.'),
+				icon: 'question',
+				showCancelButton: true,
+				confirmButtonColor: '#3085d6',
+				cancelButtonColor: '#d33',
+				confirmButtonText: 'Sim, gerar!',
+				cancelButtonText: 'Cancelar'
+			}).then((result) => {
+				if (!result.isConfirmed) return;
+				Swal.fire({ title: 'Gerando certificado...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+				$.get(window.location.pathname, {
+					acao_acomp: 'certificado_usuario',
+					usuario_id: usuarioId,
+					treinamento_id: acompTreinamentoId,
+					forcar: forcar ? 1 : 0
+				}, function(data) {
+					if (!data.success) {
+						Swal.fire({ icon: 'error', title: 'Erro', text: data.message || 'Não foi possível gerar o certificado.' });
+						return;
+					}
+					if (data.status === 'aguardando_assinatura') {
+						Swal.fire({
+							icon: 'info',
+							title: 'Certificado enviado para assinatura',
+							text: 'O certificado ficará disponível após a assinatura eletrônica.'
+						}).then(() => window.location.reload());
+						return;
+					}
+					if (data.url) {
+						Swal.fire({
+							icon: 'success',
+							title: 'Certificado gerado',
+							text: 'O certificado já está disponível para download.',
+							confirmButtonText: 'Abrir certificado',
+							showCancelButton: true,
+							cancelButtonText: 'Fechar'
+						}).then((abrir) => {
+							if (abrir.isConfirmed) window.open(data.url, '_blank');
+							window.location.reload();
+						});
+						return;
+					}
+					Swal.fire({ icon: 'success', title: 'Concluído', text: data.message || 'Certificado gerado com sucesso.' }).then(() => window.location.reload());
 				}, 'json').fail(function() {
 					Swal.fire({ icon: 'error', title: 'Erro', text: 'Erro ao conectar com o servidor.' });
 				});
