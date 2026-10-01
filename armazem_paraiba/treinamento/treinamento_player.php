@@ -184,13 +184,22 @@
 			}
 		}
 
-		// Conclusão automática ao assistir 100% do vídeo
-		// (para séries, a conclusão do episódio não marca o treinamento geral - depende da avaliação)
+		// Conclusão automática ao assistir 100% do vídeo.
+		// Regra: com avaliação, o certificado só sai após a aprovação; sem avaliação,
+		// a conclusão do vídeo já conclui (episódio ou treinamento de vídeo único).
 		$concluido = (int)($progresso["trepr_nb_concluido"] ?? 0);
 		$dataConclusao = $progresso["trepr_dt_data_conclusao"] ?? null;
-		if ($porcentagem >= 100 && !$concluido && $episodioId <= 0) {
-			$concluido = 1;
-			$dataConclusao = date("Y-m-d H:i:s");
+		$concluiuAgora = false;
+		if ($porcentagem >= 100 && !$concluido) {
+			if ($episodioId <= 0) {
+				$concluido = 1;
+				$dataConclusao = date("Y-m-d H:i:s");
+				$concluiuAgora = true;
+			} elseif (!treinamento_certificado_episodioTemQuestoes($episodioId)) {
+				$concluido = 1;
+				$dataConclusao = date("Y-m-d H:i:s");
+				$concluiuAgora = true;
+			}
 		}
 
 		$whereEpiProg = $episodioId > 0 ? " AND trepr_nb_episodio_id = ?" : " AND trepr_nb_episodio_id IS NULL";
@@ -207,6 +216,20 @@
 			"diisii" . $typesEpiProg,
 			array_merge([$tempoAssistido, $porcentagem, $concluido, $dataConclusao, $treinamentoId, $usuarioId], $valsEpiProg)
 		);
+
+		// Gera automaticamente o certificado de participação/conclusão no exato
+		// momento em que o treinamento é concluído (quando não há avaliação pendente).
+		if ($concluiuAgora) {
+			try {
+				if ($episodioId > 0) {
+					// Episódio sem avaliação concluído: se era o último, fecha a série.
+					treinamento_certificado_marcarSerieConcluida($treinamentoId, $usuarioId);
+				}
+				treinamento_certificado_gerar($treinamentoId, $usuarioId);
+			} catch (Throwable $e) {
+				// Silencioso: o certificado será gerado em nova tentativa (player/acompanhamento).
+			}
+		}
 
 		echo json_encode(["success" => true, "tempo" => $tempoAssistido, "porcentagem" => $porcentagem, "concluido" => $concluido]);
 		exit;
@@ -349,27 +372,13 @@
 			);
 		}
 
-		// Conclusão do treinamento: não-série conclui ao aprovar; série conclui quando TODOS os episódios aprovados
+		// Conclusão do treinamento: não-série conclui ao aprovar; série conclui quando
+		// todos os episódios estão concluídos (aprovados ou, sem avaliação, com vídeo finalizado).
 		$concluidoGeral = 0;
 		if ($aprovado) {
 			if ($ehSerie) {
-				$todosAprovados = true;
-				$rsEpiCheck = query("SELECT trepi_nb_id FROM treinamento_episodio WHERE trepi_nb_treinamento_id = ? AND trepi_tx_status = 'ativo'", "i", [$treinamentoId]);
-				while ($rsEpiCheck && ($rEpi = mysqli_fetch_assoc($rsEpiCheck))) {
-					$progEpi = obterOuCriarProgresso($treinamentoId, $usuarioId, (int)$rEpi["trepi_nb_id"]);
-					if (((int)($progEpi["trepr_nb_avaliacao_aprovada"] ?? 0)) !== 1) {
-						$todosAprovados = false;
-						break;
-					}
-				}
-				if ($todosAprovados) {
+				if (treinamento_certificado_marcarSerieConcluida($treinamentoId, $usuarioId)) {
 					$concluidoGeral = 1;
-					$progGeral = obterOuCriarProgresso($treinamentoId, $usuarioId);
-					query(
-						"UPDATE treinamento_progresso SET trepr_nb_concluido = 1, trepr_dt_data_conclusao = ? WHERE trepr_nb_id = ?",
-						"si",
-						[date("Y-m-d H:i:s"), $progGeral["trepr_nb_id"]]
-					);
 				}
 			} else {
 				$concluidoGeral = 1;
@@ -378,6 +387,27 @@
 					"sii",
 					[date("Y-m-d H:i:s"), $treinamentoId, $usuarioId]
 				);
+			}
+		}
+
+		// Certificado automático de participação/conclusão assim que o treinamento
+		// é concluído (vídeo único aprovado ou último episódio da série aprovado).
+		$certificadoAvaliacao = [];
+		if ($concluidoGeral == 1) {
+			try {
+				$resultadoCertAval = treinamento_certificado_gerar($treinamentoId, $usuarioId);
+				$registroCertAval = !empty($resultadoCertAval["registro"])
+					? $resultadoCertAval["registro"]
+					: treinamento_certificado_buscarRegistro($treinamentoId, $usuarioId);
+				$caminhoCertAval = !empty($registroCertAval) ? trim(strval(treinamento_certificado_arquivo($registroCertAval))) : "";
+				$certificadoAvaliacao = [
+					"status" => strval($registroCertAval["trece_tx_status"] ?? ""),
+					"url" => $caminhoCertAval !== ""
+						? (rtrim($_ENV["URL_BASE"] ?? "", "/") . ($CONTEX["path"] ?? "") . "/" . ltrim($caminhoCertAval, "/"))
+						: ""
+				];
+			} catch (Throwable $e) {
+				$certificadoAvaliacao = [];
 			}
 		}
 
@@ -423,7 +453,8 @@
 					"resposta_correta" => (int)$campoCorreta
 				];
 			}, $questoes),
-			"concluido" => $concluidoGeral
+			"concluido" => $concluidoGeral,
+			"certificado" => $certificadoAvaliacao
 		]);
 		exit;
 	}
@@ -537,11 +568,10 @@
 			exit;
 		}
 
-		// Escolher o episódio: se não informado, o primeiro não aprovado
+		// Escolher o episódio: se não informado, o primeiro ainda não concluído
 		if ($episodioId <= 0) {
 			foreach ($episodiosSerie as $idx => $ep) {
-				$progEpi = obterOuCriarProgresso($treinamentoId, $usuarioId, (int)$ep["trepi_nb_id"]);
-				if (((int)($progEpi["trepr_nb_avaliacao_aprovada"] ?? 0)) !== 1) {
+				if (!treinamento_certificado_episodioConcluido($treinamentoId, $usuarioId, (int)$ep["trepi_nb_id"])) {
 					$episodioAtual = $ep;
 					$episodioIndex = $idx;
 					break;
@@ -565,10 +595,9 @@
 			}
 		}
 
-		// Desbloqueio sequencial: todos os episódios anteriores devem estar aprovados
+		// Desbloqueio sequencial: todos os episódios anteriores devem estar concluídos
 		for ($i = 0; $i < $episodioIndex; $i++) {
-			$progAnt = obterOuCriarProgresso($treinamentoId, $usuarioId, (int)$episodiosSerie[$i]["trepi_nb_id"]);
-			if (((int)($progAnt["trepr_nb_avaliacao_aprovada"] ?? 0)) !== 1) {
+			if (!treinamento_certificado_episodioConcluido($treinamentoId, $usuarioId, (int)$episodiosSerie[$i]["trepi_nb_id"])) {
 				$episodioAtual = $episodiosSerie[$i];
 				$episodioIndex = $i;
 				break;
@@ -658,7 +687,8 @@
 	// Máximo de tentativas configurado no treinamento (0 = 10 tentativas + bloqueio de 1h)
 	$maxTentativasConfig = (int)($treinamento["trei_nb_max_tentativas"] ?? 2);
 	$limiteTentativas = ($maxTentativasConfig > 0) ? $maxTentativasConfig : 10;
-	$podeAvaliar = ($porcentagem >= 99 && !$aprovado && $tentativas < $limiteTentativas);
+	// Sem questões ativas não há avaliação: o vídeo concluído já finaliza.
+	$podeAvaliar = ($porcentagem >= 99 && !$aprovado && $tentativas < $limiteTentativas && !empty($questoes));
 	// Modo segurança (0): calcular bloqueio de 1h
 	$avaliacaoBloqueadaAte = 0;
 	if ($maxTentativasConfig <= 0 && !$aprovado && $tentativas >= $limiteTentativas) {
@@ -682,10 +712,9 @@
 	if ($ehSerie && $episodioIndex + 1 < $totalEpisodios) {
 		$proximoEpisodio = $episodiosSerie[$episodioIndex + 1];
 	}
-	// O episódio atual está "bloqueado" se existe anterior não aprovado (redirecionado pelo desbloqueio)
+	// O episódio atual está "bloqueado" se existe anterior não concluído (redirecionado pelo desbloqueio)
 	if ($ehSerie && $episodioIndex > 0) {
-		$progAnterior = obterOuCriarProgresso($treinamentoId, $usuarioId, (int)$episodiosSerie[$episodioIndex - 1]["trepi_nb_id"]);
-		if (((int)($progAnterior["trepr_nb_avaliacao_aprovada"] ?? 0)) !== 1) {
+		if (!treinamento_certificado_episodioConcluido($treinamentoId, $usuarioId, (int)$episodiosSerie[$episodioIndex - 1]["trepi_nb_id"])) {
 			$episodioLiberado = false;
 		}
 	}
@@ -756,18 +785,17 @@
 					<strong><i class='fa fa-video-camera'></i> Série: " . htmlspecialchars($treinamento["trei_tx_titulo"]) . "</strong>
 					<span class='text-muted'> — Episódio " . ($episodioIndex + 1) . " de {$totalEpisodios}</span>
 					<div class='episodios-navegacao' style='margin-top:10px; display:flex; flex-wrap:wrap; gap:6px;'>";
-					// Um episódio fica acessível quando todos os anteriores estão aprovados
+					// Um episódio fica acessível quando todos os anteriores estão concluídos
 					// (ou é o episódio atual), permitindo navegar pelos já liberados
 					$liberadoAte = true;
 					foreach ($episodiosSerie as $idx => $ep) {
-						$progEpi = obterOuCriarProgresso($treinamentoId, $usuarioId, (int)$ep["trepi_nb_id"]);
-						$aprovEpi = ((int)($progEpi["trepr_nb_avaliacao_aprovada"] ?? 0)) === 1;
+						$concluidoEpi = treinamento_certificado_episodioConcluido($treinamentoId, $usuarioId, (int)$ep["trepi_nb_id"]);
 						$ativo = ((int)$ep["trepi_nb_id"] === $episodioId);
-						$acessivel = ($aprovEpi || $ativo || $liberadoAte);
+						$acessivel = ($concluidoEpi || $ativo || $liberadoAte);
 
 						if ($ativo) {
 							$cls = "episodio-item ativo";
-						} elseif ($aprovEpi) {
+						} elseif ($concluidoEpi) {
 							$cls = "episodio-item aprovado";
 						} elseif ($acessivel) {
 							$cls = "episodio-item liberado";
@@ -775,7 +803,7 @@
 							$cls = "episodio-item";
 						}
 
-						if ($aprovEpi) {
+						if ($concluidoEpi) {
 							$icone = "<i class='fa fa-check'></i>";
 						} elseif ($acessivel) {
 							$icone = "<i class='fa fa-play'></i>";
@@ -786,14 +814,14 @@
 						$link = $acessivel ? "treinamento_player.php?id={$treinamentoId}&episodio={$ep["trepi_nb_id"]}" : "#";
 						$tituloItem = htmlspecialchars($ep["trepi_tx_titulo"]);
 						if (!$acessivel) {
-							$tituloItem .= " (bloqueado - conclua e seja aprovado no episódio anterior)";
-						} elseif (!$aprovEpi && !$ativo) {
+							$tituloItem .= " (bloqueado - conclua o episódio anterior)";
+						} elseif (!$concluidoEpi && !$ativo) {
 							$tituloItem .= " (liberado)";
 						}
 						echo "<a href='{$link}' class='{$cls}' title='{$tituloItem}'>{$icone} #" . ($idx + 1) . " " . htmlspecialchars($ep["trepi_tx_titulo"]) . "</a>";
 
-						// A partir do primeiro episódio não aprovado, os seguintes ficam bloqueados
-						if (!$aprovEpi) {
+						// A partir do primeiro episódio não concluído, os seguintes ficam bloqueados
+						if (!$concluidoEpi) {
 							$liberadoAte = false;
 						}
 					}
@@ -1018,13 +1046,22 @@
 					</div>
 				</div>";
 
-				// Se concluído, mostrar mensagem
-				if ($concluido) {
-					echo "
+				// Se concluído, mostrar mensagem (avaliação pendente não é conclusão;
+				// aprovação na avaliação já conclui, pois exige 99% do vídeo)
+				if ($aprovado || $concluido) {
+					if (!empty($questoes) && !$aprovado) {
+						echo "
+				<div class='alert alert-warning'>
+					<i class='fa fa-exclamation-triangle'></i> <strong>" . ($ehSerie ? "Vídeo do episódio concluído!" : "Vídeo concluído!") . "</strong>
+					Falta a aprovação na avaliação para concluir" . ($ehSerie ? " o episódio" : " o treinamento") . " e emitir o certificado.
+				</div>";
+					} else {
+						echo "
 				<div class='alert alert-success'>
 					<i class='fa fa-check-circle'></i> <strong>Treinamento Concluído!</strong>
 					" . ($aprovado ? "Avaliação aprovada com nota: <strong>{$notaAtual}%</strong>" : "") . "
 				</div>";
+					}
 				}
 
 				// Certificado de conclusão
@@ -1281,7 +1318,9 @@
 					<h4><i class='fa fa-info-circle'></i> Informações</h4>
 					<div class='row'>
 						<div class='col-xs-6'><strong>Status:</strong></div>
-						<div class='col-xs-6'>" . ($concluido ? "<span class='label label-success'>Concluído</span>" : ($porcentagem > 0 ? "<span class='label label-warning'>Em Andamento</span>" : "<span class='label label-info'>Não Iniciado</span>")) . "</div>
+						<div class='col-xs-6'>" . (($aprovado || $concluido)
+							? ((!empty($questoes) && !$aprovado) ? "<span class='label label-warning'>Avaliação pendente</span>" : "<span class='label label-success'>Concluído</span>")
+							: ($porcentagem > 0 ? "<span class='label label-warning'>Em Andamento</span>" : "<span class='label label-info'>Não Iniciado</span>")) . "</div>
 					</div>
 					<div class='row'>
 						<div class='col-xs-6'><strong>Progresso:</strong></div>
@@ -1820,6 +1859,10 @@
 
 							if(data.aprovado && data.proximo_episodio) {
 								html += '<br><a href=\"treinamento_player.php?id=' + treinamentoId + '&episodio=' + data.proximo_episodio + '\" class=\"btn btn-success\"><i class=\"fa fa-play\"></i> Assistir Próximo Episódio</a>';
+							}
+
+							if(data.certificado && data.certificado.url) {
+								html += '<br><a href=\"' + data.certificado.url + '\" target=\"_blank\" class=\"btn btn-info\" style=\"margin-top:6px;\"><i class=\"fa fa-certificate\"></i> Abrir Certificado de Conclusão</a>';
 							}
 
 							Swal.fire({

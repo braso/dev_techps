@@ -1,6 +1,7 @@
 <?php
 	include_once __DIR__."/../load_env.php";
 	include_once __DIR__."/../conecta.php";
+	include_once __DIR__."/certificado.php";
 
 	// =====================================================
 	// MÓDULO DE TREINAMENTO - Listagem para Usuário
@@ -305,6 +306,9 @@
 			$aprovado = ($t["avaliacao_aprovada"] ?? 0) == 1;
 			$progresso = $t["usuario_progresso"] ?? 0;
 			$ehSerieCard = ($t["trei_tx_serie"] ?? "nao") === "sim";
+			// Vídeo único com avaliação: só fica "Concluído" após aprovação.
+			$temQuestoesCard = $ehSerieCard ? false : treinamento_certificado_temQuestoes($treinamentoId);
+			$concluidoCard = $temQuestoesCard ? $aprovado : $concluido;
 
 			// Bloqueio por data de liberação futura (card visível, mas sem acesso)
 			$dataLiberacao = $t["trei_dt_data_liberacao"] ?? null;
@@ -347,7 +351,8 @@
 					if (!empty($progEpiCard) && !empty($progEpiCard["trepr_dt_data_inicio"])) {
 						$serieIniciada = true;
 					}
-					if (((int)($progEpiCard["trepr_nb_avaliacao_aprovada"] ?? 0)) === 1) {
+					// Episódio com avaliação exige aprovação; sem avaliação, basta o vídeo concluído.
+					if (treinamento_certificado_episodioConcluido($treinamentoId, $usuarioId, $idEpi)) {
 						$episodioAtualCard = $idxEpi + 1;
 					} else {
 						break;
@@ -378,13 +383,22 @@
 					$btnAction = "treinamento_player.php?id={$treinamentoId}";
 				}
 } else {
-			if ($concluido) {
-				$statusClass = "badge-success";
-				$statusLabel = "Concluído";
-				$btnClass = "btn-default";
-				$btnLabel = "<i class='fa fa-refresh'></i> Assistir novamente";
-				$btnAction = "treinamento_player.php?id={$treinamentoId}";
-			} elseif ($progresso > 0) {
+			if ($temQuestoesCard) {
+				// Com avaliação: aprovado = concluído; vídeo concluído sem
+				// aprovação = avaliação pendente.
+				if ($aprovado) {
+					$statusClass = "badge-success";
+					$statusLabel = "Concluído";
+					$btnClass = "btn-default";
+					$btnLabel = "<i class='fa fa-refresh'></i> Assistir novamente";
+					$btnAction = "treinamento_player.php?id={$treinamentoId}";
+				} elseif ($concluido) {
+					$statusClass = "badge-warning";
+					$statusLabel = "Avaliação pendente";
+					$btnClass = "btn-warning";
+					$btnLabel = "<i class='fa fa-pencil-square-o'></i> Realizar Avaliação";
+					$btnAction = "treinamento_player.php?id={$treinamentoId}";
+				} elseif ($progresso > 0) {
 					$statusClass = "badge-warning";
 					$statusLabel = "Em Andamento";
 					$btnClass = "btn-warning";
@@ -397,6 +411,27 @@
 					$btnLabel = "<i class='fa fa-play'></i> Assistir";
 					$btnAction = "treinamento_player.php?id={$treinamentoId}";
 				}
+			} else {
+				if ($concluido) {
+					$statusClass = "badge-success";
+					$statusLabel = "Concluído";
+					$btnClass = "btn-default";
+					$btnLabel = "<i class='fa fa-refresh'></i> Assistir novamente";
+					$btnAction = "treinamento_player.php?id={$treinamentoId}";
+				} elseif ($progresso > 0) {
+					$statusClass = "badge-warning";
+					$statusLabel = "Em Andamento";
+					$btnClass = "btn-warning";
+					$btnLabel = "<i class='fa fa-play'></i> Continuar";
+					$btnAction = "treinamento_player.php?id={$treinamentoId}";
+				} else {
+					$statusClass = "badge-info";
+					$statusLabel = "Não Iniciado";
+					$btnClass = "btn-primary";
+					$btnLabel = "<i class='fa fa-play'></i> Assistir";
+					$btnAction = "treinamento_player.php?id={$treinamentoId}";
+				}
+			}
 			}
 
 			// Treinamento com data de liberação futura: card bloqueado
@@ -414,7 +449,7 @@
 			} elseif ($ehSerieCard) {
 				$situacaoCard = $serieConcluida ? "concluidos" : ($serieIniciada ? "andamento" : "pendentes");
 			} else {
-				$situacaoCard = $concluido ? "concluidos" : ($progresso > 0 ? "andamento" : "pendentes");
+				$situacaoCard = $concluidoCard ? "concluidos" : ($progresso > 0 ? "andamento" : "pendentes");
 			}
 
 			ob_start();

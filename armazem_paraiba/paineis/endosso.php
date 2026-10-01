@@ -723,9 +723,8 @@
             document.body.removeChild(form);
         }
         </script>";
-        if(!empty($_SESSION["user_tx_nivel"]) && is_int(strpos($_SESSION["user_tx_nivel"], "Administrador"))){
-            $botaoAtualizarPainel = "<a class='btn btn-warning' onclick='atualizarPainel()'> Atualizar Painel</a>";
-        }
+        // Basta ter permissão de acesso ao painel (verificaPermissao no início do index()).
+        $botaoAtualizarPainel = "<a class='btn btn-warning' onclick='atualizarPainel()'> Atualizar Painel</a>";
         if(!empty($_POST["empresa"])){
             $botao_baixar_txt = "<button class='btn default' type='button' onclick='exportarAdicionalNoturno()'>Baixar TXT Ad.Not.</button>
             <script>

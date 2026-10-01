@@ -2220,7 +2220,16 @@ if(function_exists("index")){
 	}
 
 	function arquivosFuncionario($nome, $idFuncionario, $arquivos) {
-		return gerarHTMLArquivos($nome, 'Funcionário',$idFuncionario, $arquivos, $_SESSION['user_tx_nivel'] ?? 'Funcionário');
+		// Regra: quem pode acessar a página atual (administrador ou perfil com permissão
+		// no menu) gerencia os documentos; os demais ficam restritos (sem adicionar/editar/excluir).
+		$nivel = trim(strval($_SESSION['user_tx_nivel'] ?? ''));
+		$isAdmin = (bool) preg_match('/administrador|super\s+admin|adminsitrador/i', $nivel);
+		$podeGerenciar = $isAdmin;
+		if (!$podeGerenciar && function_exists('temPermissaoMenu')) {
+			$pathAtual = '/'.basename(strval($_SERVER['SCRIPT_NAME'] ?? ''));
+			$podeGerenciar = temPermissaoMenu($pathAtual);
+		}
+		return gerarHTMLArquivos($nome, 'Funcionário', $idFuncionario, $arquivos, $podeGerenciar ? 'Admin' : 'Funcionário');
 	}
 
 	function arquivo($nome,$variavel,$modificador = '',$tamanho=4, $extra=''){

@@ -83,43 +83,34 @@
 		));
 
 		if (($treinamento['trei_tx_serie'] ?? 'nao') === 'sim') {
-			// Séries: concluído quando todos os episódios ativos estão aprovados
-			// (a aprovação do episódio exige o vídeo assistido).
-			if (((int)($progresso['trepr_nb_concluido'] ?? 0)) === 1) {
-				return true;
-			}
+			// Séries: concluído quando todos os episódios ativos estão concluídos.
+			// Episódio com avaliação exige aprovação; episódio sem avaliação exige
+			// apenas o vídeo finalizado. Sem episódios ativos, vale o flag geral.
 			$rs = query(
 				"SELECT trepi_nb_id FROM treinamento_episodio WHERE trepi_nb_treinamento_id = ? AND trepi_tx_status = 'ativo'",
 				"i",
 				[$treinamentoId]
 			);
 			$total = 0;
-			$aprovados = 0;
+			$concluidos = 0;
 			while ($rs && ($ep = mysqli_fetch_assoc($rs))) {
 				$total++;
-				$progEpi = mysqli_fetch_assoc(query(
-					"SELECT trepr_nb_avaliacao_aprovada FROM treinamento_progresso
-					 WHERE trepr_nb_treinamento_id = ? AND trepr_nb_usuario_id = ? AND trepr_nb_episodio_id = ?
-					 ORDER BY trepr_nb_id DESC LIMIT 1",
-					"iii",
-					[$treinamentoId, $usuarioId, (int)$ep['trepi_nb_id']]
-				));
-				if (((int)($progEpi['trepr_nb_avaliacao_aprovada'] ?? 0)) === 1) {
-					$aprovados++;
+				if (treinamento_certificado_episodioConcluido($treinamentoId, $usuarioId, (int)$ep['trepi_nb_id'])) {
+					$concluidos++;
 				}
 			}
-			return ($total > 0 && $aprovados >= $total);
+			if ($total > 0) {
+				return ($concluidos >= $total);
+			}
+			return ((int)($progresso['trepr_nb_concluido'] ?? 0)) === 1;
 		}
 
-		// Vídeo único: exige o vídeo finalizado e, havendo questões cadastradas,
-		// também a aprovação na avaliação.
-		if (((int)($progresso['trepr_nb_concluido'] ?? 0)) !== 1) {
-			return false;
-		}
+		// Vídeo único: com avaliação, a aprovação já conclui (o player só libera a
+		// prova após 99% do vídeo); sem avaliação, exige o vídeo finalizado.
 		if (treinamento_certificado_temQuestoes($treinamentoId)) {
 			return ((int)($progresso['trepr_nb_avaliacao_aprovada'] ?? 0)) === 1;
 		}
-		return true;
+		return ((int)($progresso['trepr_nb_concluido'] ?? 0)) === 1;
 	}
 
 	// Indica se o treinamento (vídeo único) possui questões de avaliação ativas.
@@ -130,6 +121,104 @@
 			[(int)$treinamentoId]
 		));
 		return ((int)($res['total'] ?? 0)) > 0;
+	}
+
+	// Indica se o episódio possui questões de avaliação ativas (com cache por requisição).
+	function treinamento_certificado_episodioTemQuestoes($episodioId) {
+		static $cache = [];
+		$episodioId = (int)$episodioId;
+		if ($episodioId <= 0) {
+			return false;
+		}
+		if (!array_key_exists($episodioId, $cache)) {
+			$res = mysqli_fetch_assoc(query(
+				"SELECT COUNT(*) AS total FROM treinamento_episodio_questao WHERE trepq_nb_episodio_id = ? AND trepq_tx_status = 'ativo'",
+				"i",
+				[$episodioId]
+			));
+			$cache[$episodioId] = ((int)($res['total'] ?? 0)) > 0;
+		}
+		return $cache[$episodioId];
+	}
+
+	// Verifica se todos os episódios da série estão concluídos e, em caso positivo,
+	// marca a linha geral de progresso como concluída. Retorna true quando a série
+	// está completa (com ou sem avaliação em cada episódio).
+	function treinamento_certificado_marcarSerieConcluida($treinamentoId, $usuarioId) {
+		$treinamentoId = (int)$treinamentoId;
+		$usuarioId = (int)$usuarioId;
+		if ($treinamentoId <= 0 || $usuarioId <= 0) {
+			return false;
+		}
+		$treinamento = carregar("treinamento", $treinamentoId);
+		if (empty($treinamento) || ($treinamento['trei_tx_serie'] ?? 'nao') !== 'sim') {
+			return false;
+		}
+		$rs = query(
+			"SELECT trepi_nb_id FROM treinamento_episodio WHERE trepi_nb_treinamento_id = ? AND trepi_tx_status = 'ativo'",
+			"i",
+			[$treinamentoId]
+		);
+		$total = 0;
+		$concluidos = 0;
+		while ($rs && ($ep = mysqli_fetch_assoc($rs))) {
+			$total++;
+			if (treinamento_certificado_episodioConcluido($treinamentoId, $usuarioId, (int)$ep['trepi_nb_id'])) {
+				$concluidos++;
+			}
+		}
+		if ($total <= 0 || $concluidos < $total) {
+			return false;
+		}
+
+		$progGeral = mysqli_fetch_assoc(query(
+			"SELECT trepr_nb_id, trepr_nb_concluido FROM treinamento_progresso
+			 WHERE trepr_nb_treinamento_id = ? AND trepr_nb_usuario_id = ? AND trepr_nb_episodio_id IS NULL
+			 ORDER BY trepr_nb_id DESC LIMIT 1",
+			"ii",
+			[$treinamentoId, $usuarioId]
+		));
+		if (empty($progGeral)) {
+			inserir("treinamento_progresso",
+				["trepr_nb_usuario_id", "trepr_nb_treinamento_id", "trepr_dt_data_inicio", "trepr_nb_concluido", "trepr_dt_data_conclusao"],
+				[$usuarioId, $treinamentoId, date("Y-m-d H:i:s"), 1, date("Y-m-d H:i:s")]
+			);
+			return true;
+		}
+		if (((int)($progGeral['trepr_nb_concluido'] ?? 0)) !== 1) {
+			query(
+				"UPDATE treinamento_progresso SET trepr_nb_concluido = 1, trepr_dt_data_conclusao = ? WHERE trepr_nb_id = ?",
+				"si",
+				[date("Y-m-d H:i:s"), (int)$progGeral['trepr_nb_id']]
+			);
+		}
+		return true;
+	}
+
+	// Regra de conclusão por episódio:
+	// - Com avaliação: exige aprovação (trepr_nb_avaliacao_aprovada = 1).
+	// - Sem avaliação: basta o vídeo concluído (trepr_nb_concluido = 1).
+	function treinamento_certificado_episodioConcluido($treinamentoId, $usuarioId, $episodioId) {
+		$treinamentoId = (int)$treinamentoId;
+		$usuarioId = (int)$usuarioId;
+		$episodioId = (int)$episodioId;
+		if ($treinamentoId <= 0 || $usuarioId <= 0 || $episodioId <= 0) {
+			return false;
+		}
+		$prog = mysqli_fetch_assoc(query(
+			"SELECT trepr_nb_avaliacao_aprovada, trepr_nb_concluido FROM treinamento_progresso
+			 WHERE trepr_nb_treinamento_id = ? AND trepr_nb_usuario_id = ? AND trepr_nb_episodio_id = ?
+			 ORDER BY trepr_nb_id DESC LIMIT 1",
+			"iii",
+			[$treinamentoId, $usuarioId, $episodioId]
+		));
+		if (empty($prog)) {
+			return false;
+		}
+		if (treinamento_certificado_episodioTemQuestoes($episodioId)) {
+			return ((int)($prog['trepr_nb_avaliacao_aprovada'] ?? 0)) === 1;
+		}
+		return ((int)($prog['trepr_nb_concluido'] ?? 0)) === 1;
 	}
 
 	function treinamento_certificado_instrutorLabel($treinamento) {
@@ -181,7 +270,7 @@
 
 		$usuario = mysqli_fetch_assoc(query(
 			"SELECT u.user_nb_id, u.user_tx_nome, u.user_tx_login, u.user_nb_entidade, u.user_nb_empresa,
-				e.enti_nb_id, e.enti_tx_nome, e.enti_tx_cpf, e.enti_tx_matricula, e.enti_tx_ocupacao,
+				e.enti_nb_id, e.enti_tx_nome, e.enti_tx_cpf, e.enti_tx_ocupacao,
 				e.enti_tx_email, e.enti_setor_id,
 				COALESCE(NULLIF(e.enti_nb_empresa, 0), u.user_nb_empresa) AS empresa_id,
 				emp.empr_tx_nome, emp.empr_tx_logo,
@@ -215,10 +304,12 @@
 		$notaSerieCount = 0;
 		$episodios = [];
 		$ultimaConclusaoEpi = '';
+		$inicio = trim(strval($progresso['trepr_dt_data_inicio'] ?? ''));
+		$primeiroInicioEpi = '';
 
 		if ($ehSerie) {
 			$rsEpi = query(
-				"SELECT trepi_nb_id, trepi_nb_ordem, trepi_tx_titulo, trepi_nb_carga_horaria FROM treinamento_episodio
+				"SELECT trepi_nb_id, trepi_nb_ordem, trepi_tx_titulo, trepi_tx_descricao, trepi_tx_url_video, trepi_nb_carga_horaria FROM treinamento_episodio
 				 WHERE trepi_nb_treinamento_id = ? AND trepi_tx_status = 'ativo'
 				 ORDER BY trepi_nb_ordem, trepi_nb_id",
 				"i",
@@ -230,7 +321,7 @@
 				$cargaEpisodios += $cargaEpi;
 
 				$progEpi = mysqli_fetch_assoc(query(
-					"SELECT trepr_nb_avaliacao_nota, trepr_nb_avaliacao_aprovada, trepr_dt_data_conclusao, trepr_dt_data_inicio
+					"SELECT trepr_nb_avaliacao_nota, trepr_nb_avaliacao_aprovada, trepr_nb_concluido, trepr_dt_data_conclusao, trepr_dt_data_inicio
 					 FROM treinamento_progresso
 					 WHERE trepr_nb_treinamento_id = ? AND trepr_nb_usuario_id = ? AND trepr_nb_episodio_id = ?
 					 ORDER BY trepr_nb_id DESC LIMIT 1",
@@ -250,6 +341,7 @@
 						$notaSerieCount++;
 					}
 				}
+				$concluidoEpi = $aprovadoEpi || ($progEpi && ((int)($progEpi['trepr_nb_concluido'] ?? 0)) === 1);
 
 				$dataEpi = trim(strval($progEpi['trepr_dt_data_conclusao'] ?? ''));
 				if ($dataEpi === '') {
@@ -259,20 +351,31 @@
 					$ultimaConclusaoEpi = $dataEpi;
 				}
 
+				$dataInicioEpi = trim(strval($progEpi['trepr_dt_data_inicio'] ?? ''));
+				if ($dataInicioEpi !== '' && ($primeiroInicioEpi === '' || $dataInicioEpi < $primeiroInicioEpi)) {
+					$primeiroInicioEpi = $dataInicioEpi;
+				}
+
 				$episodios[] = [
 					"ordem" => (int)($ep['trepi_nb_ordem'] ?? $totalEpisodios),
 					"titulo" => trim(strval($ep['trepi_tx_titulo'] ?? '')),
+					"descricao" => trim(strval($ep['trepi_tx_descricao'] ?? '')),
+					"url" => trim(strval($ep['trepi_tx_url_video'] ?? '')),
 					"carga" => $cargaEpi,
 					"carga_label" => treinamento_certificado_formatarCarga($cargaEpi),
 					"conclusao" => $dataEpi,
 					"conclusao_label" => $dataEpi !== '' ? date("d/m/Y", strtotime($dataEpi)) : '',
 					"nota" => $notaEpi,
-					"aprovado" => $aprovadoEpi
+					"aprovado" => $aprovadoEpi,
+					"concluido" => $concluidoEpi
 				];
 			}
 		}
 		if ($cargaHoraria <= 0) {
 			$cargaHoraria = $cargaEpisodios;
+		}
+		if ($inicio === '' && $ehSerie && $primeiroInicioEpi !== '') {
+			$inicio = $primeiroInicioEpi;
 		}
 
 		$conclusao = trim(strval($progresso['trepr_dt_data_conclusao'] ?? ''));
@@ -305,7 +408,6 @@
 			"entidade_id" => (int)($usuario['enti_nb_id'] ?? 0),
 			"nome" => trim(strval($usuario['enti_tx_nome'] ?? $usuario['user_tx_nome'] ?? '')),
 			"cpf" => trim(strval($usuario['enti_tx_cpf'] ?? '')),
-			"matricula" => trim(strval($usuario['enti_tx_matricula'] ?? '')),
 			"ocupacao" => trim(strval($usuario['enti_tx_ocupacao'] ?? '')),
 			"email" => trim(strval($usuario['enti_tx_email'] ?? '')),
 			"empresa" => trim(strval($usuario['empr_tx_nome'] ?? '')),
@@ -314,12 +416,16 @@
 			"titulo" => trim(strval($treinamento['trei_tx_titulo'] ?? '')),
 			"tipo" => (($treinamento['trei_tx_tipo'] ?? 'treinamento') === 'dss') ? 'DSS' : 'Treinamento',
 			"tipo_treinamento" => ucfirst(strval($treinamento['trei_tx_tipo_treinamento'] ?? '')),
+			"modalidade" => $ehSerie ? 'Série de vídeos' : 'Vídeo único',
+			"video_url" => trim(strval($treinamento['trei_tx_url_video'] ?? '')),
 			"eh_serie" => $ehSerie,
 			"total_episodios" => $totalEpisodios,
 			"episodios" => $episodios,
 			"carga_episodios" => $cargaEpisodios,
 			"carga_horaria" => (int)$cargaHoraria,
 			"carga_label" => treinamento_certificado_formatarCarga($cargaHoraria),
+			"data_inicio" => $inicio,
+			"data_inicio_label" => $inicio !== '' ? date("d/m/Y", strtotime($inicio)) : '',
 			"conclusao" => $conclusao,
 			"conclusao_label" => date("d/m/Y", strtotime($conclusao)),
 			"conclusao_data" => substr($conclusao, 0, 10),
@@ -345,8 +451,9 @@
 		if (strpos($l, 'cpf') !== false) {
 			return $dados['cpf'];
 		}
+		// Campo matrícula removido do certificado (não é exibido).
 		if (strpos($l, 'matricula') !== false || strpos($l, 'matr cula') !== false) {
-			return $dados['matricula'];
+			return '';
 		}
 		if (strpos($l, 'empresa') !== false || strpos($l, 'filial') !== false) {
 			return $dados['empresa'];
@@ -387,6 +494,12 @@
 		if (strpos($l, 'tipo') !== false) {
 			return $dados['tipo'];
 		}
+		if (strpos($l, 'modalidade') !== false || strpos($l, 'formato') !== false) {
+			return $dados['modalidade'];
+		}
+		if (strpos($l, 'inicio') !== false || strpos($l, 'in cio') !== false) {
+			return $dados['data_inicio_label'];
+		}
 		if (strpos($l, 'data') !== false || strpos($l, 'conclusao') !== false || strpos($l, 'realizacao') !== false || strpos($l, 'emissao') !== false || strpos($l, 'geracao') !== false) {
 			if (strpos($l, 'emissao') !== false || strpos($l, 'geracao') !== false || strpos($l, 'cadastro') !== false) {
 				return date("d/m/Y");
@@ -410,16 +523,17 @@
 		$campos = [
 			["label" => "Nome", "valor" => $dados['nome']],
 			["label" => "CPF", "valor" => $dados['cpf']],
-			["label" => "Matrícula", "valor" => $dados['matricula']],
 			["label" => "Empresa", "valor" => $dados['empresa']],
 			["label" => "Função", "valor" => $dados['ocupacao']],
 			["label" => "Treinamento", "valor" => $dados['titulo']],
 			["label" => "Tipo", "valor" => $dados['tipo']],
+			["label" => "Modalidade", "valor" => $dados['modalidade']],
 			["label" => "Carga Horária", "valor" => $dados['carga_label']],
 		];
 		if (!empty($dados['eh_serie']) && (int)$dados['total_episodios'] > 0) {
 			$campos[] = ["label" => "Episódios", "valor" => (string)(int)$dados['total_episodios']];
 		}
+		$campos[] = ["label" => "Data de Início", "valor" => $dados['data_inicio_label']];
 		$campos[] = ["label" => "Data de Conclusão", "valor" => $dados['conclusao_label']];
 		if ($dados['nota'] !== null) {
 			$campos[] = ["label" => "Aproveitamento", "valor" => $dados['nota'] . '%'];
@@ -576,25 +690,21 @@
 		$cpf = trim(strval($dados['cpf'] ?? ''));
 		$titulo = htmlspecialchars(strval($dados['titulo'] ?? ''), ENT_QUOTES, 'UTF-8');
 		$empresa = htmlspecialchars(strval($dados['empresa'] ?? ''), ENT_QUOTES, 'UTF-8');
-		$matricula = htmlspecialchars(strval($dados['matricula'] ?? ''), ENT_QUOTES, 'UTF-8');
 		$carga = htmlspecialchars(strval($dados['carga_label'] ?? ''), ENT_QUOTES, 'UTF-8');
 		$conclusao = htmlspecialchars(strval($dados['conclusao_label'] ?? ''), ENT_QUOTES, 'UTF-8');
 
 		$html = '<h1 style="text-align:center;font-size:22pt;letter-spacing:3px;color:#2c6a86;margin-bottom:2px;">CERTIFICADO</h1>';
-		$html .= '<p style="text-align:center;font-size:10pt;color:#555;margin-top:0;">Certificado de Conclusão de Treinamento</p>';
+		$html .= '<p style="text-align:center;font-size:10pt;color:#555;margin-top:0;">Certificado de Participação e Conclusão de Treinamento</p>';
 		$html .= '<br>';
 		$html .= '<p style="text-align:justify;font-size:11pt;line-height:1.5;">';
 		$html .= 'Certificamos que <b>' . $nome . '</b>';
 		if ($cpf !== '') {
 			$html .= ', CPF n° <b>' . htmlspecialchars($cpf, ENT_QUOTES, 'UTF-8') . '</b>';
 		}
-		if ($matricula !== '') {
-			$html .= ', matrícula <b>' . $matricula . '</b>';
-		}
 		if ($empresa !== '') {
 			$html .= ', colaborador(a) da empresa <b>' . $empresa . '</b>';
 		}
-		$html .= ', concluiu o treinamento <b>' . $titulo . '</b>';
+		$html .= ', participou e concluiu o treinamento <b>' . $titulo . '</b>';
 		if ($carga !== '') {
 			$html .= ', com carga horária de <b>' . $carga . '</b>';
 		}
@@ -642,24 +752,42 @@
 		}
 		$html .= '</table>';
 
-		// Séries: lista cada episódio (título, duração, conclusão e aproveitamento)
+		// Séries: lista cada episódio/vídeo (título, link, duração, conclusão e aproveitamento)
 		if (!empty($dados['eh_serie']) && !empty($dados['episodios'])) {
-			$html .= '<br><h3 style="font-size:12pt;">Episódios do Treinamento</h3>';
+			$html .= '<br><h3 style="font-size:12pt;">Episódios e Vídeos do Treinamento</h3>';
 			$html .= '<table border="1" cellpadding="3" cellspacing="0" style="width:100%;">';
 			$html .= '<thead><tr style="background-color:#f0f0f0;">';
-			$html .= '<th width="7%" style="text-align:center;"><b>#</b></th>';
-			$html .= '<th width="45%" style="text-align:left;"><b>Episódio</b></th>';
-			$html .= '<th width="14%" style="text-align:center;"><b>Duração</b></th>';
-			$html .= '<th width="16%" style="text-align:center;"><b>Conclusão</b></th>';
-			$html .= '<th width="18%" style="text-align:center;"><b>Aproveitamento</b></th>';
+			$html .= '<th width="6%" style="text-align:center;"><b>#</b></th>';
+			$html .= '<th width="52%" style="text-align:left;"><b>Episódio</b></th>';
+			$html .= '<th width="11%" style="text-align:center;"><b>Duração</b></th>';
+			$html .= '<th width="14%" style="text-align:center;"><b>Conclusão</b></th>';
+			$html .= '<th width="17%" style="text-align:center;"><b>Aproveitamento</b></th>';
 			$html .= '</tr></thead><tbody>';
 			foreach ($dados['episodios'] as $idxEp => $ep) {
+				$urlEpi = trim(strval($ep['url'] ?? ''));
 				$html .= '<tr>';
 				$html .= '<td style="text-align:center;">' . ($idxEp + 1) . '</td>';
-				$html .= '<td>' . htmlspecialchars(strval($ep['titulo'] ?? ''), ENT_QUOTES, 'UTF-8') . '</td>';
+				$html .= '<td>' . htmlspecialchars(strval($ep['titulo'] ?? ''), ENT_QUOTES, 'UTF-8');
+				if ($urlEpi !== '') {
+					// Exibe a URL sem parâmetros de rastreio (o link mantém a URL completa)
+					$urlExibicao = $urlEpi;
+					$partesUrl = @parse_url($urlEpi);
+					if (is_array($partesUrl) && !empty($partesUrl['host'])) {
+						$urlExibicao = strval($partesUrl['scheme'] ?? 'https') . '://' . $partesUrl['host'] . strval($partesUrl['path'] ?? '');
+					}
+					$html .= '<br><a href="' . htmlspecialchars($urlEpi, ENT_QUOTES, 'UTF-8') . '" style="font-size:7pt;color:#2c6a86;text-decoration:none;">Vídeo: ' . htmlspecialchars($urlExibicao, ENT_QUOTES, 'UTF-8') . '</a>';
+				}
+				$html .= '</td>';
 				$html .= '<td style="text-align:center;">' . htmlspecialchars(strval($ep['carga_label'] ?? ''), ENT_QUOTES, 'UTF-8') . '</td>';
 				$html .= '<td style="text-align:center;">' . htmlspecialchars(strval($ep['conclusao_label'] ?? ''), ENT_QUOTES, 'UTF-8') . '</td>';
-				$html .= '<td style="text-align:center;">' . ($ep['nota'] !== null ? htmlspecialchars(strval($ep['nota']), ENT_QUOTES, 'UTF-8') . '%' : '-') . '</td>';
+				if ($ep['nota'] !== null) {
+					$notaCel = htmlspecialchars(strval($ep['nota']), ENT_QUOTES, 'UTF-8') . '%';
+				} elseif (!empty($ep['concluido'])) {
+					$notaCel = 'Concluído';
+				} else {
+					$notaCel = '-';
+				}
+				$html .= '<td style="text-align:center;">' . $notaCel . '</td>';
 				$html .= '</tr>';
 			}
 			$html .= '<tr style="background-color:#f7f7f7;">';
@@ -874,9 +1002,42 @@
 			$registro = treinamento_certificado_sincronizar($registro);
 			return ["ok" => true, "status" => $registro['trece_tx_status'], "registro" => $registro, "existente" => true];
 		}
+		// Regeneração forçada (certificado já gerado): remove o arquivo e o
+		// registro anterior do funcionário para não acumular versões antigas.
+		if (!empty($registro) && $forcar && strval($registro['trece_tx_status']) === 'gerado') {
+			$caminhoAntigo = trim(strval($registro['trece_tx_caminho'] ?? ''));
+			if ($caminhoAntigo !== '') {
+				$absAntigo = __DIR__ . '/../' . ltrim($caminhoAntigo, '/');
+				if (file_exists($absAntigo)) {
+					@unlink($absAntigo);
+				}
+				query("DELETE FROM documento_funcionario WHERE docu_tx_caminho = ?", "s", [$caminhoAntigo]);
+			}
+		}
 
 		if (!treinamento_certificado_estaConcluido($treinamentoId, $usuarioId)) {
-			return ["ok" => false, "message" => "Treinamento ainda não concluído."];
+			$treinamentoPend = carregar("treinamento", $treinamentoId);
+			$ehSeriePend = ($treinamentoPend["trei_tx_serie"] ?? "nao") === "sim";
+			if (!$ehSeriePend) {
+				$progPend = mysqli_fetch_assoc(query(
+					"SELECT trepr_nb_concluido, trepr_nb_avaliacao_aprovada FROM treinamento_progresso
+					 WHERE trepr_nb_treinamento_id = ? AND trepr_nb_usuario_id = ? AND trepr_nb_episodio_id IS NULL
+					 ORDER BY trepr_nb_id DESC LIMIT 1",
+					"ii",
+					[$treinamentoId, $usuarioId]
+				));
+				if (treinamento_certificado_temQuestoes($treinamentoId)) {
+					if (((int)($progPend["trepr_nb_avaliacao_aprovada"] ?? 0)) !== 1) {
+						return ["ok" => false, "message" => "A avaliação ainda não foi aprovada. Aprove a avaliação para emitir o certificado."];
+					}
+					return ["ok" => false, "message" => "Treinamento ainda não concluído."];
+				}
+				if (((int)($progPend["trepr_nb_concluido"] ?? 0)) !== 1) {
+					return ["ok" => false, "message" => "O vídeo ainda não foi concluído."];
+				}
+				return ["ok" => false, "message" => "Treinamento ainda não concluído."];
+			}
+			return ["ok" => false, "message" => "A série ainda não foi concluída. Finalize todos os episódios e aprove as avaliações (quando houver)."];
 		}
 
 		$tipo = treinamento_certificado_buscarTipo();
