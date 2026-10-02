@@ -43,19 +43,106 @@ function tt_dataParaSql($valor) {
     return $valor;
 }
 
+// Volta para a tela exibindo a mensagem de erro. O status em $_POST se perde no
+// redirect GET, por isso a mensagem vai pela sessao e e mostrada ao carregar a pagina.
+function tt_redirecionarComErro($mensagem) {
+    $_SESSION['tt_erro'] = strval($mensagem);
+    header("Location: solicitar_troca_turno.php");
+    exit;
+}
+
+// Volta para a tela exibindo a mensagem de sucesso.
+function tt_redirecionarComSucesso($mensagem) {
+    $_SESSION['tt_msg'] = strval($mensagem);
+    header("Location: solicitar_troca_turno.php");
+    exit;
+}
+
+// Exclui solicitacao pendente do proprio usuario (solicitante).
+function tt_excluirSolicitacaoTela() {
+    if (!function_exists('tt_buscarUsuarioAtual')) {
+        include_once __DIR__."/helpers_troca_turno.php";
+    }
+
+    $usuario = tt_buscarUsuarioAtual();
+    if (empty($usuario)) {
+        tt_redirecionarComErro('Usuario nao identificado.');
+    }
+
+    $idEntidade = intval(tt_s($usuario, 'enti_nb_id', 0));
+    $idSolicitacao = intval(tt_s($_POST, 'id_solicitacao', 0));
+
+    if ($idSolicitacao <= 0) {
+        tt_redirecionarComErro('Solicitacao nao informada.');
+    }
+
+    $solicitacao = tt_fetch_assoc_safe(tt_query(
+        "SELECT soli_nb_id, soli_nb_entidade, soli_tx_status_gestor
+         FROM solicitacao_troca_horario
+         WHERE soli_nb_id = ? LIMIT 1",
+        "i",
+        array($idSolicitacao)
+    ));
+
+    if (empty($solicitacao)) {
+        tt_redirecionarComErro('Solicitacao nao encontrada.');
+    }
+    if (intval(tt_val($solicitacao, 'soli_nb_entidade', 0)) !== $idEntidade) {
+        tt_redirecionarComErro('Voce so pode excluir solicitacoes feitas por voce.');
+    }
+    if (strval(tt_val($solicitacao, 'soli_tx_status_gestor', '')) !== 'pendente') {
+        tt_redirecionarComErro('Somente solicitacoes pendentes podem ser excluidas.');
+    }
+
+    tt_query(
+        "DELETE FROM solicitacao_troca_horario WHERE soli_nb_id = ? AND soli_tx_status_gestor = 'pendente'",
+        "i",
+        array($idSolicitacao)
+    );
+    // O status pode ter mudado entre a leitura e o DELETE: se a linha continua la, aborta
+    // sem remover aprovadores/notificacoes.
+    $aindaExiste = tt_fetch_assoc_safe(tt_query(
+        "SELECT soli_nb_id FROM solicitacao_troca_horario WHERE soli_nb_id = ? LIMIT 1",
+        "i",
+        array($idSolicitacao)
+    ));
+    if (!empty($aindaExiste)) {
+        tt_redirecionarComErro('Somente solicitacoes pendentes podem ser excluidas.');
+    }
+
+    tt_query(
+        "DELETE FROM solicitacao_troca_horario_aprovadores WHERE apro_nb_solicitacao = ?",
+        "i",
+        array($idSolicitacao)
+    );
+    tt_query(
+        "DELETE FROM notificacao_troca_turno WHERE noti_nb_solicitacao = ?",
+        "i",
+        array($idSolicitacao)
+    );
+
+    tt_log_runtime('POST solicitacao excluida: '.$idSolicitacao);
+    tt_redirecionarComSucesso('Solicitacao #'.$idSolicitacao.' excluida com sucesso.');
+}
+
 // Fluxo principal de gravacao da solicitacao de troca de horario.
 function tt_salvarSolicitacaoTela() {
     if (!function_exists('tt_buscarUsuarioAtual')) {
         include_once __DIR__."/helpers_troca_turno.php";
     }
 
+    // Em POST o roteador do contex20/funcoes.php executa esta funcao durante o include
+    // do conecta.php e encerra a requisicao — a chamada da linha 24 nao roda. Sem isso,
+    // um envio em base nova falharia com "tabela nao existe".
+    if (function_exists('tt_ensureSchema')) {
+        tt_ensureSchema();
+    }
+
     tt_log_runtime('POST iniciar envio solicitacao');
 
     $usuario = tt_buscarUsuarioAtual();
     if (empty($usuario)) {
-        set_status("ERRO: Usuario nao identificado.");
-        header("Location: solicitar_troca_turno.php");
-        exit;
+        tt_redirecionarComErro('Usuario nao identificado.');
     }
 
     $idSolicitante = intval(tt_s($usuario, 'enti_nb_id', 0));
@@ -70,23 +157,24 @@ function tt_salvarSolicitacaoTela() {
     $dataPagaraSql = tt_dataParaSql($dataPagara);
 
     if ($matriculaDestino === '' || $dataTroca === '' || $turnoTroca === '') {
-        set_status("ERRO: Preencha matricula, data da troca e turno da troca.");
-        header("Location: solicitar_troca_turno.php");
-        exit;
+        tt_redirecionarComErro('Preencha matricula, data da troca e turno da troca.');
+    }
+
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dataTrocaSql)) {
+        tt_redirecionarComErro('Data da troca invalida.');
+    }
+    if ($dataPagaraSql !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $dataPagaraSql)) {
+        tt_redirecionarComErro('Data que pagara invalida.');
     }
 
     $destino = tt_buscarPorMatricula($matriculaDestino);
     if (empty($destino)) {
-        set_status("ERRO: Matricula informada nao foi encontrada.");
-        header("Location: solicitar_troca_turno.php");
-        exit;
+        tt_redirecionarComErro('Matricula informada nao foi encontrada.');
     }
 
     $idDestino = intval(tt_s($destino, 'enti_nb_id', 0));
     if ($idDestino === $idSolicitante) {
-        set_status("ERRO: A matricula informada deve ser de outro colaborador.");
-        header("Location: solicitar_troca_turno.php");
-        exit;
+        tt_redirecionarComErro('A matricula informada deve ser de outro colaborador.');
     }
 
     list($setorSolicitante, $subsetorSolicitante) = tt_buscarSetorSubsetor($idSolicitante);
@@ -112,7 +200,7 @@ function tt_salvarSolicitacaoTela() {
         'soli_tx_subsetor_trabalhara' => $subsetorDestino,
         'soli_tx_data_troca' => $dataTrocaSql,
         'soli_tx_turno_troca' => $turnoTroca,
-        'soli_tx_data_pagara' => ($dataPagaraSql !== '' ? $dataPagaraSql : ''),
+        'soli_tx_data_pagara' => ($dataPagaraSql !== '' ? $dataPagaraSql : null),
         'soli_tx_turno_pagara' => $turnoPagara,
         'soli_tx_complemento' => $complemento,
         'soli_tx_aceite_status' => 'pendente',
@@ -125,9 +213,8 @@ function tt_salvarSolicitacaoTela() {
     $idSolicitacao = 0;
     if (is_array($resIns) && isset($resIns[0])) {
         if ($resIns[0] instanceof Exception) {
-            set_status('ERRO: Falha ao salvar solicitacao. Verifique os dados e tente novamente.');
-            header("Location: solicitar_troca_turno.php");
-            exit;
+            tt_log_runtime('INSERT FALHOU | '.$resIns[0]->getMessage());
+            tt_redirecionarComErro('Falha ao salvar solicitacao. Verifique os dados e tente novamente.');
         }
         if (is_numeric($resIns[0])) {
             $idSolicitacao = intval($resIns[0]);
@@ -135,9 +222,8 @@ function tt_salvarSolicitacaoTela() {
     }
 
     if ($idSolicitacao <= 0) {
-        set_status("ERRO: Nao foi possivel salvar a solicitacao.");
-        header("Location: solicitar_troca_turno.php");
-        exit;
+        tt_log_runtime('INSERT SEM ID | last_sql_error='.strval($GLOBALS['last_sql_error'] ?? ''));
+        tt_redirecionarComErro('Nao foi possivel salvar a solicitacao.');
     }
 
     $gestores1 = tt_obterGestoresPorEntidade($idSolicitante);
@@ -193,19 +279,20 @@ function salvarSolicitacao() {
     tt_salvarSolicitacaoTela();
 }
 
+// Entry-point do Contex para exclusao de solicitacao pendente (acao=excluirSolicitacao).
+function excluirSolicitacao() {
+    tt_excluirSolicitacaoTela();
+}
+
 if (tt_s($_POST, 'acao', '') === 'salvarSolicitacao') {
     try {
         tt_salvarSolicitacaoTela();
     } catch (Exception $e) {
         tt_log_runtime('EXCEPTION | '.$e->getMessage().' | '.$e->getFile().':'.$e->getLine());
-        set_status('ERRO: Falha inesperada ao enviar solicitacao.');
-        header('Location: solicitar_troca_turno.php');
-        exit;
+        tt_redirecionarComErro('Falha inesperada ao enviar solicitacao.');
     } catch (Error $e) {
         tt_log_runtime('ERROR | '.$e->getMessage().' | '.$e->getFile().':'.$e->getLine());
-        set_status('ERRO: Falha inesperada ao enviar solicitacao.');
-        header('Location: solicitar_troca_turno.php');
-        exit;
+        tt_redirecionarComErro('Falha inesperada ao enviar solicitacao.');
     }
 }
 
@@ -240,6 +327,16 @@ $resHistory = tt_query(
 $historico = ($resHistory instanceof mysqli_result) ? mysqli_fetch_all($resHistory, MYSQLI_ASSOC) : array();
 
 cabecalho('Troca de Horario');
+
+if (!empty($_SESSION['tt_msg'])) {
+    echo "<div class='alert alert-success'>".htmlspecialchars(strval($_SESSION['tt_msg']))."</div>";
+    unset($_SESSION['tt_msg']);
+}
+
+if (!empty($_SESSION['tt_erro'])) {
+    echo "<div class='alert alert-danger'>".htmlspecialchars(strval($_SESSION['tt_erro']))."</div>";
+    unset($_SESSION['tt_erro']);
+}
 
 if (!empty($_GET['sucesso']) && !empty($_GET['id'])) {
     echo "<div class='alert alert-success'>Solicitacao #".intval($_GET['id'])." registrada com sucesso.</div>";
@@ -393,16 +490,18 @@ document.addEventListener('DOMContentLoaded', function(){
 echo "<div class='row' style='margin-top:20px;'><div class='col-sm-12'><div class='portlet light'>";
 echo "<div class='portlet-title'><div class='caption'><span class='caption-subject font-dark bold'>Historico de Solicitacoes</span></div></div>";
 echo "<div class='portlet-body'><div class='table-responsive'><table class='table table-striped table-hover'>";
-echo "<thead><tr><th>Data</th><th>Tipo</th><th>Solicitante</th><th>Troca com</th><th>Data Troca</th><th>Status Gestor</th><th>Gestor</th></tr></thead><tbody>";
+echo "<thead><tr><th>Data</th><th>Tipo</th><th>Solicitante</th><th>Troca com</th><th>Data Troca</th><th>Status Gestor</th><th>Gestor</th><th>Acoes</th></tr></thead><tbody>";
 
 if (empty($historico)) {
-    echo "<tr><td colspan='7' class='text-center alert alert-info'>Nenhuma solicitacao encontrada.</td></tr>";
+    echo "<tr><td colspan='8' class='text-center alert alert-info'>Nenhuma solicitacao encontrada.</td></tr>";
 } else {
     foreach ($historico as $h) {
         $statusGestor = strval(tt_s($h, 'soli_tx_status_gestor', 'pendente'));
         $badge = "<span class='label label-warning'>Pendente</span>";
         if ($statusGestor === 'aprovado') { $badge = "<span class='label label-success'>Aprovado</span>"; }
         if ($statusGestor === 'rejeitado') { $badge = "<span class='label label-danger'>Rejeitado</span>"; }
+
+        $podeExcluir = (strval(tt_s($h, 'tipo_visualizacao', '')) === 'Enviada' && $statusGestor === 'pendente');
 
         echo "<tr>";
         echo "<td>".htmlspecialchars(strval(tt_s($h, 'soli_tx_dataCadastro', '')))."</td>";
@@ -412,6 +511,18 @@ if (empty($historico)) {
         echo "<td>".htmlspecialchars(strval(tt_s($h, 'soli_tx_data_troca', '')))."</td>";
         echo "<td>{$badge}</td>";
         echo "<td>".htmlspecialchars(strval(tt_s($h, 'gestor_nome', '-')))."</td>";
+        echo "<td>";
+        if ($podeExcluir) {
+            $idSolicitacaoHist = intval(tt_s($h, 'soli_nb_id', 0));
+            echo "<form method='post' style='margin:0;' onsubmit=\"return confirm('Excluir a solicitacao #{$idSolicitacaoHist}?');\">"
+                ."<input type='hidden' name='acao' value='excluirSolicitacao'>"
+                ."<input type='hidden' name='id_solicitacao' value='{$idSolicitacaoHist}'>"
+                ."<button type='submit' class='btn btn-danger btn-xs'><i class='fa fa-trash'></i> Excluir</button>"
+                ."</form>";
+        } else {
+            echo "<span style='color:#aaa;'>-</span>";
+        }
+        echo "</td>";
         echo "</tr>";
     }
 }

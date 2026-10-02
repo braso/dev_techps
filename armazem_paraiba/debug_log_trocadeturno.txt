@@ -46,3 +46,60 @@
 2026-04-23 16:04:50 | POST retorno inserir recebido
 2026-04-23 16:04:50 | POST aprovadores processados
 2026-04-23 16:04:50 | POST solicitacao enviada com sucesso: 1
+2026-10-02 10:16:24 | POST iniciar envio solicitacao
+2026-10-02 10:16:24 | POST retorno inserir recebido
+2026-10-02 10:16:49 | POST iniciar envio solicitacao
+2026-10-02 10:16:49 | POST retorno inserir recebido
+2026-10-02 10:17:26 | POST iniciar envio solicitacao
+2026-10-02 10:17:26 | POST retorno inserir recebido
+2026-10-02 10:18:28 | POST iniciar envio solicitacao
+2026-10-02 10:18:28 | POST retorno inserir recebido
+2026-10-02 10:34:46 | POST iniciar envio solicitacao
+2026-10-02 10:34:46 | POST retorno inserir recebido
+2026-10-02 10:34:46 | POST aprovadores processados
+2026-10-02 10:34:46 | POST solicitacao enviada com sucesso: 3
+2026-10-02 10:35:00 | POST iniciar envio solicitacao
+2026-10-02 10:36:07 | POST iniciar envio solicitacao
+2026-10-02 10:36:07 | POST retorno inserir recebido
+2026-10-02 10:36:07 | POST aprovadores processados
+2026-10-02 10:36:07 | POST solicitacao enviada com sucesso: 4
+2026-10-02 13:39:07 | FATAL | Uncaught Error: Call to undefined function query() in /var/www/html/braso/armazem_paraiba/trocadeturno/helpers_troca_turno.php:6
+Stack trace:
+#0 /var/www/html/braso/armazem_paraiba/trocadeturno/helpers_troca_turno.php(40): tt_query('CREATE TABLE IF...')
+#1 /var/www/html/braso/armazem_paraiba/trocadeturno/solicitar_troca_turno.php(24): tt_ensureSchema()
+#2 /var/www/html/braso/tmp_tt_del_run.php(29): include('/var/www/html/b...')
+#3 {main}
+  thrown | /var/www/html/braso/armazem_paraiba/trocadeturno/helpers_troca_turno.php:6
+2026-10-02 13:39:18 | FATAL | Uncaught Error: Call to undefined function query() in /var/www/html/braso/armazem_paraiba/trocadeturno/helpers_troca_turno.php:6
+Stack trace:
+#0 /var/www/html/braso/armazem_paraiba/trocadeturno/helpers_troca_turno.php(40): tt_query('CREATE TABLE IF...')
+#1 /var/www/html/braso/armazem_paraiba/trocadeturno/solicitar_troca_turno.php(24): tt_ensureSchema()
+#2 /var/www/html/braso/tmp_tt_del_run.php(29): include('/var/www/html/b...')
+#3 {main}
+  thrown | /var/www/html/braso/armazem_paraiba/trocadeturno/helpers_troca_turno.php:6
+2026-10-02 13:39:36 | FATAL | Uncaught Error: Call to undefined function query() in /var/www/html/braso/armazem_paraiba/trocadeturno/helpers_troca_turno.php:6
+Stack trace:
+#0 /var/www/html/braso/armazem_paraiba/trocadeturno/helpers_troca_turno.php(40): tt_query('CREATE TABLE IF...')
+#1 /var/www/html/braso/armazem_paraiba/trocadeturno/solicitar_troca_turno.php(24): tt_ensureSchema()
+#2 /var/www/html/braso/tmp_tt_del_run.php(32): include('/var/www/html/b...')
+#3 {main}
+  thrown | /var/www/html/braso/armazem_paraiba/trocadeturno/helpers_troca_turno.php:6
+2026-10-02 10:39:54 | FATAL | Uncaught Error: Call to undefined function query() in /var/www/html/braso/armazem_paraiba/trocadeturno/helpers_troca_turno.php:6
+Stack trace:
+#0 /var/www/html/braso/armazem_paraiba/trocadeturno/helpers_troca_turno.php(40): tt_query('CREATE TABLE IF...')
+#1 /var/www/html/braso/armazem_paraiba/trocadeturno/solicitar_troca_turno.php(24): tt_ensureSchema()
+#2 /var/www/html/braso/tmp_tt_del_run.php(32): include('/var/www/html/b...')
+#3 {main}
+  thrown | /var/www/html/braso/armazem_paraiba/trocadeturno/helpers_troca_turno.php:6
+2026-10-02 10:40:06 | POST solicitacao excluida: 9
+2026-10-02 10:42:05 | POST solicitacao excluida: 15
+2026-10-02 10:43:19 | POST solicitacao excluida: 4
+2026-10-02 10:43:29 | POST iniciar envio solicitacao
+2026-10-02 10:43:29 | POST retorno inserir recebido
+2026-10-02 10:43:29 | POST aprovadores processados
+2026-10-02 10:43:29 | POST solicitacao enviada com sucesso: 18
+2026-10-02 10:43:42 | POST solicitacao excluida: 18
+2026-10-02 10:44:24 | POST iniciar envio solicitacao
+2026-10-02 10:44:24 | POST retorno inserir recebido
+2026-10-02 10:44:24 | POST aprovadores processados
+2026-10-02 10:44:24 | POST solicitacao enviada com sucesso: 19

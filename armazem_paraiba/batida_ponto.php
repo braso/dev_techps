@@ -497,6 +497,7 @@ function index() {
                 ."<div class='margin-bottom-5'><b>Matrícula:</b> ".$motorista["enti_tx_matricula"]."</div>"
                 ."<div class='margin-bottom-5'><b>CPF:</b> ".$motorista["user_tx_cpf"]."</div>"
                 ."<div class='margin-bottom-10'><b>Nome:</b> ".$motorista["user_tx_nome"]."</div>"
+                ."<div class='margin-bottom-10' style='grid-column:1/-1;'><a href='".$CONTEX["path"]."/ajuste_pontofuncionario.php' style='font-size:13px;'><i class='fa fa-edit'></i> Solicitar ajuste de ponto</a></div>"
             ."</div>",
         ];
 

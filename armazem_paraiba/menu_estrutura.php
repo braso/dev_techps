@@ -79,6 +79,7 @@
 				],
 				"ponto" => [
 					"/batida_ponto.php"     => "Registrar Ponto",
+					"/ajuste_pontofuncionario.php" => "Solicitar Ajuste",
 					"/endosso.php" 			=> "Consultar Endossos",
 					"/espelho_ponto.php" 	=> "Espelhos de Ponto",
 					"/carregar_ponto.php" 	=> "Integrações de Ponto",
@@ -279,6 +280,7 @@
 			if(in_array($nivel, $niveisOperacionais)){
 				return [
 					["tipo" => "link", "path" => "/batida_ponto.php",  "label" => $rotuloMenuPonto("Registrar Ponto")],
+					["tipo" => "link", "path" => "/ajuste_pontofuncionario.php", "label" => $rotuloMenuPonto("Solicitar Ajuste")],
 					["tipo" => "link", "path" => "/espelho_ponto.php", "label" => $rotuloMenuPonto("Espelhos de Ponto")],
 				];
 			}

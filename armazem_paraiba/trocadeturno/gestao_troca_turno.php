@@ -130,9 +130,153 @@ function tt_processarDecisaoGestor() {
     return array('Solicitacao '.($decisao === 'aprovado' ? 'aprovada' : 'rejeitada').' com sucesso.', false);
 }
 
+// True quando a solicitacao aprovada ainda pode ser excluida: ate o dia anterior
+// a primeira data da troca (data troca e, se houver, data que pagara).
+function tt_trocaPodeSerExcluida($solicitacao) {
+    $amanha = date('Y-m-d', strtotime('+1 day'));
+    $dataTroca = substr(strval(tg($solicitacao, 'soli_tx_data_troca', '')), 0, 10);
+    $dataPagara = substr(strval(tg($solicitacao, 'soli_tx_data_pagara', '')), 0, 10);
+
+    if ($dataTroca === '' || $dataTroca < $amanha) {
+        return false;
+    }
+    if ($dataPagara !== '' && $dataPagara < $amanha) {
+        return false;
+    }
+
+    return true;
+}
+
+// Remove documentos/assinaturas pendentes gerados pela troca aprovada excluida.
+function tt_removerAssinaturasTroca($idSolicitacao, $idInstancia) {
+    $idSolicitacao = intval($idSolicitacao);
+    $idInstancia = intval($idInstancia);
+
+    if (tt_tabelaExiste('solicitacoes_assinatura')) {
+        $grupo = 'troca_turno_'.$idSolicitacao;
+        $ids = array();
+        $res = tt_query(
+            "SELECT id FROM solicitacoes_assinatura WHERE grupo_envio = ?",
+            "s",
+            array($grupo)
+        );
+        while ($res && ($r = mysqli_fetch_assoc($res))) {
+            $ids[] = intval(tg($r, 'id', 0));
+        }
+
+        if (!empty($ids)) {
+            $in = implode(',', array_filter($ids));
+            if ($in !== '') {
+                if (tt_tabelaExiste('assinantes')) {
+                    tt_query("DELETE FROM assinantes WHERE id_solicitacao IN (".$in.")");
+                }
+                tt_query("DELETE FROM solicitacoes_assinatura WHERE id IN (".$in.")");
+            }
+        }
+    }
+
+    if ($idInstancia > 0) {
+        if (tt_tabelaExiste('valo_documento_modulo')) {
+            tt_query("DELETE FROM valo_documento_modulo WHERE valo_nb_instancia = ?", "i", array($idInstancia));
+        }
+        if (tt_tabelaExiste('inst_documento_modulo')) {
+            tt_query("DELETE FROM inst_documento_modulo WHERE inst_nb_id = ?", "i", array($idInstancia));
+        }
+    }
+}
+
+// Exclui solicitacao aprovada antes do dia da troca; sem a linha aprovada o espelho
+// deixa de aplicar a troca e as previsoes de trabalho voltam ao normal.
+function tt_processarExclusaoTroca() {
+    $idUser = intval(tg($_SESSION, 'user_nb_id', 0));
+    $idEntidade = intval(tg($_SESSION, 'user_nb_entidade', 0));
+    $isSuperAdmin = tt_isSuperAdmin();
+
+    if ($idUser <= 0 || (!$isSuperAdmin && $idEntidade <= 0)) {
+        header("Location: ../index.php");
+        exit;
+    }
+
+    $idSolicitacao = intval(tg($_POST, 'id_solicitacao', 0));
+    if ($idSolicitacao <= 0) {
+        return array('Solicitacao invalida para exclusao.', true);
+    }
+
+    $solicitacao = tt_fetch_assoc_safe(tt_query(
+        "SELECT soli_nb_id, soli_nb_entidade, soli_nb_entidade_destino,
+                soli_tx_status_gestor, soli_tx_data_troca, soli_tx_data_pagara,
+                soli_nb_id_instancia
+         FROM solicitacao_troca_horario
+         WHERE soli_nb_id = ? LIMIT 1",
+        "i",
+        array($idSolicitacao)
+    ));
+
+    if (empty($solicitacao)) {
+        return array('Solicitacao nao encontrada.', true);
+    }
+    if (strval(tg($solicitacao, 'soli_tx_status_gestor', '')) !== 'aprovado') {
+        return array('Somente solicitacoes aprovadas podem ser excluidas por aqui.', true);
+    }
+
+    if (!$isSuperAdmin) {
+        $perm = tt_fetch_assoc_safe(tt_query(
+            "SELECT apro_nb_id
+             FROM solicitacao_troca_horario_aprovadores
+             WHERE apro_nb_solicitacao = ? AND apro_nb_entidade = ?
+             LIMIT 1",
+            "ii",
+            array($idSolicitacao, $idEntidade)
+        ));
+        if (empty($perm)) {
+            return array('Voce nao tem permissao para excluir esta solicitacao.', true);
+        }
+    }
+
+    if (!tt_trocaPodeSerExcluida($solicitacao)) {
+        return array('Nao e mais possivel excluir: a troca ja iniciou ou esta prevista para hoje.', true);
+    }
+
+    $idSolicitante = intval(tg($solicitacao, 'soli_nb_entidade', 0));
+    $idDestino = intval(tg($solicitacao, 'soli_nb_entidade_destino', 0));
+    $idInstancia = intval(tg($solicitacao, 'soli_nb_id_instancia', 0));
+
+    tt_removerAssinaturasTroca($idSolicitacao, $idInstancia);
+
+    tt_query("DELETE FROM solicitacao_troca_horario_aprovadores WHERE apro_nb_solicitacao = ?", "i", array($idSolicitacao));
+    tt_query("DELETE FROM notificacao_troca_turno WHERE noti_nb_solicitacao = ?", "i", array($idSolicitacao));
+    // A linha guarda as duas pontas da troca (data_troca e data_pagara). Como o espelho
+    // so aplica trocas com soli_tx_status_gestor = 'aprovado', remover a linha devolve a
+    // previsao de jornada normal nas DUAS datas — inclusive na data que pagara.
+    tt_query("DELETE FROM solicitacao_troca_horario WHERE soli_nb_id = ? AND soli_tx_status_gestor = 'aprovado'", "i", array($idSolicitacao));
+
+    $aindaExiste = tt_fetch_assoc_safe(tt_query(
+        "SELECT soli_nb_id FROM solicitacao_troca_horario WHERE soli_nb_id = ? LIMIT 1",
+        "i",
+        array($idSolicitacao)
+    ));
+    if (!empty($aindaExiste)) {
+        return array('Nao foi possivel excluir a solicitacao.', true);
+    }
+
+    $msgCancelamento = 'A troca de turno aprovada foi cancelada pelo gestor. As previsoes de trabalho voltaram ao normal.';
+    tt_criarNotificacao($idSolicitacao, $idSolicitante, 'resultado', $msgCancelamento);
+    tt_criarNotificacao($idSolicitacao, $idDestino, 'resultado', $msgCancelamento);
+
+    return array('Solicitacao #'.$idSolicitacao.' excluida e previsoes de trabalho restauradas.', false);
+}
+
 // Entry-point do Contex para acao do formulario (acao=decidir).
 function decidir() {
     list($mensagem, $erro) = tt_processarDecisaoGestor();
+    tt_setFlashGestao($mensagem, $erro);
+    header('Location: gestao_troca_turno.php');
+    exit;
+}
+
+// Entry-point do Contex para exclusao de troca aprovada (acao=excluirTrocaAprovada).
+function excluirTrocaAprovada() {
+    list($mensagem, $erro) = tt_processarExclusaoTroca();
     tt_setFlashGestao($mensagem, $erro);
     header('Location: gestao_troca_turno.php');
     exit;
@@ -262,17 +406,19 @@ cabecalho("Gestao de Troca de Turno");
                                 <th>Turno pagara</th>
                                 <th>Status</th>
                                 <th>Decisao</th>
+                                <th>Acoes</th>
                             </tr>
                         </thead>
                         <tbody>
                         <?php if (empty($solicitacoes)): ?>
-                            <tr><td colspan="8" style="text-align:center;color:#666;">Nenhuma solicitacao encontrada.</td></tr>
+                            <tr><td colspan="9" style="text-align:center;color:#666;">Nenhuma solicitacao encontrada.</td></tr>
                         <?php else: foreach ($solicitacoes as $s): ?>
                             <?php
                                 $statusGlobal = strval(tg($s, 'soli_tx_status_gestor', 'pendente'));
                                 $badge = "<span class='label label-warning'>Pendente</span>";
                                 if ($statusGlobal === 'aprovado') $badge = "<span class='label label-success'>Aprovado</span>";
                                 if ($statusGlobal === 'rejeitado') $badge = "<span class='label label-danger'>Rejeitado</span>";
+                                $podeExcluirTroca = ($statusGlobal === 'aprovado' && tt_trocaPodeSerExcluida($s));
                             ?>
                             <tr>
                                 <td><?php echo htmlspecialchars(strval(tg($s, 'soli_tx_dataCadastro', ''))); ?></td>
@@ -295,6 +441,17 @@ cabecalho("Gestao de Troca de Turno");
                                     <?php else: ?>
                                         <div><strong>Decisor:</strong> <?php echo htmlspecialchars(strval(tg($s, 'gestor_decisor', '-'))); ?></div>
                                         <div><strong>Em:</strong> <?php echo htmlspecialchars(strval(tg($s, 'soli_tx_data_decisao', '-'))); ?></div>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="min-width:120px;">
+                                    <?php if ($podeExcluirTroca): ?>
+                                        <form method="post" style="margin:0;" onsubmit="return confirm('Excluir a solicitacao aprovada #<?php echo intval(tg($s, 'soli_nb_id', 0)); ?>? As previsoes de trabalho voltarao ao normal.');">
+                                            <input type="hidden" name="acao" value="excluirTrocaAprovada">
+                                            <input type="hidden" name="id_solicitacao" value="<?php echo intval(tg($s, 'soli_nb_id', 0)); ?>">
+                                            <button class="btn btn-danger btn-sm" type="submit"><i class="fa fa-trash"></i> Excluir</button>
+                                        </form>
+                                    <?php else: ?>
+                                        <span style="color:#aaa;">-</span>
                                     <?php endif; ?>
                                 </td>
                             </tr>
