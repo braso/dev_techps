@@ -215,6 +215,7 @@ function runnerSourceContracts(): void
         'check_permission.php' => [
             '/batida_ponto.php',
             '/espelho_ponto.php',
+            '/ajuste_pontofuncionario.php',
         ],
         // Secoes e paginas do menu ficam em menu_estrutura.php (fonte unica). menu.php e o
         // cabecalho da assinatura so desenham, e o cadastro de perfil sincroniza menu_item
@@ -224,6 +225,7 @@ function runnerSourceContracts(): void
             '/endosso.php',
             '/espelho_ponto.php',
             '/paineis/endosso.php',
+            '/ajuste_pontofuncionario.php',
         ],
         'menu.php' => [
             'menu_estrutura_do_nivel(',
@@ -233,6 +235,10 @@ function runnerSourceContracts(): void
         ],
         'cadastro_perfil_acesso.php' => [
             '/menu_estrutura.php',
+        ],
+        'batida_ponto.php' => [
+            'verificaPermissao(\'/batida_ponto.php\')',
+            '/ajuste_pontofuncionario.php',
         ],
         'espelho_ponto.php' => [
             'include "funcoes_ponto.php"',
@@ -286,6 +292,13 @@ function runnerSourceContracts(): void
         ],
         'trocadeturno/gestao_troca_turno.php' => [
             'tt_validarConflitosTroca(',
+            'tt_trocaPodeSerExcluida(',
+            'function excluirTrocaAprovada()',
+        ],
+        'trocadeturno/solicitar_troca_turno.php' => [
+            'tt_ensureSchema()',
+            'tt_redirecionarComErro(',
+            'function excluirSolicitacao()',
         ],
     ];
 

@@ -39,6 +39,12 @@ function verificaPermissao($pathMenu)
         $permitido = !empty($rowPerm);
     }
 
+    // 2.1. Solicitar Ajuste herda a permissão de quem já pode registrar/consultar
+    // o próprio ponto: liberar "Registrar Ponto" (ou o espelho) libera o ajuste junto.
+    if (!$permitido && $perfilId > 0 && $pathMenu === '/ajuste_pontofuncionario.php') {
+        $permitido = temPermissaoMenu('/batida_ponto.php') || temPermissaoMenu('/espelho_ponto.php');
+    }
+
     // 3. Regras por nível de acesso para funcionário
     $nivel = trim($_SESSION["user_tx_nivel"] ?? "");
     $isAdmin = (
@@ -47,7 +53,7 @@ function verificaPermissao($pathMenu)
         preg_match('/adminsitrador/i', $nivel)
     );
 
-    $pathsPermitidosFuncionario = ['/batida_ponto.php', '/espelho_ponto.php'];
+    $pathsPermitidosFuncionario = ['/batida_ponto.php', '/espelho_ponto.php', '/ajuste_pontofuncionario.php'];
 
     if (!$isAdmin && !$permitido) {
         // Regra especial para operação: esses níveis acessam batida/espelho mesmo sem
@@ -89,7 +95,15 @@ function temPermissaoMenu($pathMenu)
         [$perfilId, $pathMenu]
     );
     $rowPerm = $rsPerm ? mysqli_fetch_assoc($rsPerm) : null;
-    return !empty($rowPerm);
+    if (!empty($rowPerm)) { return true; }
+
+    // Solicitar Ajuste acompanha Registrar Ponto / Espelho de Ponto no perfil:
+    // quem já pode registrar ou consultar o próprio ponto também pode solicitar o ajuste.
+    if ($pathMenu === '/ajuste_pontofuncionario.php') {
+        return temPermissaoMenu('/batida_ponto.php') || temPermissaoMenu('/espelho_ponto.php');
+    }
+
+    return false;
 }
 
 
