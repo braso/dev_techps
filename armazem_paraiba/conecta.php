@@ -266,12 +266,6 @@
         mysqli_query($conn, "ALTER TABLE treinamento ADD COLUMN trei_nb_max_tentativas INT NOT NULL DEFAULT 2 AFTER trei_nb_nota_minima_aprovacao");
     }
 
-    // Data da última tentativa de avaliação (para o bloqueio de 1h no modo 0)
-    $__checkUltTent = mysqli_query($conn, "SHOW COLUMNS FROM treinamento_progresso LIKE 'trepr_dt_data_ultima_avaliacao'");
-    if ($__checkUltTent && mysqli_num_rows($__checkUltTent) === 0) {
-        mysqli_query($conn, "ALTER TABLE treinamento_progresso ADD COLUMN trepr_dt_data_ultima_avaliacao DATETIME NULL AFTER trepr_nb_avaliacao_nota");
-    }
-
     // Tabela de materiais de apoio
     mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_material (
         tram_nb_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -302,11 +296,12 @@
         FOREIGN KEY (treq_nb_treinamento_id) REFERENCES treinamento(trei_nb_id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
-    // Tabela de progresso do usuário
+    // Tabela de progresso do usuário (já nasce com a estrutura final, incluindo progresso por episódio/série)
     mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_progresso (
         trepr_nb_id INT AUTO_INCREMENT PRIMARY KEY,
         trepr_nb_usuario_id INT NOT NULL,
         trepr_nb_treinamento_id INT NOT NULL,
+        trepr_nb_episodio_id INT NULL,
         trepr_dt_data_inicio DATETIME,
         trepr_nb_tempo_assistido INT DEFAULT 0,
         trepr_nb_porcentagem_assistida DECIMAL(5,2) DEFAULT 0,
@@ -314,20 +309,33 @@
         trepr_nb_avaliacao_tentativas INT DEFAULT 0,
         trepr_tx_avaliacao_respostas_json JSON,
         trepr_nb_avaliacao_nota DECIMAL(5,2),
+        trepr_dt_data_ultima_avaliacao DATETIME NULL,
         trepr_nb_concluido TINYINT(1) DEFAULT 0,
         trepr_dt_data_conclusao DATETIME,
         trepr_dt_data_cadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE KEY uk_usuario_treinamento (trepr_nb_usuario_id, trepr_nb_treinamento_id),
+        UNIQUE KEY uk_usuario_episodio (trepr_nb_usuario_id, trepr_nb_treinamento_id, trepr_nb_episodio_id),
         KEY idx_treinamento (trepr_nb_treinamento_id),
         FOREIGN KEY (trepr_nb_usuario_id) REFERENCES user(user_nb_id) ON DELETE CASCADE,
         FOREIGN KEY (trepr_nb_treinamento_id) REFERENCES treinamento(trei_nb_id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
-    // Migração: progresso por episódio (séries)
+    // Migração: progresso por episódio (séries) em tabelas já existentes
     $__checkEpiProg = mysqli_query($conn, "SHOW COLUMNS FROM treinamento_progresso LIKE 'trepr_nb_episodio_id'");
     if ($__checkEpiProg && mysqli_num_rows($__checkEpiProg) === 0) {
-        mysqli_query($conn, "ALTER TABLE treinamento_progresso ADD COLUMN trepr_nb_episodio_id INT NULL AFTER trepr_nb_treinamento_id, ADD UNIQUE KEY uk_usuario_episodio (trepr_nb_usuario_id, trepr_nb_treinamento_id, trepr_nb_episodio_id)");
+        mysqli_query($conn, "ALTER TABLE treinamento_progresso ADD COLUMN trepr_nb_episodio_id INT NULL AFTER trepr_nb_treinamento_id");
     }
+    // Garante a unique por episódio mesmo que a coluna já existisse sem o índice
+    $__checkUkEpisodio = mysqli_query($conn, "SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'treinamento_progresso' AND INDEX_NAME = 'uk_usuario_episodio'");
+    if ($__checkUkEpisodio && mysqli_num_rows($__checkUkEpisodio) === 0) {
+        mysqli_query($conn, "ALTER TABLE treinamento_progresso ADD UNIQUE KEY uk_usuario_episodio (trepr_nb_usuario_id, trepr_nb_treinamento_id, trepr_nb_episodio_id)");
+    }
+
+    // Data da última tentativa de avaliação (para o bloqueio de 1h no modo 0)
+    $__checkUltTent = mysqli_query($conn, "SHOW COLUMNS FROM treinamento_progresso LIKE 'trepr_dt_data_ultima_avaliacao'");
+    if ($__checkUltTent && mysqli_num_rows($__checkUltTent) === 0) {
+        mysqli_query($conn, "ALTER TABLE treinamento_progresso ADD COLUMN trepr_dt_data_ultima_avaliacao DATETIME NULL AFTER trepr_nb_avaliacao_nota");
+    }
+
     // Remover a unique antiga que impede múltiplos registros por treinamento (necessário para séries)
     $__checkUkAntiga = mysqli_query($conn, "SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'treinamento_progresso' AND INDEX_NAME = 'uk_usuario_treinamento'");
     if ($__checkUkAntiga && mysqli_num_rows($__checkUkAntiga) > 0) {
