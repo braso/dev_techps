@@ -918,6 +918,13 @@
             $titulo = trim((string)($r["tipo"] ?? ""));
             if($titulo === "") $titulo = trim((string)($r["arquivo"] ?? ""));
             if($titulo === "") $titulo = "Documento " . $r["id_documento"];
+            $modoEnvio = strtolower(trim((string)($r["modo_envio"] ?? "")));
+            $urlDocumento = $base . "/assinar_via_link.php?token=" . urlencode((string)$r["token"]);
+            // Documentos sem coleta de assinatura (notificação de visualização) abrem a
+            // página de leitura no módulo de termos, que registra a auditoria do acesso.
+            if($modoEnvio === "termo_notificacao"){
+                $urlDocumento = dirname($base) . "/documentos/termos/visualizar_termo.php?token=" . urlencode((string)$r["token"]);
+            }
             $out[] = [
                 "id"                => intval($r["id"]),
                 "solicitacaoID"     => intval($r["solicitacao_id"]),
@@ -933,7 +940,7 @@
                 "expirado"          => $expirado,
                 "lida"              => !empty($r["lida_em"]),
                 "lidaEm"            => $r["lida_em"],
-                "url"               => $base . "/assinar_via_link.php?token=" . urlencode((string)$r["token"]),
+                "url"               => $urlDocumento,
             ];
         }
 

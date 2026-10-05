@@ -21,12 +21,23 @@ function termos_ensure_tables($conn = null): void {
 		mode_tx_denominacao VARCHAR(120) NULL,
 		mode_tx_cidade_assinatura VARCHAR(150) NULL,
 		mode_tx_status ENUM('ativo','inativo') DEFAULT 'ativo',
+		mode_tx_notificacao ENUM('sim','nao') NOT NULL DEFAULT 'sim',
 		mode_nb_userCadastro INT NULL,
 		mode_tx_dataCadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
 		mode_nb_userAtualiza INT NULL,
 		mode_tx_dataAtualiza DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
 		KEY idx_tipo (mode_nb_tipo_doc)
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+	$colsModelo = [
+		"mode_tx_notificacao" => "ALTER TABLE modelo_termo ADD COLUMN mode_tx_notificacao ENUM('sim','nao') NOT NULL DEFAULT 'sim' AFTER mode_tx_status"
+	];
+	foreach($colsModelo as $colModelo => $ddlModelo){
+		$checkModelo = mysqli_query($conn, "SHOW COLUMNS FROM modelo_termo LIKE '{$colModelo}'");
+		if($checkModelo && mysqli_num_rows($checkModelo) === 0){
+			@mysqli_query($conn, $ddlModelo);
+		}
+	}
 
 	mysqli_query($conn, "CREATE TABLE IF NOT EXISTS modelo_termo_assinante (
 		moas_nb_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -45,18 +56,99 @@ function termos_ensure_tables($conn = null): void {
 		terg_nb_modelo INT NOT NULL,
 		terg_nb_entidade INT NOT NULL,
 		terg_nb_tipo_doc INT NULL,
-		terg_tx_status ENUM('gerado','aguardando_assinatura','assinado','erro','cancelado') DEFAULT 'gerado',
+		terg_tx_status ENUM('gerado','notificado','visualizado','aguardando_assinatura','assinado','erro','cancelado') DEFAULT 'gerado',
 		terg_tx_caminho VARCHAR(500) NULL,
 		terg_nb_solicitacao_assinatura INT NULL,
+		terg_nb_assinante INT NULL,
 		terg_tx_id_documento VARCHAR(100) NULL,
 		terg_nb_documento_funcionario INT NULL,
 		terg_tx_detalhe TEXT NULL,
 		terg_nb_user_geracao INT NULL,
 		terg_dt_geracao DATETIME DEFAULT CURRENT_TIMESTAMP,
+		terg_dt_data_notificacao DATETIME NULL,
+		terg_dt_data_visualizacao DATETIME NULL,
+		terg_tx_ip_visualizacao VARCHAR(45) NULL,
+		terg_tx_user_agent_visualizacao TEXT NULL,
+		terg_tx_hash_visualizacao VARCHAR(64) NULL,
 		terg_dt_data_assinatura DATETIME NULL,
 		KEY idx_modelo (terg_nb_modelo),
 		KEY idx_entidade (terg_nb_entidade),
-		KEY idx_solicitacao (terg_nb_solicitacao_assinatura)
+		KEY idx_solicitacao (terg_nb_solicitacao_assinatura),
+		KEY idx_assinante (terg_nb_assinante)
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+	$colStatusAtual = mysqli_query($conn, "SHOW COLUMNS FROM termo_gerado LIKE 'terg_tx_status'");
+	if($colStatusAtual && ($rowStatus = mysqli_fetch_assoc($colStatusAtual))){
+		$tipoStatus = strtolower(strval($rowStatus["Type"] ?? ""));
+		if(strpos($tipoStatus, "enum") === 0 && (strpos($tipoStatus, "'notificado'") === false || strpos($tipoStatus, "'visualizado'") === false)){
+			$novoEnum = "ENUM('gerado','notificado','visualizado','aguardando_assinatura','assinado','erro','cancelado')";
+			$nullStatus = (strtoupper(strval($rowStatus["Null"] ?? "")) === "YES") ? "NULL" : "NOT NULL";
+			$defStatus = isset($rowStatus["Default"]) && $rowStatus["Default"] !== null ? " DEFAULT '" . addslashes(strval($rowStatus["Default"])) . "'" : "";
+			@mysqli_query($conn, "ALTER TABLE termo_gerado MODIFY COLUMN terg_tx_status {$novoEnum} {$nullStatus}{$defStatus}");
+		}
+	}
+
+	$colsGerado = [
+		"terg_nb_assinante" => "ALTER TABLE termo_gerado ADD COLUMN terg_nb_assinante INT NULL AFTER terg_nb_solicitacao_assinatura",
+		"terg_dt_data_notificacao" => "ALTER TABLE termo_gerado ADD COLUMN terg_dt_data_notificacao DATETIME NULL AFTER terg_dt_geracao",
+		"terg_dt_data_visualizacao" => "ALTER TABLE termo_gerado ADD COLUMN terg_dt_data_visualizacao DATETIME NULL AFTER terg_dt_data_notificacao",
+		"terg_tx_ip_visualizacao" => "ALTER TABLE termo_gerado ADD COLUMN terg_tx_ip_visualizacao VARCHAR(45) NULL AFTER terg_dt_data_visualizacao",
+		"terg_tx_user_agent_visualizacao" => "ALTER TABLE termo_gerado ADD COLUMN terg_tx_user_agent_visualizacao TEXT NULL AFTER terg_tx_ip_visualizacao",
+		"terg_tx_hash_visualizacao" => "ALTER TABLE termo_gerado ADD COLUMN terg_tx_hash_visualizacao VARCHAR(64) NULL AFTER terg_tx_user_agent_visualizacao"
+	];
+	foreach($colsGerado as $colGerado => $ddlGerado){
+		$checkGerado = mysqli_query($conn, "SHOW COLUMNS FROM termo_gerado LIKE '{$colGerado}'");
+		if($checkGerado && mysqli_num_rows($checkGerado) === 0){
+			@mysqli_query($conn, $ddlGerado);
+		}
+	}
+
+	mysqli_query($conn, "CREATE TABLE IF NOT EXISTS termo_visualizacao (
+		tevi_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+		tevi_nb_termo INT NOT NULL,
+		tevi_nb_modelo INT NULL,
+		tevi_nb_entidade INT NULL,
+		tevi_nb_solicitacao INT NULL,
+		tevi_nb_assinante INT NULL,
+		tevi_tx_evento ENUM('abertura','confirmacao') NOT NULL DEFAULT 'abertura',
+		tevi_tx_ip VARCHAR(45) NULL,
+		tevi_tx_ip_forwarded VARCHAR(255) NULL,
+		tevi_tx_user_agent TEXT NULL,
+		tevi_tx_accept_language VARCHAR(120) NULL,
+		tevi_tx_host VARCHAR(255) NULL,
+		tevi_tx_referer VARCHAR(500) NULL,
+		tevi_tx_plataforma VARCHAR(40) NULL,
+		tevi_nb_latitude VARCHAR(50) NULL,
+		tevi_nb_longitude VARCHAR(50) NULL,
+		tevi_nb_geo_precisao VARCHAR(50) NULL,
+		tevi_tx_hash VARCHAR(64) NULL,
+		tevi_nb_user INT NULL,
+		tevi_tx_login VARCHAR(255) NULL,
+		tevi_dt_data DATETIME DEFAULT CURRENT_TIMESTAMP,
+		KEY idx_termo (tevi_nb_termo),
+		KEY idx_entidade (tevi_nb_entidade),
+		KEY idx_solicitacao (tevi_nb_solicitacao)
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+	termos_garantir_tabela_notificacoes($conn);
+}
+
+function termos_garantir_tabela_notificacoes($conn = null): void {
+	global $conn;
+	if(!($conn instanceof mysqli)){
+		return;
+	}
+	mysqli_query($conn, "CREATE TABLE IF NOT EXISTS notificacoes (
+		notf_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+		notf_nb_entidade INT NOT NULL,
+		notf_tx_titulo VARCHAR(255) NOT NULL,
+		notf_tx_mensagem TEXT NULL,
+		notf_tx_link VARCHAR(500) NULL,
+		notf_tx_tipo VARCHAR(30) NOT NULL DEFAULT 'info',
+		notf_tx_status VARCHAR(20) NOT NULL DEFAULT 'nao_lida',
+		notf_tx_dataCadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
+		notf_tx_dataLeitura DATETIME NULL,
+		KEY idx_notf_entidade (notf_nb_entidade, notf_tx_status)
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 }
 
@@ -434,7 +526,7 @@ function termos_resolver_caminho_arquivo(string $caminho): string {
 	$docDir = dirname(__DIR__);
 	$modDir = dirname(__DIR__, 2);
 	$cands = [];
-	if($caminho[0] === "/" || preg_match('/^[A-Za-z]:[\\\/]/', $caminho)){
+	if($caminho[0] === "/" || preg_match('#^[A-Za-z]:[\\\\/]#', $caminho)){
 		$cands[] = $caminho;
 	}else{
 		$cands[] = $docDir . "/" . ltrim($caminho, "/\\");
@@ -773,6 +865,227 @@ function termos_enviar_assinatura(int $entiId, array $dados, array $modelo, arra
 	return assinatura_integracao_enviarDocumentoParaMultiplosAssinantes($GLOBALS["conn"], $pdfTmp, $signatarios, $base);
 }
 
+function termos_url_visualizacao(string $token): string {
+	$token = trim($token);
+	if($token === ""){
+		return "";
+	}
+	$sufixo = "/documentos/termos/visualizar_termo.php?token=" . urlencode($token);
+	$raiz = rtrim(strval($_ENV["URL_BASE"] ?? ""), "/");
+	$ctx = rtrim(strval($GLOBALS["CONTEX"]["path"] ?? ""), "/");
+	if($ctx === ""){
+		$ctx = rtrim(strval($_ENV["APP_PATH"] ?? ""), "/") . rtrim(strval($_ENV["CONTEX_PATH"] ?? ""), "/");
+	}
+	if($raiz !== ""){
+		return $raiz . rtrim($ctx, "/") . $sufixo;
+	}
+	$https = strtolower(trim(strval($_SERVER["HTTPS"] ?? "")));
+	$proto = trim(strval($_SERVER["HTTP_X_FORWARDED_PROTO"] ?? ""));
+	if($proto === ""){
+		$proto = ($https !== "" && $https !== "off") ? "https" : "http";
+	}
+	$host = trim(strval($_SERVER["HTTP_X_FORWARDED_HOST"] ?? ($_SERVER["HTTP_HOST"] ?? "")));
+	if($ctx === ""){
+		$dir = rtrim(str_replace("\\", "/", dirname(strval($_SERVER["SCRIPT_NAME"] ?? ""))), "/");
+		return $proto . "://" . $host . $dir . "/visualizar_termo.php?token=" . urlencode($token);
+	}
+	return $proto . "://" . $host . rtrim($ctx, "/") . $sufixo;
+}
+
+function termos_enviar_email_visualizacao(string $email, string $nome, string $nomeArquivo, string $link, int $prazoDias = 0): bool {
+	$email = trim($email);
+	if($email === "" || !filter_var($email, FILTER_VALIDATE_EMAIL)){
+		return false;
+	}
+	require_once dirname(__DIR__) . "/../assinatura/integracao/assinatura_integracao.php";
+	assinatura_integracao_carregarEmail();
+	if(!function_exists("configurarSMTP") || !class_exists("PHPMailer\\PHPMailer\\PHPMailer")){
+		return false;
+	}
+
+	try{
+		$mail = new PHPMailer\PHPMailer\PHPMailer(true);
+		configurarSMTP($mail);
+		$mail->addAddress($email, $nome);
+
+		$cidLogo = function_exists("assinatura_email_embedLogo") ? assinatura_email_embedLogo($mail, "logo_techps_visualizacao") : "";
+		$mail->isHTML(true);
+		$mail->Subject = "Documento disponível para visualização: " . $nomeArquivo;
+
+		$headerHtml = $cidLogo !== ""
+			? "<img src='{$cidLogo}' alt='TechPS' style='max-width: 150px;'>"
+			: "<h2 style='color: #333; margin: 0;'>TechPS</h2>";
+
+		$nomeSafe = function_exists("assinatura_h") ? assinatura_h(strtoupper($nome)) : htmlspecialchars(strtoupper($nome), ENT_QUOTES, "UTF-8");
+		$arquivoSafe = function_exists("assinatura_h") ? assinatura_h($nomeArquivo) : htmlspecialchars($nomeArquivo, ENT_QUOTES, "UTF-8");
+		$linkSafe = function_exists("assinatura_h") ? assinatura_h($link) : htmlspecialchars($link, ENT_QUOTES, "UTF-8");
+		$prazoTxt = $prazoDias > 0
+			? "<p style='color:#b45309; font-size: 14px; margin: 0 0 8px 0;'>Este link fica disponível por " . intval($prazoDias) . " dia(s).</p>"
+			: "";
+
+		$contentHtml = "
+			<h2 style='color: #333; font-size: 24px; margin-top: 0;'>Olá, {$nomeSafe}.</h2>
+
+			<p style='color: #555; font-size: 16px; line-height: 1.5;'>
+				Existe um documento disponível para a sua <strong style='color: #0056b3;'>visualização</strong>:
+			</p>
+
+			<div style='background-color: #f8f9fa; border-left: 4px solid #0056b3; padding: 20px; margin: 25px 0; border-radius: 4px;'>
+				<p style='margin: 0; color: #555;'>
+					<strong style='color: #333;'>Documento:</strong> <br>
+					<span style='font-size: 18px; color: #0056b3;'>{$arquivoSafe}</span>
+				</p>
+			</div>
+
+			<div style='text-align: center; margin: 35px 0;'>
+				<a href='{$linkSafe}' style='background-color: #0056b3; color: white; padding: 16px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.1);'>
+					Visualizar Documento
+				</a>
+			</div>
+
+			{$prazoTxt}
+
+			<div style='border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px;'>
+				<p style='font-size: 13px; color: #777; margin-bottom: 10px;'>
+					Se o botão não funcionar, copie e cole o link abaixo no seu navegador:
+				</p>
+				<p style='font-size: 12px; color: #555; background: #f8f9fa; padding: 10px; border-radius: 4px; word-break: break-all; font-family: monospace; border: 1px solid #eee;'>
+					{$linkSafe}
+				</p>
+			</div>
+
+			<div style='margin-top: 30px; font-size: 12px; color: #777; text-align: justify; line-height: 1.5; border-top: 1px solid #eee; padding-top: 20px;'>
+				<p style='margin-bottom: 10px;'>
+					Ao abrir o documento, o sistema registra automaticamente data, hora, endereço IP e demais dados do acesso para fins de auditoria, comprovando a sua ciência sobre o conteúdo.
+				</p>
+				<p style='margin-top: 10px;'>
+					<strong>Data de Envio:</strong> " . date("d/m/Y H:i:s") . "
+				</p>
+			</div>
+		";
+
+		$footerHtml = "
+			<p style='margin: 0;'>Mensagem automática enviada pelo sistema de Documentos TechPS.</p>
+			<p style='margin: 5px 0 0 0;'>&copy; " . date("Y") . " Armazém Paraíba - Todos os direitos reservados.</p>
+		";
+
+		if(function_exists("assinatura_email_wrap")){
+			$mail->Body = assinatura_email_wrap($headerHtml, $contentHtml, $footerHtml);
+		}else{
+			$mail->Body = $headerHtml . $contentHtml . $footerHtml;
+		}
+		$mail->AltBody = "Documento disponível para visualização: {$nomeArquivo}\n\nAcesse: {$link}\n";
+		$mail->send();
+		return true;
+	}catch(Throwable $e){
+		termos_log("email_visualizacao_erro", $e->getMessage(), ["email" => $email, "arquivo" => $nomeArquivo]);
+		return false;
+	}
+}
+
+function termos_criar_notificacao_visualizacao(int $entiId, array $dados, array $modelo, array $tipo, string $rel, array $params): array {
+	require_once dirname(__DIR__) . "/../assinatura/integracao/assinatura_integracao.php";
+
+	$modeloId = intval($modelo["mode_nb_id"] ?? 0);
+	$tipoId = intval($tipo["tipo_nb_id"] ?? 0);
+	$pdfAbs = termos_resolver_caminho_arquivo($rel);
+	if($pdfAbs === ""){
+		return ["ok" => false, "error" => "PDF do documento não encontrado para gerar a notificação."];
+	}
+
+	$nomeArquivo = basename(str_replace("\\", "/", $rel));
+	$prazo = intval($params["prazo_expiracao_dias"] ?? 1);
+	if($prazo < 0){
+		$prazo = 0;
+	}
+
+	$opts = [
+		"tipo_documento_id" => $tipoId,
+		"validar_icp" => "nao",
+		"modo_envio" => "termo_notificacao",
+		"grupo_envio" => "termo_" . $modeloId,
+		"nome_arquivo_original" => $nomeArquivo,
+		"enviar_email" => "nao",
+		"prazo_expiracao_dias" => $prazo,
+		"apagar_origem" => false,
+		"salvar_documento_funcionario" => "nao",
+		"funcao" => "Visualização",
+		"email_fallback" => termos_email_fallback($dados, ["enti_nb_id" => $entiId])
+	];
+
+	$criada = assinatura_integracao_enviarDocumentoParaAssinatura($GLOBALS["conn"], $entiId, $pdfAbs, $opts);
+	if(empty($criada["ok"])){
+		return ["ok" => false, "error" => strval($criada["error"] ?? "Falha ao criar a notificação no módulo de assinatura.")];
+	}
+
+	$token = strval($criada["token_assinante"] ?? "");
+	$solId = intval($criada["id_solicitacao"] ?? 0);
+	$idDoc = strval($criada["id_documento"] ?? "");
+
+	$assinanteId = 0;
+	if($token !== ""){
+		$resAss = query("SELECT id FROM assinantes WHERE token = ? LIMIT 1", "s", [$token]);
+		if($resAss instanceof mysqli_result && ($rowAss = mysqli_fetch_assoc($resAss))){
+			$assinanteId = intval($rowAss["id"]);
+		}
+	}
+	// A notificação de visualização não é uma pendência de assinatura: sai da lista
+	// de "Assinaturas Pendentes" web (que usa status 'pendente'), mas continua sendo
+	// devolvida para o app como notificação (que ignora apenas 'dispensado'/'assinado').
+	if($assinanteId > 0){
+		termos_executar("UPDATE assinantes SET status = 'visualizado' WHERE id = ? AND LOWER(TRIM(status)) = 'pendente'", "i", [$assinanteId]);
+	}
+
+	$link = termos_url_visualizacao($token);
+	$nomeFunc = trim(strval($dados["enti_tx_nome"] ?? ""));
+	termos_executar(
+		"INSERT INTO notificacoes (notf_nb_entidade, notf_tx_titulo, notf_tx_mensagem, notf_tx_link, notf_tx_tipo, notf_tx_status) VALUES (?, ?, ?, ?, 'info', 'nao_lida')",
+		"isss",
+		[
+			$entiId,
+			"Documento disponível para visualização",
+			"O documento \"" . $nomeArquivo . "\" está disponível para leitura." . ($nomeFunc !== "" ? " Confira e registre a ciência." : ""),
+			$link
+		]
+	);
+
+	$emailEnviado = false;
+	$enviarEmail = strtolower(trim(strval($params["enviar_email"] ?? "sim"))) !== "nao";
+	if($enviarEmail){
+		$emailDest = trim(strval($criada["email"] ?? ""));
+		$nomeDest = trim(strval($criada["nome"] ?? $nomeFunc));
+		if($emailDest !== "" && filter_var($emailDest, FILTER_VALIDATE_EMAIL) && !preg_match('/^sememail\./i', $emailDest)){
+			$emailEnviado = termos_enviar_email_visualizacao($emailDest, $nomeDest, $nomeArquivo, $link, $prazo);
+		}
+	}
+
+	return [
+		"ok" => true,
+		"id_solicitacao" => $solId,
+		"id_documento" => $idDoc,
+		"id_assinante" => $assinanteId,
+		"token" => $token,
+		"link" => $link,
+		"email_enviado" => $emailEnviado
+	];
+}
+
+function termos_ip_cliente(): string {
+	$candidatos = [
+		$_SERVER["HTTP_CF_CONNECTING_IP"] ?? "",
+		$_SERVER["HTTP_X_REAL_IP"] ?? "",
+		$_SERVER["HTTP_X_FORWARDED_FOR"] ?? "",
+		$_SERVER["REMOTE_ADDR"] ?? ""
+	];
+	foreach($candidatos as $c){
+		$c = trim(explode(",", strval($c))[0]);
+		if($c !== "" && filter_var($c, FILTER_VALIDATE_IP)){
+			return $c;
+		}
+	}
+	return trim(strval($_SERVER["REMOTE_ADDR"] ?? ""));
+}
+
 function termos_processar_um(int $entiId, array $params): array {
 	global $conn;
 	$modeloId = intval($params["modelo_id"] ?? 0);
@@ -798,7 +1111,7 @@ function termos_processar_um(int $entiId, array $params): array {
 	$forcar = strtolower(trim(strval($params["forcar"] ?? "nao"))) === "sim";
 	if(!$forcar){
 		$dup = query(
-			"SELECT terg_nb_id FROM termo_gerado WHERE terg_nb_modelo = ? AND terg_nb_entidade = ? AND terg_tx_status IN ('gerado','aguardando_assinatura','assinado') LIMIT 1",
+			"SELECT terg_nb_id FROM termo_gerado WHERE terg_nb_modelo = ? AND terg_nb_entidade = ? AND terg_tx_status IN ('gerado','notificado','visualizado','aguardando_assinatura','assinado') LIMIT 1",
 			"ii",
 			[$modeloId, $entiId]
 		);
@@ -859,6 +1172,45 @@ function termos_processar_um(int $entiId, array $params): array {
 	}
 
 	$docuId = termos_registrar_documento_funcionario($entiId, $tipoId, $sbgrupo, $nome, $descricao, $rel, "nao");
+
+	$notificar = strtolower(trim(strval($modelo["mode_tx_notificacao"] ?? "sim"))) === "sim";
+	if($notificar){
+		$notif = termos_criar_notificacao_visualizacao($entiId, $dados, $modelo, $tipo, $rel, $params);
+		if(empty($notif["ok"])){
+			$msgErroNotif = strval($notif["error"] ?? "Falha ao notificar o funcionário.");
+			$regId = termos_inserir_gerado($modeloId, $entiId, $tipoId, "gerado", $rel, 0, "", $docuId, "Documento gerado sem assinatura. Notificação não enviada: " . $msgErroNotif, $user);
+			termos_log("notificacao_erro", $msgErroNotif, ["modelo" => $modeloId, "entidade" => $entiId, "termo" => $regId]);
+			return ["ok" => true, "entidade" => $entiId, "nome" => $nomeFunc, "msg" => $nomeFunc . " — documento gerado e salvo no funcionário, mas houve falha na notificação: " . $msgErroNotif];
+		}
+
+		$regId = termos_inserir_gerado(
+			$modeloId,
+			$entiId,
+			$tipoId,
+			"notificado",
+			$rel,
+			intval($notif["id_solicitacao"] ?? 0),
+			strval($notif["id_documento"] ?? ""),
+			$docuId,
+			"Documento salvo no funcionário e notificação de visualização enviada.",
+			$user
+		);
+		termos_atualizar_gerado($regId, [
+			"terg_nb_assinante" => intval($notif["id_assinante"] ?? 0),
+			"terg_dt_data_notificacao" => date("Y-m-d H:i:s")
+		]);
+		termos_log("notificado", "Documento gerado e notificação de visualização enviada", [
+			"modelo" => $modeloId,
+			"entidade" => $entiId,
+			"termo" => $regId,
+			"caminho" => $rel,
+			"solicitacao" => intval($notif["id_solicitacao"] ?? 0),
+			"email" => !empty($notif["email_enviado"]) ? "enviado" : "nao_enviado"
+		]);
+		$msgEmail = !empty($notif["email_enviado"]) ? " e-mail de notificação enviado" : " notificação registrada (e-mail não pôde ser enviado — confira o cadastro/SMTP)";
+		return ["ok" => true, "entidade" => $entiId, "nome" => $nomeFunc, "msg" => $nomeFunc . " — documento salvo no funcionário," . $msgEmail . "."];
+	}
+
 	$regId = termos_inserir_gerado($modeloId, $entiId, $tipoId, "gerado", $rel, 0, "", $docuId, "Documento gerado sem assinatura.", $user);
 	termos_log("gerado", "Termo gerado (PDF local)", [
 		"modelo" => $modeloId,
@@ -888,6 +1240,13 @@ function termos_sincronizar_registro(array $registro): array {
 	$solId = intval($registro["terg_nb_solicitacao_assinatura"] ?? 0);
 	if($solId <= 0){
 		return $registro;
+	}
+
+	$resModo = query("SELECT modo_envio FROM solicitacoes_assinatura WHERE id = ? LIMIT 1", "i", [$solId]);
+	if($resModo instanceof mysqli_result && ($rowModo = mysqli_fetch_assoc($resModo))){
+		if(strtolower(trim(strval($rowModo["modo_envio"] ?? ""))) === "termo_notificacao"){
+			return $registro;
+		}
 	}
 
 	$res = query(
@@ -970,7 +1329,7 @@ function termos_link_pdf(array $r): string {
 	if($status === "assinado"){
 		return "../../assinatura/" . termos_url_relativa($caminho);
 	}
-	if($status === "gerado"){
+	if(in_array($status, ["gerado", "notificado", "visualizado"], true)){
 		return "../../" . termos_url_relativa($caminho);
 	}
 	return "";

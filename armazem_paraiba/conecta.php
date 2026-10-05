@@ -143,6 +143,17 @@
         }
     };
 
+    // Migração da tabela documento_funcionario: registro da visualização dos documentos
+    // notificados (quando o funcionário abre/confirma a leitura para auditoria).
+    $__checkDocVis = mysqli_query($conn, "SHOW COLUMNS FROM documento_funcionario LIKE 'docu_tx_visualizado'");
+    if ($__checkDocVis && mysqli_num_rows($__checkDocVis) === 0) {
+        mysqli_query($conn, "ALTER TABLE documento_funcionario ADD COLUMN docu_tx_visualizado ENUM('sim','nao') NOT NULL DEFAULT 'nao' AFTER docu_tx_assinado");
+    }
+    $__checkDocVisData = mysqli_query($conn, "SHOW COLUMNS FROM documento_funcionario LIKE 'docu_tx_dataVisualizacao'");
+    if ($__checkDocVisData && mysqli_num_rows($__checkDocVisData) === 0) {
+        mysqli_query($conn, "ALTER TABLE documento_funcionario ADD COLUMN docu_tx_dataVisualizacao DATETIME NULL AFTER docu_tx_visualizado");
+    }
+
     // Migração da tabela parametro: coluna para abonar feriados automaticamente na escala
     $checkAbonarFeriado = mysqli_query($conn, "SHOW COLUMNS FROM parametro LIKE 'para_tx_abonarFeriadoEscala'");
     if ($checkAbonarFeriado && mysqli_num_rows($checkAbonarFeriado) == 0) {

@@ -27,14 +27,19 @@ function termos_hide_loading(): void {
 function termos_opcoes_modelos(): array {
 	$out = ["" => "Selecione..."];
 	$res = query(
-		"SELECT m.mode_nb_id, m.mode_tx_nome, t.tipo_tx_assinatura
+		"SELECT m.mode_nb_id, m.mode_tx_nome, m.mode_tx_notificacao, t.tipo_tx_assinatura
 		 FROM modelo_termo m
 		 LEFT JOIN tipos_documentos t ON t.tipo_nb_id = m.mode_nb_tipo_doc
 		 WHERE m.mode_tx_status = 'ativo'
 		 ORDER BY m.mode_tx_nome ASC"
 	);
 	while($res && ($r = mysqli_fetch_assoc($res))){
-		$suf = strtolower(trim(strval($r["tipo_tx_assinatura"] ?? "nao"))) === "sim" ? " [assinatura]" : "";
+		$requerAssinatura = strtolower(trim(strval($r["tipo_tx_assinatura"] ?? "nao"))) === "sim";
+		if($requerAssinatura){
+			$suf = " [assinatura]";
+		}else{
+			$suf = strtolower(trim(strval($r["mode_tx_notificacao"] ?? "sim"))) === "nao" ? " [sem notificação]" : " [notificação de visualização]";
+		}
 		$out[intval($r["mode_nb_id"])] = $r["mode_tx_nome"] . $suf;
 	}
 	return $out;
@@ -150,7 +155,7 @@ function termos_mapa_termos_existentes(int $modeloId, array $entidades): array {
 	$in = implode(",", array_unique($ids));
 	$res = query(
 		"SELECT terg_nb_entidade, terg_tx_status FROM termo_gerado
-		 WHERE terg_nb_modelo = ? AND terg_nb_entidade IN ({$in}) AND terg_tx_status IN ('gerado','aguardando_assinatura','assinado')",
+		 WHERE terg_nb_modelo = ? AND terg_nb_entidade IN ({$in}) AND terg_tx_status IN ('gerado','notificado','visualizado','aguardando_assinatura','assinado')",
 		"i",
 		[$modeloId]
 	);
@@ -335,7 +340,13 @@ function index() {
 
 			$badge = "";
 			if($statusTermo !== ""){
-				$cor = $statusTermo === "assinado" ? "success" : ($statusTermo === "aguardando_assinatura" ? "warning" : "info");
+				if(in_array($statusTermo, ["assinado", "visualizado"], true)){
+					$cor = "success";
+				}elseif(in_array($statusTermo, ["aguardando_assinatura", "notificado"], true)){
+					$cor = "warning";
+				}else{
+					$cor = "info";
+				}
 				$badge = "<span class='label label-{$cor}'>" . termos_h($statusTermo) . "</span>";
 			}else{
 				$badge = "<span class='label label-default'>sem termo</span>";
@@ -375,6 +386,7 @@ function index() {
 			<div class='row'>
 				<div class='col-sm-12 text-muted' style='font-size:11px; margin-top:4px; overflow-wrap:break-word; word-wrap:break-word;'>
 					<i class='fa fa-info-circle'></i> <b>Assinatura:</b> segue a configuração do <b>Tipo de Documento</b> (Cadastros &gt; Tipo de Documento &gt; Assinatura = Sim/Não). &nbsp;
+					<b>Notificação:</b> quando o tipo não exige assinatura, vale a configuração do modelo (Notificação = Sim/Não): com <b>Sim</b> o funcionário é avisado de que existe um documento para visualizar e o acesso é auditado (data, hora, IP etc.). &nbsp;
 					<b>Validar ICP:</b> assina o PDF final com certificado digital ICP-Brasil ao concluir as assinaturas. &nbsp;
 					<b>Enviar e-mail:</b> envia para cada funcionário o e-mail com o link do documento dele. &nbsp;
 					<b>Forçar regeração:</b> Não pula quem já tem termo gerado/assinado; Sim gera de novo (novo PDF e nova assinatura) mesmo para quem já tem. &nbsp;
