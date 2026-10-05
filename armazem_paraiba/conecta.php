@@ -198,6 +198,13 @@
         mysqli_query($conn, "ALTER TABLE perfil_acesso ADD COLUMN perfil_tx_esconderSalario ENUM('sim','nao') NOT NULL DEFAULT 'nao'");
     };
 
+    // Migração da tabela perfil_acesso: flag que libera o mês corrente completo no espelho
+    // de ponto do próprio funcionário. Sem a flag, valem as últimas 48 horas (somente leitura).
+    $checkEspelhoMesPerfil = mysqli_query($conn, "SHOW COLUMNS FROM perfil_acesso LIKE 'perfil_tx_espelhoMes'");
+    if ($checkEspelhoMesPerfil && mysqli_num_rows($checkEspelhoMesPerfil) === 0) {
+        mysqli_query($conn, "ALTER TABLE perfil_acesso ADD COLUMN perfil_tx_espelhoMes ENUM('sim','nao') NOT NULL DEFAULT 'nao'");
+    };
+
     // Criação da tabela feriado_funcionario se não existir
     mysqli_query($conn, "CREATE TABLE IF NOT EXISTS feriado_funcionario (
         fefi_nb_id INT AUTO_INCREMENT PRIMARY KEY,

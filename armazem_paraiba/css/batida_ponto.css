@@ -279,3 +279,30 @@ form .row{
 .btn.cyan:hover {
     background-color: #147b75;
 }
+
+/* ============================================================
+   ATALHO "SOLICITAR AJUSTE DE PONTO"
+   Destaque leve para facilitar a visualização sem competir com
+   os botões de registro de ponto.
+   ============================================================ */
+.atalho-ajuste-ponto {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border: 1px solid #c7dbff;
+    border-radius: 8px;
+    background: #eef4ff;
+    color: #2458a6;
+    text-decoration: none;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.atalho-ajuste-ponto:hover,
+.atalho-ajuste-ponto:focus {
+    background: #dfeaff;
+    border-color: #9dc0f5;
+    color: #1c4a8f;
+    text-decoration: none;
+}

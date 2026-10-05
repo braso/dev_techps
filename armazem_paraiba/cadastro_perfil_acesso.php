@@ -47,6 +47,7 @@ function cadastrar(){
         "perfil_tx_descricao" => $_POST["descricao"],
         "perfil_tx_status" => $status,
         "perfil_tx_esconderSalario" => (!empty($_POST["esconder_salario"]) ? "sim" : "nao"),
+        "perfil_tx_espelhoMes" => (!empty($_POST["espelho_mes"]) ? "sim" : "nao"),
         "perfil_tx_dataAtualiza" => date("Y-m-d H:i:s")
     ];
 
@@ -216,6 +217,7 @@ function formPerfil(){
     foreach($items as $it){ $grupo[$it["menu_tx_secao"]][] = $it; }
 
     $esconderSalarioChecked = (!empty($perfil["perfil_tx_esconderSalario"]) && $perfil["perfil_tx_esconderSalario"] === "sim");
+    $espelhoMesChecked = (!empty($perfil["perfil_tx_espelhoMes"]) && $perfil["perfil_tx_espelhoMes"] === "sim");
 
     $checksSection = "<div class='row' style='margin-top:10px'>"
 
@@ -239,6 +241,15 @@ function formPerfil(){
             $checksSection .= "<span style='font-weight:600'>".$it["menu_tx_label"]."</span>";
             $checksSection .= "</label>";
             if($it["menu_tx_label"] === "Funcionário"){ $temFuncionario = true; }
+            // Flag do espelho de ponto acompanha o item "Registrar Ponto" na mesma grade,
+            // seguindo o padrão visual das permissões da seção (independe do nome da seção).
+            if(mb_strtolower(trim((string)$it["menu_tx_label"])) === "registrar ponto"){
+                $bgStyleEspelho = $espelhoMesChecked ? "background:#eaffea; border-color:#b7e1b7;" : "background:#f9fafb; border-color:#e5e7eb;";
+                $checksSection .= "<label class='menu-check-item' title=\"Com 'Registrar Ponto' marcado, o perfil visualiza o próprio espelho de ponto (somente leitura). Marcado, vê o mês corrente completo; desmarcado, vê apenas as últimas 48 horas.\" style='border-radius:10px; padding:10px; border:1px solid; display:flex; align-items:center; gap:10px; " . $bgStyleEspelho . "'>";
+                $checksSection .= "<input type='checkbox' name='espelho_mes' value='1' ".($espelhoMesChecked?"checked":"").">";
+                $checksSection .= "<span style='font-weight:600'>Espelho de ponto: Mês competência</span>";
+                $checksSection .= "</label>";
+            }
         }
         $checksSection .= "</div>";
 
