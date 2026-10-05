@@ -33,6 +33,7 @@
 				$mapa = [
 					"Registrar Ponto" => "Registrar Produção",
 					"Espelhos de Ponto" => "Espelhos de Produção",
+					"Meu Espelho de Ponto" => "Meu Espelho de Produção",
 					"Integrações de Ponto" => "Integrações de Produção",
 					"Pontos" => "Produções"
 				];
@@ -231,6 +232,27 @@
 						"label" => ($secKey === "ponto") ? $rotuloMenuPonto($value) : $value,
 						"iti"   => ($key === "#iti"),
 					];
+				}
+
+				// Atalho "Meu Espelho de Ponto": quem pode registrar ponto mas não tem a
+				// permissão explícita de espelho enxerga apenas o próprio espelho (somente
+				// leitura). Fica junto dos demais itens liberados da seção Ponto.
+				if($secKey === "ponto"){
+					$temItemEspelho = false;
+					foreach($itens as $item){
+						if($item["path"] === "/espelho_ponto.php"){
+							$temItemEspelho = true;
+							break;
+						}
+					}
+					if(!$temItemEspelho && $perfilId > 0 && function_exists('temPermissaoMenu')
+						&& temPermissaoMenu('/batida_ponto.php') && !temPermissaoMenu('/espelho_ponto.php')){
+						$itens[] = [
+							"path"  => "/espelho_ponto.php?acao=buscarEspelho()",
+							"label" => $rotuloMenuPonto("Meu Espelho de Ponto"),
+							"iti"   => false,
+						];
+					}
 				}
 				// Se houver perfil vinculado, mostra a seção se houver filhos OU se o PAI estiver permitido
 				$showSection = true;

@@ -70,6 +70,68 @@
 			];
 	}
 
+	// ===== Visualização do próprio espelho (somente leitura) =====
+	// Quem está na batida de ponto (Registrar Ponto), mas não tem a permissão explícita
+	// de /espelho_ponto.php, enxerga apenas o próprio espelho e não altera nada.
+	function espelhoProprioPermitido(): bool{
+		if(temPermissaoMenu('/espelho_ponto.php')){
+			return false;
+		}
+		$nivel = trim((string)($_SESSION["user_tx_nivel"] ?? ""));
+		// Administrador continua com o acesso completo de sempre (verificaPermissao libera).
+		if(preg_match('/administrador|super\s+admin/i', $nivel)){
+			return false;
+		}
+		if(temPermissaoMenu('/batida_ponto.php')){
+			return true;
+		}
+		// Níveis operacionais sem perfil configurado continuam vendo o próprio espelho.
+		return perfilAtivoDoUsuario() <= 0 && (bool)preg_match('/(funcionário|motorista|ajudante|terceirizado|tercerizado)/i', $nivel);
+	}
+
+	// A flag "Mês competência" do perfil libera o mês corrente inteiro no próprio espelho.
+	function espelhoMesCompletoPerfil(): bool{
+		$perfilId = perfilAtivoDoUsuario();
+		if($perfilId <= 0){
+			return false;
+		}
+		$rs = query("SELECT perfil_tx_espelhoMes FROM perfil_acesso WHERE perfil_nb_id = ? LIMIT 1;", "i", [$perfilId]);
+		$row = $rs ? mysqli_fetch_assoc($rs) : null;
+		return !empty($row) && (($row["perfil_tx_espelhoMes"] ?? "nao") === "sim");
+	}
+
+	// Sem a flag de mês competência, a janela é de 48 horas (ontem e hoje).
+	function espelhoPeriodoProprio(array $motorista): array{
+		if(espelhoMesCompletoPerfil()){
+			return [date("Y-m-01"), date("Y-m-d")];
+		}
+		$inicio = date("Y-m-d", strtotime("-1 day"));
+		$limiteInicio = !empty($motorista["enti_tx_admissao"])
+			? substr((string)$motorista["enti_tx_admissao"], 0, 10)
+			: date("Y-m-01");
+		if($inicio < $limiteInicio){
+			$inicio = $limiteInicio;
+		}
+		return [$inicio, date("Y-m-d")];
+	}
+
+	function espelhoForcarConsultaPropria(): void{
+		$idEntidade = intval($_SESSION["user_nb_entidade"] ?? 0);
+		$motoristaProprio = [];
+		if($idEntidade > 0){
+			$motoristaProprio = mysqli_fetch_assoc(query(
+				"SELECT enti_tx_admissao, enti_nb_empresa FROM entidade WHERE enti_nb_id = {$idEntidade} LIMIT 1;"
+			)) ?: [];
+		}
+
+		$_POST["busca_motorista"] = (string)$idEntidade;
+		$empresaPropria = intval($motoristaProprio["enti_nb_empresa"] ?? 0);
+		$_POST["busca_empresa"] = (string)($empresaPropria > 0 ? $empresaPropria : intval($_SESSION["user_nb_empresa"] ?? 0));
+
+		[$inicio, $fim] = espelhoPeriodoProprio($motoristaProprio);
+		$_POST["busca_periodo"] = [$inicio, $fim];
+	}
+
 	function normalizarFiltroArray($valor): array{
 		if (is_array($valor)) {
 			return array_values(array_filter(array_map('trim', $valor), function($v) { return $v !== ''; }));
@@ -266,7 +328,13 @@
 		$rotulos = getRotulosEspelho();
 		include_once "check_permission.php";
 		$temPermissao = temPermissaoMenu('/espelho_ponto.php');
-if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário", "Terceirizado", "Tercerizado"]) && !$temPermissao){
+		$modoProprio = !$temPermissao && espelhoProprioPermitido();
+		if(!$temPermissao && !$modoProprio){
+			verificaPermissao('/espelho_ponto.php');
+		}
+		if($modoProprio){
+			espelhoForcarConsultaPropria();
+		}elseif(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário", "Terceirizado", "Tercerizado"]) && !$temPermissao){
             [$_POST["busca_motorista"], $_POST["busca_empresa"]] = [$_SESSION["user_nb_entidade"], (string)$_SESSION["user_nb_empresa"]];
 		}
 		
@@ -356,23 +424,32 @@ if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"
 		//ARQUIVO QUE VALIDA A PERMISSAO VIA PERFIL DE USUARIO VINCULADO
         // APATH QUE O USER ESTA TENTANDO ACESSAR PARA VERIFICAR NO PERFIL SE TEM ACESSO2
 		include_once "check_permission.php";
-        verificaPermissao('/espelho_ponto.php');
         $temPermissao = temPermissaoMenu('/espelho_ponto.php');
+		$modoProprio = !$temPermissao && espelhoProprioPermitido();
+		if(!$temPermissao && !$modoProprio){
+			verificaPermissao('/espelho_ponto.php');
+		}
+		if($modoProprio){
+			espelhoForcarConsultaPropria();
+		}
 		
 		cabecalho(empty($_POST["title"])? "Buscar Espelho de {$rotulos["modulo"]}": $_POST["title"]);
 		
-		// Definir ajustarPonto globalmente logo no início, antes de qualquer tabela
-		echo "<script>
-			function ajustarPonto(idMotorista, data){
-				var form = document.querySelector('form[name=\"form_ajuste_ponto\"]');
-				if(!form){ alert('Formulário de ajuste não encontrado.'); return; }
-				var fieldId = form.querySelector('[name=\"idMotorista\"]');
-				var fieldData = form.querySelector('[name=\"data\"]');
-				if(fieldId) fieldId.value = idMotorista;
-				if(fieldData) fieldData.value = data;
-				form.submit();
-			}
-		</script>";
+		// Definir ajustarPonto globalmente logo no início, antes de qualquer tabela.
+		// No modo somente leitura do próprio espelho o ajuste não é oferecido.
+		if(!$modoProprio){
+			echo "<script>
+				function ajustarPonto(idMotorista, data){
+					var form = document.querySelector('form[name=\"form_ajuste_ponto\"]');
+					if(!form){ alert('Formulário de ajuste não encontrado.'); return; }
+					var fieldId = form.querySelector('[name=\"idMotorista\"]');
+					var fieldData = form.querySelector('[name=\"data\"]');
+					if(fieldId) fieldId.value = idMotorista;
+					if(fieldData) fieldData.value = data;
+					form.submit();
+				}
+			</script>";
+		}
 
 		echo "<style>";
 		include "css/espelho_ponto.css";
@@ -395,7 +472,16 @@ if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"
 			$condBuscaMotorista = "AND enti_tx_status = 'ativo'";
 			$condBuscaEmpresa = "AND empr_tx_status = 'ativo'";
 
-			if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário", "Terceirizado", "Tercerizado"]) && !$temPermissao){
+			if($modoProprio){
+                $condBuscaMotorista .= " AND enti_nb_id = '".intval($_SESSION["user_nb_entidade"])."'";
+				
+				$motoristaLogado = mysqli_fetch_assoc(query("SELECT enti_tx_nome FROM entidade WHERE enti_nb_id = ".intval($_SESSION["user_nb_entidade"])." LIMIT 1"));
+				
+				$searchFields = [
+					campo($rotulos["funcionario"], "nome_motorista_view", ($motoristaLogado["enti_tx_nome"] ?? ""), 4, "", "readonly")
+				];
+
+			}elseif(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário", "Terceirizado", "Tercerizado"]) && !$temPermissao){
                 [$_POST["busca_motorista"], $_POST["busca_empresa"]] = [$_SESSION["user_nb_entidade"], (string)$_SESSION["user_nb_empresa"]];
                 $condBuscaMotorista .= " AND enti_nb_id = '".$_SESSION["user_nb_entidade"]."'";
 				
@@ -489,12 +575,23 @@ if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"
 
             }
 
-			$searchFields[] = campo(
-				"Período", "busca_periodo",
-				(!empty($_POST["busca_periodo"])? $_POST["busca_periodo"]: [date("Y-m-01"), date("Y-m-d")]),
-				2,
-				"MASCARA_PERIODO_MES_ATUAL"
-			);
+			if($modoProprio){
+				$inicioPeriodo = $_POST["busca_periodo"][0] ?? date("Y-m-d");
+				$fimPeriodo = $_POST["busca_periodo"][1] ?? date("Y-m-d");
+				$searchFields[] = texto(
+					"Período",
+					date("d/m/Y", strtotime($inicioPeriodo))." até ".date("d/m/Y", strtotime($fimPeriodo))
+						."<br><small>".(espelhoMesCompletoPerfil()? "Mês competência (somente leitura)" : "Últimas 48 horas (somente leitura)")."</small>",
+					4
+				);
+			}else{
+				$searchFields[] = campo(
+					"Período", "busca_periodo",
+					(!empty($_POST["busca_periodo"])? $_POST["busca_periodo"]: [date("Y-m-01"), date("Y-m-d")]),
+					2,
+					"MASCARA_PERIODO_MES_ATUAL"
+				);
+			}
 		//}
 
 		//BOTOES{
@@ -502,8 +599,11 @@ if(in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"
 				botao("Buscar", "buscarEspelho()", "", "", "", "", "btn btn-success"),
 			];
 			
+			// No modo somente leitura do próprio espelho as ações de alteração não aparecem.
+			if(!$modoProprio){
 				$b[] = botao("Cadastrar Abono", "redirParaAbono", "acaoPrevia", $_POST["acao"]??"", "btn btn-secondary");
 				$b[] = botao("Solicitar Ajuste", "redirParaAjustePonto()", "acaoPrevia", $_POST["acao"]??"", "btn btn-secondary");
+			}
 
 			
 			if(!empty($_POST["acao"]) && $_POST["acao"] == "buscarEspelho()"){
@@ -813,7 +913,9 @@ JS;
 						}
 					}
 					
-					$row = array_merge([verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"])], $aDetalhado);
+					// No modo somente leitura não há link de ajuste na primeira coluna.
+					$colunaAjuste = $modoProprio? "": verificaTolerancia($aDetalhado["diffSaldo"], $date->format("Y-m-d"), $motorista["enti_nb_id"]);
+					$row = array_merge([$colunaAjuste], $aDetalhado);
 					
 					// Substituir "00:00" por vazio em todos os campos da linha final, exceto colunas protegidas se necessário
 					foreach($row as $key => &$val){
@@ -982,27 +1084,29 @@ JS;
 				unset($_POST["errorFields"]);
 
 				
-				$params = array_merge($_POST, [
-					"acao" => "index",
-					"acaoPrevia" => $_POST["acao"],
-					"idMotorista" => "",
-					"data" => "",
-					"HTTP_REFERER" => (!empty($_POST["HTTP_REFERER"])? $_POST["HTTP_REFERER"]: $_SERVER["REQUEST_URI"])
-				]);
+				if(!$modoProprio){
+					$params = array_merge($_POST, [
+						"acao" => "index",
+						"acaoPrevia" => $_POST["acao"],
+						"idMotorista" => "",
+						"data" => "",
+						"HTTP_REFERER" => (!empty($_POST["HTTP_REFERER"])? $_POST["HTTP_REFERER"]: $_SERVER["REQUEST_URI"])
+					]);
 
-				
-				if(in_array($_SESSION["user_tx_nivel"],["Administrador", "Super Administrador"]) || temPermissaoMenu('/espelho_ponto.php')){
-					$paginaDestino = "ajuste_ponto.php";
-				}else{
-					$paginaDestino = "ajuste_pontofuncionario.php";
+					
+					if(in_array($_SESSION["user_tx_nivel"],["Administrador", "Super Administrador"]) || temPermissaoMenu('/espelho_ponto.php')){
+						$paginaDestino = "ajuste_ponto.php";
+					}else{
+						$paginaDestino = "ajuste_pontofuncionario.php";
+					}
+					echo criarHiddenForm(
+						"form_ajuste_ponto",
+						array_keys($params),
+						array_values($params),
+						$paginaDestino
+					);
+					unset($params);
 				}
-				echo criarHiddenForm(
-					"form_ajuste_ponto",
-					array_keys($params),
-					array_values($params),
-					$paginaDestino
-				);
-				unset($params);
 					if($indiceMotorista < ($totalMotoristasSelecionados - 1)){
 						echo "<div style='page-break-after:always;'></div>";
 					}
