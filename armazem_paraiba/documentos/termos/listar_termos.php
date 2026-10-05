@@ -28,6 +28,8 @@ function termos_status_badge(string $status): string {
 	$status = strtolower(trim($status));
 	$mapa = [
 		"gerado" => ["info", "Gerado"],
+		"notificado" => ["warning", "Aguardando Visualização"],
+		"visualizado" => ["success", "Visualizado"],
 		"aguardando_assinatura" => ["warning", "Aguardando Assinatura"],
 		"assinado" => ["success", "Assinado"],
 		"erro" => ["danger", "Erro"],
@@ -107,6 +109,8 @@ function index() {
 		combo("Status", "status", $filtroStatus, 2, [
 			"" => "Todos",
 			"gerado" => "Gerado",
+			"notificado" => "Aguardando Visualização",
+			"visualizado" => "Visualizado",
 			"aguardando_assinatura" => "Aguardando Assinatura",
 			"assinado" => "Assinado",
 			"erro" => "Erro",
@@ -134,11 +138,11 @@ function index() {
 
 	echo "<h3>Termos Gerados (" . count($linhas) . ")</h3>";
 	echo "<div class='table-responsive'><table class='table table-bordered table-striped'>";
-	echo "<thead><tr><th>ID</th><th>Modelo</th><th>Funcionário</th><th>Matrícula</th><th>Empresa</th><th>Status</th><th>Gerado em</th><th>Ações</th></tr></thead>";
+	echo "<thead><tr><th>ID</th><th>Modelo</th><th>Funcionário</th><th>Matrícula</th><th>Empresa</th><th>Status</th><th>Visualização</th><th>Gerado em</th><th>Ações</th></tr></thead>";
 	echo "<tbody>";
 
 	if(empty($linhas)){
-		echo "<tr><td colspan='8' class='text-center'>Nenhum termo encontrado.</td></tr>";
+		echo "<tr><td colspan='9' class='text-center'>Nenhum termo encontrado.</td></tr>";
 	}
 
 	foreach($linhas as $r){
@@ -149,6 +153,20 @@ function index() {
 		$empresa = termos_h($r["empresa_nome"] ?? "—");
 		$status = strval($r["terg_tx_status"] ?? "");
 		$data = date("d/m/Y H:i", strtotime(strval($r["terg_dt_geracao"])));
+
+		$dataVisualizacao = "";
+		$rawVis = trim(strval($r["terg_dt_data_visualizacao"] ?? ""));
+		if($rawVis !== "" && $rawVis !== "0000-00-00 00:00:00"){
+			$tsVis = strtotime($rawVis);
+			$ipVis = trim(strval($r["terg_tx_ip_visualizacao"] ?? ""));
+			$dataVisualizacao = $tsVis
+				? "<span title='IP: " . termos_h($ipVis !== "" ? $ipVis : "-") . "'>" . date("d/m/Y H:i", $tsVis) . "</span>"
+				: termos_h($rawVis);
+		}elseif($status === "notificado"){
+			$dataVisualizacao = "<span class='text-muted'>Aguardando</span>";
+		}else{
+			$dataVisualizacao = "<span class='text-muted'>—</span>";
+		}
 
 		$pdfLink = termos_link_pdf($r);
 		$acaoPdf = $pdfLink !== ""
@@ -167,6 +185,7 @@ function index() {
 		echo "<td>{$mat}</td>";
 		echo "<td>{$empresa}</td>";
 		echo "<td>" . termos_status_badge($status) . "</td>";
+		echo "<td>{$dataVisualizacao}</td>";
 		echo "<td>{$data}</td>";
 		echo "<td>
 				<form method='post' style='display:inline;'><input type='hidden' name='id' value='{$id}'><input type='hidden' name='acao' value='sincronizar'><button type='submit' class='btn btn-xs btn-default' title='Sincronizar status com o módulo de assinatura'><span class='glyphicon glyphicon-refresh'></span></button></form>

@@ -25,6 +25,7 @@
 		$rs = query(
 			"SELECT d.docu_nb_id, d.docu_tx_nome, d.docu_tx_descricao, d.docu_tx_caminho,
 			        d.docu_tx_dataCadastro, d.docu_tx_dataVencimento, d.docu_tx_assinado,
+			        d.docu_tx_visualizado, d.docu_tx_dataVisualizacao,
 			        t.tipo_tx_nome, g.grup_tx_nome
 			   FROM documento_funcionario d
 			   LEFT JOIN tipos_documentos t ON t.tipo_nb_id = d.docu_tx_tipo
@@ -156,6 +157,7 @@
 				."<th>Anexado em</th>"
 				."<th class='md-esconde-mobile'>Vencimento</th>"
 				."<th class='md-esconde-mobile'>Assinado</th>"
+				."<th class='md-esconde-mobile'>Visualizado</th>"
 				."<th>Ações</th>"
 				."</tr></thead><tbody>";
 
@@ -170,6 +172,15 @@
 					? "<span class='label label-success'>Sim</span>"
 					: "<span class='label label-default'>Não</span>";
 
+				$visualizadoRaw = trim(strval($documento["docu_tx_dataVisualizacao"] ?? ""));
+				$visualizado = strtolower(trim(strval($documento["docu_tx_visualizado"] ?? "nao"))) === "sim";
+				if($visualizado){
+					$tsVis = ($visualizadoRaw !== "" && $visualizadoRaw !== "0000-00-00 00:00:00") ? strtotime($visualizadoRaw) : false;
+					$visualizado = "<span class='label label-success' " . ($tsVis ? "title='" . htmlspecialchars(date("d/m/Y H:i", $tsVis), ENT_QUOTES) . "'" : "") . ">Sim</span>";
+				}else{
+					$visualizado = "<span class='label label-default'>Não</span>";
+				}
+
 				echo "<tr>"
 					."<td><strong>{$nome}</strong>"
 					.($descricao !== "" ? "<br><small style='color:#8a94a0;'>".htmlspecialchars($descricao)."</small>" : "")
@@ -178,6 +189,7 @@
 					."<td>".meusDocumentosData($documento["docu_tx_dataCadastro"] ?? "", true)."</td>"
 					."<td class='md-esconde-mobile'>".meusDocumentosData($documento["docu_tx_dataVencimento"] ?? "")."</td>"
 					."<td class='md-esconde-mobile'>{$assinado}</td>"
+					."<td class='md-esconde-mobile'>{$visualizado}</td>"
 					."<td class='md-acoes'>"
 					."<a class='btn btn-xs btn-default' target='_blank' rel='noopener' href='{$CONTEX["path"]}/meus_documentos.php?acao=baixar&modo=ver&id={$id}' title='Abrir'><i class='fa fa-eye'></i> Ver</a> "
 					."<a class='btn btn-xs btn-default' href='{$CONTEX["path"]}/meus_documentos.php?acao=baixar&id={$id}' title='Baixar'><i class='fa fa-download'></i></a>"

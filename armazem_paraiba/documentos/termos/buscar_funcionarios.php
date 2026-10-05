@@ -119,7 +119,7 @@ if($modelo > 0){
 		$in = implode(",", array_unique($ids));
 		$resTermos = query(
 			"SELECT terg_nb_entidade, terg_tx_status FROM termo_gerado
-			 WHERE terg_nb_modelo = ? AND terg_nb_entidade IN ({$in}) AND terg_tx_status IN ('gerado','aguardando_assinatura','assinado')",
+			 WHERE terg_nb_modelo = ? AND terg_nb_entidade IN ({$in}) AND terg_tx_status IN ('gerado','notificado','visualizado','aguardando_assinatura','assinado')",
 			"i",
 			[$modelo]
 		);

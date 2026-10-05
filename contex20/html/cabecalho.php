@@ -468,6 +468,29 @@
 								}
 							}
 
+							// ── Notificações do funcionário (tabela notificacoes) ──
+							// Usadas pelos documentos notificados para visualização (módulo de termos) e
+							// por outros avisos que registram o destinatário na entidade.
+							$__docNotifItens = [];
+							if($entiSess > 0 && $connLocal){
+								$hasNotf = mysqli_query($connLocal, "SHOW TABLES LIKE 'notificacoes'");
+								if($hasNotf && mysqli_num_rows($hasNotf) > 0){
+									$stmtDocNotf = mysqli_prepare($connLocal, "SELECT notf_nb_id, notf_tx_titulo, notf_tx_mensagem, notf_tx_link, notf_tx_dataCadastro
+										FROM notificacoes
+										WHERE notf_nb_entidade = ? AND LOWER(TRIM(notf_tx_status)) = 'nao_lida'
+										ORDER BY notf_nb_id DESC LIMIT 5");
+									if($stmtDocNotf){
+										mysqli_stmt_bind_param($stmtDocNotf, "i", $entiSess);
+										mysqli_stmt_execute($stmtDocNotf);
+										$resDocNotf = mysqli_stmt_get_result($stmtDocNotf);
+										while($resDocNotf && ($rowDocNotf = mysqli_fetch_assoc($resDocNotf))){
+											$__docNotifItens[] = $rowDocNotf;
+										}
+										mysqli_stmt_close($stmtDocNotf);
+									}
+								}
+							}
+
 							// ── Sino de notificações de gestão (não conformidade, jornada crítica, CNH, férias) ──
 							// Só para quem não é operacional (mesmo público da Torre de Comando) e só se o
 							// tenant atual tiver o motor de notificações (armazem_paraiba/notificacoes.php).
@@ -490,7 +513,8 @@
 									$__notifItens = notificacao_calcular($__notifPref["categorias"]);
 								}
 							}
-							$__notifTotal = $assinPendCount + count($__notifItens);
+							$__docNotifCount = count($__docNotifItens);
+							$__notifTotal = $assinPendCount + $__docNotifCount + count($__notifItens);
 						?>
 						<ul class="nav navbar-nav pull-right">
 							<li class="droddown dropdown-separator">
@@ -515,6 +539,20 @@
 											</a>
 										</li>
 									<?php endif; ?>
+									<?php foreach($__docNotifItens as $__docNotf): ?>
+										<?php
+											$__docNotfLink = trim(strval($__docNotf["notf_tx_link"] ?? ""));
+											if($__docNotfLink === ""){
+												$__docNotfLink = $CONTEX["path"] . "/meus_documentos.php";
+											}
+										?>
+										<li>
+											<a href="<?=htmlspecialchars($__docNotfLink, ENT_QUOTES, "UTF-8")?>" style="display:block; padding:10px 14px; border-bottom:1px solid #f2f2f2;">
+												<div style="font-weight:600; color:#333; font-size:13px;"><i class="fa fa-bell-o" style="color:#2f6fa3; margin-right:6px;"></i><?=htmlspecialchars(strval($__docNotf["notf_tx_titulo"] ?? ""), ENT_QUOTES, "UTF-8")?></div>
+												<div style="font-size:12px; color:#888; margin-top:2px;"><?=htmlspecialchars(strval($__docNotf["notf_tx_mensagem"] ?? ""), ENT_QUOTES, "UTF-8")?></div>
+											</a>
+										</li>
+									<?php endforeach; ?>
 									<?php foreach($__notifItens as $__item): ?>
 										<li>
 											<a href="<?=$CONTEX["path"]?>/<?=htmlspecialchars($__item["link"])?>" style="display:block; padding:10px 14px; border-bottom:1px solid #f2f2f2;">

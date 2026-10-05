@@ -245,9 +245,9 @@ function formPerfil(){
             // seguindo o padrão visual das permissões da seção (independe do nome da seção).
             if(mb_strtolower(trim((string)$it["menu_tx_label"])) === "registrar ponto"){
                 $bgStyleEspelho = $espelhoMesChecked ? "background:#eaffea; border-color:#b7e1b7;" : "background:#f9fafb; border-color:#e5e7eb;";
-                $checksSection .= "<label class='menu-check-item' title=\"Com 'Registrar Ponto' marcado, o perfil visualiza o próprio espelho de ponto (somente leitura). Marcado, vê o mês corrente completo; desmarcado, vê apenas as últimas 48 horas.\" style='border-radius:10px; padding:10px; border:1px solid; display:flex; align-items:center; gap:10px; " . $bgStyleEspelho . "'>";
-                $checksSection .= "<input type='checkbox' name='espelho_mes' value='1' ".($espelhoMesChecked?"checked":"").">";
-                $checksSection .= "<span style='font-weight:600'>Espelho de ponto: Mês competência</span>";
+                $checksSection .= "<label class='menu-check-item' title=\"Com 'Registrar Ponto' marcado, o perfil visualiza o próprio espelho de ponto (somente leitura). Marcado, vê o mês corrente completo; desmarcado, vê apenas as últimas 48 horas.\" style='border-radius:10px; padding:10px; border:1px solid; display:flex; align-items:center; gap:10px; box-sizing:border-box; min-width:0; " . $bgStyleEspelho . "'>";
+                $checksSection .= "<input type='checkbox' name='espelho_mes' value='1' style='flex-shrink:0;' ".($espelhoMesChecked?"checked":"").">";
+                $checksSection .= "<span style='font-weight:600; min-width:0; overflow-wrap:break-word;'>Espelho/Mês competência</span>";
                 $checksSection .= "</label>";
             }
         }

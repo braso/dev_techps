@@ -1307,6 +1307,19 @@ if(function_exists("index")){
 						? "&nbsp;<i class='fa-solid fa-file-contract text-success' title='Documento assinado digitalmente'></i>"
 						: "&nbsp;<i class='fa-solid fa-file-signature text-danger' title='Documento não assinado'></i>";
 
+					// Ícone de Visualização (documentos notificados e confirmados pelo funcionário)
+					$IconeVisualizacao = "";
+					if (array_key_exists("docu_tx_visualizado", $arquivo) && strtolower(trim(strval($arquivo["docu_tx_visualizado"]))) === "sim") {
+						$dataVisRaw = trim(strval($arquivo["docu_tx_dataVisualizacao"] ?? ""));
+						$dataVisFmt = "";
+						if ($dataVisRaw !== "" && $dataVisRaw !== "0000-00-00 00:00:00") {
+							$tsVis = strtotime($dataVisRaw);
+							$dataVisFmt = $tsVis ? date("d/m/Y H:i", $tsVis) : $dataVisRaw;
+						}
+						$tituloVis = "Visualizado pelo funcionário" . ($dataVisFmt !== "" ? " em " . $dataVisFmt : "");
+						$IconeVisualizacao = "&nbsp;<i class='fa-solid fa-eye text-success' title='" . htmlspecialchars($tituloVis, ENT_QUOTES, 'UTF-8') . "'></i>";
+					}
+
 					// Ícone de Excluir (Apenas para não-Funcionários)
 					if (!$isFuncionario) {
 						$nomeArquivoExcluir = htmlspecialchars($arquivo['docu_tx_nome'], ENT_QUOTES, 'UTF-8');
@@ -1345,6 +1358,7 @@ if(function_exists("index")){
 						<td class='text-center action-icons' style='white-space:nowrap;'>
 							$iconeDownload
 							$IconeAssinatura
+							$IconeVisualizacao
 							$iconePreview
 							$iconeEditar
 							$iconeExcluir

@@ -2081,6 +2081,8 @@
 				documento_funcionario.docu_tx_nome,
 				documento_funcionario.docu_tx_visivel,
 				documento_funcionario.docu_tx_assinado,
+				documento_funcionario.docu_tx_visualizado,
+				documento_funcionario.docu_tx_dataVisualizacao,
 				documento_funcionario.docu_tx_tipo,
 				documento_funcionario.docu_nb_sbgrupo,
 				t.tipo_nb_id,

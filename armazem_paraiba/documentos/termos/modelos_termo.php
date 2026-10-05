@@ -74,11 +74,11 @@ function index() {
 
 	echo "<h3>Modelos Cadastrados</h3>";
 	echo "<div class='table-responsive'><table class='table table-bordered table-striped'>";
-	echo "<thead><tr><th>ID</th><th>Nome</th><th>Tipo de Documento</th><th>Assinatura</th><th>Status</th><th>Atualizado</th><th>Ações</th></tr></thead>";
+	echo "<thead><tr><th>ID</th><th>Nome</th><th>Tipo de Documento</th><th>Assinatura</th><th>Notificação</th><th>Status</th><th>Atualizado</th><th>Ações</th></tr></thead>";
 	echo "<tbody>";
 
 	if(!$res || mysqli_num_rows($res) == 0){
-		echo "<tr><td colspan='7' class='text-center'>Nenhum modelo cadastrado ainda.</td></tr>";
+		echo "<tr><td colspan='8' class='text-center'>Nenhum modelo cadastrado ainda.</td></tr>";
 	}
 
 	while($res && ($row = mysqli_fetch_assoc($res))){
@@ -86,6 +86,8 @@ function index() {
 		$nome = termos_h($row["mode_tx_nome"] ?? "");
 		$tipoNome = termos_h($row["tipo_tx_nome"] ?? "—");
 		$ass = strtolower(trim(strval($row["tipo_tx_assinatura"] ?? "nao"))) === "sim" ? "Sim" : "Não";
+		$notif = strtolower(trim(strval($row["mode_tx_notificacao"] ?? "sim"))) === "nao" ? "Não" : "Sim";
+		$notifExibe = $ass === "Sim" ? "<span class='text-muted' title='Ignorada para documentos com coleta de assinatura'>—</span>" : ($notif === "Sim" ? "<span class='label label-info'>Sim</span>" : "<span class='label label-default'>Não</span>");
 		$status = strtolower(trim(strval($row["mode_tx_status"] ?? "inativo"))) === "ativo" ? "Ativo" : "Inativo";
 		$data = date("d/m/Y H:i", strtotime(strval($row["mode_tx_dataAtualiza"] ?? $row["mode_tx_dataCadastro"])));
 
@@ -101,6 +103,7 @@ function index() {
 		echo "<td><b>{$nome}</b></td>";
 		echo "<td>{$tipoNome}</td>";
 		echo "<td>{$ass}</td>";
+		echo "<td>{$notifExibe}</td>";
 		echo "<td>{$status}</td>";
 		echo "<td>{$data}</td>";
 		echo "<td>
@@ -418,7 +421,7 @@ function termosModalCargosSelecionados() {
 				$.each(res.funcionarios, function(i, f) {
 					var badge = '';
 					if (f.status_termo) {
-						var cor = f.status_termo === 'assinado' ? 'success' : (f.status_termo === 'aguardando_assinatura' ? 'warning' : 'info');
+						var cor = (f.status_termo === 'assinado' || f.status_termo === 'visualizado') ? 'success' : ((f.status_termo === 'aguardando_assinatura' || f.status_termo === 'notificado') ? 'warning' : 'info');
 						badge = '<span class=\"label label-' + cor + '\">' + termosEscapeHtml(f.status_termo) + '</span>';
 					} else {
 						badge = '<span class=\"label label-default\">sem termo</span>';
@@ -656,10 +659,16 @@ function form() {
 		$tipoDocPadrao = strval($_POST["tipo_doc"] ?? $_GET["tipo_doc"] ?? "");
 	}
 
+	$notificacaoPadrao = strtolower(trim(strval($a_mod["mode_tx_notificacao"] ?? "sim")));
+	if($notificacaoPadrao !== "nao"){
+		$notificacaoPadrao = "sim";
+	}
+
 	$fields = [
 		"<input type='hidden' name='id' value='{$id}'>",
-		campo("Nome do Modelo*", "nome", strval($a_mod["mode_tx_nome"] ?? ""), 5),
-		combo("Tipo de Documento*", "tipo_doc", $tipoDocPadrao, 4, $tipos),
+		campo("Nome do Modelo*", "nome", strval($a_mod["mode_tx_nome"] ?? ""), 4),
+		combo("Tipo de Documento*", "tipo_doc", $tipoDocPadrao, 3, $tipos),
+		combo("Notificação", "notificacao", $notificacaoPadrao, 3, ["sim" => "Sim", "nao" => "Não"]),
 		combo("Status", "status", strval($a_mod["mode_tx_status"] ?? "ativo"), 2, ["ativo" => "Ativo", "inativo" => "Inativo"])
 	];
 
@@ -678,6 +687,10 @@ function form() {
 	echo abre_form("Dados do Modelo");
 	echo "<input type='hidden' name='id' value='{$id}'>";
 	echo linha_form($fields);
+
+	echo "<div class='alert alert-info' style='font-size:12px; margin-top:8px;'>
+		<i class='fa fa-bell'></i> <b>Notificação:</b> quando marcado como <b>Sim</b>, se o <b>Tipo de Documento</b> não exigir coleta de assinatura, o funcionário recebe uma notificação (app/e-mail) de que existe um documento para visualizar. Ao abrir, o sistema registra data, hora, IP e demais dados do acesso para auditoria da visualização. Para documentos <b>com assinatura</b>, este campo é desconsiderado e vale o fluxo normal de assinatura.
+	</div>";
 
 	echo "<br>";
 
@@ -761,6 +774,7 @@ function salvar() {
 	$nome = trim(strval($_POST["nome"] ?? ""));
 	$tipoDoc = intval($_POST["tipo_doc"] ?? 0);
 	$status = in_array(strval($_POST["status"] ?? "ativo"), ["ativo", "inativo"], true) ? strval($_POST["status"]) : "ativo";
+	$notificacao = strtolower(trim(strval($_POST["notificacao"] ?? "sim"))) === "nao" ? "nao" : "sim";
 	$conteudo = termos_sanitizar_html(strval($_POST["conteudo"] ?? ""));
 	$user = intval($_SESSION["user_nb_id"] ?? 0);
 
@@ -787,16 +801,16 @@ function salvar() {
 
 	if($id > 0){
 		termos_executar(
-			"UPDATE modelo_termo SET mode_tx_nome = ?, mode_nb_tipo_doc = ?, mode_tx_conteudo = ?, mode_tx_status = ?, mode_nb_userAtualiza = ?, mode_tx_dataAtualiza = NOW() WHERE mode_nb_id = ?",
-			"sisssi",
-			[$nome, $tipoDoc, $conteudo, $status, $user, $id]
+			"UPDATE modelo_termo SET mode_tx_nome = ?, mode_nb_tipo_doc = ?, mode_tx_conteudo = ?, mode_tx_notificacao = ?, mode_tx_status = ?, mode_nb_userAtualiza = ?, mode_tx_dataAtualiza = NOW() WHERE mode_nb_id = ?",
+			"sissssi",
+			[$nome, $tipoDoc, $conteudo, $notificacao, $status, $user, $id]
 		);
-		termos_log("modelo_atualizado", "Modelo #{$id} atualizado", ["nome" => $nome]);
+		termos_log("modelo_atualizado", "Modelo #{$id} atualizado", ["nome" => $nome, "notificacao" => $notificacao]);
 	}else{
 		$id = termos_inserir_id(
-			"INSERT INTO modelo_termo (mode_tx_nome, mode_nb_tipo_doc, mode_tx_conteudo, mode_tx_status, mode_nb_userCadastro) VALUES (?, ?, ?, ?, ?)",
-			"sissi",
-			[$nome, $tipoDoc, $conteudo, $status, $user]
+			"INSERT INTO modelo_termo (mode_tx_nome, mode_nb_tipo_doc, mode_tx_conteudo, mode_tx_notificacao, mode_tx_status, mode_nb_userCadastro) VALUES (?, ?, ?, ?, ?, ?)",
+			"sisssi",
+			[$nome, $tipoDoc, $conteudo, $notificacao, $status, $user]
 		);
 		termos_log("modelo_criado", "Modelo #{$id} criado", ["nome" => $nome]);
 	}
@@ -876,14 +890,15 @@ function clonar_modelos() {
 		}
 		$nomeNovo = termos_nome_clonado(strval($origem["mode_tx_nome"] ?? ""));
 		$novoId = termos_inserir_id(
-			"INSERT INTO modelo_termo (mode_tx_nome, mode_nb_tipo_doc, mode_tx_conteudo, mode_tx_denominacao, mode_tx_cidade_assinatura, mode_tx_status, mode_nb_userCadastro) VALUES (?, ?, ?, ?, ?, 'ativo', ?)",
-			"sisssi",
+			"INSERT INTO modelo_termo (mode_tx_nome, mode_nb_tipo_doc, mode_tx_conteudo, mode_tx_denominacao, mode_tx_cidade_assinatura, mode_tx_notificacao, mode_tx_status, mode_nb_userCadastro) VALUES (?, ?, ?, ?, ?, ?, 'ativo', ?)",
+			"sissssi",
 			[
 				$nomeNovo,
 				intval($origem["mode_nb_tipo_doc"] ?? 0),
 				strval($origem["mode_tx_conteudo"] ?? ""),
 				strval($origem["mode_tx_denominacao"] ?? ""),
 				strval($origem["mode_tx_cidade_assinatura"] ?? ""),
+				strtolower(trim(strval($origem["mode_tx_notificacao"] ?? "sim"))) === "nao" ? "nao" : "sim",
 				$user
 			]
 		);
