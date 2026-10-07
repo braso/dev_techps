@@ -24,6 +24,18 @@
 		return null;
 	}
 
+	function escalaPdfTextoSemAcento(string $texto): string {
+		$texto = mb_strtoupper(trim($texto), "UTF-8");
+		return strtr($texto, [
+			"Á" => "A", "À" => "A", "Ã" => "A", "Â" => "A", "Ä" => "A",
+			"É" => "E", "È" => "E", "Ê" => "E", "Ë" => "E",
+			"Í" => "I", "Ì" => "I", "Î" => "I", "Ï" => "I",
+			"Ó" => "O", "Ò" => "O", "Õ" => "O", "Ô" => "O", "Ö" => "O",
+			"Ú" => "U", "Ù" => "U", "Û" => "U", "Ü" => "U",
+			"Ç" => "C",
+		]);
+	}
+
 	function escalaPdfExtrairLinhas(string $tabelaHtml): array {
 		$linhas = [];
 		$doc = new DOMDocument();
@@ -52,14 +64,21 @@
 				$texto = preg_replace('/\x{00A0}/u', ' ', $texto);
 				$texto = preg_replace('/\s+/u', ' ', $texto);
 				$texto = trim($texto);
+				$negrito = ($tag === "th");
 				// Horário no formato "08:00 - 17:00" vira duas linhas, ganhando legibilidade
 				if (preg_match('/^\d{2}:\d{2}\s*-\s*\d{2}:\d{2}$/u', $texto)) {
 					$texto = preg_replace('/\s*-\s*/u', "\n", $texto);
 				}
+				// Férias: em vez de "FÉRIAS" inteiro (que estreita demais a célula),
+				// usa a quebra "FÉ-\nRIAS" e destaca em negrito
+				if (escalaPdfTextoSemAcento($texto) === "FERIAS") {
+					$texto = "FÉ-\nRIAS";
+					$negrito = true;
+				}
 				$celulas[] = [
 					"texto" => $texto,
 					"cor" => escalaPdfCorFundo($node->getAttribute("style")),
-					"negrito" => ($tag === "th"),
+					"negrito" => $negrito,
 				];
 			}
 			if (!empty($celulas)) {

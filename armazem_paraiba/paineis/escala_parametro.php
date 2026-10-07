@@ -48,20 +48,36 @@ function montarCondicaoListaSql($coluna, $valor, $tipo='s') {
     return " AND LOWER($coluna) IN (" . implode(',', $condicoes) . ")";
 }
 
-function renderFiltroCheckboxGroup($titulo, $name, $opcoes, $selecionados, $width=3) {
+function renderFiltroCheckboxGroup($titulo, $name, $opcoes, $selecionados, $width=3, $mostrarNomes=false) {
     $selecionados = normalizarFiltroArray($selecionados);
     $selecionadosQtd = count($selecionados);
-    $tituloRender = $titulo.($selecionadosQtd > 0 ? " ({$selecionadosQtd})" : "");
+    $tituloRender = $titulo;
+    if ($selecionadosQtd > 0) {
+        if ($mostrarNomes) {
+            $nomesSelecionados = [];
+            foreach ($selecionados as $v) {
+                $nomesSelecionados[] = isset($opcoes[$v]) ? $opcoes[$v] : $v;
+            }
+            $nomesTexto = implode(", ", $nomesSelecionados);
+            if (mb_strlen($nomesTexto, "UTF-8") > 60) {
+                $nomesTexto = mb_substr($nomesTexto, 0, 57, "UTF-8")."...";
+            }
+            $tituloRender = $titulo.": ".$nomesTexto;
+        } else {
+            $tituloRender = $titulo." ({$selecionadosQtd})";
+        }
+    }
     $nameAttr = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
     $groupId = preg_replace('/[^a-zA-Z0-9_]/', '_', $name);
     $hiddenValue = htmlspecialchars(implode(',', $selecionados), ENT_QUOTES, 'UTF-8');
     $tituloAttr = htmlspecialchars($titulo, ENT_QUOTES, 'UTF-8');
     $tituloRenderAttr = htmlspecialchars($tituloRender, ENT_QUOTES, 'UTF-8');
+    $opcoesAttr = $mostrarNomes ? " data-opcoes='".htmlspecialchars(json_encode($opcoes, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8')."'" : "";
 
     $html = "<div class='col-sm-{$width} margin-bottom-5 campo-fit-content'>"
-        ."<div class='filtro-dropdown' data-filter-group='".$groupId."' style='position:relative; overflow:visible;'>"
+        ."<div class='filtro-dropdown' data-filter-group='".$groupId."' data-mostrar-nomes='".($mostrarNomes ? "1" : "0")."'".$opcoesAttr." style='position:relative; overflow:visible;'>"
         ."<button type='button' class='btn btn-default btn-block filtro-dropdown-toggle js-filtro-toggle' data-target='".$nameAttr."' data-base-label='".$tituloAttr."' aria-expanded='false' style='display:flex; justify-content:space-between; align-items:center; gap:10px;'>"
-        ."<span class='js-filtro-label' style='text-align:left;'>".$tituloRenderAttr."</span>"
+        ."<span class='js-filtro-label' style='text-align:left; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;'>".$tituloRenderAttr."</span>"
         ."<span class='caret'></span>"
         ."</button>"
         ."<div class='filtro-dropdown-menu' style='display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:1050; background:#fff; border:1px solid #d9d9d9; border-radius:8px; box-shadow:0 12px 30px rgba(0,0,0,.12); padding:10px; max-height:260px; overflow:auto;'>"
@@ -111,10 +127,17 @@ function index() {
         $empresasOpcoes[$row['empr_nb_id']] = $row['empr_tx_nome'];
     }
 
+    // Na primeira carga, ja seleciona a empresa do usuario logado
+    $empresaSelecionada = $_POST["empresa"] ?? null;
+    if ($empresaSelecionada === null) {
+        $empresaUsuario = intval($_SESSION["user_nb_empresa"] ?? 0);
+        $empresaSelecionada = (isset($empresasOpcoes[$empresaUsuario])) ? (string)$empresaUsuario : "";
+    }
+
     // Carrega nomes dinamicamente com base nas empresas selecionadas
     $empresaFiltroNomesSql = "";
-    if (!empty($_POST["empresa"])) {
-        $empresasSelecionadas = normalizarFiltroArray($_POST["empresa"]);
+    if (!empty($empresaSelecionada)) {
+        $empresasSelecionadas = normalizarFiltroArray($empresaSelecionada);
         $empresasIds = array_map('intval', $empresasSelecionadas);
         $empresasIds = array_filter($empresasIds, function($v){ return $v > 0; });
         if (!empty($empresasIds)) {
@@ -137,7 +160,7 @@ function index() {
     }
 
         $campos = [
-        renderFiltroCheckboxGroup("Empresa", "empresa", $empresasOpcoes, $_POST["empresa"] ?? "", 4),
+        renderFiltroCheckboxGroup("Empresa", "empresa", $empresasOpcoes, $empresaSelecionada, 4, true),
         campo_mes("Mês*", "busca_dataMes", $buscaDataMes, 2),
         renderFiltroCheckboxGroup("Nome", "busca_nome", $nomesOpcoes, $_POST["busca_nome"] ?? "", 4),
         renderFiltroCheckboxGroup("Ocupação", "busca_ocupacao", 
@@ -284,8 +307,26 @@ function index() {
             }
             var botao = wrapper.find('.js-filtro-toggle').first();
             var labelBase = botao.data('base-label') || nome;
-            var qtd = wrapper.find('input.js-filtro-checkbox[data-target="' + nome + '"]:checked').length;
-            var texto = qtd > 0 ? (labelBase + ' (' + qtd + ')') : labelBase;
+            var marcados = wrapper.find('input.js-filtro-checkbox[data-target="' + nome + '"]:checked');
+            var qtd = marcados.length;
+            var texto = labelBase;
+            if(qtd > 0){
+                if(String(wrapper.attr('data-mostrar-nomes')) === '1'){
+                    var opcoes = wrapper.data('opcoes') || {};
+                    var nomes = [];
+                    marcados.each(function(){
+                        var valor = String($(this).val());
+                        nomes.push(opcoes[valor] !== undefined ? opcoes[valor] : valor);
+                    });
+                    var nomesTexto = nomes.join(', ');
+                    if(nomesTexto.length > 60){
+                        nomesTexto = nomesTexto.substring(0, 57) + '...';
+                    }
+                    texto = labelBase + ': ' + nomesTexto;
+                }else{
+                    texto = labelBase + ' (' + qtd + ')';
+                }
+            }
             botao.find('.js-filtro-label').text(texto);
         }
 
@@ -591,6 +632,24 @@ function index() {
             return;
         }
 
+        // Busca férias ativas no período para identificar os dias de cada funcionário
+        $feriasPorEntidade = [];
+        $idsEntidades = array_values(array_unique(array_map(function($m){
+            return intval($m["enti_nb_id"]);
+        }, $motoristas)));
+        if (!empty($idsEntidades)) {
+            $feriasResult = query(
+                "SELECT feri_nb_entidade, feri_tx_dataInicio, feri_tx_dataFim FROM ferias
+                 WHERE feri_tx_status = 'ativo'
+                   AND feri_nb_entidade IN (".implode(",", $idsEntidades).")
+                   AND feri_tx_dataInicio <= '".$periodoFim->format("Y-m-d")."'
+                   AND feri_tx_dataFim >= '".$periodoInicio->format("Y-m-d")."'"
+            );
+            while ($f = mysqli_fetch_assoc($feriasResult)) {
+                $feriasPorEntidade[intval($f["feri_nb_entidade"])][] = $f;
+            }
+        }
+
         $exibirEmpresa = empty($_POST["empresa"]);
         $exibirOcupacao = empty($_POST["busca_ocupacao"]);
         $exibirCargo = empty($_POST["operacao"]);
@@ -741,6 +800,21 @@ function index() {
                     }
                 }
 
+                // Férias: identifica o dia no grid (e no PDF)
+                $deFerias = false;
+                $entidadeId = intval($motorista["enti_nb_id"]);
+                if (!empty($feriasPorEntidade[$entidadeId])) {
+                    foreach ($feriasPorEntidade[$entidadeId] as $periodoFerias) {
+                        if ($dataStr >= $periodoFerias["feri_tx_dataInicio"] && $dataStr <= $periodoFerias["feri_tx_dataFim"]) {
+                            $deFerias = true;
+                            break;
+                        }
+                    }
+                }
+                if ($deFerias) {
+                    $valor = "FÉRIAS";
+                }
+
                 // Lógica de destaque movida para JS/CSS para preencher a célula inteira
 
                 if ($inicio !== "--:--" && $fim !== "--:--") {
@@ -848,6 +922,11 @@ function index() {
     background-color:#ffe0b2 !important;
     color: black !important;
 }
+.tabela-espelho-ponto td.ferias{
+    background-color:#e2d9f3 !important;
+    color:#4a2d7a !important;
+    font-weight:bold !important;
+}
 </style>";
         $mesTituloPdf = $buscaDataMes;
         $dtMesTitulo = DateTime::createFromFormat("Y-m", $buscaDataMes);
@@ -864,6 +943,9 @@ function index() {
             . "<option value='dividido'>Mês dividido</option>"
             . "<option value='colunas'>Colunas do mês</option>"
             . "</select></label>";
+        echo "<span style='margin-left:15px; font-size:12px;'>"
+            . "<span style='display:inline-block; width:12px; height:12px; background:#e2d9f3; border:1px solid #999; vertical-align:middle;'></span> Férias"
+            . "</span>";
         
         $qtdeFuncionarios = count($valores);
         echo "<span style='margin-left: 20px; font-weight: bold; font-size: 14px;'>Total de Funcionários: $qtdeFuncionarios</span>";
@@ -1034,6 +1116,11 @@ function index() {
                 for (var f = 0; f < celulasFeriado.length; f++) {
                     celulasFeriado[f].style.backgroundColor = '#ffe0b2';
                 }
+                var celulasFerias = clone.querySelectorAll('td.ferias, th.ferias');
+                for (var ff = 0; ff < celulasFerias.length; ff++) {
+                    celulasFerias[ff].style.backgroundColor = '#e2d9f3';
+                    celulasFerias[ff].style.fontWeight = 'bold';
+                }
                 var linhasSelecionadas = clone.querySelectorAll('tr.selected-row');
                 for (var s = 0; s < linhasSelecionadas.length; s++) {
                     var celulasLinha = linhasSelecionadas[s].querySelectorAll('th, td');
@@ -1146,6 +1233,18 @@ function index() {
                         }
                     }
                 });
+            }
+
+            // Destaque para Férias
+            var celulasFeriasGrid = tabela.querySelectorAll('tbody td');
+            for (var x = 0; x < celulasFeriasGrid.length; x++) {
+                var textoCelula = (celulasFeriasGrid[x].textContent || '').replace(/\s+/g, ' ').trim().toUpperCase();
+                if (typeof textoCelula.normalize === 'function') {
+                    textoCelula = textoCelula.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                }
+                if (textoCelula === 'FERIAS' || textoCelula === 'FÉRIAS') {
+                    celulasFeriasGrid[x].classList.add('ferias');
+                }
             }
 
             var linhasBody = tabela.querySelectorAll('tbody tr');
