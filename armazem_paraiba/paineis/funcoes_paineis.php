@@ -1788,9 +1788,12 @@ function logisticas() {
 		mkdir($path, 0755, true);
 	}
 
-	$periodo = DateTime::createFromFormat("d/m/Y H:i", $_POST["busca_periodo"]);
-	$periodoInicio = $periodo->format("Y-m")."-01";
 	$hoje = new DateTime();
+	$periodo = DateTime::createFromFormat("d/m/Y H:i", strval($_POST["busca_periodo"] ?? ""));
+	if (!$periodo) {
+		$periodo = clone $hoje;
+	}
+	$periodoInicio = $periodo->format("Y-m")."-01";
 
 	if (empty($_POST["busca_periodo"])) {
 		// $hoje->modify("-1 day");
@@ -1849,9 +1852,29 @@ function logisticas() {
 	), MYSQLI_ASSOC);
 
 	$dataReferenciaStr = !empty($_POST["busca_periodo"]) ? $_POST["busca_periodo"] : $hoje->format("d/m/Y H:i");
+	$dataReferencia = DateTime::createFromFormat("d/m/Y H:i", $dataReferenciaStr);
+	if (!$dataReferencia) {
+		$dataReferencia = clone $hoje;
+		$dataReferenciaStr = $dataReferencia->format("d/m/Y H:i");
+	}
+	// Nada depois do momento consultado entra na conta: numa consulta retroativa o
+	// descanso não pode ser calculado a partir de uma batida que ainda não existia.
+	$momentoConsulta = $dataReferencia->format("Y-m-d H:i:59");
+
+	$telefoneContato = static function (array $dados): string {
+		foreach (["enti_tx_fone1", "enti_tx_fone2", "enti_tx_fone3"] as $campo) {
+			$valor = trim(strval($dados[$campo] ?? ""));
+			if ($valor !== "") {
+				return $valor;
+			}
+		}
+		return "";
+	};
+
 	$skippedDrivers = [];
 	$totalMotoristasLivres = 0;
 	$motoristasIgnorados = 0;
+	$totalMotoristasJornada = 0;
 	foreach ($motoristas as $motorista) {
 		$parametro = mysqli_fetch_all(query(
 			"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_maxHESemanalDiario, para_tx_adi5322"
@@ -1860,38 +1883,69 @@ function logisticas() {
 		), MYSQLI_ASSOC);
 
 		$lastFim = mysqli_fetch_assoc(query(
-			"SELECT pont_tx_data FROM ponto 
-				WHERE pont_tx_status = 'ativo' 
-					AND pont_tx_matricula = '{$motorista["enti_tx_matricula"]}' 
-					AND pont_tx_tipo = '2' 
-				ORDER BY pont_tx_data DESC 
+			"SELECT pont_tx_data FROM ponto
+				WHERE pont_tx_status = 'ativo'
+					AND pont_tx_matricula = '{$motorista["enti_tx_matricula"]}'
+					AND pont_tx_tipo = '2'
+					AND pont_tx_data <= '{$momentoConsulta}'
+				ORDER BY pont_tx_data DESC
 				LIMIT 1;"
 		));
 
-		if (empty($lastFim) || empty($lastFim["pont_tx_data"])) {
-			// Check if has ANY start of journey (Type 1)
-			$hasStart = mysqli_fetch_assoc(query(
-				"SELECT pont_nb_id FROM ponto 
-					WHERE pont_tx_status = 'ativo' 
-						AND pont_tx_matricula = '{$motorista["enti_tx_matricula"]}' 
-						AND pont_tx_tipo = '1' 
-					LIMIT 1;"
-			));
-			
-			if (empty($hasStart)) {
-				$motoristasIgnorados++;
-			}
-			
+		// Último início de jornada até o mesmo momento: se for mais recente que o
+		// último fim, a pessoa está trabalhando agora — não tem descanso a contar.
+		$lastInicio = mysqli_fetch_assoc(query(
+			"SELECT pont_tx_data FROM ponto
+				WHERE pont_tx_status = 'ativo'
+					AND pont_tx_matricula = '{$motorista["enti_tx_matricula"]}'
+					AND pont_tx_tipo = '1'
+					AND pont_tx_data <= '{$momentoConsulta}'
+				ORDER BY pont_tx_data DESC
+				LIMIT 1;"
+		));
+
+		$dataUltimoFim = strval($lastFim["pont_tx_data"] ?? "");
+		$dataUltimoInicio = strval($lastInicio["pont_tx_data"] ?? "");
+
+		if ($dataUltimoFim === "" && $dataUltimoInicio === "") {
+			// Nunca bateu ponto até o momento consultado.
+			$motoristasIgnorados++;
 			continue;
 		}
 
-		$dataFormatada = DateTime::createFromFormat("Y-m-d H:i:s", $lastFim["pont_tx_data"]);
+		// Jornada aberta: iniciou e ainda não fechou (ou o fim é de uma jornada anterior).
+		// Enquanto está trabalhando não há descanso a contar: sai da disponibilidade e
+		// entra no grupo "Em Jornada".
+		if ($dataUltimoInicio !== "" && ($dataUltimoFim === "" || $dataUltimoInicio > $dataUltimoFim)) {
+			$inicioAberto = DateTime::createFromFormat("Y-m-d H:i:s", $dataUltimoInicio);
+			$inicioAbertoStr = $inicioAberto ? $inicioAberto->format("d/m/Y H:i") : $dataUltimoInicio;
+			$motoristasLivres["EmJornada"][] = [
+				"matricula"        => $motorista["enti_tx_matricula"],
+				"Nome"             => $motorista["enti_tx_nome"],
+				"ocupacao"         => $motorista["enti_tx_ocupacao"],
+				"telefone"         => $telefoneContato($motorista),
+				"tipoOperacaoNome" => (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem Cargo"),
+				"ultimaJornada"    => "Aberta desde ".$inicioAbertoStr,
+				"inicioJornada"    => $inicioAbertoStr,
+				"repouso"          => "----",
+				"Apos8"            => "----",
+				"Apos11"           => "----",
+				"consulta"         => $dataReferenciaStr,
+				"ADI_5322"         => (isset($parametro[0]["para_tx_adi5322"]) && $parametro[0]["para_tx_adi5322"] === "sim") ? "Sim" : "Não",
+				"setor"            => $motorista["enti_setor_id"],
+				"setorNome"        => $motorista["grup_tx_nome"],
+				"subsetor"         => $motorista["enti_subSetor_id"],
+				"subsetorNome"     => $motorista["sbgr_tx_nome"]
+			];
+			$totalMotoristasJornada++;
+			continue;
+		}
+
+		$dataFormatada = DateTime::createFromFormat("Y-m-d H:i:s", $dataUltimoFim);
 		$dataMais8Horas = clone $dataFormatada;
 		$dataMais8Horas->modify("+8 hours");
 		$dataMais11Horas = clone $dataFormatada;
 		$dataMais11Horas->modify("+11 hours");
-
-		$dataReferencia = DateTime::createFromFormat("d/m/Y H:i", $dataReferenciaStr);
 
 		$considerarADI = isset($parametro[0]["para_tx_adi5322"]) && $parametro[0]["para_tx_adi5322"] === "sim";
 		$infoADI = $considerarADI ? "Sim" : "Não";
@@ -1926,6 +1980,7 @@ function logisticas() {
 			"matricula"       => $motorista["enti_tx_matricula"],
 			"Nome"            => $motorista["enti_tx_nome"],
 			"ocupacao"        => $motorista["enti_tx_ocupacao"],
+			"telefone"        => $telefoneContato($motorista),
             "tipoOperacaoNome"=> (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem Cargo"),
 			"ultimaJornada"   => $dataFormatada->format("d/m/Y H:i"),
 			"repouso"         => $avisoRepouso,
@@ -1950,7 +2005,9 @@ function logisticas() {
 	}
 
 	$motoristasLivres["total"] = [
-		"totalMotoristasJornada" => count($motoristas) - $totalMotoristasLivres - $motoristasIgnorados,
+		// Contagem direta de quem está em jornada aberta (antes era por subtração,
+		// e só enxergava quem nunca tinha fechado uma jornada).
+		"totalMotoristasJornada" => $totalMotoristasJornada,
 		"totalMotoristasLivres" => $totalMotoristasLivres,
 		"consulta"        => $dataReferenciaStr,
 	];

@@ -1556,6 +1556,8 @@ $notaGestao = torre_calcular_nota_gestao($empresaFiltro, $condEmpresa, $ativos, 
   .tc-tile-foot{ font-size:11.5px; color:var(--tc-ink-mute); margin-top:auto; }
   .tc-tile-link{ font-size:11px; font-weight:600; color:var(--tc-accent); text-decoration:none; display:inline-flex; align-items:center; gap:4px; margin-top:2px; }
   .tc-tile-link:hover{ text-decoration:underline; }
+  /* Mais de um destino no mesmo painel (ex.: jornadas abertas e disponibilidade). */
+  .tc-links-linha{ display:flex; flex-wrap:wrap; gap:18px; align-items:center; margin-top:4px; }
   .tc-panel-link{ font-size:11.5px; font-weight:600; color:var(--tc-accent); text-decoration:none; display:inline-flex; align-items:center; gap:4px; margin-top:12px; }
   .tc-panel-link:hover{ text-decoration:underline; }
 
@@ -1797,7 +1799,10 @@ $notaGestao = torre_calcular_nota_gestao($empresaFiltro, $condEmpresa, $ativos, 
             <div class="tc-status-item"><span class="tc-swatch" style="background:#64748b;"></span><span class="tc-status-label">Fora de jornada</span><span class="tc-status-valor"><?= number_format($foraDeJornada,0,",",".") ?></span></div>
           </div>
         </div>
-        <?= torre_link("paineis/jornada.php") ?>
+        <div class="tc-links-linha">
+          <?= torre_link("paineis/jornada.php", "Ver jornadas abertas") ?>
+          <?= torre_link("paineis/disponibilidade.php", "Ver disponibilidade") ?>
+        </div>
       </div>
       <?php endif; ?>
       <?php if ($mostrarPainelOcupacao): ?>
