@@ -633,6 +633,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
                 if (data.status === 'success') {
+                    /* Avisa a tela que esta assinatura terminou. É o gancho usado
+                       pela assinatura em sequência (quem assina muitos documentos
+                       como responsável) — tanto para oferecer os pendentes quanto
+                       para avisar a janela que está conduzindo o lote. */
+                    try {
+                        document.dispatchEvent(new CustomEvent('assinatura:concluida', {
+                            detail: {
+                                protocolo: data.protocolo || '',
+                                token: (document.getElementById('token_solicitacao') || {}).value || '',
+                                dados: {
+                                    nome: nome,
+                                    cpf: cpf,
+                                    rg: rg,
+                                    rubrica: rubricaDataUrl
+                                }
+                            }
+                        }));
+                    } catch (e) { console.warn('evento assinatura:concluida', e); }
+
                     // Atualiza a interface
                     const container = document.getElementById('main-container') || document.querySelector('.container');
                     

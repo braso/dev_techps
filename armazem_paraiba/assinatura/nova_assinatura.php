@@ -2266,3 +2266,47 @@ if (isset($hasEnvPaths) && $hasEnvPaths) {
 <?php
 include_once "componentes/layout_footer.php";
 ?>
+
+<script>
+/* Trava de duplo envio: ao submeter qualquer formulário de envio desta tela, o
+   botão é desabilitado e um segundo submit é ignorado. Antes, dois cliques
+   rápidos criavam duas solicitações para a mesma pessoa. */
+(function(){
+    document.addEventListener("submit", function(evento){
+        var form = evento.target;
+        if(!form || form.tagName !== "FORM"){ return; }
+        if(evento.defaultPrevented){ return; }   // validação do próprio form barrou
+
+        if(form.dataset.enviando === "1"){
+            evento.preventDefault();
+            return;
+        }
+        form.dataset.enviando = "1";
+
+        var botoes = form.querySelectorAll('button[type="submit"], input[type="submit"]');
+        for(var i = 0; i < botoes.length; i++){
+            var b = botoes[i];
+            if(b.tagName === "BUTTON"){
+                b.dataset.textoOriginal = b.innerHTML;
+                b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+            }
+            b.disabled = true;
+            b.classList.add("opacity-60", "cursor-not-allowed");
+        }
+
+        // Se o envio não sair (validação do navegador, erro de rede), libera de novo.
+        setTimeout(function(){
+            if(form.dataset.enviando !== "1"){ return; }
+            form.dataset.enviando = "";
+            for(var j = 0; j < botoes.length; j++){
+                var bt = botoes[j];
+                bt.disabled = false;
+                bt.classList.remove("opacity-60", "cursor-not-allowed");
+                if(bt.tagName === "BUTTON" && bt.dataset.textoOriginal){
+                    bt.innerHTML = bt.dataset.textoOriginal;
+                }
+            }
+        }, 20000);
+    }, true);
+})();
+</script>
