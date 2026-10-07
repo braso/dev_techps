@@ -56,8 +56,129 @@
 	
     // INICIALIZAÇÃO DE TABELAS (GARANTE A ESTRUTURA PARA CLIENTES NOVOS)
 
+    /* As migrações abaixo rodam a cada acesso. Como o mysqli está em modo de exceção,
+       um "SHOW COLUMNS" numa tabela que ainda não existe derrubava o sistema inteiro
+       com Fatal error. Estas funções fazem a migração só quando a tabela existe, e
+       criam o que falta — nenhum cliente fica sem entrar por causa de estrutura. */
+    if (!function_exists("bancoTabelaExiste")) {
+        function bancoTabelaExiste($conn, string $tabela): bool {
+            $rs = @mysqli_query($conn, "SHOW TABLES LIKE '".mysqli_real_escape_string($conn, $tabela)."'");
+            return ($rs instanceof mysqli_result) && mysqli_num_rows($rs) > 0;
+        }
+    }
+
+    if (!function_exists("bancoColunaExiste")) {
+        function bancoColunaExiste($conn, string $tabela, string $coluna): bool {
+            if (!bancoTabelaExiste($conn, $tabela)) {
+                return false;
+            }
+            $rs = @mysqli_query($conn, "SHOW COLUMNS FROM `{$tabela}` LIKE '".mysqli_real_escape_string($conn, $coluna)."'");
+            return ($rs instanceof mysqli_result) && mysqli_num_rows($rs) > 0;
+        }
+    }
+
+    if (!function_exists("bancoCriarTabela")) {
+        /* Cria a tabela. Se o banco recusar por causa de uma chave estrangeira
+           (alvo MyISAM, tabela da base ausente, tipo diferente), cria sem as chaves
+           em vez de abortar o acesso — a tabela existir é o que importa. */
+        function bancoCriarTabela($conn, string $sql): bool {
+            if (@mysqli_query($conn, $sql)) {
+                return true;
+            }
+            $erro = mysqli_error($conn);
+            $semChaves = preg_replace(
+                '/,\s*(CONSTRAINT\s+`?\w+`?\s+)?FOREIGN KEY\s*\([^)]*\)\s*REFERENCES\s*`?\w+`?\s*\([^)]*\)(\s*ON DELETE\s+[A-Z ]+)?(\s*ON UPDATE\s+[A-Z ]+)?/i',
+                '',
+                $sql
+            );
+            if ($semChaves !== $sql && @mysqli_query($conn, $semChaves)) {
+                error_log("[conecta] tabela criada sem chaves estrangeiras: ".$erro);
+                return true;
+            }
+            error_log("[conecta] nao foi possivel criar tabela: ".$erro);
+            return false;
+        }
+    }
+
+    // A partir daqui as falhas de estrutura só vão para o log: uma tabela que não
+    // pode ser criada não pode mais derrubar o sistema com Fatal error.
+    mysqli_report(MYSQLI_REPORT_OFF);
+
+    if (!function_exists("bancoGarantirColuna")) {
+        /** Cria a coluna se a tabela existir e a coluna faltar. Devolve true se criou. */
+        function bancoGarantirColuna($conn, string $tabela, string $coluna, string $definicao): bool {
+            if (!bancoTabelaExiste($conn, $tabela) || bancoColunaExiste($conn, $tabela, $coluna)) {
+                return false;
+            }
+            return (bool) @mysqli_query($conn, "ALTER TABLE `{$tabela}` ADD COLUMN {$coluna} {$definicao}");
+        }
+    }
+
+
+    // Solicitações de ajuste de ponto (a tela de ajuste criava a tabela só quando era
+    // aberta; quem entrava antes dela batia num Fatal error nas migrações abaixo).
+    bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS solicitacoes_ajuste (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        id_motorista INT NOT NULL,
+        data_ajuste DATE NOT NULL,
+        hora_ajuste TIME NOT NULL,
+        id_macro INT NOT NULL,
+        id_motivo INT NOT NULL,
+        justificativa TEXT NULL,
+        status VARCHAR(20) DEFAULT 'rascunho',
+        data_solicitacao DATETIME NOT NULL,
+        id_usuario_solicitante INT NOT NULL,
+        cargo_usuario VARCHAR(100) NULL,
+        setor_usuario VARCHAR(100) NULL,
+        subsetor_usuario VARCHAR(100) NULL,
+        data_decisao DATETIME NULL,
+        id_superior INT NULL,
+        justificativa_gestor TEXT NULL,
+        data_visualizacao DATETIME NULL,
+        data_envio_documento DATETIME NULL,
+        id_instancia_documento INT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
+
+    // Módulo de documentos: as três tabelas só nasciam ao rodar
+    // documentos/setup_documentos.php na mão. Onde as chaves estrangeiras não puderem
+    // ser criadas, a tabela nasce sem elas (bancoCriarTabela cuida disso).
+    {
+        @bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS camp_documento_modulo (
+            camp_nb_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+            camp_nb_tipo_doc INT(11) NOT NULL,
+            camp_tx_label VARCHAR(255) NOT NULL,
+            camp_tx_tipo ENUM('texto_curto', 'texto_longo', 'data', 'selecao', 'usuario', 'setor', 'number') NOT NULL,
+            camp_tx_opcoes TEXT DEFAULT NULL,
+            camp_nb_ordem INT(11) DEFAULT 0,
+            camp_tx_obrigatorio ENUM('sim', 'nao') DEFAULT 'nao',
+            camp_tx_placeholder VARCHAR(255) DEFAULT NULL,
+            camp_tx_status ENUM('ativo', 'inativo') DEFAULT 'ativo',
+            FOREIGN KEY (camp_nb_tipo_doc) REFERENCES tipos_documentos(tipo_nb_id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8;");
+
+        @bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS inst_documento_modulo (
+            inst_nb_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+            inst_nb_tipo_doc INT(11) NOT NULL,
+            inst_nb_user INT(11) NOT NULL,
+            inst_dt_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+            inst_tx_status ENUM('ativo', 'inativo') DEFAULT 'ativo',
+            FOREIGN KEY (inst_nb_tipo_doc) REFERENCES tipos_documentos(tipo_nb_id) ON DELETE CASCADE,
+            FOREIGN KEY (inst_nb_user) REFERENCES user(user_nb_id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8;");
+
+        @bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS valo_documento_modulo (
+            valo_nb_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+            valo_nb_instancia INT(11) NOT NULL,
+            valo_nb_campo INT(11) NOT NULL,
+            valo_tx_valor TEXT DEFAULT NULL,
+            valo_tx_status ENUM('ativo', 'inativo') DEFAULT 'ativo',
+            FOREIGN KEY (valo_nb_instancia) REFERENCES inst_documento_modulo(inst_nb_id) ON DELETE CASCADE,
+            FOREIGN KEY (valo_nb_campo) REFERENCES camp_documento_modulo(camp_nb_id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8;");
+    }
+
     // Tabela Principal de RFIDs
-    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS rfids (
+    bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS rfids (
         rfids_nb_id INT(11) AUTO_INCREMENT PRIMARY KEY,
         rfids_tx_uid VARCHAR(255) NOT NULL UNIQUE,
         rfids_nb_user_id INT(11) DEFAULT NULL,
@@ -68,7 +189,7 @@
     );");
 
     // Tabela de Log de Auditoria (Já nasce com os nomes de colunas novos)
-    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS rfids_log (
+    bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS rfids_log (
         rlog_nb_id INT(11) AUTO_INCREMENT PRIMARY KEY,
         rlog_nb_rfid_id INT(11) NOT NULL,
         rlog_tx_acao VARCHAR(50) NOT NULL,
@@ -82,8 +203,7 @@
     );");
     
     // Migração Segura da tabela RFIDs
-    $checkMotivo = mysqli_query($conn, "SHOW COLUMNS FROM rfids LIKE 'rfids_tx_motivo_exclusao'");
-    if ($checkMotivo && mysqli_num_rows($checkMotivo) == 0) {
+    if (bancoTabelaExiste($conn, "rfids") && !bancoColunaExiste($conn, "rfids", "rfids_tx_motivo_exclusao")) {
         
         // Passo 1: Cria a nova coluna para guardar a justificativa
         mysqli_query($conn, "ALTER TABLE rfids ADD COLUMN rfids_tx_motivo_exclusao VARCHAR(100) DEFAULT NULL AFTER rfids_tx_status;");
@@ -99,31 +219,26 @@
     };
 
     // 2. Tabela rfids_log: Atualiza entidade_anterior para user_anterior
-    $checkCol2 = mysqli_query($conn, "SHOW COLUMNS FROM rfids_log LIKE 'rlog_nb_entidade_anterior'");
-    if ($checkCol2 && mysqli_num_rows($checkCol2) > 0) {
+    if (bancoColunaExiste($conn, "rfids_log", "rlog_nb_entidade_anterior")) {
         mysqli_query($conn, "ALTER TABLE rfids_log CHANGE rlog_nb_entidade_anterior rlog_nb_user_anterior INT(11) DEFAULT NULL;");
     };
 
     // 3. Tabela rfids_log: Atualiza entidade_nova para user_novo
-    $checkCol3 = mysqli_query($conn, "SHOW COLUMNS FROM rfids_log LIKE 'rlog_nb_entidade_nova'");
-    if ($checkCol3 && mysqli_num_rows($checkCol3) > 0) {
+    if (bancoColunaExiste($conn, "rfids_log", "rlog_nb_entidade_nova")) {
         mysqli_query($conn, "ALTER TABLE rfids_log CHANGE rlog_nb_entidade_nova rlog_nb_user_novo INT(11) DEFAULT NULL;");
     };
 
     // Migração da tabela de ajustes: chave de lote para agrupar um unico PDF por envio.
-    $checkEnvioDoc = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_ajuste LIKE 'data_envio_documento'");
-    if ($checkEnvioDoc && mysqli_num_rows($checkEnvioDoc) == 0) {
+    if (bancoTabelaExiste($conn, "solicitacoes_ajuste") && !bancoColunaExiste($conn, "solicitacoes_ajuste", "data_envio_documento")) {
         mysqli_query($conn, "ALTER TABLE solicitacoes_ajuste ADD COLUMN data_envio_documento DATETIME NULL AFTER data_visualizacao;");
     };
 
     // Migração da tabela de instancias de documento: suporte ao vinculo por entidade e data de referencia.
-    $checkInstEnt = mysqli_query($conn, "SHOW COLUMNS FROM inst_documento_modulo LIKE 'inst_nb_entidade'");
-    if ($checkInstEnt && mysqli_num_rows($checkInstEnt) == 0) {
+    if (bancoTabelaExiste($conn, "inst_documento_modulo") && !bancoColunaExiste($conn, "inst_documento_modulo", "inst_nb_entidade")) {
         mysqli_query($conn, "ALTER TABLE inst_documento_modulo ADD COLUMN inst_nb_entidade INT NULL AFTER inst_nb_user;");
     };
 
-    $checkInstRef = mysqli_query($conn, "SHOW COLUMNS FROM inst_documento_modulo LIKE 'inst_tx_data_referencia'");
-    if ($checkInstRef && mysqli_num_rows($checkInstRef) == 0) {
+    if (bancoTabelaExiste($conn, "inst_documento_modulo") && !bancoColunaExiste($conn, "inst_documento_modulo", "inst_tx_data_referencia")) {
         mysqli_query($conn, "ALTER TABLE inst_documento_modulo ADD COLUMN inst_tx_data_referencia DATE NULL AFTER inst_nb_entidade;");
     };
 
@@ -136,8 +251,7 @@
             "tipo_tx_rodape" => "TEXT DEFAULT NULL"
         ];
         foreach ($__colTiposDoc as $__col => $__tipo) {
-            $__checkCol = mysqli_query($conn, "SHOW COLUMNS FROM tipos_documentos LIKE '{$__col}'");
-            if ($__checkCol && mysqli_num_rows($__checkCol) === 0) {
+            if (bancoTabelaExiste($conn, "tipos_documentos") && !bancoColunaExiste($conn, "tipos_documentos", $__col)) {
                 @mysqli_query($conn, "ALTER TABLE tipos_documentos ADD COLUMN {$__col} {$__tipo}");
             }
         }
@@ -145,41 +259,36 @@
 
     // Migração da tabela documento_funcionario: registro da visualização dos documentos
     // notificados (quando o funcionário abre/confirma a leitura para auditoria).
-    $__checkDocVis = mysqli_query($conn, "SHOW COLUMNS FROM documento_funcionario LIKE 'docu_tx_visualizado'");
-    if ($__checkDocVis && mysqli_num_rows($__checkDocVis) === 0) {
+    if (bancoTabelaExiste($conn, "documento_funcionario") && !bancoColunaExiste($conn, "documento_funcionario", "docu_tx_visualizado")) {
         mysqli_query($conn, "ALTER TABLE documento_funcionario ADD COLUMN docu_tx_visualizado ENUM('sim','nao') NOT NULL DEFAULT 'nao' AFTER docu_tx_assinado");
     }
-    $__checkDocVisData = mysqli_query($conn, "SHOW COLUMNS FROM documento_funcionario LIKE 'docu_tx_dataVisualizacao'");
-    if ($__checkDocVisData && mysqli_num_rows($__checkDocVisData) === 0) {
+    if (bancoTabelaExiste($conn, "documento_funcionario") && !bancoColunaExiste($conn, "documento_funcionario", "docu_tx_dataVisualizacao")) {
         mysqli_query($conn, "ALTER TABLE documento_funcionario ADD COLUMN docu_tx_dataVisualizacao DATETIME NULL AFTER docu_tx_visualizado");
     }
 
     // Migração da tabela parametro: coluna para abonar feriados automaticamente na escala
-    $checkAbonarFeriado = mysqli_query($conn, "SHOW COLUMNS FROM parametro LIKE 'para_tx_abonarFeriadoEscala'");
-    if ($checkAbonarFeriado && mysqli_num_rows($checkAbonarFeriado) == 0) {
+    if (bancoTabelaExiste($conn, "parametro") && !bancoColunaExiste($conn, "parametro", "para_tx_abonarFeriadoEscala")) {
         mysqli_query($conn, "ALTER TABLE parametro ADD COLUMN para_tx_abonarFeriadoEscala ENUM('sim','nao') NOT NULL DEFAULT 'nao' COMMENT 'Abonar automaticamente feriados na escala'");
     };
 
     // Migração da tabela endosso: colunas necessárias para o cadastro atual
-    $checkEndossoNome = mysqli_query($conn, "SHOW COLUMNS FROM endosso LIKE 'endo_tx_nome'");
-    if ($checkEndossoNome && mysqli_num_rows($checkEndossoNome) == 0) {
+    if (bancoTabelaExiste($conn, "endosso") && !bancoColunaExiste($conn, "endosso", "endo_tx_nome")) {
         mysqli_query($conn, "ALTER TABLE endosso ADD COLUMN endo_tx_nome VARCHAR(255) NULL AFTER endo_nb_entidade");
     };
-    $checkEndossoEmpresa = mysqli_query($conn, "SHOW COLUMNS FROM endosso LIKE 'endo_nb_empresa'");
-    if ($checkEndossoEmpresa && mysqli_num_rows($checkEndossoEmpresa) == 0) {
+    if (bancoTabelaExiste($conn, "endosso") && !bancoColunaExiste($conn, "endosso", "endo_nb_empresa")) {
         mysqli_query($conn, "ALTER TABLE endosso ADD COLUMN endo_nb_empresa INT NULL AFTER endo_tx_nome");
     };
-    $checkEndossoPontos = mysqli_query($conn, "SHOW COLUMNS FROM endosso LIKE 'endo_tx_pontos'");
-    if ($checkEndossoPontos && mysqli_num_rows($checkEndossoPontos) == 0) {
+    if (bancoTabelaExiste($conn, "endosso") && !bancoColunaExiste($conn, "endosso", "endo_tx_pontos")) {
         mysqli_query($conn, "ALTER TABLE endosso ADD COLUMN endo_tx_pontos LONGTEXT NULL AFTER endo_tx_max50APagar");
     };
-    $checkEndossoResumo = mysqli_query($conn, "SHOW COLUMNS FROM endosso LIKE 'totalResumo'");
-    if ($checkEndossoResumo && mysqli_num_rows($checkEndossoResumo) == 0) {
+    if (bancoTabelaExiste($conn, "endosso") && !bancoColunaExiste($conn, "endosso", "totalResumo")) {
         mysqli_query($conn, "ALTER TABLE endosso ADD COLUMN totalResumo LONGTEXT NULL AFTER endo_tx_pontos");
     };
 
     // Migração da tabela entidade: aumentar o tamanho do saldo de horas para varchar(15)
-    $checkBancoCol = mysqli_query($conn, "SHOW COLUMNS FROM entidade LIKE 'enti_tx_banco'");
+    $checkBancoCol = bancoTabelaExiste($conn, "entidade")
+        ? mysqli_query($conn, "SHOW COLUMNS FROM entidade LIKE 'enti_tx_banco'")
+        : null;
     if ($checkBancoCol && $row = mysqli_fetch_assoc($checkBancoCol)) {
         if ($row['Type'] === 'varchar(8)') {
             mysqli_query($conn, "ALTER TABLE entidade MODIFY COLUMN enti_tx_banco VARCHAR(15) DEFAULT '00:00';");
@@ -196,28 +305,25 @@
         "enti_respFuncionario_id"  => "INT NULL",
         "enti_respFuncionario_ids" => "TEXT NULL",
     ] as $__respCol => $__respTipo) {
-        $__checkRespCol = mysqli_query($conn, "SHOW COLUMNS FROM entidade LIKE '{$__respCol}'");
-        if ($__checkRespCol && mysqli_num_rows($__checkRespCol) === 0) {
+        if (bancoTabelaExiste($conn, "entidade") && !bancoColunaExiste($conn, "entidade", $__respCol)) {
             mysqli_query($conn, "ALTER TABLE entidade ADD COLUMN {$__respCol} {$__respTipo}");
         }
     }
 
     // Migração da tabela perfil_acesso: coluna pra esconder o campo de salário do
     // funcionário para quem estiver incluído em perfis marcados com essa opção.
-    $checkEsconderSalario = mysqli_query($conn, "SHOW COLUMNS FROM perfil_acesso LIKE 'perfil_tx_esconderSalario'");
-    if ($checkEsconderSalario && mysqli_num_rows($checkEsconderSalario) === 0) {
+    if (bancoTabelaExiste($conn, "perfil_acesso") && !bancoColunaExiste($conn, "perfil_acesso", "perfil_tx_esconderSalario")) {
         mysqli_query($conn, "ALTER TABLE perfil_acesso ADD COLUMN perfil_tx_esconderSalario ENUM('sim','nao') NOT NULL DEFAULT 'nao'");
     };
 
     // Migração da tabela perfil_acesso: flag que libera o mês corrente completo no espelho
     // de ponto do próprio funcionário. Sem a flag, valem as últimas 48 horas (somente leitura).
-    $checkEspelhoMesPerfil = mysqli_query($conn, "SHOW COLUMNS FROM perfil_acesso LIKE 'perfil_tx_espelhoMes'");
-    if ($checkEspelhoMesPerfil && mysqli_num_rows($checkEspelhoMesPerfil) === 0) {
+    if (bancoTabelaExiste($conn, "perfil_acesso") && !bancoColunaExiste($conn, "perfil_acesso", "perfil_tx_espelhoMes")) {
         mysqli_query($conn, "ALTER TABLE perfil_acesso ADD COLUMN perfil_tx_espelhoMes ENUM('sim','nao') NOT NULL DEFAULT 'nao'");
     };
 
     // Criação da tabela feriado_funcionario se não existir
-    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS feriado_funcionario (
+    bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS feriado_funcionario (
         fefi_nb_id INT AUTO_INCREMENT PRIMARY KEY,
         fefi_tx_nome VARCHAR(255) NOT NULL,
         fefi_tx_data DATE NOT NULL,
@@ -229,7 +335,7 @@
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;");
 
     // Criação da tabela feriado_parametro se não existir
-    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS feriado_parametro (
+    bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS feriado_parametro (
         feit_nb_id INT AUTO_INCREMENT PRIMARY KEY,
         feit_nb_parametro INT NOT NULL,
         feit_tx_titulo VARCHAR(255) NOT NULL,
@@ -246,7 +352,7 @@
     // =====================================================
 
     // Tabela principal de treinamentos
-    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento (
+    bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS treinamento (
         trei_nb_id INT AUTO_INCREMENT PRIMARY KEY,
         trei_tx_titulo VARCHAR(255) NOT NULL,
         trei_tx_descricao TEXT,
@@ -273,19 +379,17 @@
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
     // Campo de notificação de novo treinamento (migração segura para tabelas existentes)
-    $__checkGerarNotif = mysqli_query($conn, "SHOW COLUMNS FROM treinamento LIKE 'trei_tx_gerar_notificacao'");
-    if ($__checkGerarNotif && mysqli_num_rows($__checkGerarNotif) === 0) {
+    if (bancoTabelaExiste($conn, "treinamento") && !bancoColunaExiste($conn, "treinamento", "trei_tx_gerar_notificacao")) {
         mysqli_query($conn, "ALTER TABLE treinamento ADD COLUMN trei_tx_gerar_notificacao ENUM('sim','nao') NOT NULL DEFAULT 'nao' AFTER trei_tx_status");
     }
 
     // Máximo de tentativas da avaliação (0 = ilimitado com segurança: 10 tentativas + bloqueio de 1h)
-    $__checkMaxTent = mysqli_query($conn, "SHOW COLUMNS FROM treinamento LIKE 'trei_nb_max_tentativas'");
-    if ($__checkMaxTent && mysqli_num_rows($__checkMaxTent) === 0) {
+    if (bancoTabelaExiste($conn, "treinamento") && !bancoColunaExiste($conn, "treinamento", "trei_nb_max_tentativas")) {
         mysqli_query($conn, "ALTER TABLE treinamento ADD COLUMN trei_nb_max_tentativas INT NOT NULL DEFAULT 2 AFTER trei_nb_nota_minima_aprovacao");
     }
 
     // Tabela de materiais de apoio
-    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_material (
+    bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS treinamento_material (
         tram_nb_id INT AUTO_INCREMENT PRIMARY KEY,
         tram_nb_treinamento_id INT NOT NULL,
         tram_tx_nome VARCHAR(255),
@@ -301,7 +405,7 @@
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
     // Tabela de questões (banco de provas)
-    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_questao (
+    bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS treinamento_questao (
         treq_nb_id INT AUTO_INCREMENT PRIMARY KEY,
         treq_nb_treinamento_id INT NOT NULL,
         treq_tx_pergunta TEXT NOT NULL,
@@ -315,7 +419,7 @@
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
     // Tabela de progresso do usuário (já nasce com a estrutura final, incluindo progresso por episódio/série)
-    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_progresso (
+    bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS treinamento_progresso (
         trepr_nb_id INT AUTO_INCREMENT PRIMARY KEY,
         trepr_nb_usuario_id INT NOT NULL,
         trepr_nb_treinamento_id INT NOT NULL,
@@ -338,8 +442,7 @@
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
     // Migração: progresso por episódio (séries) em tabelas já existentes
-    $__checkEpiProg = mysqli_query($conn, "SHOW COLUMNS FROM treinamento_progresso LIKE 'trepr_nb_episodio_id'");
-    if ($__checkEpiProg && mysqli_num_rows($__checkEpiProg) === 0) {
+    if (bancoTabelaExiste($conn, "treinamento_progresso") && !bancoColunaExiste($conn, "treinamento_progresso", "trepr_nb_episodio_id")) {
         mysqli_query($conn, "ALTER TABLE treinamento_progresso ADD COLUMN trepr_nb_episodio_id INT NULL AFTER trepr_nb_treinamento_id");
     }
     // Garante a unique por episódio mesmo que a coluna já existisse sem o índice
@@ -349,8 +452,7 @@
     }
 
     // Data da última tentativa de avaliação (para o bloqueio de 1h no modo 0)
-    $__checkUltTent = mysqli_query($conn, "SHOW COLUMNS FROM treinamento_progresso LIKE 'trepr_dt_data_ultima_avaliacao'");
-    if ($__checkUltTent && mysqli_num_rows($__checkUltTent) === 0) {
+    if (bancoTabelaExiste($conn, "treinamento_progresso") && !bancoColunaExiste($conn, "treinamento_progresso", "trepr_dt_data_ultima_avaliacao")) {
         mysqli_query($conn, "ALTER TABLE treinamento_progresso ADD COLUMN trepr_dt_data_ultima_avaliacao DATETIME NULL AFTER trepr_nb_avaliacao_nota");
     }
 
@@ -361,20 +463,17 @@
     }
 
     // Migração: campo série no treinamento
-    $__checkSerie = mysqli_query($conn, "SHOW COLUMNS FROM treinamento LIKE 'trei_tx_serie'");
-    if ($__checkSerie && mysqli_num_rows($__checkSerie) === 0) {
+    if (bancoTabelaExiste($conn, "treinamento") && !bancoColunaExiste($conn, "treinamento", "trei_tx_serie")) {
         mysqli_query($conn, "ALTER TABLE treinamento ADD COLUMN trei_tx_serie ENUM('sim','nao') NOT NULL DEFAULT 'nao' AFTER trei_tx_status");
     }
 
     // Migração: empresas habilitadas por treinamento (JSON de ids; NULL/vazio = todas)
-    $__checkEmpHab = mysqli_query($conn, "SHOW COLUMNS FROM treinamento LIKE 'trei_tx_empresas_habilitadas'");
-    if ($__checkEmpHab && mysqli_num_rows($__checkEmpHab) === 0) {
+    if (bancoTabelaExiste($conn, "treinamento") && !bancoColunaExiste($conn, "treinamento", "trei_tx_empresas_habilitadas")) {
         mysqli_query($conn, "ALTER TABLE treinamento ADD COLUMN trei_tx_empresas_habilitadas TEXT NULL AFTER trei_tx_tipo_usuario_permitido");
     }
 
     // Migração: instrutor responsável e criador do treinamento
-    $__checkInstrutor = mysqli_query($conn, "SHOW COLUMNS FROM treinamento LIKE 'trei_tx_instrutor_tipo'");
-    if ($__checkInstrutor && mysqli_num_rows($__checkInstrutor) === 0) {
+    if (bancoTabelaExiste($conn, "treinamento") && !bancoColunaExiste($conn, "treinamento", "trei_tx_instrutor_tipo")) {
         mysqli_query($conn, "ALTER TABLE treinamento
             ADD COLUMN trei_tx_instrutor_tipo ENUM('funcionario','externo') NOT NULL DEFAULT 'funcionario' AFTER trei_nb_obrigatorio,
             ADD COLUMN trei_nb_instrutor_entidade_id INT NULL AFTER trei_tx_instrutor_tipo,
@@ -388,7 +487,7 @@
     }
 
     // Tabela de episódios (séries de vídeos)
-    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_episodio (
+    bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS treinamento_episodio (
         trepi_nb_id INT AUTO_INCREMENT PRIMARY KEY,
         trepi_nb_treinamento_id INT NOT NULL,
         trepi_nb_ordem INT NOT NULL DEFAULT 1,
@@ -405,7 +504,7 @@
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
     // Tabela de questões por episódio
-    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_episodio_questao (
+    bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS treinamento_episodio_questao (
         trepq_nb_id INT AUTO_INCREMENT PRIMARY KEY,
         trepq_nb_episodio_id INT NOT NULL,
         trepq_tx_pergunta TEXT NOT NULL,
@@ -419,7 +518,7 @@
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
     // Tabela de atribuições (treinamento x usuário)
-    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_atribuicao (
+    bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS treinamento_atribuicao (
         treate_nb_id INT AUTO_INCREMENT PRIMARY KEY,
         treate_nb_treinamento_id INT NOT NULL,
         treate_nb_usuario_id INT NOT NULL,
@@ -431,7 +530,7 @@
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
     // Tabela de logs de auditoria
-    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_log (
+    bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS treinamento_log (
         trelog_nb_id INT AUTO_INCREMENT PRIMARY KEY,
         trelog_nb_treinamento_id INT NOT NULL,
         trelog_nb_usuario_id INT NOT NULL,
@@ -447,7 +546,7 @@
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
     // Tabela de bloqueios individuais (usuário desmarcado não vê o treinamento mesmo com perfil)
-    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_bloqueio (
+    bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS treinamento_bloqueio (
         trebl_nb_id INT AUTO_INCREMENT PRIMARY KEY,
         trebl_nb_treinamento_id INT NOT NULL,
         trebl_nb_usuario_id INT NOT NULL,
@@ -459,7 +558,7 @@
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
     // Tabela de mensagens da conversa do treinamento (chat + auditoria)
-    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_mensagem (
+    bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS treinamento_mensagem (
         trem_nb_id INT AUTO_INCREMENT PRIMARY KEY,
         trem_nb_treinamento_id INT NOT NULL,
         trem_nb_usuario_id INT NOT NULL,
@@ -476,7 +575,7 @@
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
     // Controle de leitura da conversa por gestor (marca até onde cada gestor visualizou)
-    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_mensagem_leitura (
+    bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS treinamento_mensagem_leitura (
         trei_nb_id INT NOT NULL,
         user_nb_id INT NOT NULL,
         trel_nb_ultimo_id_lido INT NOT NULL DEFAULT 0,
@@ -487,7 +586,7 @@
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
     // Certificados de conclusão (um por treinamento/usuário) gerados automaticamente
-    mysqli_query($conn, "CREATE TABLE IF NOT EXISTS treinamento_certificado (
+    bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS treinamento_certificado (
         trece_nb_id INT AUTO_INCREMENT PRIMARY KEY,
         trece_nb_treinamento_id INT NOT NULL,
         trece_nb_usuario_id INT NOT NULL,
@@ -510,7 +609,8 @@
         KEY idx_solicitacao (trece_nb_solicitacao_assinatura)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
-    // =====================================================
+    // Fim da estrutura: o restante do sistema volta a reportar erros de SQL.
+    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
     // =====================================================
     // PADRÕES DE GRID (3 por usuário, aplicados em todos os grids)
@@ -521,7 +621,7 @@
         if ($userId <= 0) return;
         $existe = mysqli_query($conn, "SHOW TABLES LIKE 'grid_user_padrao'");
         if (mysqli_num_rows($existe) == 0) {
-            mysqli_query($conn, "CREATE TABLE IF NOT EXISTS grid_user_padrao (
+            bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS grid_user_padrao (
                 gup_nb_id INT AUTO_INCREMENT PRIMARY KEY,
                 gup_nb_user INT NOT NULL,
                 gup_nb_ordem TINYINT NOT NULL DEFAULT 1,
