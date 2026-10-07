@@ -344,6 +344,48 @@ if(
     redirectTo($redirect_to, "error", "Nenhum signatário informado");
 }
 
+/* Trava de envio repetido.
+   Houve caso de o mesmo documento ser enviado duas vezes com segundos de
+   diferença (duplo clique / reenvio do formulário), criando duas solicitações
+   para a mesma pessoa — uma delas fica pendente para sempre. A chave abaixo
+   identifica o envio; se o mesmo envio chegar de novo dentro da janela, o
+   segundo é descartado com um aviso em vez de criar outra solicitação. */
+if(session_status() === PHP_SESSION_NONE){
+    session_start();
+}
+$assinaturaChaveEnvio = md5(json_encode([
+    "modo"       => $modo_envio,
+    "tipo_doc"   => intval($_POST["tipo_documento"] ?? 0),
+    "arquivo"    => strval($_FILES["arquivo"]["name"] ?? ""),
+    "tamanho"    => intval($_FILES["arquivo"]["size"] ?? 0),
+    "entidade"   => intval($_POST["enti_nb_id"] ?? 0),
+    "signatarios"=> array_map(function($s){
+        return strtolower(trim(strval($s["email"] ?? ""))).":".intval($s["enti_nb_id"] ?? 0);
+    }, is_array($signatarios) ? $signatarios : []),
+    "ids"        => strval($_POST["ids"] ?? ""),
+]));
+$assinaturaJanelaSegundos = 120;
+$assinaturaEnviosRecentes = is_array($_SESSION["assinatura_envios_recentes"] ?? null)
+    ? $_SESSION["assinatura_envios_recentes"]
+    : [];
+$agoraEnvio = time();
+// Limpa o que já passou da janela.
+foreach($assinaturaEnviosRecentes as $chave => $quando){
+    if(($agoraEnvio - intval($quando)) > $assinaturaJanelaSegundos){
+        unset($assinaturaEnviosRecentes[$chave]);
+    }
+}
+if(isset($assinaturaEnviosRecentes[$assinaturaChaveEnvio])){
+    $_SESSION["assinatura_envios_recentes"] = $assinaturaEnviosRecentes;
+    redirectTo(
+        $redirect_to,
+        "error",
+        "Este mesmo envio acabou de ser feito (há ".($agoraEnvio - intval($assinaturaEnviosRecentes[$assinaturaChaveEnvio]))."s). Confira na consulta antes de enviar de novo."
+    );
+}
+$assinaturaEnviosRecentes[$assinaturaChaveEnvio] = $agoraEnvio;
+$_SESSION["assinatura_envios_recentes"] = $assinaturaEnviosRecentes;
+
 // Filtrar signatários vazios (removidos no frontend mas que ainda vieram no POST)
 if (!empty($signatarios) && is_array($signatarios)) {
     $signatarios = array_values(array_filter($signatarios, function($sig) {

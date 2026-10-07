@@ -19,6 +19,7 @@
             $linha .= " 
                         +'<td style=\'text-align: center;\'>'+item.matricula+'</td>'
                          +'<td style=\'text-align: center;\'>'+(item.nome || item.Nome || '-')+'</td>'
+                         +'<td style=\'text-align: center;\'>'+(item.telefone || '-')+'</td>'
                          +'<td style=\'text-align: center;\'>'+item.ultimaJornada+'</td>'
                         +'<td style=\'text-align: center;\'>'+item.ocupacao+'</td>'
                         +'<td style=\'text-align: center;\'>'+ (item.tipoOperacaoNome || '-') +'</td>'
@@ -43,7 +44,70 @@
                         window.print();
                     }
 
-                    var contagemOcupacoes = {}; 
+                    var contagemOcupacoes = {};
+
+                    // Listas completas de cada card, para o popup. Quem está indisponível ou
+                    // em jornada aberta não entra na tabela, mas continua acessível aqui.
+                    var djGrupos = { disponivel: [], parcial: [], naoPermitido: [], EmJornada: [] };
+
+                    var djRotulos = {
+                        disponivel:   'Disponíveis com 11h de descanso',
+                        parcial:      'Parcialmente disponíveis (8h de descanso)',
+                        naoPermitido: 'Indisponíveis',
+                        EmJornada:    'Em jornada aberta'
+                    };
+
+                    function djEscapar(valor){
+                        return $('<span>').text(valor === null || valor === undefined ? '' : valor).html();
+                    }
+
+                    function djAtualizarCards(){
+                        Object.keys(djGrupos).forEach(function(grupo){
+                            var total = djGrupos[grupo].length;
+                            $('#dj-num-' + grupo).text(total);
+                            $('.dj-card[data-grupo=\"' + grupo + '\"]').attr('data-vazio', total > 0 ? '0' : '1');
+                        });
+                    }
+
+                    function djMontarLista(grupo){
+                        var pessoas = djGrupos[grupo] || [];
+                        if (!pessoas.length) {
+                            return '<div class=\"dj-lista-vazia\">Nenhum funcionário neste grupo agora.</div>';
+                        }
+
+                        var emJornada = (grupo === 'EmJornada');
+                        var html = '<table class=\"table table-striped table-hover dj-lista\"><thead><tr>'
+                            + '<th>Matrícula</th><th>Nome</th><th>Contato</th><th>Ocupação</th><th>Cargo</th>'
+                            + '<th>' + (emJornada ? 'Jornada' : 'Fim de jornada') + '</th>'
+                            + (emJornada ? '' : '<th>Tempo de disponibilidade</th><th>Disponível a partir de</th>')
+                            + '</tr></thead><tbody>';
+
+                        pessoas.forEach(function(p){
+                            html += '<tr>'
+                                + '<td>' + djEscapar(p.matricula) + '</td>'
+                                + '<td>' + djEscapar(p.nome || p.Nome || '-') + '</td>'
+                                + '<td>' + djEscapar(p.telefone || '-') + '</td>'
+                                + '<td>' + djEscapar(p.ocupacao || '-') + '</td>'
+                                + '<td>' + djEscapar(p.tipoOperacaoNome || '-') + '</td>'
+                                + '<td>' + djEscapar(p.ultimaJornada || '-') + '</td>'
+                                + (emJornada ? '' :
+                                      '<td><strong>' + djEscapar(p.repouso || '-') + '</strong></td>'
+                                    + '<td>' + djEscapar(p.Apos11 || p.Apos8 || '-') + '</td>')
+                                + '</tr>';
+                        });
+
+                        return html + '</tbody></table>';
+                    }
+
+                    $(document).on('click', '.dj-card', function(){
+                        var grupo = $(this).data('grupo');
+                        var pessoas = djGrupos[grupo] || [];
+                        if (!pessoas.length) { return; }
+                        $('#dj-modal-titulo').text(djRotulos[grupo] + ' (' + pessoas.length + ')');
+                        $('#dj-modal-corpo').html(djMontarLista(grupo));
+                        $('#dj-modal-lista').modal('show');
+                    });
+
                     $(document).ready(function(){
                         var tabela = $('#tabela-empresas tbody');
                         var filtro = '".$filtro ."';
@@ -76,11 +140,20 @@
                                             status = 'Indisponível';
                                         }
 
+                                        // Guarda a lista inteira do grupo para o popup do card,
+                                        // antes do filtro de status, que só vale para a tabela.
+                                        if (Array.isArray(item) && djGrupos.hasOwnProperty(index)) {
+                                            djGrupos[index] = djGrupos[index].concat(item);
+                                        }
+
                                         if (filtro !== '' && index !== filtro) {
                                             return;
                                         }
 
-                                        if(index != 'EmJornada'){
+                                        // A tabela lista apenas quem pode ser escalado: jornada
+                                        // fechada e descanso cumprido (total ou parcial). Jornada
+                                        // aberta e indisponível ficam só na contagem dos cards.
+                                        if(index != 'EmJornada' && index != 'naoPermitido'){
                                             if (Array.isArray(item)) {
                                                 // Itera sobre o array de motoristas
                                                 $.each(item, function(index, item) {
@@ -94,7 +167,7 @@
                                                     tabela.append(linha);
                                                 });
                                             }
-                                        }  
+                                        }
 
                                         if(contagemStatus.hasOwnProperty(index)) {
                                             if (Array.isArray(item)) {
@@ -127,7 +200,7 @@
                                     consulta.after('<br><strong>Ocupação:&nbsp</strong> <span>'+ocupacaoData+'</span>');
 
                                     var resumo = $('#resumo');
-                                    resumo.after('<br><span style=\"font-size: 10px; text-align: justify;\"><i class=\"fa fa-info-circle\" aria-hidden=\"true\" style=\"font-size: 14px;\"></i> Funcionários com jornada aberta não aparecem neste painel.</span>');
+                                    resumo.after('<br><span style=\"font-size: 10px; text-align: justify;\"><i class=\"fa fa-info-circle\" aria-hidden=\"true\" style=\"font-size: 14px;\"></i> A tabela lista somente quem pode ser escalado. Quem está com <b>jornada aberta</b> (descanso só começa a contar depois do fim da jornada) e quem está <b>indisponível</b> entram apenas na contagem dos cards acima.</span>');
 
                                     var tabela_funcionarios = $('#tabela-funcionarios thead');
 
@@ -160,54 +233,10 @@
                                     tabela_funcionarios.append(ocupacoesHTML);
 
 
-                                    var tabela_disponivel = $('#tabela-disponivel thead');
-                                    var tabela_parcial = $('#tabela-parcial thead');
-                                    var tabela_indisponivel = $('#tabela-indisponivel thead');
-                                    var tabela_jornada = $('#tabela-jornada thead');
-
-                                    var linha_disponivel = `
-                                        <tr>
-                                            <td style=\"background-color: lightgreen; height: 54px; vertical-align: middle; font-size: 13px; padding: 10px;\">
-                                                <div style=\"display: flex; justify-content: space-between; align-items: center;\">
-                                                    <strong>Disponível com 11H:</strong>
-                                                    <span style=\"margin-left: 10px;\"><strong>\${contagemStatus.disponivel}</strong></span>
-                                                </div>
-                                            </td>
-                                        </tr>`;
-                                    tabela_disponivel.append(linha_disponivel);
-
-                                    var linha_parcial = `
-                                        <tr>
-                                            <td style=\"background-color: var(--var-lightorange); height: 54px; vertical-align: middle; font-size: 13px; padding: 10px;\">
-                                                <div style=\"display: flex; justify-content: space-between; align-items: center;\">
-                                                    <strong>Parcialmente Disponível com 8H:</strong>
-                                                    <span style=\"margin-left: 10px;\"><strong>\${contagemStatus.parcial}</strong></span>
-                                                </div>
-                                            </td>
-                                        </tr>`;
-                                    tabela_parcial.append(linha_parcial);
-
-                                    var linha_indisponivel = `
-                                        <tr>
-                                            <td style=\"background-color: #a30000; color: white; padding: 5px 10px; height: 54px; vertical-align: middle; font-size: 13px; padding: 10px;\">
-                                                <div style=\"display: flex; justify-content: space-between; align-items: center;\">
-                                                    <strong>Indisponível:</strong>
-                                                    <span style=\"margin-left: 10px;\"><strong>\${contagemStatus.naoPermitido}</strong></span>
-                                                </div>
-                                            </td>
-                                        </tr>`;
-                                    tabela_indisponivel.append(linha_indisponivel);
-
-                                    var linha_jornada = `
-                                        <tr>
-                                            <td style=\"background-color: black; color: white; padding: 5px 10px; height: 54px; vertical-align: middle; font-size: 13px; padding: 10px;\">
-                                                <div style=\"display: flex; justify-content: space-between; align-items: center;\">
-                                                    <strong>Em Jornada</strong>
-                                                    <span style=\"margin-left: 10px;\"><strong>\${data.total.totalMotoristasJornada}</strong></span>
-                                                </div>
-                                            </td>
-                                        </tr>`;
-                                    tabela_jornada.append(linha_jornada);
+                                    // Números dos cards (a lista de cada um abre no popup).
+                                    // 'Em jornada' vem do total calculado no servidor.
+                                    djAtualizarCards();
+                                    $('#dj-num-EmJornada').text(data.total.totalMotoristasJornada);
 
                                 },
                                 error: function(){
@@ -287,7 +316,7 @@
                             });
                         }
 
-                        var colunasPermitidas = ['matricula', 'nome', 'jornada', 'ocupacao', 'operacao', 'setor', 'subsetor', 'repouso', 'disponível8', 'disponível11'];
+                        var colunasPermitidas = ['matricula', 'nome', 'contato', 'jornada', 'ocupacao', 'operacao', 'setor', 'subsetor', 'repouso', 'disponível8', 'disponível11'];
                         var colunasPermitidas2 = ['ocupacao2', 'matricula2', 'nome2', 'jornada2', 'consulta2', 'repouso2', 'disponível82', 'disponível112'];
 
                         // Evento de clique para ordenar a tabela ao clicar no cabeçalho
@@ -358,8 +387,8 @@
             ["" => "Todos", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário"]),
             campo_dataHora("Disponibilidade de Jornada Projetada para:","busca_periodo",(!empty($_POST["busca_periodo"])? $_POST["busca_periodo"] : ''),
             2),
-            combo("Status", "busca_Dispobilidade", ($_POST["busca_Dispobilidade"] ?? ""), 2, 
-            ["" => "Todos", "disponivel" => "Disponives", "naoPermitido" => "Indisponives", "parcial" => "Parcialmente disponível"]),
+            combo("Status", "busca_Dispobilidade", ($_POST["busca_Dispobilidade"] ?? ""), 2,
+            ["" => "Todos", "disponivel" => "Disponives", "parcial" => "Parcialmente disponível"]),
             combo_bd("!Cargo", "operacao", ($_POST["operacao"]?? ""), 2, "operacao", "", "ORDER BY oper_tx_nome ASC"),
             combo_bd("!Setor", 		"busca_setor", 	($_POST["busca_setor"]?? ""), 	2, "grupos_documentos", "onchange=\"document.contex_form.busca_subsetor.value=''; document.contex_form.reloadOnly.value='1'; this.form.submit();\""),
             combo_bd("!Subsetor", 	"busca_subsetor", 	($_POST["busca_subsetor"]?? ""), 	2, "sbgrupos_documentos", "", (!empty($_POST["busca_setor"]) ? " AND sbgr_nb_idgrup = ".intval($_POST["busca_setor"])." ORDER BY sbgr_tx_nome ASC" : " AND 1 = 0 ORDER BY sbgr_tx_nome ASC"))
@@ -370,10 +399,10 @@
         function enviarDados() {
             console.log(contagemOcupacoes);
             const tabelaOriginal = document.querySelector('#tabela-empresas');
-            const disponivel = document.querySelector('#tabela-disponivel span strong')?.textContent || '0';
-            const parcial = document.querySelector('#tabela-parcial span strong')?.textContent || '0';
-            const indisponível = document.querySelector('#tabela-indisponivel span strong')?.textContent || '0';
-            const EmJornada = document.querySelector('#tabela-jornada span strong')?.textContent || '0';
+            const disponivel = document.querySelector('#dj-num-disponivel')?.textContent || '0';
+            const parcial = document.querySelector('#dj-num-parcial')?.textContent || '0';
+            const indisponível = document.querySelector('#dj-num-naoPermitido')?.textContent || '0';
+            const EmJornada = document.querySelector('#dj-num-EmJornada')?.textContent || '0';
 
             if (!tabelaOriginal) return;
 
@@ -413,10 +442,10 @@
                 tr.querySelectorAll('th').forEach((th, index)=> {
                     let largura = '80px'; // valor padrão
                     if (index === 0) largura = '40px';
-                    else if (index === 1) largura = '40px';
-                    else if (index === 2) largura = '222px';
-                    else if (index === 3) largura = '80px';
-                    else if (index === 4) largura = '100px';
+                    else if (index === 1) largura = '160px';
+                    else if (index === 2) largura = '90px';
+                    else if (index === 3) largura = '100px';
+                    else if (index === 4) largura = '80px';
                     else if (index === 5) largura = '100px';
 
                     htmlSimplificado += '<th style=\"border:0.5px solid #000;padding:2px;text-align:center;font-weight:bold;background-color:#444d58; color:white; width:' + largura + '\">';
@@ -438,10 +467,10 @@
                     tr.querySelectorAll('td').forEach((td, colIndex) => {
                         let largura = '80px'; // valor padrão
                         if (colIndex === 0) largura = '40px';
-                        else if (colIndex === 1) largura = '40px';
-                        else if (colIndex === 2) largura = '222px';
-                        else if (colIndex === 3) largura = '80px';
-                        else if (colIndex === 4) largura = '100px';
+                        else if (colIndex === 1) largura = '160px';
+                        else if (colIndex === 2) largura = '90px';
+                        else if (colIndex === 3) largura = '100px';
+                        else if (colIndex === 4) largura = '80px';
                         else if (colIndex === 5) largura = '100px';
 
                         let estiloBase = 'border:0.5px solid #000;padding:2px;font-size:7pt;width:' + largura + ';';
@@ -574,6 +603,7 @@
                 $rowTitulos .= "
                       <th class='matricula'>Matrícula</th>
                 <th class='nome'>Nome</th>
+                <th class='contato'>Contato</th>
                 <th class='jornada'>Fim de jornada</th>
                 <th class='ocupacao'>Ocupação</th>
                 <th class='operacao'>Cargo</th>
@@ -586,45 +616,124 @@
                 <th class=''>Status</th>";
                 $rowTitulos .= "</tr>";
 
-                $tabelaMotivo = "
-			    <div style='display: flex; flex-direction: column;'>
-				<div class='row' id='resumo'>
-					<div class='col-md-4.5'>
-						<table id='tabela-funcionarios'
-							class='table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact'>
-							<thead>
-							</thead>
-                        </table>
+                /* Cards de resumo: cada um abre a lista completa do seu grupo num popup.
+                   Os números são preenchidos pelo JS em carregarJS(). */
+                $tabelaMotivo = <<<'HTML'
+                <style>
+                    .dj-resumo{ display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+                    .dj-ocupacoes{ flex: 0 0 auto; }
+                    /* nowrap: os quatro cards ficam sempre na mesma linha, um do lado do outro */
+                    .dj-cards{ display: flex; flex-wrap: nowrap; gap: 10px; flex: 1 1 420px; min-width: 0; }
+
+                    .dj-card{
+                        flex: 1 1 0;
+                        min-width: 0;
+                        border: none;
+                        border-radius: 12px;
+                        padding: 12px 13px;
+                        text-align: left;
+                        color: #fff;
+                        cursor: pointer;
+                        box-shadow: 0 2px 6px rgba(0,0,0,.18);
+                        transition: transform .15s ease, box-shadow .15s ease;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                    }
+
+                    .dj-card:hover{ transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,.26); }
+                    .dj-card:focus{ outline: 2px solid #2f6fa3; outline-offset: 2px; }
+                    .dj-card[data-vazio="1"]{ opacity: .5; cursor: default; transform: none; box-shadow: 0 2px 6px rgba(0,0,0,.12); }
+
+                    .dj-card__rotulo{ font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; line-height: 1.25; }
+                    .dj-card__numero{ font-size: 30px; font-weight: 700; line-height: 1; margin-top: 8px; font-variant-numeric: tabular-nums; }
+                    .dj-card__acao{ font-size: 10px; opacity: .88; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+                    .dj-card--disponivel{ background: #2e8b45; }
+                    .dj-card--parcial{ background: #d98215; }
+                    .dj-card--indisponivel{ background: #a30000; }
+                    .dj-card--jornada{ background: #2b3038; }
+
+                    /* Popup largo e baixo: cabe a lista inteira sem rolar muito.
+                       Posição é a padrão do Bootstrap (no topo da tela). */
+                    #dj-modal-lista .modal-dialog{ width: 96%; max-width: 1500px; margin: 20px auto; }
+                    #dj-modal-lista .modal-header{ padding: 10px 15px; }
+                    #dj-modal-lista .modal-title{ font-size: 15px; }
+                    #dj-modal-lista .modal-body{ padding: 10px 12px; }
+                    #dj-modal-lista .modal-footer{ padding: 8px 12px; }
+
+                    .dj-lista{ margin-bottom: 0; }
+                    .dj-lista td, .dj-lista th{ font-size: 11px; padding: 4px 6px !important; vertical-align: middle !important; white-space: nowrap; }
+                    .dj-lista th{ font-size: 9.5px; text-transform: uppercase; color: #6b7684; }
+                    .dj-lista-vazia{ padding: 24px; text-align: center; color: #98a1ac; }
+
+                    @media print{
+                        .dj-card{ box-shadow: none; color: #000 !important; background: #fff !important; border: 1px solid #000; }
+                        .dj-card__acao{ display: none; }
+                    }
+
+                    @media(max-width: 768px){
+                        .dj-cards{ flex: 1 1 100%; flex-wrap: wrap; }
+                        .dj-card{ flex: 1 1 calc(50% - 10px); min-width: 0; padding: 10px; }
+                        .dj-card__numero{ font-size: 24px; }
+                        .dj-card__acao{ display: none; }
+                        #dj-modal-lista .modal-dialog{ width: 98%; margin: 10px auto; }
+                        .dj-lista td, .dj-lista th{ white-space: normal; }
+                    }
+                </style>
+
+                <div style="display: flex; flex-direction: column;">
+                <div class="row" id="resumo">
+                    <div class="dj-resumo">
+                        <div class="dj-ocupacoes">
+                            <table id="tabela-funcionarios"
+                                class="table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact">
+                                <thead></thead>
+                            </table>
+                        </div>
+
+                        <div class="dj-cards">
+                            <button type="button" class="dj-card dj-card--disponivel" data-grupo="disponivel" data-vazio="1">
+                                <span class="dj-card__rotulo">Disponível com 11h</span>
+                                <span class="dj-card__numero" id="dj-num-disponivel">0</span>
+                                <span class="dj-card__acao">clique para ver a lista</span>
+                            </button>
+
+                            <button type="button" class="dj-card dj-card--parcial" data-grupo="parcial" data-vazio="1">
+                                <span class="dj-card__rotulo">Parcial com 8h</span>
+                                <span class="dj-card__numero" id="dj-num-parcial">0</span>
+                                <span class="dj-card__acao">clique para ver a lista</span>
+                            </button>
+
+                            <button type="button" class="dj-card dj-card--indisponivel" data-grupo="naoPermitido" data-vazio="1">
+                                <span class="dj-card__rotulo">Indisponível</span>
+                                <span class="dj-card__numero" id="dj-num-naoPermitido">0</span>
+                                <span class="dj-card__acao">clique para ver a lista</span>
+                            </button>
+
+                            <button type="button" class="dj-card dj-card--jornada" data-grupo="EmJornada" data-vazio="1">
+                                <span class="dj-card__rotulo">Em jornada</span>
+                                <span class="dj-card__numero" id="dj-num-EmJornada">0</span>
+                                <span class="dj-card__acao">clique para ver a lista</span>
+                            </button>
+                        </div>
                     </div>
-                    <div style=\"padding-left: 50px;\">
-                        <table id=\"tabela-disponivel\"
-                            class=\"table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact \"
-                            style=\"margin-bottom: 15px; border-radius: 15px; overflow: hidden;\">
-                            <thead></thead>
-                        </table>
+
+                <div class="modal fade" id="dj-modal-lista" tabindex="-1" role="dialog">
+                    <div class="modal-dialog modal-lg" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                <h4 class="modal-title" id="dj-modal-titulo">Funcionários</h4>
+                            </div>
+                            <div class="modal-body" style="max-height: 58vh; overflow-y: auto;" id="dj-modal-corpo"></div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">Fechar</button>
+                            </div>
+                        </div>
                     </div>
-                    <div style=\"padding-left: 30px;\">
-                        <table id=\"tabela-parcial\"
-                            class=\"table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact\"
-                            style=\"margin-bottom: 15px; border-radius: 15px; overflow: hidden;\">
-                            <thead></thead>
-                        </table>
-                    </div>
-                    <div style=\"padding-left: 30px;\">
-                        <table id=\"tabela-indisponivel\"
-                            class=\"table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact\"
-                            style=\"margin-bottom: 15px; border-radius: 15px; overflow: hidden;\">
-                            <thead></thead>
-                        </table>
-                    </div>
-                    <div style=\"padding-left: 30px;\">
-                        <table id=\"tabela-jornada\"
-                            class=\"table w-auto text-xsmall table-bordered table-striped table-condensed flip-content compact\"
-                            style=\"margin-bottom: 15px; border-radius: 15px; overflow: hidden;\">
-                            <thead></thead>
-                        </table>
-                    </div>
-                    ";
+                </div>
+HTML;
 
                 $painelDisp = true;
                 include_once "painel_html2.php";

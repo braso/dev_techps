@@ -804,6 +804,192 @@ $cadastro_ok = $exigeCpfRg ? $cadastro_cpf_rg_ok : true;
                 window.ASSINATURA_EXIGE_CPF_RG = <?php echo $exigeCpfRg ? 'true' : 'false'; ?>;
                 window.ASSINATURA_EXIGE_RUBRICA = <?php echo $exigeRubrica ? 'true' : 'false'; ?>;
                 window.RUBRICA_CADASTRO_URL = <?php echo json_encode($rubricaCadastroUrl); ?>;
+                window.ASSINATURA_TOKEN = <?php echo json_encode($token); ?>;
+                window.ASSINATURA_AUTO = <?php echo (strval($_GET["auto"] ?? "") === "1") ? 'true' : 'false'; ?>;
+            </script>
+
+            <script>
+            /* ============================================================
+               Assinatura em sequência (quem assina muitos documentos).
+
+               Depois de assinar, a tela pergunta ao auto_assinar.php quantos
+               outros documentos esperam a assinatura desta mesma pessoa e
+               oferece assinar todos. Cada documento é assinado pela PRÓPRIA
+               tela de assinatura, carregada em segundo plano com &auto=1 —
+               assim o PDF final e a evidência (data, IP, hash) saem iguais
+               aos de uma assinatura feita à mão, um por um.
+               ============================================================ */
+            (function(){
+                var CHAVE = 'techps_assinatura_dados';
+
+                // ---------- modo automático: preenche e assina sozinho ----------
+                if (window.ASSINATURA_AUTO) {
+                    document.addEventListener('assinatura:concluida', function(ev){
+                        if (window.parent && window.parent !== window) {
+                            window.parent.postMessage({
+                                tipo: 'assinatura-auto',
+                                ok: true,
+                                token: window.ASSINATURA_TOKEN,
+                                protocolo: (ev.detail || {}).protocolo || ''
+                            }, window.location.origin);
+                        }
+                    });
+
+                    document.addEventListener('DOMContentLoaded', function(){
+                        var dados = null;
+                        try { dados = JSON.parse(sessionStorage.getItem(CHAVE) || 'null'); } catch(e){ dados = null; }
+
+                        var form = document.getElementById('formAssinatura');
+                        if (!form || !dados) {
+                            avisarFalha('Dados da assinatura não disponíveis nesta aba.');
+                            return;
+                        }
+
+                        function preencher(id, valor){
+                            var campo = document.getElementById(id);
+                            if (!campo || valor === undefined || valor === null) { return; }
+                            campo.value = valor;
+                            campo.dispatchEvent(new Event('input', { bubbles: true }));
+                            campo.dispatchEvent(new Event('blur', { bubbles: true }));
+                        }
+
+                        preencher('nome', dados.nome);
+                        preencher('cpf', dados.cpf);
+                        preencher('rg', dados.rg);
+                        if (dados.rubrica) { preencher('rubrica', dados.rubrica); }
+
+                        var aceite = document.getElementById('aceite');
+                        if (aceite) { aceite.checked = true; aceite.dispatchEvent(new Event('change', { bubbles: true })); }
+
+                        // Espera o PDF terminar de carregar antes de assinar.
+                        var tentativas = 0;
+                        var relogio = setInterval(function(){
+                            tentativas++;
+                            var botao = document.getElementById('btnAssinar');
+                            var pronto = botao && !botao.disabled;
+                            if (pronto) {
+                                clearInterval(relogio);
+                                form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                            } else if (tentativas > 150) {   // ~45s
+                                clearInterval(relogio);
+                                avisarFalha('O documento não carregou em tempo.');
+                            }
+                        }, 300);
+                    });
+
+                    function avisarFalha(motivo){
+                        if (window.parent && window.parent !== window) {
+                            window.parent.postMessage({
+                                tipo: 'assinatura-auto',
+                                ok: false,
+                                token: window.ASSINATURA_TOKEN,
+                                erro: motivo
+                            }, window.location.origin);
+                        }
+                    }
+                    return;
+                }
+
+                // ---------- modo normal: oferece assinar os pendentes ----------
+                document.addEventListener('assinatura:concluida', async function(ev){
+                    var detalhe = ev.detail || {};
+                    try { sessionStorage.setItem(CHAVE, JSON.stringify(detalhe.dados || {})); } catch(e){}
+
+                    var lista = [];
+                    try {
+                        var resp = await fetch('auto_assinar.php?acao=listar&token=' + encodeURIComponent(window.ASSINATURA_TOKEN), { credentials: 'same-origin' });
+                        var json = await resp.json();
+                        lista = (json && json.ok && Array.isArray(json.itens)) ? json.itens : [];
+                    } catch(e) {
+                        console.warn('não foi possível consultar os documentos pendentes', e);
+                        return;
+                    }
+                    if (!lista.length) { return; }
+
+                    var confirmacao = await Swal.fire({
+                        icon: 'question',
+                        title: 'Assinar os outros documentos?',
+                        html: 'Ainda há <b>' + lista.length + '</b> documento(s) esperando a sua assinatura.<br>'
+                            + 'Posso assinar todos agora, com os mesmos dados e a mesma rubrica que você acabou de usar.'
+                            + '<br><small style="color:#6b7280">Cada documento é assinado individualmente e registra a sua própria data, IP e código de verificação. Mantenha esta aba aberta.</small>',
+                        showCancelButton: true,
+                        confirmButtonText: 'Assinar os ' + lista.length,
+                        cancelButtonText: 'Assinar depois',
+                        confirmButtonColor: '#16a34a'
+                    });
+                    if (!confirmacao.isConfirmed) { return; }
+
+                    var assinados = 0, falhas = [];
+
+                    function assinarUm(item){
+                        return new Promise(function(resolve){
+                            var quadro = document.createElement('iframe');
+                            quadro.style.position = 'fixed';
+                            quadro.style.width = '1px';
+                            quadro.style.height = '1px';
+                            quadro.style.left = '-9999px';
+                            quadro.setAttribute('aria-hidden', 'true');
+
+                            var encerrado = false;
+                            function encerrar(ok, erro){
+                                if (encerrado) { return; }
+                                encerrado = true;
+                                window.removeEventListener('message', ouvir);
+                                clearTimeout(limite);
+                                if (quadro.parentNode) { quadro.parentNode.removeChild(quadro); }
+                                resolve({ ok: ok, erro: erro || '' });
+                            }
+                            function ouvir(mensagem){
+                                if (mensagem.origin !== window.location.origin) { return; }
+                                var d = mensagem.data || {};
+                                if (d.tipo !== 'assinatura-auto' || d.token !== item.token) { return; }
+                                encerrar(!!d.ok, d.erro);
+                            }
+
+                            window.addEventListener('message', ouvir);
+                            var limite = setTimeout(function(){ encerrar(false, 'tempo esgotado'); }, 120000);
+
+                            quadro.src = 'assinar_via_link.php?token=' + encodeURIComponent(item.token) + '&auto=1';
+                            document.body.appendChild(quadro);
+                        });
+                    }
+
+                    Swal.fire({
+                        title: 'Assinando documentos',
+                        html: '<div id="autoProgressoTexto">0 de ' + lista.length + '</div>'
+                            + '<div style="height:8px;background:#e5e7eb;border-radius:6px;margin-top:10px;overflow:hidden">'
+                            + '<div id="autoProgressoBarra" style="height:8px;width:0%;background:#16a34a;transition:width .25s"></div></div>'
+                            + '<div style="font-size:11.5px;color:#6b7280;margin-top:10px">Não feche esta aba até terminar.</div>',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false
+                    });
+
+                    for (var i = 0; i < lista.length; i++) {
+                        var resultado = await assinarUm(lista[i]);
+                        if (resultado.ok) { assinados++; } else { falhas.push((lista[i].documento || lista[i].token) + ': ' + resultado.erro); }
+
+                        var texto = document.getElementById('autoProgressoTexto');
+                        var barra = document.getElementById('autoProgressoBarra');
+                        if (texto) { texto.textContent = (i + 1) + ' de ' + lista.length; }
+                        if (barra) { barra.style.width = (((i + 1) / lista.length) * 100).toFixed(1) + '%'; }
+                    }
+
+                    try { sessionStorage.removeItem(CHAVE); } catch(e){}
+
+                    await Swal.fire({
+                        icon: falhas.length ? 'warning' : 'success',
+                        title: falhas.length ? 'Assinatura concluída com pendências' : 'Documentos assinados',
+                        html: '<b>' + assinados + '</b> documento(s) assinado(s).'
+                            + (falhas.length
+                                ? '<br><br><b>' + falhas.length + '</b> não puderam ser assinados agora:<br>'
+                                  + '<small style="color:#6b7280">' + falhas.slice(0, 5).join('<br>') + (falhas.length > 5 ? '<br>…' : '') + '</small>'
+                                  + '<br><br>Eles continuam pendentes e podem ser assinados pelo link de cada um.'
+                                : ''),
+                        confirmButtonColor: '#16a34a'
+                    });
+                });
+            })();
             </script>
             <?php if ($exigeRubrica): ?>
             <script>
