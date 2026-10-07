@@ -610,33 +610,40 @@ function index() {
         }
 
         $cabecalho = ["Matrícula", "Nome"];
+        $chavesCabecalho = ["matricula", "nome"];
         $numColunasFixas = 2;
 
         $visualizacao = $_POST["visualizacao"] ?? "analitica";
 
         if ($exibirEmpresa) {
             $cabecalho[] = "Empresa";
+            $chavesCabecalho[] = "empresa_nome";
             $numColunasFixas++;
         }
         if ($exibirOcupacao) {
             $cabecalho[] = "Ocupação";
+            $chavesCabecalho[] = "ocupacao";
             $numColunasFixas++;
         }
         if ($exibirCargo) {
             $cabecalho[] = "Cargo";
+            $chavesCabecalho[] = "cargo";
             $numColunasFixas++;
         }
         if ($exibirSetor) {
             $cabecalho[] = "Setor";
+            $chavesCabecalho[] = "setor";
             $numColunasFixas++;
         }
         if ($exibirSubSetor) {
             $cabecalho[] = "SubSetor";
+            $chavesCabecalho[] = "subsetor";
             $numColunasFixas++;
         }
 
         if ($visualizacao == "sintetica") {
             $cabecalho[] = "Escala";
+            $chavesCabecalho[] = "escala";
             $numColunasFixas++;
         }
         
@@ -670,8 +677,10 @@ function index() {
             }
             
             $cabecalho[] = $tituloColuna;
+            $chavesCabecalho[] = "dia_" . $data->format("d");
         }
         $cabecalho[] = "Total Previsto";
+        $chavesCabecalho[] = "totalPrevisto";
 
         $valores = [];
 
@@ -767,6 +776,51 @@ function index() {
             $valores[] = $row;
         }
 
+        // Remove colunas que não têm nenhuma informação em nenhuma linha (ex.: SubSetor vazio)
+        $colunasOpcionais = [
+            "empresa_nome" => "",
+            "ocupacao" => "",
+            "cargo" => "",
+            "setor" => "",
+            "subsetor" => "",
+            "escala" => "--:-- --:--",
+        ];
+        $indicesRemover = [];
+        foreach ($chavesCabecalho as $i => $chave) {
+            if (!array_key_exists($chave, $colunasOpcionais)) {
+                continue;
+            }
+            $valorVazio = $colunasOpcionais[$chave];
+            $temInformacao = false;
+            foreach ($valores as $valor) {
+                $v = trim((string)($valor[$chave] ?? ""));
+                if ($v !== "" && $v !== $valorVazio) {
+                    $temInformacao = true;
+                    break;
+                }
+            }
+            if (!$temInformacao) {
+                $indicesRemover[] = $i;
+            }
+        }
+        if (!empty($indicesRemover)) {
+            $chavesRemover = [];
+            foreach ($indicesRemover as $i) {
+                $chavesRemover[] = $chavesCabecalho[$i];
+            }
+            foreach (array_reverse($indicesRemover) as $i) {
+                array_splice($cabecalho, $i, 1);
+                array_splice($chavesCabecalho, $i, 1);
+            }
+            foreach ($valores as &$valor) {
+                foreach ($chavesRemover as $chave) {
+                    unset($valor[$chave]);
+                }
+            }
+            unset($valor);
+            $numColunasFixas -= count($indicesRemover);
+        }
+
         echo "<div class='row'><div class='col-sm-12'>";
         echo "<style>
 .tabela-espelho-ponto th,
@@ -795,9 +849,21 @@ function index() {
     color: black !important;
 }
 </style>";
+        $mesTituloPdf = $buscaDataMes;
+        $dtMesTitulo = DateTime::createFromFormat("Y-m", $buscaDataMes);
+        if ($dtMesTitulo) {
+            $mesTituloPdf = $dtMesTitulo->format("m/Y");
+        }
+
         echo "<div style='margin-bottom:8px; text-align:left;'>";
         echo "<button type='button' class='btn btn-success btn-sm' onclick='exportarEscalaCSV()'>Exportar CSV</button> ";
-        echo "<button type='button' class='btn btn-primary btn-sm' onclick='exportarEscalaExcel()'>Exportar Excel</button>";
+        echo "<button type='button' class='btn btn-primary btn-sm' onclick='exportarEscalaExcel()'>Exportar Excel</button> ";
+        echo "<button type='button' class='btn btn-danger btn-sm' onclick='baixarEscalaPDF()'>Baixar PDF</button>";
+        echo "<label style='margin-left:10px; font-weight:normal; font-size:12px;'>Layout do PDF: <select id='escalaPdfLayout' class='input-sm' style='height:28px; padding:2px 6px;'>"
+            . "<option value='auto'>Automático</option>"
+            . "<option value='dividido'>Mês dividido</option>"
+            . "<option value='colunas'>Colunas do mês</option>"
+            . "</select></label>";
         
         $qtdeFuncionarios = count($valores);
         echo "<span style='margin-left: 20px; font-weight: bold; font-size: 14px;'>Total de Funcionários: $qtdeFuncionarios</span>";
@@ -926,6 +992,96 @@ function index() {
             } catch (e) {
                 console.error(e);
                 alert('Erro ao exportar Excel: ' + e.message);
+            }
+        };
+
+        window.baixarEscalaPDF = function() {
+            try {
+                var wrapper = document.getElementById('escala-grid-wrapper');
+                if (!wrapper) { alert('Erro: Container da tabela não encontrado.'); return; }
+
+                var tabela = wrapper.querySelector('table');
+                if (!tabela) { alert('Erro: Tabela não encontrada.'); return; }
+
+                var linhas = tabela.querySelectorAll('tr');
+                if (linhas.length === 0) { alert('Erro: Tabela vazia.'); return; }
+
+                // Clona o grid exibido, preservando linhas/colunas e destaques
+                var clone = tabela.cloneNode(true);
+                clone.className = 'tabela-escala';
+                clone.removeAttribute('style');
+                clone.removeAttribute('id');
+
+                var removiveis = clone.querySelectorAll('i, svg, button, a, script, style');
+                for (var i = 0; i < removiveis.length; i++) {
+                    removiveis[i].remove();
+                }
+                var comTitle = clone.querySelectorAll('[title]');
+                for (var t = 0; t < comTitle.length; t++) {
+                    comTitle[t].removeAttribute('title');
+                }
+                var ths = clone.querySelectorAll('th');
+                for (var h = 0; h < ths.length; h++) {
+                    ths[h].textContent = ths[h].textContent.replace(/\s+/g, ' ').trim();
+                }
+
+                // Converte os destaques em estilos inline (TCPDF não interpreta as classes)
+                var celulasHoje = clone.querySelectorAll('th.current-day, td.current-day');
+                for (var d = 0; d < celulasHoje.length; d++) {
+                    celulasHoje[d].style.backgroundColor = '#d4edda';
+                }
+                var celulasFeriado = clone.querySelectorAll('th.holiday-sunday, td.holiday-sunday');
+                for (var f = 0; f < celulasFeriado.length; f++) {
+                    celulasFeriado[f].style.backgroundColor = '#ffe0b2';
+                }
+                var linhasSelecionadas = clone.querySelectorAll('tr.selected-row');
+                for (var s = 0; s < linhasSelecionadas.length; s++) {
+                    var celulasLinha = linhasSelecionadas[s].querySelectorAll('th, td');
+                    for (var c = 0; c < celulasLinha.length; c++) {
+                        celulasLinha[c].style.backgroundColor = '#fff3cd';
+                    }
+                }
+
+                var filtrosDiv = document.getElementById('filtros-aplicados');
+                var filtrosTexto = '';
+                if (filtrosDiv) {
+                    filtrosTexto = filtrosDiv.innerText || filtrosDiv.textContent || '';
+                    filtrosTexto = filtrosTexto.replace(/\s+/g, ' ').trim();
+                }
+
+                var empresaId = '';
+                var empresaHidden = document.querySelector('input.js-filtro-hidden[data-filter-name="empresa"]');
+                if (empresaHidden && empresaHidden.value) {
+                    empresaId = String(empresaHidden.value).split(',')[0].trim();
+                }
+
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = 'escala_pdf.php';
+                form.target = '_blank';
+
+                function addCampoPDF(nome, valor) {
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = nome;
+                    input.value = valor;
+                    form.appendChild(input);
+                }
+
+                addCampoPDF('tabela_html', '<table class="tabela-escala">' + clone.innerHTML + '</table>');
+                addCampoPDF('filtros_texto', filtrosTexto);
+                addCampoPDF('IdEmpresa', empresaId);
+                addCampoPDF('paginaTitulo', 'ESCALA DE TRABALHO - ' + <?= json_encode($mesTituloPdf) ?>);
+
+                var layoutSelect = document.getElementById('escalaPdfLayout');
+                addCampoPDF('layout_pdf', layoutSelect ? layoutSelect.value : 'auto');
+
+                document.body.appendChild(form);
+                form.submit();
+                document.body.removeChild(form);
+            } catch (e) {
+                console.error(e);
+                alert('Erro ao gerar PDF: ' + e.message);
             }
         };
 
