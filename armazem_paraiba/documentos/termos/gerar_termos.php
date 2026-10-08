@@ -178,6 +178,14 @@ function index() {
 
 	$filtroModelo = intval($_POST["modelo"] ?? 0);
 
+	$modeloSelecionado = $filtroModelo > 0 ? termos_carregar_modelo($filtroModelo) : [];
+	$tipoSelecionado = !empty($modeloSelecionado) ? termos_carregar_tipo(intval($modeloSelecionado["mode_nb_tipo_doc"] ?? 0)) : [];
+	$exigeAtivo = termos_tipo_requer_ativo($tipoSelecionado);
+	$ativosLista = $exigeAtivo ? termos_listar_ativos() : [];
+	$ativosJson = json_encode($ativosLista, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+	$modeloAtivoJs = intval($modeloSelecionado["mode_nb_ativo"] ?? 0);
+	$infoAtivo = $exigeAtivo ? " <b>Ativo:</b> este modelo pertence a um ativo; selecione o celular de cada funcionário na coluna <b>Ativo</b> (o aparelho já vinculado ao funcionário vem pré-selecionado). &nbsp;" : "";
+
 	$filtroEmpresas = $_POST["empresas"] ?? [];
 	if(!is_array($filtroEmpresas)){
 		$filtroEmpresas = [];
@@ -309,6 +317,10 @@ function index() {
 	if($filtroModelo > 0){
 		echo "<h3>" . count($entidades) . " funcionário(s) encontrado(s)</h3>";
 
+		if($exigeAtivo && empty($ativosLista)){
+			echo "<div class='alert alert-warning'>Este modelo pertence a um ativo, mas não há ativos (celulares) cadastrados. Cadastre em <a href='../../cadastro_celular.php' target='_blank'>Cadastro de Celulares</a>.</div>";
+		}
+
 		if($temBusca && $filtroModelo > 0 && empty($entidades)){
 			echo "<div class='alert alert-warning'>Nenhum funcionário encontrado para os filtros selecionados.</div>";
 		}
@@ -323,8 +335,9 @@ function index() {
 			</div>
 		</div>";
 
+		$thAtivo = $exigeAtivo ? "<th>Ativo</th>" : "";
 		echo "<div class='table-responsive'><table class='table table-bordered table-striped'>
-			<thead><tr><th style='width:30px'></th><th>Matrícula</th><th>Nome</th><th>CPF</th><th>Cargo</th><th>Setor</th><th>Empresa</th><th>Termo</th><th>Prévia</th></tr></thead>
+			<thead><tr><th style='width:30px'></th><th>Matrícula</th><th>Nome</th><th>CPF</th><th>Cargo</th><th>Setor</th><th>Empresa</th>{$thAtivo}<th>Termo</th><th>Prévia</th></tr></thead>
 			<tbody>";
 
 		foreach($entidades as $e){
@@ -353,6 +366,9 @@ function index() {
 			}
 
 			$previewUrl = "preview_termo.php?modelo=" . $filtroModelo;
+			$celulaAtivo = $exigeAtivo
+				? "<td><select class='termo-ativo form-control input-sm' data-entidade='{$eid}' style='min-width:220px;'><option value=''>Selecione...</option></select></td>"
+				: "";
 
 			echo "<tr>
 				<td><input type='checkbox' class='termo-entidade' value='{$eid}' data-nome='" . termos_h($nome) . "'></td>
@@ -362,6 +378,7 @@ function index() {
 				<td>{$cargo}</td>
 				<td>{$setorNome}</td>
 				<td>{$empresaNome}</td>
+				{$celulaAtivo}
 				<td>{$badge}</td>
 				<td><a href='{$previewUrl}' target='_blank' class='btn btn-xs btn-info' title='Pré-visualizar texto do modelo'><span class='glyphicon glyphicon-eye-open'></span></a></td>
 			</tr>";
@@ -391,7 +408,7 @@ function index() {
 					<b>Enviar e-mail:</b> envia para cada funcionário o e-mail com o link do documento dele. &nbsp;
 					<b>Forçar regeração:</b> Não pula quem já tem termo gerado/assinado; Sim gera de novo (novo PDF e nova assinatura) mesmo para quem já tem. &nbsp;
 					<b>Prazo p/ assinatura:</b> quantos dias o link de assinatura fica válido (0 = sem prazo de expiração). &nbsp;
-					<b>Func. por lote:</b> quantos funcionários são processados por requisição.
+					<b>Func. por lote:</b> quantos funcionários são processados por requisição.{$infoAtivo}
 				</div>
 			</div>
 			<div id='termos_progresso' style='display:none; margin-top:14px;'>
@@ -406,6 +423,9 @@ function index() {
 		echo "
 		<script>
 			var TERMOS_MODELO_ID = " . $filtroModelo . ";
+			var TERMOS_EXIGE_ATIVO = " . ($exigeAtivo ? "true" : "false") . ";
+			var TERMOS_MODELO_ATIVO = " . $modeloAtivoJs . ";
+			var TERMOS_ATIVOS = " . $ativosJson . ";
 
 			function termosAtualizarUniform() {
 				try {
@@ -414,6 +434,26 @@ function index() {
 					}
 				} catch (e) {}
 			}
+
+			function termosPopularAtivos() {
+				if (!TERMOS_EXIGE_ATIVO) { return; }
+				$('.termo-ativo').each(function() {
+					var sel = $(this);
+					var eid = parseInt(sel.attr('data-entidade'), 10);
+					TERMOS_ATIVOS.forEach(function(a) {
+						sel.append($('<option>').val(a.celu_nb_id).text(a.rotulo));
+					});
+					var padrao = 0;
+					TERMOS_ATIVOS.forEach(function(a) {
+						if (padrao === 0 && parseInt(a.celu_nb_entidade, 10) === eid) {
+							padrao = parseInt(a.celu_nb_id, 10);
+						}
+					});
+					if (padrao === 0) { padrao = TERMOS_MODELO_ATIVO; }
+					if (padrao > 0) { sel.val(String(padrao)); }
+				});
+			}
+			$(function() { termosPopularAtivos(); });
 
 			function termosMarcar(marcar) {
 				$('.termo-entidade').prop('checked', marcar);
@@ -431,13 +471,31 @@ function index() {
 
 			function termosProcessar() {
 				var ids = [];
-				$('.termo-entidade:checked').each(function() { ids.push(parseInt($(this).val(), 10)); });
+				var ativos = {};
+				var faltando = [];
+				$('.termo-entidade:checked').each(function() {
+					var eid = parseInt($(this).val(), 10);
+					ids.push(eid);
+					if (TERMOS_EXIGE_ATIVO) {
+						var selAtivo = $('.termo-ativo[data-entidade=\"' + eid + '\"]');
+						var ativoId = selAtivo.length ? parseInt(selAtivo.val(), 10) : 0;
+						if (!ativoId) {
+							faltando.push($(this).attr('data-nome') || ('#' + eid));
+						} else {
+							ativos[eid] = ativoId;
+						}
+					}
+				});
 				if (ids.length === 0) {
 					alert('Selecione ao menos um funcionário.');
 					return;
 				}
 				if (TERMOS_MODELO_ID <= 0) {
 					alert('Selecione um modelo de termo.');
+					return;
+				}
+				if (faltando.length > 0) {
+					alert('Selecione o ativo (celular) para: ' + faltando.join(', '));
 					return;
 				}
 				var lote = parseInt($('#tamanho_lote').val() || '5', 10);
@@ -447,7 +505,8 @@ function index() {
 					validar_icp: $('select[name=validar_icp]').val(),
 					enviar_email: $('select[name=enviar_email]').val(),
 					forcar: $('select[name=forcar]').val(),
-					prazo_expiracao_dias: parseInt($('input[name=prazo_expiracao_dias]').val(), 10) || 0
+					prazo_expiracao_dias: parseInt($('input[name=prazo_expiracao_dias]').val(), 10) || 0,
+					ativos: ativos
 				};
 				$('#btn_processar').prop('disabled', true);
 				$('#termos_progresso').show();

@@ -51,7 +51,7 @@
 
     function modificarTipoDoc(){
 		$a_mod = carregar("tipos_documentos", $_POST["id"]);
-		[$_POST["id"], $_POST["nome"], $_POST["setor"], $_POST["vencimento"], $_POST["assinatura"], $_POST["sub-setor"], $_POST["status"]] = [$a_mod["tipo_nb_id"], $a_mod["tipo_tx_nome"], $a_mod["tipo_nb_grupo"],$a_mod["tipo_tx_vencimento"], $a_mod["tipo_tx_assinatura"], $a_mod["tipo_nb_sbgrupo"], $a_mod["tipo_tx_status"]];
+		[$_POST["id"], $_POST["nome"], $_POST["setor"], $_POST["vencimento"], $_POST["assinatura"], $_POST["ativo"], $_POST["sub-setor"], $_POST["status"]] = [$a_mod["tipo_nb_id"], $a_mod["tipo_tx_nome"], $a_mod["tipo_nb_grupo"],$a_mod["tipo_tx_vencimento"], $a_mod["tipo_tx_assinatura"], ($a_mod["tipo_tx_ativo"] ?? "nao"), $a_mod["tipo_nb_sbgrupo"], $a_mod["tipo_tx_status"]];
 		layout_tipo_doc();
 		exit;
 	}
@@ -63,6 +63,7 @@
         $_POST["nome"] = trim($_POST["nome"] ?? "");
         $_POST["vencimento"] = in_array($_POST["vencimento"] ?? "nao", ["sim","nao"]) ? $_POST["vencimento"] : "nao";
         $_POST["assinatura"] = in_array($_POST["assinatura"] ?? "nao", ["sim","nao"]) ? $_POST["assinatura"] : "nao";
+        $_POST["ativo"] = in_array($_POST["ativo"] ?? "nao", ["sim","nao"]) ? $_POST["ativo"] : "nao";
 
         $errorMsg = conferirCamposObrig(["nome" => "Nome", "setor" => "Setor"], $_POST);
         if(!empty($errorMsg)){
@@ -111,6 +112,7 @@
             "tipo_nb_sbgrupo" => $subSetorId,
             "tipo_tx_vencimento" => $_POST["vencimento"],
             "tipo_tx_assinatura" => $_POST["assinatura"],
+            "tipo_tx_ativo" => $_POST["ativo"],
             "tipo_tx_status" => "ativo"
         ];
 
@@ -215,6 +217,12 @@
 			$_POST["assinatura"] = "nao";
 		}
 
+        if($_POST["ativo"] == '1') $_POST["ativo"] = 'sim';
+        if($_POST["ativo"] == '0') $_POST["ativo"] = 'nao';
+		if (empty($_POST["ativo"])) {
+			$_POST["ativo"] = "nao";
+		}
+
 		$sbsetor_documento = mysqli_fetch_all(query(
 			"SELECT sbgr_nb_id,sbgr_nb_idgrup, sbgr_tx_nome, sbgr_tx_status FROM sbgrupos_documentos ORDER BY sbgr_tx_nome ASC"
 		), MYSQLI_ASSOC);
@@ -226,6 +234,7 @@
 			$campoStatus,
             combo("Vencimento", "vencimento", $_POST["vencimento"], 2, ["" => "", "sim" => "Sim", "nao" => "Não"]),
             combo("Assinatura", "assinatura", $_POST["assinatura"], 2, ["" => "", "sim" => "Sim", "nao" => "Não"]),
+            combo("Ativo", "ativo", $_POST["ativo"], 2, ["" => "", "sim" => "Sim", "nao" => "Não"]),
 		];
 
 		$botoes = [
@@ -287,6 +296,7 @@
             "NOME" 			=> "tipo_tx_nome",
             "SETOR" 		=> "grup_tx_nome",
 			"SUBSETOR" 		=> "sbgr_tx_nome",
+            "ATIVO"         => "tipo_tx_ativo_exibe",
             "STATUS" 	    => "tipo_tx_status",
             "MODELOS"       => "qtd_modelos",
         ];
@@ -301,6 +311,7 @@
 
         $queryBase = 
             "SELECT t.tipo_nb_id, t.tipo_tx_nome, g.grup_tx_nome, s.sbgr_tx_nome, t.tipo_tx_status,
+                   IF(t.tipo_tx_ativo = 'sim', 'Sim', 'Não') AS tipo_tx_ativo_exibe,
                    (SELECT COUNT(*) FROM modelo_termo WHERE mode_nb_tipo_doc = t.tipo_nb_id AND mode_tx_status = 'ativo') as qtd_modelos
              FROM tipos_documentos t
              LEFT JOIN grupos_documentos g ON g.grup_nb_id = t.tipo_nb_grupo

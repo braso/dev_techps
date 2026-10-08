@@ -62,10 +62,16 @@ function index() {
 		$varsTipo = [$filtroTipoDoc];
 	}
 
+	$temCelular = termos_tabela_ativo_existe();
+	$selAtivo = $temCelular ? "c.celu_tx_nome AS ativo_nome, c.celu_tx_imei AS ativo_imei" : "NULL AS ativo_nome, NULL AS ativo_imei";
+	$joinAtivo = $temCelular ? "LEFT JOIN celular c ON c.celu_nb_id = m.mode_nb_ativo" : "";
+
 	$res = query(
-		"SELECT m.*, t.tipo_tx_nome, t.tipo_tx_assinatura
+		"SELECT m.*, t.tipo_tx_nome, t.tipo_tx_assinatura, t.tipo_tx_ativo,
+		        {$selAtivo}
 		 FROM modelo_termo m
 		 LEFT JOIN tipos_documentos t ON t.tipo_nb_id = m.mode_nb_tipo_doc
+		 {$joinAtivo}
 		 {$whereTipo}
 		 ORDER BY m.mode_tx_dataCadastro DESC",
 		$typesTipo,
@@ -74,11 +80,11 @@ function index() {
 
 	echo "<h3>Modelos Cadastrados</h3>";
 	echo "<div class='table-responsive'><table class='table table-bordered table-striped'>";
-	echo "<thead><tr><th>ID</th><th>Nome</th><th>Tipo de Documento</th><th>Assinatura</th><th>Notificação</th><th>Status</th><th>Atualizado</th><th>Ações</th></tr></thead>";
+	echo "<thead><tr><th>ID</th><th>Nome</th><th>Tipo de Documento</th><th>Ativo</th><th>Assinatura</th><th>Notificação</th><th>Status</th><th>Atualizado</th><th>Ações</th></tr></thead>";
 	echo "<tbody>";
 
 	if(!$res || mysqli_num_rows($res) == 0){
-		echo "<tr><td colspan='8' class='text-center'>Nenhum modelo cadastrado ainda.</td></tr>";
+		echo "<tr><td colspan='9' class='text-center'>Nenhum modelo cadastrado ainda.</td></tr>";
 	}
 
 	while($res && ($row = mysqli_fetch_assoc($res))){
@@ -91,6 +97,15 @@ function index() {
 		$status = strtolower(trim(strval($row["mode_tx_status"] ?? "inativo"))) === "ativo" ? "Ativo" : "Inativo";
 		$data = date("d/m/Y H:i", strtotime(strval($row["mode_tx_dataAtualiza"] ?? $row["mode_tx_dataCadastro"])));
 
+		$ativoExibe = "<span class='text-muted'>—</span>";
+		if(intval($row["mode_nb_ativo"] ?? 0) > 0){
+			$ativoExibe = termos_h(strval($row["ativo_nome"] ?? ("Ativo #" . intval($row["mode_nb_ativo"]))));
+			$imeiAtivo = trim(strval($row["ativo_imei"] ?? ""));
+			if($imeiAtivo !== ""){
+				$ativoExibe .= "<br><small class='text-muted'>IMEI: " . termos_h($imeiAtivo) . "</small>";
+			}
+		}
+
 		$btnStatus = $status === "Ativo"
 			? "<form method='post' style='display:inline;'><input type='hidden' name='id' value='{$id}'><input type='hidden' name='status' value='inativo'><input type='hidden' name='acao' value='alterar_status'><button type='submit' class='btn btn-xs btn-warning' title='Desativar'><span class='glyphicon glyphicon-off'></span></button></form>"
 			: "<form method='post' style='display:inline;'><input type='hidden' name='id' value='{$id}'><input type='hidden' name='status' value='ativo'><input type='hidden' name='acao' value='alterar_status'><button type='submit' class='btn btn-xs btn-success' title='Ativar'><span class='glyphicon glyphicon-ok'></span></button></form>";
@@ -102,6 +117,7 @@ function index() {
 		echo "<td>{$id}</td>";
 		echo "<td><b>{$nome}</b></td>";
 		echo "<td>{$tipoNome}</td>";
+		echo "<td>{$ativoExibe}</td>";
 		echo "<td>{$ass}</td>";
 		echo "<td>{$notifExibe}</td>";
 		echo "<td>{$status}</td>";
@@ -641,9 +657,14 @@ function form() {
 	termos_hide_loading();
 
 	$tipos = ["" => "Selecione..."];
-	$resTipos = query("SELECT tipo_nb_id, tipo_tx_nome, tipo_tx_assinatura FROM tipos_documentos WHERE tipo_tx_status = 'ativo' ORDER BY tipo_tx_nome ASC");
+	$tiposAtivo = [];
+	$resTipos = query("SELECT tipo_nb_id, tipo_tx_nome, tipo_tx_assinatura, tipo_tx_ativo FROM tipos_documentos WHERE tipo_tx_status = 'ativo' ORDER BY tipo_tx_nome ASC");
 	while($resTipos && ($t = mysqli_fetch_assoc($resTipos))){
 		$suf = strtolower(trim(strval($t["tipo_tx_assinatura"] ?? "nao"))) === "sim" ? " (com assinatura)" : "";
+		if(strtolower(trim(strval($t["tipo_tx_ativo"] ?? "nao"))) === "sim"){
+			$suf .= " (com ativo)";
+			$tiposAtivo[intval($t["tipo_nb_id"])] = true;
+		}
 		$tipos[$t["tipo_nb_id"]] = $t["tipo_tx_nome"] . $suf;
 	}
 
@@ -652,6 +673,17 @@ function form() {
 	$placeholdersHtml = "";
 	foreach(termos_lista_placeholders() as $token => $desc){
 		$placeholdersHtml .= "<option value=\"" . termos_h($token) . "\">" . termos_h($token . " — " . $desc) . "</option>";
+	}
+
+	$tagsAtivoHtml = "";
+	foreach(termos_lista_placeholders_ativo() as $token => $desc){
+		$tagsAtivoHtml .= "<option value=\"" . termos_h($token) . "\">" . termos_h($token . " — " . $desc) . "</option>";
+	}
+
+	$ativoSelecionado = intval($a_mod["mode_nb_ativo"] ?? 0);
+	$opcoesAtivo = ["" => "Selecione um ativo..."];
+	foreach(termos_listar_ativos() as $a){
+		$opcoesAtivo[intval($a["celu_nb_id"])] = termos_h(strval($a["rotulo"] ?? ("Ativo #" . intval($a["celu_nb_id"]))));
 	}
 
 	$tipoDocPadrao = strval($a_mod["mode_nb_tipo_doc"] ?? "");
@@ -668,6 +700,7 @@ function form() {
 		"<input type='hidden' name='id' value='{$id}'>",
 		campo("Nome do Modelo*", "nome", strval($a_mod["mode_tx_nome"] ?? ""), 4),
 		combo("Tipo de Documento*", "tipo_doc", $tipoDocPadrao, 3, $tipos),
+		combo("Ativo", "ativo", $ativoSelecionado, 3, $opcoesAtivo, "id='termos_modelo_ativo'"),
 		combo("Notificação", "notificacao", $notificacaoPadrao, 3, ["sim" => "Sim", "nao" => "Não"]),
 		combo("Status", "status", strval($a_mod["mode_tx_status"] ?? "ativo"), 2, ["ativo" => "Ativo", "inativo" => "Inativo"])
 	];
@@ -700,7 +733,7 @@ function form() {
 		<div class='portlet light'>
 			<div class='portlet-title'><span class='caption-subject font-dark bold uppercase'>Texto Padrão do Documento</span></div>
 			<div class='portlet-body'>
-				<p class='text-muted'>Escreva o texto padrão do documento e insira os campos pelo menu abaixo. <b>O modelo é salvo com os placeholders</b> (ex.: <code>{{funcionario_nome}}</code>) — os dados de cada funcionário são preenchidos automaticamente na hora de gerar. Para conferir, use a Pré-visualização (escolhe o funcionário de amostra).</p>
+				<p class='text-muted'>Escreva o texto padrão do documento e insira os campos pelo menu abaixo. <b>O modelo é salvo com os placeholders</b> (ex.: <code>{{funcionario_nome}}</code>) — os dados de cada funcionário são preenchidos automaticamente na hora de gerar. Se o <b>Tipo de Documento</b> exigir <b>Ativo</b>, selecione o ativo e use o menu de dados do ativo (ex.: <code>{{ativo_imei}}</code>). Para conferir, use a Pré-visualização (escolhe o funcionário de amostra).</p>
 				<div class='row' style='margin-bottom:6px;'>
 					<div class='col-sm-12' style='display:flex; flex-wrap:wrap; gap:4px; align-items:center;'>
 						<button type='button' class='btn btn-default btn-xs' onclick='termosExec(\"bold\")' title='Negrito'><b>B</b></button>
@@ -721,6 +754,10 @@ function form() {
 							<option value=''>Inserir campo do funcionário...</option>
 							{$placeholdersHtml}
 						</select>
+						<select id='termos_tags_ativo' class='form-control input-sm' style='display:inline-block;width:auto;max-width:380px;' onchange='termosInserirPlaceholder(this)' disabled title='Selecione um Ativo para habilitar os dados do ativo'>
+							<option value=''>Inserir dado do ativo...</option>
+							{$tagsAtivoHtml}
+						</select>
 					</div>
 				</div>
 				<div id='editor_conteudo' contenteditable='true' style='border:1px solid #ccc; min-height:420px; padding:14px; background:#fff; overflow:auto; font-size:14px; line-height:1.6;'>{$conteudo}</div>
@@ -737,6 +774,7 @@ function form() {
 	echo "
 	<script>
 		var TERMOS_CONTEUDO = " . json_encode($conteudo, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ";
+		var TERMOS_TIPOS_ATIVO = " . json_encode($tiposAtivo, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ";
 
 		function termosExec(cmd, arg) {
 			document.execCommand(cmd, false, arg || null);
@@ -750,6 +788,21 @@ function form() {
 			sel.value = '';
 		}
 
+		function termosAtualizarCampoAtivo() {
+			var tipoId = String($('select[name=tipo_doc]').val() || '');
+			var exige = !!TERMOS_TIPOS_ATIVO[tipoId];
+			$('#termos_modelo_ativo').closest('.col-sm-3').toggle(exige);
+			if (!exige) {
+				$('#termos_modelo_ativo').val('');
+			}
+			termosAtualizarTagsAtivo();
+		}
+
+		function termosAtualizarTagsAtivo() {
+			var temAtivo = String($('#termos_modelo_ativo').val() || '') !== '';
+			$('#termos_tags_ativo').prop('disabled', !temAtivo);
+		}
+
 		$(function() {
 			var termosEditor = document.getElementById('editor_conteudo');
 			termosEditor.innerHTML = TERMOS_CONTEUDO;
@@ -758,6 +811,9 @@ function form() {
 			};
 			termosEditor.addEventListener('input', termosSync);
 			$('form[name=contex_form]').on('submit', termosSync);
+			$('select[name=tipo_doc]').on('change', termosAtualizarCampoAtivo);
+			$('#termos_modelo_ativo').on('change', termosAtualizarTagsAtivo);
+			termosAtualizarCampoAtivo();
 		});
 	</script>
 	";
@@ -799,18 +855,25 @@ function salvar() {
 		exit;
 	}
 
+	$ativoId = intval($_POST["ativo"] ?? 0);
+	if(!termos_tipo_requer_ativo($tipo)){
+		$ativoId = 0;
+	}elseif($ativoId > 0 && empty(termos_dados_ativo($ativoId))){
+		$ativoId = 0;
+	}
+
 	if($id > 0){
 		termos_executar(
-			"UPDATE modelo_termo SET mode_tx_nome = ?, mode_nb_tipo_doc = ?, mode_tx_conteudo = ?, mode_tx_notificacao = ?, mode_tx_status = ?, mode_nb_userAtualiza = ?, mode_tx_dataAtualiza = NOW() WHERE mode_nb_id = ?",
-			"sissssi",
-			[$nome, $tipoDoc, $conteudo, $notificacao, $status, $user, $id]
+			"UPDATE modelo_termo SET mode_tx_nome = ?, mode_nb_tipo_doc = ?, mode_tx_conteudo = ?, mode_tx_notificacao = ?, mode_tx_status = ?, mode_nb_ativo = ?, mode_nb_userAtualiza = ?, mode_tx_dataAtualiza = NOW() WHERE mode_nb_id = ?",
+			"sisssiii",
+			[$nome, $tipoDoc, $conteudo, $notificacao, $status, $ativoId > 0 ? $ativoId : null, $user, $id]
 		);
 		termos_log("modelo_atualizado", "Modelo #{$id} atualizado", ["nome" => $nome, "notificacao" => $notificacao]);
 	}else{
 		$id = termos_inserir_id(
-			"INSERT INTO modelo_termo (mode_tx_nome, mode_nb_tipo_doc, mode_tx_conteudo, mode_tx_notificacao, mode_tx_status, mode_nb_userCadastro) VALUES (?, ?, ?, ?, ?, ?)",
-			"sisssi",
-			[$nome, $tipoDoc, $conteudo, $notificacao, $status, $user]
+			"INSERT INTO modelo_termo (mode_tx_nome, mode_nb_tipo_doc, mode_tx_conteudo, mode_tx_notificacao, mode_tx_status, mode_nb_ativo, mode_nb_userCadastro) VALUES (?, ?, ?, ?, ?, ?, ?)",
+			"sisssii",
+			[$nome, $tipoDoc, $conteudo, $notificacao, $status, $ativoId > 0 ? $ativoId : null, $user]
 		);
 		termos_log("modelo_criado", "Modelo #{$id} criado", ["nome" => $nome]);
 	}
@@ -890,8 +953,8 @@ function clonar_modelos() {
 		}
 		$nomeNovo = termos_nome_clonado(strval($origem["mode_tx_nome"] ?? ""));
 		$novoId = termos_inserir_id(
-			"INSERT INTO modelo_termo (mode_tx_nome, mode_nb_tipo_doc, mode_tx_conteudo, mode_tx_denominacao, mode_tx_cidade_assinatura, mode_tx_notificacao, mode_tx_status, mode_nb_userCadastro) VALUES (?, ?, ?, ?, ?, ?, 'ativo', ?)",
-			"sissssi",
+			"INSERT INTO modelo_termo (mode_tx_nome, mode_nb_tipo_doc, mode_tx_conteudo, mode_tx_denominacao, mode_tx_cidade_assinatura, mode_tx_notificacao, mode_nb_ativo, mode_tx_status, mode_nb_userCadastro) VALUES (?, ?, ?, ?, ?, ?, ?, 'ativo', ?)",
+			"sissssii",
 			[
 				$nomeNovo,
 				intval($origem["mode_nb_tipo_doc"] ?? 0),
@@ -899,6 +962,7 @@ function clonar_modelos() {
 				strval($origem["mode_tx_denominacao"] ?? ""),
 				strval($origem["mode_tx_cidade_assinatura"] ?? ""),
 				strtolower(trim(strval($origem["mode_tx_notificacao"] ?? "sim"))) === "nao" ? "nao" : "sim",
+				intval($origem["mode_nb_ativo"] ?? 0) > 0 ? intval($origem["mode_nb_ativo"]) : null,
 				$user
 			]
 		);
