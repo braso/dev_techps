@@ -650,6 +650,34 @@ function index() {
             }
         }
 
+        // Busca abonos ativos no período (por matrícula e data)
+        $abonosPorMatricula = [];
+        $matriculasBusca = [];
+        foreach ($motoristas as $m) {
+            $mat = trim((string)($m["enti_tx_matricula"] ?? ""));
+            if ($mat !== "") {
+                $matriculasBusca[$mat] = true;
+            }
+        }
+        $matriculasBusca = array_keys($matriculasBusca);
+        if (!empty($matriculasBusca)) {
+            $matriculasSql = array_map(function($mat){
+                return "'".mysqli_real_escape_string($GLOBALS["conn"], $mat)."'";
+            }, $matriculasBusca);
+            $abonosResult = query(
+                "SELECT abono.abon_tx_matricula, abono.abon_tx_data, abono.abon_tx_abono, motivo.moti_tx_nome
+                 FROM abono
+                 LEFT JOIN motivo ON motivo.moti_nb_id = abono.abon_nb_motivo
+                 WHERE abono.abon_tx_status = 'ativo'
+                   AND abono.abon_tx_matricula IN (".implode(",", $matriculasSql).")
+                   AND abono.abon_tx_data BETWEEN '".$periodoInicio->format("Y-m-d")."' AND '".$periodoFim->format("Y-m-d")."'
+                 ORDER BY abono.abon_nb_id DESC"
+            );
+            while ($a = mysqli_fetch_assoc($abonosResult)) {
+                $abonosPorMatricula[$a["abon_tx_matricula"]][$a["abon_tx_data"]] = $a;
+            }
+        }
+
         $exibirEmpresa = empty($_POST["empresa"]);
         $exibirOcupacao = empty($_POST["busca_ocupacao"]);
         $exibirCargo = empty($_POST["operacao"]);
@@ -811,8 +839,31 @@ function index() {
                         }
                     }
                 }
+
+                // Abono: identifica o dia no grid (e no PDF). Férias tem prioridade.
+                $abonoDia = null;
+                if (!$deFerias) {
+                    $matriculaAtual = (string)$motorista["enti_tx_matricula"];
+                    if (isset($abonosPorMatricula[$matriculaAtual][$dataStr])) {
+                        $abonoDia = $abonosPorMatricula[$matriculaAtual][$dataStr];
+                    }
+                }
+
                 if ($deFerias) {
                     $valor = "FÉRIAS";
+                } elseif (!empty($abonoDia)) {
+                    $detalheAbono = [];
+                    if (!empty($abonoDia["abon_tx_abono"])) {
+                        $detalheAbono[] = "Abono: ".substr($abonoDia["abon_tx_abono"], 0, 5);
+                    }
+                    if (!empty($abonoDia["moti_tx_nome"])) {
+                        $detalheAbono[] = "Motivo: ".$abonoDia["moti_tx_nome"];
+                    }
+                    if (!empty($detalheAbono)) {
+                        $valor = "<span title='".htmlspecialchars(implode(" | ", $detalheAbono), ENT_QUOTES, "UTF-8")."' style='cursor:help;'>ABONO</span>";
+                    } else {
+                        $valor = "ABONO";
+                    }
                 }
 
                 // Lógica de destaque movida para JS/CSS para preencher a célula inteira
@@ -927,6 +978,11 @@ function index() {
     color:#4a2d7a !important;
     font-weight:bold !important;
 }
+.tabela-espelho-ponto td.abono{
+    background-color:#cfe9f7 !important;
+    color:#12556f !important;
+    font-weight:bold !important;
+}
 </style>";
         $mesTituloPdf = $buscaDataMes;
         $dtMesTitulo = DateTime::createFromFormat("Y-m", $buscaDataMes);
@@ -945,6 +1001,9 @@ function index() {
             . "</select></label>";
         echo "<span style='margin-left:15px; font-size:12px;'>"
             . "<span style='display:inline-block; width:12px; height:12px; background:#e2d9f3; border:1px solid #999; vertical-align:middle;'></span> Férias"
+            . "</span>";
+        echo "<span style='margin-left:10px; font-size:12px;'>"
+            . "<span style='display:inline-block; width:12px; height:12px; background:#cfe9f7; border:1px solid #999; vertical-align:middle;'></span> Abono"
             . "</span>";
         
         $qtdeFuncionarios = count($valores);
@@ -1121,6 +1180,11 @@ function index() {
                     celulasFerias[ff].style.backgroundColor = '#e2d9f3';
                     celulasFerias[ff].style.fontWeight = 'bold';
                 }
+                var celulasAbono = clone.querySelectorAll('td.abono, th.abono');
+                for (var ab = 0; ab < celulasAbono.length; ab++) {
+                    celulasAbono[ab].style.backgroundColor = '#cfe9f7';
+                    celulasAbono[ab].style.fontWeight = 'bold';
+                }
                 var linhasSelecionadas = clone.querySelectorAll('tr.selected-row');
                 for (var s = 0; s < linhasSelecionadas.length; s++) {
                     var celulasLinha = linhasSelecionadas[s].querySelectorAll('th, td');
@@ -1235,7 +1299,7 @@ function index() {
                 });
             }
 
-            // Destaque para Férias
+            // Destaque para Férias e Abono
             var celulasFeriasGrid = tabela.querySelectorAll('tbody td');
             for (var x = 0; x < celulasFeriasGrid.length; x++) {
                 var textoCelula = (celulasFeriasGrid[x].textContent || '').replace(/\s+/g, ' ').trim().toUpperCase();
@@ -1244,6 +1308,8 @@ function index() {
                 }
                 if (textoCelula === 'FERIAS' || textoCelula === 'FÉRIAS') {
                     celulasFeriasGrid[x].classList.add('ferias');
+                } else if (textoCelula === 'ABONO') {
+                    celulasFeriasGrid[x].classList.add('abono');
                 }
             }
 
