@@ -11,6 +11,20 @@
     include_once "conecta.php";
     mysqli_query($conn, "SET time_zone = '-3:00'");
 
+    function ensureCelularEntidadeOpcional(){
+        global $conn;
+        if(!($conn instanceof mysqli)){
+            return;
+        }
+        $check = @mysqli_query($conn, "SHOW COLUMNS FROM celular LIKE 'celu_nb_entidade'");
+        if($check instanceof mysqli_result && ($row = mysqli_fetch_assoc($check))){
+            if(strtoupper(strval($row["Null"] ?? "NO")) === "NO"){
+                @mysqli_query($conn, "ALTER TABLE celular MODIFY COLUMN celu_nb_entidade INT(11) NULL DEFAULT NULL");
+            }
+        }
+    }
+    ensureCelularEntidadeOpcional();
+
     // --- ROTEADOR DE AÇÕES ---
     // Verifica se chegou alguma ação via POST
     if(!empty($_POST['acao'])){
@@ -94,7 +108,7 @@
         ];
 
         $queryBase = "SELECT ".implode(", ", array_values($gridFields))." FROM celular
-        JOIN entidade ON celu_nb_entidade = enti_nb_id";
+        LEFT JOIN entidade ON celu_nb_entidade = enti_nb_id";
 
         $msgPadrao = "Tem certeza que deseja excluir o celular <br><h3 style='color:#337ab7;'>{NOME} <br><small>(IMEI: {IMEI})</small></h3>?";
     
@@ -161,7 +175,12 @@
             set_status("<script>Swal.fire('Sucesso!', 'Celular atualizado com sucesso.', 'success');</script>");
         } else {
             $novoCelular["celu_tx_dataCadastro"] = date("Y-m-d H:i:s");
-            inserir("celular", array_keys($novoCelular), array_values($novoCelular));
+            $retorno = inserir("celular", array_keys($novoCelular), array_values($novoCelular));
+            if(is_array($retorno) && isset($retorno[0]) && is_object($retorno[0])){
+                set_status("<script>Swal.fire('Erro!', 'Não foi possível cadastrar o celular: " . addslashes($retorno[0]->getMessage()) . "', 'error');</script>");
+                index();
+                exit;
+            }
             set_status("<script>Swal.fire('Sucesso!', 'Celular inserido com sucesso.', 'success');</script>");
         }
         unset($_POST);

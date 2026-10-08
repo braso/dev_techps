@@ -14,7 +14,8 @@ echo "Verificando 'tipos_documentos'...<br>";
 $colunas_novas = [
     'tipo_tx_logo' => 'VARCHAR(255) DEFAULT NULL',
     'tipo_tx_cabecalho' => 'TEXT DEFAULT NULL',
-    'tipo_tx_rodape' => 'TEXT DEFAULT NULL'
+    'tipo_tx_rodape' => 'TEXT DEFAULT NULL',
+    'tipo_tx_ativo' => "ENUM('sim','nao') NOT NULL DEFAULT 'nao'"
 ];
 
 foreach ($colunas_novas as $col => $def) {

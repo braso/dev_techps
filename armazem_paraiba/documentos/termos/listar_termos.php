@@ -66,14 +66,20 @@ function termos_listar(array $filtros): array {
 		$vars[] = $like;
 	}
 
+	$temCelular = termos_tabela_ativo_existe();
+	$selAtivo = $temCelular ? ", c.celu_tx_nome AS ativo_nome, c.celu_tx_imei AS ativo_imei" : ", NULL AS ativo_nome, NULL AS ativo_imei";
+	$joinAtivo = $temCelular ? "LEFT JOIN celular c ON c.celu_nb_id = tg.terg_nb_ativo" : "";
+
 	$sql = "SELECT
 			tg.*, m.mode_tx_nome AS modelo_nome, t.tipo_tx_nome AS tipo_nome,
 			e.enti_tx_nome AS func_nome, e.enti_tx_matricula, em.empr_tx_nome AS empresa_nome
+			{$selAtivo}
 		FROM termo_gerado tg
 		LEFT JOIN modelo_termo m ON m.mode_nb_id = tg.terg_nb_modelo
 		LEFT JOIN tipos_documentos t ON t.tipo_nb_id = tg.terg_nb_tipo_doc
 		LEFT JOIN entidade e ON e.enti_nb_id = tg.terg_nb_entidade
 		LEFT JOIN empresa em ON em.empr_nb_id = e.enti_nb_empresa
+		{$joinAtivo}
 		WHERE " . implode(" AND ", $where) . "
 		ORDER BY tg.terg_dt_geracao DESC
 		LIMIT 500";
@@ -138,11 +144,11 @@ function index() {
 
 	echo "<h3>Termos Gerados (" . count($linhas) . ")</h3>";
 	echo "<div class='table-responsive'><table class='table table-bordered table-striped'>";
-	echo "<thead><tr><th>ID</th><th>Modelo</th><th>Funcionário</th><th>Matrícula</th><th>Empresa</th><th>Status</th><th>Visualização</th><th>Gerado em</th><th>Ações</th></tr></thead>";
+	echo "<thead><tr><th>ID</th><th>Modelo</th><th>Funcionário</th><th>Matrícula</th><th>Empresa</th><th>Ativo</th><th>Status</th><th>Visualização</th><th>Gerado em</th><th>Ações</th></tr></thead>";
 	echo "<tbody>";
 
 	if(empty($linhas)){
-		echo "<tr><td colspan='9' class='text-center'>Nenhum termo encontrado.</td></tr>";
+		echo "<tr><td colspan='10' class='text-center'>Nenhum termo encontrado.</td></tr>";
 	}
 
 	foreach($linhas as $r){
@@ -153,6 +159,15 @@ function index() {
 		$empresa = termos_h($r["empresa_nome"] ?? "—");
 		$status = strval($r["terg_tx_status"] ?? "");
 		$data = date("d/m/Y H:i", strtotime(strval($r["terg_dt_geracao"])));
+
+		$ativoExibe = "<span class='text-muted'>—</span>";
+		if(intval($r["terg_nb_ativo"] ?? 0) > 0){
+			$ativoExibe = termos_h(strval($r["ativo_nome"] ?? ("Ativo #" . intval($r["terg_nb_ativo"]))));
+			$imeiAtivo = trim(strval($r["ativo_imei"] ?? ""));
+			if($imeiAtivo !== ""){
+				$ativoExibe .= "<br><small class='text-muted'>IMEI: " . termos_h($imeiAtivo) . "</small>";
+			}
+		}
 
 		$dataVisualizacao = "";
 		$rawVis = trim(strval($r["terg_dt_data_visualizacao"] ?? ""));
@@ -184,6 +199,7 @@ function index() {
 		echo "<td>{$funcNome}</td>";
 		echo "<td>{$mat}</td>";
 		echo "<td>{$empresa}</td>";
+		echo "<td>{$ativoExibe}</td>";
 		echo "<td>" . termos_status_badge($status) . "</td>";
 		echo "<td>{$dataVisualizacao}</td>";
 		echo "<td>{$data}</td>";

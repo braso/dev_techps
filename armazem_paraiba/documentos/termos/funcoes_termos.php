@@ -22,6 +22,7 @@ function termos_ensure_tables($conn = null): void {
 		mode_tx_cidade_assinatura VARCHAR(150) NULL,
 		mode_tx_status ENUM('ativo','inativo') DEFAULT 'ativo',
 		mode_tx_notificacao ENUM('sim','nao') NOT NULL DEFAULT 'sim',
+		mode_nb_ativo INT NULL,
 		mode_nb_userCadastro INT NULL,
 		mode_tx_dataCadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
 		mode_nb_userAtualiza INT NULL,
@@ -30,7 +31,8 @@ function termos_ensure_tables($conn = null): void {
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
 	$colsModelo = [
-		"mode_tx_notificacao" => "ALTER TABLE modelo_termo ADD COLUMN mode_tx_notificacao ENUM('sim','nao') NOT NULL DEFAULT 'sim' AFTER mode_tx_status"
+		"mode_tx_notificacao" => "ALTER TABLE modelo_termo ADD COLUMN mode_tx_notificacao ENUM('sim','nao') NOT NULL DEFAULT 'sim' AFTER mode_tx_status",
+		"mode_nb_ativo" => "ALTER TABLE modelo_termo ADD COLUMN mode_nb_ativo INT NULL AFTER mode_tx_notificacao"
 	];
 	foreach($colsModelo as $colModelo => $ddlModelo){
 		$checkModelo = mysqli_query($conn, "SHOW COLUMNS FROM modelo_termo LIKE '{$colModelo}'");
@@ -55,6 +57,7 @@ function termos_ensure_tables($conn = null): void {
 		terg_nb_id INT AUTO_INCREMENT PRIMARY KEY,
 		terg_nb_modelo INT NOT NULL,
 		terg_nb_entidade INT NOT NULL,
+		terg_nb_ativo INT NULL,
 		terg_nb_tipo_doc INT NULL,
 		terg_tx_status ENUM('gerado','notificado','visualizado','aguardando_assinatura','assinado','erro','cancelado') DEFAULT 'gerado',
 		terg_tx_caminho VARCHAR(500) NULL,
@@ -90,6 +93,7 @@ function termos_ensure_tables($conn = null): void {
 
 	$colsGerado = [
 		"terg_nb_assinante" => "ALTER TABLE termo_gerado ADD COLUMN terg_nb_assinante INT NULL AFTER terg_nb_solicitacao_assinatura",
+		"terg_nb_ativo" => "ALTER TABLE termo_gerado ADD COLUMN terg_nb_ativo INT NULL AFTER terg_nb_entidade",
 		"terg_dt_data_notificacao" => "ALTER TABLE termo_gerado ADD COLUMN terg_dt_data_notificacao DATETIME NULL AFTER terg_dt_geracao",
 		"terg_dt_data_visualizacao" => "ALTER TABLE termo_gerado ADD COLUMN terg_dt_data_visualizacao DATETIME NULL AFTER terg_dt_data_notificacao",
 		"terg_tx_ip_visualizacao" => "ALTER TABLE termo_gerado ADD COLUMN terg_tx_ip_visualizacao VARCHAR(45) NULL AFTER terg_dt_data_visualizacao",
@@ -291,6 +295,93 @@ function termos_tipo_requer_assinatura(array $tipo): bool {
 	return strtolower(trim(strval($tipo["tipo_tx_assinatura"] ?? "nao"))) === "sim";
 }
 
+function termos_tipo_requer_ativo(array $tipo): bool {
+	return strtolower(trim(strval($tipo["tipo_tx_ativo"] ?? "nao"))) === "sim";
+}
+
+function termos_tabela_ativo_existe(): bool {
+	global $conn;
+	if($conn instanceof mysqli && function_exists("bancoTabelaExiste")){
+		return bancoTabelaExiste($conn, "celular");
+	}
+	return false;
+}
+
+function termos_rotulo_ativo(array $a): string {
+	$partes = [];
+	$nome = trim(strval($a["celu_tx_nome"] ?? ""));
+	if($nome !== ""){
+		$partes[] = $nome;
+	}
+	$marca = trim(strval($a["celu_tx_marcaModelo"] ?? ""));
+	if($marca !== ""){
+		$partes[] = $marca;
+	}
+	$imei = trim(strval($a["celu_tx_imei"] ?? ""));
+	if($imei !== ""){
+		$partes[] = "IMEI: " . $imei;
+	}
+	$txt = implode(" — ", $partes);
+	if($txt === ""){
+		$txt = "Ativo #" . intval($a["celu_nb_id"] ?? 0);
+	}
+	$resp = trim(strval($a["responsavel"] ?? ""));
+	if($resp !== ""){
+		$txt .= " (" . $resp . ")";
+	}
+	return $txt;
+}
+
+function termos_dados_ativo(int $id): array {
+	if($id <= 0 || !termos_tabela_ativo_existe()){
+		return [];
+	}
+	$res = query(
+		"SELECT c.*, e.enti_tx_nome AS responsavel
+		 FROM celular c
+		 LEFT JOIN entidade e ON e.enti_nb_id = c.celu_nb_entidade
+		 WHERE c.celu_nb_id = ? LIMIT 1",
+		"i",
+		[$id]
+	);
+	return ($res instanceof mysqli_result) ? (mysqli_fetch_assoc($res) ?: []) : [];
+}
+
+function termos_listar_ativos(): array {
+	if(!termos_tabela_ativo_existe()){
+		return [];
+	}
+	$out = [];
+	$res = query(
+		"SELECT c.celu_nb_id, c.celu_tx_nome, c.celu_tx_imei, c.celu_tx_numero, c.celu_tx_operadora,
+		        c.celu_tx_cimie, c.celu_tx_sistemaOperacional, c.celu_tx_marcaModelo,
+		        c.celu_nb_entidade, e.enti_tx_nome AS responsavel
+		 FROM celular c
+		 LEFT JOIN entidade e ON e.enti_nb_id = c.celu_nb_entidade
+		 ORDER BY c.celu_tx_nome ASC"
+	);
+	while($res && ($r = mysqli_fetch_assoc($res))){
+		$r["rotulo"] = termos_rotulo_ativo($r);
+		$out[] = $r;
+	}
+	return $out;
+}
+
+function termos_ativo_do_funcionario(int $entiId): int {
+	if($entiId <= 0 || !termos_tabela_ativo_existe()){
+		return 0;
+	}
+	$res = query(
+		"SELECT celu_nb_id FROM celular WHERE celu_nb_entidade = ? ORDER BY celu_nb_id ASC LIMIT 1",
+		"i",
+		[$entiId]
+	);
+	if($res instanceof mysqli_result && ($row = mysqli_fetch_assoc($res))){
+		return intval($row["celu_nb_id"]);
+	}
+	return 0;
+}
+
 function termos_carregar_assinantes(int $modeloId): array {
 	$out = [];
 	if($modeloId <= 0){
@@ -457,7 +548,7 @@ function termos_montar_signatarios(array $dados, array $assinantes): array {
 	return $out;
 }
 
-function termos_resolver_placeholders(string $conteudo, array $dados, array $modelo = [], array $assinantes = []): array {
+function termos_resolver_placeholders(string $conteudo, array $dados, array $modelo = [], array $assinantes = [], array $ativo = []): array {
 	$cidadeAss = termos_cidade_assinatura($dados, $modelo);
 	$admissao = trim(strval($dados["enti_tx_admissao"] ?? ""));
 	$cargo = trim(strval($dados["cargo_nome"] ?? ""));
@@ -497,6 +588,14 @@ function termos_resolver_placeholders(string $conteudo, array $dados, array $mod
 		"cidade" => termos_h($cidadeAss),
 		"data_atual" => date("d/m/Y"),
 		"data_atual_extenso" => termos_data_extenso(date("Y-m-d")),
+		"ativo_nome" => termos_h($ativo["celu_tx_nome"] ?? ""),
+		"ativo_imei" => termos_h($ativo["celu_tx_imei"] ?? ""),
+		"ativo_numero" => termos_h($ativo["celu_tx_numero"] ?? ""),
+		"ativo_operadora" => termos_h($ativo["celu_tx_operadora"] ?? ""),
+		"ativo_cimie" => termos_h($ativo["celu_tx_cimie"] ?? ""),
+		"ativo_sistema_operacional" => termos_h($ativo["celu_tx_sistemaOperacional"] ?? ""),
+		"ativo_marca_modelo" => termos_h($ativo["celu_tx_marcaModelo"] ?? ""),
+		"ativo_responsavel" => termos_h($ativo["responsavel"] ?? ""),
 		"bloco_assinaturas" => termos_bloco_assinaturas($dados, $assinantes)
 	];
 
@@ -567,11 +666,11 @@ function termos_desenhar_imagem($pdf, string $caminho, float $x, float $y, float
 	$pdf->Image($arquivo, $x, $y, $largura, $altura, "", "", "", true, 300, "", false, false, 0, false, false, false);
 }
 
-function termos_renderizar_pdf(array $dados, array $modelo, array $tipo, string $destino, bool $preview = false): bool {
+function termos_renderizar_pdf(array $dados, array $modelo, array $tipo, string $destino, bool $preview = false, array $ativo = []): bool {
 	require_once dirname(__DIR__, 2) . "/tcpdf/tcpdf.php";
 
 	$assinantes = termos_carregar_assinantes(intval($modelo["mode_nb_id"] ?? 0));
-	$conteudo = termos_resolver_placeholders(strval($modelo["mode_tx_conteudo"] ?? ""), $dados, $modelo, $assinantes)[0];
+	$conteudo = termos_resolver_placeholders(strval($modelo["mode_tx_conteudo"] ?? ""), $dados, $modelo, $assinantes, $ativo)[0];
 
 	if(!class_exists("MYPDF_Termos", false)){
 		class MYPDF_Termos extends TCPDF {
@@ -731,14 +830,14 @@ function termos_inserir_id(string $sql, string $types, array $vars): int {
 	return $id;
 }
 
-function termos_inserir_gerado(int $modeloId, int $entiId, int $tipoId, string $status, $caminho, $sol, $idDoc, $docu, $detalhe, int $user): int {
+function termos_inserir_gerado(int $modeloId, int $entiId, int $tipoId, string $status, $caminho, $sol, $idDoc, $docu, $detalhe, int $user, int $ativoId = 0): int {
 	return termos_inserir_id(
 		"INSERT INTO termo_gerado
 			(terg_nb_modelo, terg_nb_entidade, terg_nb_tipo_doc, terg_tx_status, terg_tx_caminho,
 			 terg_nb_solicitacao_assinatura, terg_tx_id_documento, terg_nb_documento_funcionario,
-			 terg_tx_detalhe, terg_nb_user_geracao)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-		"iiissiisii",
+			 terg_tx_detalhe, terg_nb_user_geracao, terg_nb_ativo)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		"iiissiisiii",
 		[
 			$modeloId,
 			$entiId,
@@ -749,7 +848,8 @@ function termos_inserir_gerado(int $modeloId, int $entiId, int $tipoId, string $
 			($idDoc !== "" && $idDoc !== null) ? strval($idDoc) : null,
 			$docu > 0 ? $docu : null,
 			($detalhe !== "" && $detalhe !== null) ? strval($detalhe) : null,
-			$user
+			$user,
+			$ativoId > 0 ? $ativoId : null
 		]
 	);
 }
@@ -1108,13 +1208,39 @@ function termos_processar_um(int $entiId, array $params): array {
 	}
 	$nomeFunc = trim(strval($dados["enti_tx_nome"] ?? ""));
 
+	$exigeAtivo = termos_tipo_requer_ativo($tipo);
+	$ativoId = intval($params["ativo_id"] ?? 0);
+	if($ativoId <= 0){
+		$ativoId = intval($modelo["mode_nb_ativo"] ?? 0);
+	}
+	if($ativoId <= 0){
+		$ativoId = termos_ativo_do_funcionario($entiId);
+	}
+	$ativo = [];
+	if($exigeAtivo){
+		if($ativoId > 0){
+			$ativo = termos_dados_ativo($ativoId);
+		}
+		if(empty($ativo)){
+			return ["ok" => false, "entidade" => $entiId, "nome" => $nomeFunc, "msg" => $nomeFunc . " — selecione o ativo (celular) que será vinculado a este termo."];
+		}
+		$ativoId = intval($ativo["celu_nb_id"]);
+	}else{
+		$ativoId = 0;
+	}
+
 	$forcar = strtolower(trim(strval($params["forcar"] ?? "nao"))) === "sim";
 	if(!$forcar){
-		$dup = query(
-			"SELECT terg_nb_id FROM termo_gerado WHERE terg_nb_modelo = ? AND terg_nb_entidade = ? AND terg_tx_status IN ('gerado','notificado','visualizado','aguardando_assinatura','assinado') LIMIT 1",
-			"ii",
-			[$modeloId, $entiId]
-		);
+		$sqlDup = "SELECT terg_nb_id FROM termo_gerado WHERE terg_nb_modelo = ? AND terg_nb_entidade = ? AND terg_tx_status IN ('gerado','notificado','visualizado','aguardando_assinatura','assinado')";
+		$typesDup = "ii";
+		$varsDup = [$modeloId, $entiId];
+		if($exigeAtivo && $ativoId > 0){
+			$sqlDup .= " AND terg_nb_ativo = ?";
+			$typesDup .= "i";
+			$varsDup[] = $ativoId;
+		}
+		$sqlDup .= " LIMIT 1";
+		$dup = query($sqlDup, $typesDup, $varsDup);
 		if($dup instanceof mysqli_result && mysqli_num_rows($dup) > 0){
 			return ["ok" => false, "entidade" => $entiId, "nome" => $nomeFunc, "msg" => $nomeFunc . " — já possui termo gerado/assinado (use 'Forçar' para regerar)."];
 		}
@@ -1132,7 +1258,7 @@ function termos_processar_um(int $entiId, array $params): array {
 		}
 		$tmpPdf = rtrim(str_replace("\\", "/", $tmpDir), "/") . "/termo_{$modeloId}_{$entiId}_" . date("YmdHis") . "_" . bin2hex(random_bytes(3)) . ".pdf";
 
-		if(!termos_renderizar_pdf($dados, $modelo, $tipo, $tmpPdf)){
+		if(!termos_renderizar_pdf($dados, $modelo, $tipo, $tmpPdf, false, $ativo)){
 			return ["ok" => false, "entidade" => $entiId, "nome" => $nomeFunc, "msg" => $nomeFunc . " — falha ao gerar o PDF do termo."];
 		}
 
@@ -1140,7 +1266,7 @@ function termos_processar_um(int $entiId, array $params): array {
 		if(empty($envio["ok"])){
 			@unlink($tmpPdf);
 			$msgErro = strval($envio["error"] ?? "Falha ao enviar para assinatura.");
-			termos_inserir_gerado($modeloId, $entiId, $tipoId, "erro", null, 0, "", 0, "Assinatura: " . $msgErro, $user);
+			termos_inserir_gerado($modeloId, $entiId, $tipoId, "erro", null, 0, "", 0, "Assinatura: " . $msgErro, $user, $ativoId);
 			termos_log("assinatura_erro", $msgErro, ["modelo" => $modeloId, "entidade" => $entiId]);
 			return ["ok" => false, "entidade" => $entiId, "nome" => $nomeFunc, "msg" => $nomeFunc . " — erro ao enviar assinatura: " . $msgErro];
 		}
@@ -1155,7 +1281,8 @@ function termos_processar_um(int $entiId, array $params): array {
 			strval($envio["id_documento"] ?? ""),
 			0,
 			"Enviado para assinatura eletrônica.",
-			$user
+			$user,
+			$ativoId
 		);
 		termos_log("gerado", "Termo gerado e enviado para assinatura", [
 			"modelo" => $modeloId,
@@ -1167,7 +1294,7 @@ function termos_processar_um(int $entiId, array $params): array {
 	}
 
 	[$dest, $rel] = termos_caminho_final($entiId, $modelo, $dados);
-	if(!termos_renderizar_pdf($dados, $modelo, $tipo, $dest)){
+	if(!termos_renderizar_pdf($dados, $modelo, $tipo, $dest, false, $ativo)){
 		return ["ok" => false, "entidade" => $entiId, "nome" => $nomeFunc, "msg" => $nomeFunc . " — falha ao gerar o PDF do termo."];
 	}
 
@@ -1178,7 +1305,7 @@ function termos_processar_um(int $entiId, array $params): array {
 		$notif = termos_criar_notificacao_visualizacao($entiId, $dados, $modelo, $tipo, $rel, $params);
 		if(empty($notif["ok"])){
 			$msgErroNotif = strval($notif["error"] ?? "Falha ao notificar o funcionário.");
-			$regId = termos_inserir_gerado($modeloId, $entiId, $tipoId, "gerado", $rel, 0, "", $docuId, "Documento gerado sem assinatura. Notificação não enviada: " . $msgErroNotif, $user);
+			$regId = termos_inserir_gerado($modeloId, $entiId, $tipoId, "gerado", $rel, 0, "", $docuId, "Documento gerado sem assinatura. Notificação não enviada: " . $msgErroNotif, $user, $ativoId);
 			termos_log("notificacao_erro", $msgErroNotif, ["modelo" => $modeloId, "entidade" => $entiId, "termo" => $regId]);
 			return ["ok" => true, "entidade" => $entiId, "nome" => $nomeFunc, "msg" => $nomeFunc . " — documento gerado e salvo no funcionário, mas houve falha na notificação: " . $msgErroNotif];
 		}
@@ -1193,7 +1320,8 @@ function termos_processar_um(int $entiId, array $params): array {
 			strval($notif["id_documento"] ?? ""),
 			$docuId,
 			"Documento salvo no funcionário e notificação de visualização enviada.",
-			$user
+			$user,
+			$ativoId
 		);
 		termos_atualizar_gerado($regId, [
 			"terg_nb_assinante" => intval($notif["id_assinante"] ?? 0),
@@ -1211,7 +1339,7 @@ function termos_processar_um(int $entiId, array $params): array {
 		return ["ok" => true, "entidade" => $entiId, "nome" => $nomeFunc, "msg" => $nomeFunc . " — documento salvo no funcionário," . $msgEmail . "."];
 	}
 
-	$regId = termos_inserir_gerado($modeloId, $entiId, $tipoId, "gerado", $rel, 0, "", $docuId, "Documento gerado sem assinatura.", $user);
+	$regId = termos_inserir_gerado($modeloId, $entiId, $tipoId, "gerado", $rel, 0, "", $docuId, "Documento gerado sem assinatura.", $user, $ativoId);
 	termos_log("gerado", "Termo gerado (PDF local)", [
 		"modelo" => $modeloId,
 		"entidade" => $entiId,
@@ -1362,8 +1490,21 @@ function termos_opcoes_setores(): array {
 	return $out;
 }
 
-function termos_lista_placeholders(): array {
+function termos_lista_placeholders_ativo(): array {
 	return [
+		"{{ativo_nome}}" => "Nome/identificação do ativo (celular)",
+		"{{ativo_imei}}" => "IMEI do celular",
+		"{{ativo_numero}}" => "Número do celular",
+		"{{ativo_operadora}}" => "Operadora do celular",
+		"{{ativo_cimie}}" => "CIMIE do celular",
+		"{{ativo_sistema_operacional}}" => "Sistema operacional do celular",
+		"{{ativo_marca_modelo}}" => "Marca e modelo do celular",
+		"{{ativo_responsavel}}" => "Nome do responsável atual pelo ativo"
+	];
+}
+
+function termos_lista_placeholders(): array {
+	return array_merge([
 		"{{empresa_razao}}" => "Razão social da empresa do funcionário",
 		"{{empresa_cnpj}}" => "CNPJ da empresa (formatado)",
 		"{{empresa_contato}}" => "Contato cadastrado na empresa",
@@ -1386,5 +1527,5 @@ function termos_lista_placeholders(): array {
 		"{{data_atual_extenso}}" => "Data atual por extenso",
 		"{{bloco_assinaturas}}" => "Linhas de assinatura dos signatários configurados",
 		"{{email_funcionario}}" => "E-mail do funcionário"
-	];
+	], termos_lista_placeholders_ativo());
 }

@@ -48,9 +48,16 @@ $params = [
 	"prazo_expiracao_dias" => intval($dados["prazo_expiracao_dias"] ?? 1)
 ];
 
+$ativos = $dados["ativos"] ?? [];
+if(!is_array($ativos)){
+	$ativos = [];
+}
+
 $resultados = [];
 foreach($entidades as $entiId){
-	$resultados[] = termos_processar_um($entiId, $params);
+	$paramsEntidade = $params;
+	$paramsEntidade["ativo_id"] = intval($ativos[$entiId] ?? 0);
+	$resultados[] = termos_processar_um($entiId, $paramsEntidade);
 }
 
 termos_json_resposta(200, [

@@ -248,7 +248,8 @@
         $__colTiposDoc = [
             "tipo_tx_logo" => "VARCHAR(255) DEFAULT NULL",
             "tipo_tx_cabecalho" => "TEXT DEFAULT NULL",
-            "tipo_tx_rodape" => "TEXT DEFAULT NULL"
+            "tipo_tx_rodape" => "TEXT DEFAULT NULL",
+            "tipo_tx_ativo" => "ENUM('sim','nao') NOT NULL DEFAULT 'nao'"
         ];
         foreach ($__colTiposDoc as $__col => $__tipo) {
             if (bancoTabelaExiste($conn, "tipos_documentos") && !bancoColunaExiste($conn, "tipos_documentos", $__col)) {

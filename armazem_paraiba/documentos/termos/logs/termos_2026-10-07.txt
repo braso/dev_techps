@@ -1,0 +1,3 @@
+[2026-10-07 11:53:29] user=Techps.admin(1) ip=::ffff:172.18.0.1 evento=modelo_criado detalhe=Modelo #2 criado nome=Termo_de_entrega_Celular
+[2026-10-07 11:54:36] user=Techps.admin(1) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=2 entidade=4 termo=6 solicitacao=6
+[2026-10-07 11:55:57] user=Techps.admin(1) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=2 entidade=4 termo=7 solicitacao=7
