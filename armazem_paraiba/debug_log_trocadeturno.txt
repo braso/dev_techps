@@ -103,3 +103,7 @@ Stack trace:
 2026-10-02 10:44:24 | POST retorno inserir recebido
 2026-10-02 10:44:24 | POST aprovadores processados
 2026-10-02 10:44:24 | POST solicitacao enviada com sucesso: 19
+2026-10-08 10:21:43 | POST iniciar envio solicitacao
+2026-10-08 10:21:43 | POST retorno inserir recebido
+2026-10-08 10:21:43 | POST aprovadores processados
+2026-10-08 10:21:43 | POST solicitacao enviada com sucesso: 26

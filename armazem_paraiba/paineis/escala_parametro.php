@@ -996,7 +996,6 @@ function index() {
         echo "<button type='button' class='btn btn-danger btn-sm' onclick='baixarEscalaPDF()'>Baixar PDF</button>";
         echo "<label style='margin-left:10px; font-weight:normal; font-size:12px;'>Layout do PDF: <select id='escalaPdfLayout' class='input-sm' style='height:28px; padding:2px 6px;'>"
             . "<option value='auto'>Automático</option>"
-            . "<option value='dividido'>Mês dividido</option>"
             . "<option value='colunas'>Colunas do mês</option>"
             . "</select></label>";
         echo "<span style='margin-left:15px; font-size:12px;'>"

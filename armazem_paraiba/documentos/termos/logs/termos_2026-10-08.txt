@@ -1,0 +1,2 @@
+[2026-10-08 10:07:09] user=Techps.admin(1) ip=::ffff:172.18.0.1 evento=modelo_atualizado detalhe=Modelo #2 atualizado nome=Termo_de_entrega_Celular notificacao=sim
+[2026-10-08 10:07:35] user=Techps.admin(1) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=2 entidade=4 termo=8 solicitacao=8
