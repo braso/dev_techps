@@ -14,14 +14,25 @@
     function ensureCelularEntidadeOpcional(){
         global $conn;
         if(!($conn instanceof mysqli)){
-            return;
+            return false;
         }
         $check = @mysqli_query($conn, "SHOW COLUMNS FROM celular LIKE 'celu_nb_entidade'");
-        if($check instanceof mysqli_result && ($row = mysqli_fetch_assoc($check))){
-            if(strtoupper(strval($row["Null"] ?? "NO")) === "NO"){
-                @mysqli_query($conn, "ALTER TABLE celular MODIFY COLUMN celu_nb_entidade INT(11) NULL DEFAULT NULL");
-            }
+        if(!($check instanceof mysqli_result) || !($row = mysqli_fetch_assoc($check))){
+            return false;
         }
+        if(strtoupper(strval($row["Null"] ?? "NO")) !== "NO"){
+            return true;
+        }
+        try{
+            if(!mysqli_query($conn, "ALTER TABLE celular MODIFY COLUMN celu_nb_entidade INT(11) NULL DEFAULT NULL")){
+                error_log("[cadastro_celular] Falha ao liberar NULL em celular.celu_nb_entidade: " . mysqli_error($conn));
+                return false;
+            }
+        }catch(Throwable $e){
+            error_log("[cadastro_celular] Falha ao liberar NULL em celular.celu_nb_entidade: " . $e->getMessage());
+            return false;
+        }
+        return true;
     }
     ensureCelularEntidadeOpcional();
 
@@ -158,6 +169,17 @@
             exit;
         }
 
+        $entidadeSelecionada = (!empty($_POST["entidade"]) ? (int)$_POST["entidade"] : null);
+
+        // Se o ativo ficará sem responsável, garante que a coluna aceite NULL no banco.
+        // Em produção o usuário do banco pode não ter privilégio de ALTER; nesse caso
+        // orienta a selecionar um responsável em vez de exibir o erro cru de SQL.
+        if($entidadeSelecionada === null && !ensureCelularEntidadeOpcional()){
+            set_status("<script>Swal.fire('Atenção!', 'Selecione um Responsável para o celular. O banco de dados ainda não permite salvar ativo sem responsável.', 'warning');</script>");
+            index();
+            exit;
+        }
+
         $novoCelular = [
             "celu_tx_nome" => $_POST["nome_like"],
             "celu_tx_imei" => $_POST["imei"],
@@ -166,7 +188,7 @@
             "celu_tx_cimie" => $_POST["cimie"],
             "celu_tx_sistemaOperacional" => $_POST["sistemaOperacional"],
             "celu_tx_marcaModelo" => $_POST["marcaModelo_like"],
-            "celu_nb_entidade" => (!empty($_POST["entidade"]) ? (int)$_POST["entidade"] : null),
+            "celu_nb_entidade" => $entidadeSelecionada,
             "celu_tx_dataAtualiza" => date("Y-m-d H:i:s")
         ];
 

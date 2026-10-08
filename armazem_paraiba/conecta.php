@@ -272,6 +272,24 @@
         mysqli_query($conn, "ALTER TABLE parametro ADD COLUMN para_tx_abonarFeriadoEscala ENUM('sim','nao') NOT NULL DEFAULT 'nao' COMMENT 'Abonar automaticamente feriados na escala'");
     };
 
+    // Migração da tabela celular: o cadastro de ativos permite celular sem responsável,
+    // então a coluna de entidade precisa aceitar NULL.
+    if (bancoTabelaExiste($conn, "celular") && bancoColunaExiste($conn, "celular", "celu_nb_entidade")) {
+        $__celularNulo = @mysqli_query(
+            $conn,
+            "SELECT IS_NULLABLE FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = 'celular'
+               AND COLUMN_NAME = 'celu_nb_entidade'"
+        );
+        $__celularNuloRow = ($__celularNulo instanceof mysqli_result) ? mysqli_fetch_assoc($__celularNulo) : null;
+        if (!empty($__celularNuloRow) && strtoupper(strval($__celularNuloRow["IS_NULLABLE"] ?? "NO")) === "NO") {
+            if (!@mysqli_query($conn, "ALTER TABLE celular MODIFY COLUMN celu_nb_entidade INT(11) NULL DEFAULT NULL")) {
+                error_log("[conecta] nao foi possivel permitir NULL em celular.celu_nb_entidade: " . mysqli_error($conn));
+            }
+        }
+    }
+
     // Migração da tabela endosso: colunas necessárias para o cadastro atual
     if (bancoTabelaExiste($conn, "endosso") && !bancoColunaExiste($conn, "endosso", "endo_tx_nome")) {
         mysqli_query($conn, "ALTER TABLE endosso ADD COLUMN endo_tx_nome VARCHAR(255) NULL AFTER endo_nb_entidade");
