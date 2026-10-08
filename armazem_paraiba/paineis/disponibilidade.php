@@ -48,13 +48,15 @@
 
                     // Listas completas de cada card, para o popup. Quem está indisponível ou
                     // em jornada aberta não entra na tabela, mas continua acessível aqui.
-                    var djGrupos = { disponivel: [], parcial: [], naoPermitido: [], EmJornada: [] };
+                    var djGrupos = { disponivel: [], parcial: [], naoPermitido: [], EmJornada: [], semRegistro: [], ferias: [] };
 
                     var djRotulos = {
                         disponivel:   'Disponíveis com 11h de descanso',
                         parcial:      'Parcialmente disponíveis (8h de descanso)',
                         naoPermitido: 'Indisponíveis',
-                        EmJornada:    'Em jornada aberta'
+                        EmJornada:    'Em jornada aberta',
+                        semRegistro:  'Sem registro de ponto',
+                        ferias:       'De férias'
                     };
 
                     function djEscapar(valor){
@@ -121,7 +123,9 @@
                                     var contagemStatus = {
                                         disponivel: 0,
                                         parcial: 0,
-                                        naoPermitido: 0
+                                        naoPermitido: 0,
+                                        semRegistro: 0,
+                                        ferias: 0
                                     };
                                     var row = {};
                                     $.each(data, function(index, item){
@@ -138,6 +142,12 @@
                                         } else if(index == 'naoPermitido') {
                                             css = 'background-color: var(--var-darkred); color: white;';
                                             status = 'Indisponível';
+                                        } else if(index == 'semRegistro') {
+                                            css = 'background-color: #e5e7eb;';
+                                            status = 'Sem registro de ponto';
+                                        } else if(index == 'ferias') {
+                                            css = 'background-color: #c7d2fe;';
+                                            status = 'De férias';
                                         }
 
                                         // Guarda a lista inteira do grupo para o popup do card,
@@ -153,7 +163,7 @@
                                         // A tabela lista apenas quem pode ser escalado: jornada
                                         // fechada e descanso cumprido (total ou parcial). Jornada
                                         // aberta e indisponível ficam só na contagem dos cards.
-                                        if(index != 'EmJornada' && index != 'naoPermitido'){
+                                        if(index != 'EmJornada' && index != 'naoPermitido' && index != 'ferias'){   // semRegistro entra: pode ser escalado; ferias e jornada aberta, nao
                                             if (Array.isArray(item)) {
                                                 // Itera sobre o array de motoristas
                                                 $.each(item, function(index, item) {
@@ -200,7 +210,7 @@
                                     consulta.after('<br><strong>Ocupação:&nbsp</strong> <span>'+ocupacaoData+'</span>');
 
                                     var resumo = $('#resumo');
-                                    resumo.after('<br><span style=\"font-size: 10px; text-align: justify;\"><i class=\"fa fa-info-circle\" aria-hidden=\"true\" style=\"font-size: 14px;\"></i> A tabela lista somente quem pode ser escalado. Quem está com <b>jornada aberta</b> (descanso só começa a contar depois do fim da jornada) e quem está <b>indisponível</b> entram apenas na contagem dos cards acima.</span>');
+                                    resumo.after('<br><span style=\"font-size: 10px; text-align: justify;\"><i class=\"fa fa-info-circle\" aria-hidden=\"true\" style=\"font-size: 14px;\"></i> A tabela lista somente quem pode ser escalado. Quem está com <b>jornada aberta</b> (descanso só começa a contar depois do fim da jornada), quem está <b>indisponível</b> e quem está <b>de férias</b> entram apenas na contagem dos cards acima.</span>');
 
                                     var tabela_funcionarios = $('#tabela-funcionarios thead');
 
@@ -653,6 +663,8 @@
                     .dj-card--parcial{ background: #d98215; }
                     .dj-card--indisponivel{ background: #a30000; }
                     .dj-card--jornada{ background: #2b3038; }
+                    .dj-card--semregistro{ background: #6b7684; }
+                    .dj-card--ferias{ background: #4f46e5; }
 
                     /* Popup largo e baixo: cabe a lista inteira sem rolar muito.
                        Posição é a padrão do Bootstrap (no topo da tela). */
@@ -714,6 +726,18 @@
                             <button type="button" class="dj-card dj-card--jornada" data-grupo="EmJornada" data-vazio="1">
                                 <span class="dj-card__rotulo">Em jornada</span>
                                 <span class="dj-card__numero" id="dj-num-EmJornada">0</span>
+                                <span class="dj-card__acao">clique para ver a lista</span>
+                            </button>
+
+                            <button type="button" class="dj-card dj-card--semregistro" data-grupo="semRegistro" data-vazio="1">
+                                <span class="dj-card__rotulo">Sem registro</span>
+                                <span class="dj-card__numero" id="dj-num-semRegistro">0</span>
+                                <span class="dj-card__acao">clique para ver a lista</span>
+                            </button>
+
+                            <button type="button" class="dj-card dj-card--ferias" data-grupo="ferias" data-vazio="1">
+                                <span class="dj-card__rotulo">De férias</span>
+                                <span class="dj-card__numero" id="dj-num-ferias">0</span>
                                 <span class="dj-card__acao">clique para ver a lista</span>
                             </button>
                         </div>

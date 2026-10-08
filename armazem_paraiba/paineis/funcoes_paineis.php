@@ -758,6 +758,26 @@ function criar_relatorio_jornada() {
 		), MYSQLI_ASSOC);
 
 		foreach ($datasPontosAbertos as $datas) {
+			/* A jornada só é aberta se NÃO existe batida de fim depois do último
+			   início. Antes a tela decidia isso contando horários dentro do mesmo
+			   dia-calendário, então uma jornada encerrada na madrugada seguinte
+			   (ou já encerrada) continuava listada como aberta para sempre. */
+			$fimDepoisDoInicio = mysqli_fetch_assoc(query(
+				"SELECT p.pont_tx_data
+				   FROM ponto p
+				  WHERE p.pont_tx_matricula = ?
+				    AND p.pont_tx_status = 'ativo'
+				    AND p.pont_tx_tipo = 2
+				    AND p.pont_tx_data > ?
+				  ORDER BY p.pont_tx_data ASC
+				  LIMIT 1",
+				"ss",
+				[$motorista["enti_tx_matricula"], $datas["pont_tx_data"]]
+			));
+			if (!empty($fimDepoisDoInicio["pont_tx_data"])) {
+				continue;   // jornada encerrada: não entra no relatório de jornada aberta
+			}
+
 			$endossos = mysqli_fetch_all(query(
 				"SELECT endo_tx_de, endo_tx_ate"
 					. " FROM `endosso`"
@@ -1827,7 +1847,6 @@ function logisticas() {
 				JOIN user ON user.user_nb_entidade = entidade.enti_nb_id
 				WHERE enti_tx_status = 'ativo'
 					AND enti_nb_empresa = {$_POST["empresa"]}
-					AND enti_tx_dataCadastro <= '{$periodoInicio}'
 					{$filtroOcupacao}
 					{$filtroOperacao}
 					{$filtroSetor}
@@ -1875,7 +1894,53 @@ function logisticas() {
 	$totalMotoristasLivres = 0;
 	$motoristasIgnorados = 0;
 	$totalMotoristasJornada = 0;
+	$motoristasSemRegistro = [];
+	$motoristasFerias = [];
+
+	// Férias cobrindo o momento consultado: quem está de férias não pode ser
+	// escalado, então sai da disponibilidade e aparece no card próprio.
+	$feriasPorEntidade = [];
+	$rsFerias = query(
+		"SELECT f.feri_nb_entidade AS id, f.feri_tx_dataInicio AS inicio, f.feri_tx_dataFim AS fim
+		   FROM ferias f
+		  WHERE f.feri_tx_status = 'ativo'
+		    AND ? BETWEEN f.feri_tx_dataInicio AND f.feri_tx_dataFim",
+		"s",
+		[$dataReferencia->format("Y-m-d")]
+	);
+	while ($rsFerias && ($linhaFerias = mysqli_fetch_assoc($rsFerias))) {
+		$idFerias = intval($linhaFerias["id"] ?? 0);
+		if ($idFerias > 0 && !isset($feriasPorEntidade[$idFerias])) {
+			$feriasPorEntidade[$idFerias] = [
+				"inicio" => strval($linhaFerias["inicio"] ?? ""),
+				"fim"    => strval($linhaFerias["fim"] ?? "")
+			];
+		}
+	}
 	foreach ($motoristas as $motorista) {
+		$idEntidadeAtual = intval($motorista["enti_nb_id"] ?? 0);
+		if (isset($feriasPorEntidade[$idEntidadeAtual])) {
+			$periodoFerias = $feriasPorEntidade[$idEntidadeAtual];
+			$fimFerias = DateTime::createFromFormat("Y-m-d", substr(strval($periodoFerias["fim"]), 0, 10));
+			$motoristasFerias[] = [
+				"matricula"        => $motorista["enti_tx_matricula"],
+				"Nome"             => $motorista["enti_tx_nome"],
+				"ocupacao"         => $motorista["enti_tx_ocupacao"],
+				"telefone"         => $telefoneContato($motorista),
+				"tipoOperacaoNome" => (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem Cargo"),
+				"ultimaJornada"    => "De férias até " . ($fimFerias ? $fimFerias->format("d/m/Y") : strval($periodoFerias["fim"])),
+				"repouso"          => "----",
+				"Apos8"            => "----",
+				"Apos11"           => "----",
+				"consulta"         => $dataReferenciaStr,
+				"setor"            => $motorista["enti_setor_id"],
+				"setorNome"        => $motorista["grup_tx_nome"],
+				"subsetor"         => $motorista["enti_subSetor_id"],
+				"subsetorNome"     => $motorista["sbgr_tx_nome"]
+			];
+			continue;
+		}
+
 		$parametro = mysqli_fetch_all(query(
 			"SELECT para_tx_jornadaSemanal, para_tx_jornadaSabado, para_tx_maxHESemanalDiario, para_tx_adi5322"
 				. " FROM `parametro`"
@@ -1908,7 +1973,25 @@ function logisticas() {
 		$dataUltimoInicio = strval($lastInicio["pont_tx_data"] ?? "");
 
 		if ($dataUltimoFim === "" && $dataUltimoInicio === "") {
-			// Nunca bateu ponto até o momento consultado.
+			// Nunca bateu ponto até o momento consultado: não há descanso a calcular,
+			// mas a pessoa existe e pode ser escalada — antes ela simplesmente
+			// desaparecia do painel.
+			$motoristasSemRegistro[] = [
+				"matricula"        => $motorista["enti_tx_matricula"],
+				"Nome"             => $motorista["enti_tx_nome"],
+				"ocupacao"         => $motorista["enti_tx_ocupacao"],
+				"telefone"         => $telefoneContato($motorista),
+				"tipoOperacaoNome" => (!empty($motorista["oper_tx_nome"]) ? $motorista["oper_tx_nome"] : "Sem Cargo"),
+				"ultimaJornada"    => "Sem registro de ponto",
+				"repouso"          => "----",
+				"Apos8"            => "----",
+				"Apos11"           => "----",
+				"consulta"         => $dataReferenciaStr,
+				"setor"            => $motorista["enti_setor_id"],
+				"setorNome"        => $motorista["grup_tx_nome"],
+				"subsetor"         => $motorista["enti_subSetor_id"],
+				"subsetorNome"     => $motorista["sbgr_tx_nome"]
+			];
 			$motoristasIgnorados++;
 			continue;
 		}
@@ -2004,11 +2087,20 @@ function logisticas() {
 		$totalMotoristasLivres += 1;
 	}
 
+	if (!empty($motoristasSemRegistro)) {
+		$motoristasLivres["semRegistro"] = $motoristasSemRegistro;
+	}
+	if (!empty($motoristasFerias)) {
+		$motoristasLivres["ferias"] = $motoristasFerias;
+	}
+
 	$motoristasLivres["total"] = [
 		// Contagem direta de quem está em jornada aberta (antes era por subtração,
 		// e só enxergava quem nunca tinha fechado uma jornada).
 		"totalMotoristasJornada" => $totalMotoristasJornada,
 		"totalMotoristasLivres" => $totalMotoristasLivres,
+		"totalSemRegistro" => count($motoristasSemRegistro),
+		"totalFerias" => count($motoristasFerias),
 		"consulta"        => $dataReferenciaStr,
 	];
 
