@@ -74,6 +74,10 @@
 				if (escalaPdfTextoSemAcento($texto) === "FERIAS") {
 					$texto = "FÉ-\nRIAS";
 					$negrito = true;
+				} elseif (escalaPdfTextoSemAcento($texto) === "ABONO") {
+					// Abono: quebra "ABO-\nNO" para caber sem reduzir a fonte
+					$texto = "ABO-\nNO";
+					$negrito = true;
 				}
 				$celulas[] = [
 					"texto" => $texto,
