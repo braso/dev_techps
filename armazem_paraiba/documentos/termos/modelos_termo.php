@@ -302,6 +302,14 @@ function index() {
 							<input type='number' id='termos_modal_prazo' class='form-control input-sm' min='0' max='30' step='1' value='1'>
 							<span class='help-block termos-ajuda' style='font-size:11px; margin-bottom:0;'>Quantos dias o link de assinatura fica válido. 0 = sem prazo de expiração.</span>
 						</div>
+						<div class='col-sm-3'>
+							<label class='control-label'>Assinatura por hierarquia</label>
+							<select id='termos_modal_hierarquia' class='form-control input-sm'>
+								<option value='nao'>Não</option>
+								<option value='sim'>Sim</option>
+							</select>
+							<span class='help-block termos-ajuda' style='font-size:11px; margin-bottom:0;'>Sim: os responsáveis do funcionário assinam em sequência e, por último, o funcionário.</span>
+						</div>
 					</div>
 					<div id='termos_modal_progresso' style='display:none; margin-top:12px;'>
 						<div class='progress' style='margin-bottom:4px;'>
@@ -528,7 +536,8 @@ function termosModalCargosSelecionados() {
 				validar_icp: $('#termos_modal_icp').val(),
 				enviar_email: $('#termos_modal_email').val(),
 				forcar: $('#termos_modal_forcar').val(),
-				prazo_expiracao_dias: parseInt($('#termos_modal_prazo').val(), 10) || 0
+				prazo_expiracao_dias: parseInt($('#termos_modal_prazo').val(), 10) || 0,
+				hierarquia: $('#termos_modal_hierarquia').val()
 			};
 			var total = ids.length, feitos = 0, okC = 0, errC = 0, resumo = [];
 			function proximo(inicio) {

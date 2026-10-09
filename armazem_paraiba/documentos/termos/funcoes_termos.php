@@ -419,6 +419,10 @@ function termos_dados_funcionario(int $entiId): array {
 			e.enti_tx_admissao, e.enti_tx_matricula, e.enti_tx_ocupacao, e.enti_tx_email,
 			e.enti_tx_cnhRegistro, e.enti_tx_cnhCategoria, e.enti_tx_cnhValidade,
 			e.enti_tx_status,
+			e.enti_setor_id, e.enti_tx_tipoOperacao,
+			e.enti_respSetor_id, e.enti_respSetor_ids,
+			e.enti_respCargo_id, e.enti_respCargo_ids,
+			e.enti_respFuncionario_id, e.enti_respFuncionario_ids,
 			em.empr_nb_id, em.empr_tx_nome, em.empr_tx_cnpj, em.empr_tx_contato, em.empr_tx_email AS empr_email, em.empr_tx_logo,
 			cid.cida_tx_nome, cid.cida_tx_uf,
 			op.oper_tx_nome AS cargo_nome
@@ -431,6 +435,188 @@ function termos_dados_funcionario(int $entiId): array {
 		[$entiId]
 	);
 	return ($res instanceof mysqli_result) ? (mysqli_fetch_assoc($res) ?: []) : [];
+}
+
+function termos_responsaveis_hierarquia(int $entiId, array $dados = []): array {
+	if($entiId <= 0){
+		return [];
+	}
+	if(empty($dados)){
+		$dados = termos_dados_funcionario($entiId);
+	}
+
+	$setorId = intval($dados["enti_setor_id"] ?? 0);
+	$cargoId = intval($dados["enti_tx_tipoOperacao"] ?? 0);
+
+	$selSetor = [];
+	foreach(explode(",", strval($dados["enti_respSetor_ids"] ?? "")) as $p){
+		$v = intval(trim($p));
+		if($v > 0){ $selSetor[$v] = true; }
+	}
+	$selCargo = [];
+	foreach(explode(",", strval($dados["enti_respCargo_ids"] ?? "")) as $p){
+		$v = intval(trim($p));
+		if($v > 0){ $selCargo[$v] = true; }
+	}
+	if(empty($selSetor) && intval($dados["enti_respSetor_id"] ?? 0) > 0){
+		$selSetor[intval($dados["enti_respSetor_id"])] = true;
+	}
+	if(empty($selCargo) && intval($dados["enti_respCargo_id"] ?? 0) > 0){
+		$selCargo[intval($dados["enti_respCargo_id"])] = true;
+	}
+
+	$candidatos = [];
+
+	if($setorId > 0){
+		$res = query(
+			"SELECT e.enti_nb_id AS id, e.enti_tx_nome AS nome, e.enti_tx_email AS email,
+			        (CASE WHEN sr.sres_nb_ordem <= 0 THEN 999999 ELSE sr.sres_nb_ordem END) AS ord,
+			        sr.sres_tx_assinar_governanca AS assina
+			 FROM setor_responsavel sr
+			 INNER JOIN entidade e ON e.enti_nb_id = sr.sres_nb_entidade_id
+			 WHERE sr.sres_nb_setor_id = ? AND sr.sres_tx_status = 'ativo' AND e.enti_tx_status = 'ativo'
+			 ORDER BY ord ASC, e.enti_tx_nome ASC",
+			"i",
+			[$setorId]
+		);
+		while($res instanceof mysqli_result && ($r = mysqli_fetch_assoc($res))){
+			$id = intval($r["id"] ?? 0);
+			if($id <= 0 || $id === $entiId){
+				continue;
+			}
+			$candidatos[$id] = [
+				"enti_nb_id" => $id,
+				"nome" => strval($r["nome"] ?? ""),
+				"email" => strval($r["email"] ?? ""),
+				"ord" => intval($r["ord"] ?? 999999),
+				"assina" => strtolower(trim(strval($r["assina"] ?? "nao"))) === "sim",
+				"selecionado" => isset($selSetor[$id]),
+				"setor" => true,
+				"cargo" => false
+			];
+		}
+	}
+
+	if($cargoId > 0){
+		$res = query(
+			"SELECT e.enti_nb_id AS id, e.enti_tx_nome AS nome, e.enti_tx_email AS email,
+			        (CASE WHEN orv.opre_nb_ordem <= 0 THEN 999999 ELSE orv.opre_nb_ordem END) AS ord,
+			        orv.opre_tx_assinar_governanca AS assina
+			 FROM operacao_responsavel orv
+			 INNER JOIN entidade e ON e.enti_nb_id = orv.opre_nb_entidade_id
+			 WHERE orv.opre_nb_operacao_id = ? AND orv.opre_tx_status = 'ativo' AND e.enti_tx_status = 'ativo'
+			 ORDER BY ord ASC, e.enti_tx_nome ASC",
+			"i",
+			[$cargoId]
+		);
+		while($res instanceof mysqli_result && ($r = mysqli_fetch_assoc($res))){
+			$id = intval($r["id"] ?? 0);
+			if($id <= 0 || $id === $entiId){
+				continue;
+			}
+			$assina = strtolower(trim(strval($r["assina"] ?? "nao"))) === "sim";
+			$ord = intval($r["ord"] ?? 999999);
+			if(isset($candidatos[$id])){
+				$candidatos[$id]["cargo"] = true;
+				$candidatos[$id]["assina"] = $candidatos[$id]["assina"] || $assina;
+				$candidatos[$id]["selecionado"] = $candidatos[$id]["selecionado"] || isset($selCargo[$id]);
+				$candidatos[$id]["ord"] = min(intval($candidatos[$id]["ord"]), $ord);
+			}else{
+				$candidatos[$id] = [
+					"enti_nb_id" => $id,
+					"nome" => strval($r["nome"] ?? ""),
+					"email" => strval($r["email"] ?? ""),
+					"ord" => $ord,
+					"assina" => $assina,
+					"selecionado" => isset($selCargo[$id]),
+					"setor" => false,
+					"cargo" => true
+				];
+			}
+		}
+	}
+
+	if(empty($candidatos)){
+		return [];
+	}
+
+	$temSelecionados = false;
+	$temGovernanca = false;
+	foreach($candidatos as $c){
+		if(!empty($c["selecionado"])){ $temSelecionados = true; }
+		if(!empty($c["assina"])){ $temGovernanca = true; }
+	}
+
+	$filtros = [];
+	if($temSelecionados && $temGovernanca){
+		$filtros[] = fn($c) => !empty($c["selecionado"]) && !empty($c["assina"]);
+	}
+	if($temGovernanca){
+		$filtros[] = fn($c) => !empty($c["assina"]);
+	}
+	if($temSelecionados){
+		$filtros[] = fn($c) => !empty($c["selecionado"]);
+	}
+	$filtros[] = fn($c) => true;
+
+	$filtrados = [];
+	foreach($filtros as $filtro){
+		$filtrados = array_values(array_filter($candidatos, $filtro));
+		if(!empty($filtrados)){
+			break;
+		}
+	}
+
+	usort($filtrados, function($a, $b){
+		$ao = intval($a["ord"] ?? 999999);
+		$bo = intval($b["ord"] ?? 999999);
+		if($ao === $bo){
+			return strcasecmp(strval($a["nome"] ?? ""), strval($b["nome"] ?? ""));
+		}
+		return $ao <=> $bo;
+	});
+
+	$out = [];
+	foreach($filtrados as $c){
+		$out[] = [
+			"enti_nb_id" => intval($c["enti_nb_id"] ?? 0),
+			"nome" => strval($c["nome"] ?? ""),
+			"email" => strval($c["email"] ?? ""),
+			"funcao" => !empty($c["setor"]) ? "Responsável do Setor" : "Responsável do Cargo"
+		];
+	}
+	return $out;
+}
+
+function termos_signatarios_hierarquia(int $entiId, array $dados): array {
+	$responsaveis = termos_responsaveis_hierarquia($entiId, $dados);
+	if(empty($responsaveis)){
+		return [];
+	}
+
+	$signatarios = [];
+	$ordem = 0;
+	foreach($responsaveis as $r){
+		$ordem++;
+		$signatarios[] = [
+			"enti_nb_id" => intval($r["enti_nb_id"] ?? 0),
+			"nome" => strval($r["nome"] ?? ""),
+			"email" => strval($r["email"] ?? ""),
+			"funcao" => strval($r["funcao"] ?? "Responsável"),
+			"ordem" => $ordem,
+			"salvar_documento_funcionario" => "nao"
+		];
+	}
+
+	$signatarios[] = [
+		"enti_nb_id" => $entiId,
+		"nome" => strval($dados["enti_tx_nome"] ?? ""),
+		"email" => strval($dados["enti_tx_email"] ?? ""),
+		"funcao" => "Funcionário",
+		"ordem" => $ordem + 1,
+		"salvar_documento_funcionario" => "sim"
+	];
+	return $signatarios;
 }
 
 function termos_nome_arquivo(array $modelo, array $dados): string {
@@ -928,6 +1114,31 @@ function termos_email_fallback(array $dados, array $signatario = []): string {
 	return "sememail@techps.com.br";
 }
 
+function termos_enviar_email_primeiro(array $envio, array $signatarios, string $nomeArquivo): void {
+	$primeiro = $signatarios[0] ?? [];
+	$token = strval($envio["tokens"][0] ?? "");
+	$email = trim(strval($primeiro["email"] ?? ""));
+	if($token === "" || $email === "" || !filter_var($email, FILTER_VALIDATE_EMAIL)){
+		return;
+	}
+	if(function_exists("assinatura_integracao_carregarEmail")){
+		assinatura_integracao_carregarEmail();
+	}
+	if(!function_exists("enviarEmailProximo")){
+		return;
+	}
+	enviarEmailProximo(
+		$email,
+		strval($primeiro["nome"] ?? ""),
+		$token,
+		$nomeArquivo,
+		intval($envio["id_documento"] ?? 0),
+		strval($primeiro["funcao"] ?? "Signatário"),
+		strval($envio["caminho_arquivo_abs"] ?? ""),
+		intval($primeiro["enti_nb_id"] ?? 0)
+	);
+}
+
 function termos_enviar_assinatura(int $entiId, array $dados, array $modelo, array $tipo, string $pdfTmp, array $opts): array {
 	require_once dirname(__DIR__) . "/../assinatura/integracao/assinatura_integracao.php";
 
@@ -950,6 +1161,31 @@ function termos_enviar_assinatura(int $entiId, array $dados, array $modelo, arra
 	];
 
 	$assinantes = termos_carregar_assinantes(intval($modelo["mode_nb_id"] ?? 0));
+	if(strtolower(trim(strval($opts["hierarquia"] ?? "nao"))) === "sim" && empty($assinantes)){
+		$signatarios = termos_signatarios_hierarquia($entiId, $dados);
+		if(!empty($signatarios)){
+			if(!$enviarEmail){
+				foreach($signatarios as &$s){
+					$email = trim(strval($s["email"] ?? ""));
+					if($email === "" || !filter_var($email, FILTER_VALIDATE_EMAIL)){
+						$s["email"] = termos_email_fallback($dados, $s);
+					}
+				}
+				unset($s);
+			}
+			$envio = assinatura_integracao_enviarDocumentoParaMultiplosAssinantes(
+				$GLOBALS["conn"],
+				$pdfTmp,
+				$signatarios,
+				array_merge($base, ["enviar_email" => "nao"])
+			);
+			if($enviarEmail && !empty($envio["ok"])){
+				termos_enviar_email_primeiro($envio, $signatarios, $nomeArquivo);
+			}
+			return $envio;
+		}
+	}
+
 	if(empty($assinantes)){
 		$base["funcao"] = "Funcionário";
 		$base["salvar_documento_funcionario"] = "sim";

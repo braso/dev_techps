@@ -366,9 +366,8 @@ function assinatura_entregarParaFuncionarioEFinalizarNotificacao(
                 $resList = mysqli_stmt_get_result($stmtList);
                 if ($resList) {
                     while ($a = mysqli_fetch_assoc($resList)) {
-                        $ordem = intval($a["ordem"] ?? 0);
                         $salvarDoc = strtolower(trim(strval($a["salvar_documento_funcionario"] ?? "nao"))) === "sim";
-                        if ($ordem !== 1 && !$salvarDoc) {
+                        if (!$salvarDoc) {
                             continue;
                         }
 
