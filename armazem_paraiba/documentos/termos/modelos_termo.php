@@ -80,7 +80,7 @@ function index() {
 
 	echo "<h3>Modelos Cadastrados</h3>";
 	echo "<div class='table-responsive'><table class='table table-bordered table-striped'>";
-	echo "<thead><tr><th>ID</th><th>Nome</th><th>Tipo de Documento</th><th>Ativo</th><th>Assinatura</th><th>Notificação</th><th>Status</th><th>Atualizado</th><th>Ações</th></tr></thead>";
+	echo "<thead><tr><th>ID</th><th>Nome</th><th>Tipo de Documento</th><th>Equipamento</th><th>Assinatura</th><th>Notificação</th><th>Status</th><th>Atualizado</th><th>Ações</th></tr></thead>";
 	echo "<tbody>";
 
 	if(!$res || mysqli_num_rows($res) == 0){
@@ -99,7 +99,7 @@ function index() {
 
 		$ativoExibe = "<span class='text-muted'>—</span>";
 		if(intval($row["mode_nb_ativo"] ?? 0) > 0){
-			$ativoExibe = termos_h(strval($row["ativo_nome"] ?? ("Ativo #" . intval($row["mode_nb_ativo"]))));
+			$ativoExibe = termos_h(strval($row["ativo_nome"] ?? ("Equipamento #" . intval($row["mode_nb_ativo"]))));
 			$imeiAtivo = trim(strval($row["ativo_imei"] ?? ""));
 			if($imeiAtivo !== ""){
 				$ativoExibe .= "<br><small class='text-muted'>IMEI: " . termos_h($imeiAtivo) . "</small>";
@@ -662,7 +662,7 @@ function form() {
 	while($resTipos && ($t = mysqli_fetch_assoc($resTipos))){
 		$suf = strtolower(trim(strval($t["tipo_tx_assinatura"] ?? "nao"))) === "sim" ? " (com assinatura)" : "";
 		if(strtolower(trim(strval($t["tipo_tx_ativo"] ?? "nao"))) === "sim"){
-			$suf .= " (com ativo)";
+			$suf .= " (com equipamento)";
 			$tiposAtivo[intval($t["tipo_nb_id"])] = true;
 		}
 		$tipos[$t["tipo_nb_id"]] = $t["tipo_tx_nome"] . $suf;
@@ -671,19 +671,20 @@ function form() {
 	$conteudo = termos_sanitizar_html(strval($a_mod["mode_tx_conteudo"] ?? ""));
 
 	$placeholdersHtml = "";
-	foreach(termos_lista_placeholders() as $token => $desc){
+	foreach(termos_lista_placeholders_gerais() as $token => $desc){
 		$placeholdersHtml .= "<option value=\"" . termos_h($token) . "\">" . termos_h($token . " — " . $desc) . "</option>";
 	}
 
-	$tagsAtivoHtml = "";
+	$ativoPlaceholders = [];
 	foreach(termos_lista_placeholders_ativo() as $token => $desc){
-		$tagsAtivoHtml .= "<option value=\"" . termos_h($token) . "\">" . termos_h($token . " — " . $desc) . "</option>";
+		$ativoPlaceholders[$token] = $desc;
 	}
+	$ativoPlaceholdersJson = json_encode($ativoPlaceholders, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
 	$ativoSelecionado = intval($a_mod["mode_nb_ativo"] ?? 0);
-	$opcoesAtivo = ["" => "Selecione um ativo..."];
+	$opcoesAtivo = ["" => "Selecione um equipamento..."];
 	foreach(termos_listar_ativos() as $a){
-		$opcoesAtivo[intval($a["celu_nb_id"])] = termos_h(strval($a["rotulo"] ?? ("Ativo #" . intval($a["celu_nb_id"]))));
+		$opcoesAtivo[intval($a["celu_nb_id"])] = termos_h(strval($a["rotulo"] ?? ("Equipamento #" . intval($a["celu_nb_id"]))));
 	}
 
 	$tipoDocPadrao = strval($a_mod["mode_nb_tipo_doc"] ?? "");
@@ -700,7 +701,7 @@ function form() {
 		"<input type='hidden' name='id' value='{$id}'>",
 		campo("Nome do Modelo*", "nome", strval($a_mod["mode_tx_nome"] ?? ""), 4),
 		combo("Tipo de Documento*", "tipo_doc", $tipoDocPadrao, 3, $tipos),
-		combo("Ativo", "ativo", $ativoSelecionado, 3, $opcoesAtivo, "id='termos_modelo_ativo'"),
+		combo("Equipamento", "ativo", $ativoSelecionado, 3, $opcoesAtivo, "id='termos_modelo_ativo'"),
 		combo("Notificação", "notificacao", $notificacaoPadrao, 3, ["sim" => "Sim", "nao" => "Não"]),
 		combo("Status", "status", strval($a_mod["mode_tx_status"] ?? "ativo"), 2, ["ativo" => "Ativo", "inativo" => "Inativo"])
 	];
@@ -733,7 +734,7 @@ function form() {
 		<div class='portlet light'>
 			<div class='portlet-title'><span class='caption-subject font-dark bold uppercase'>Texto Padrão do Documento</span></div>
 			<div class='portlet-body'>
-				<p class='text-muted'>Escreva o texto padrão do documento e insira os campos pelo menu abaixo. <b>O modelo é salvo com os placeholders</b> (ex.: <code>{{funcionario_nome}}</code>) — os dados de cada funcionário são preenchidos automaticamente na hora de gerar. Se o <b>Tipo de Documento</b> exigir <b>Ativo</b>, selecione o ativo e use o menu de dados do ativo (ex.: <code>{{ativo_imei}}</code>). Para conferir, use a Pré-visualização (escolhe o funcionário de amostra).</p>
+				<p class='text-muted'>Escreva o texto padrão do documento e insira os campos pelo menu abaixo. <b>O modelo é salvo com os placeholders</b> (ex.: <code>{{funcionario_nome}}</code>) — os dados de cada funcionário são preenchidos automaticamente na hora de gerar. Quando o <b>Tipo de Documento</b> exigir <b>Equipamento</b>, os campos do equipamento (ex.: <code>{{equipamento_imei}}</code>) aparecem no mesmo menu. Para conferir, use a Pré-visualização (escolhe o funcionário de amostra).</p>
 				<div class='row' style='margin-bottom:6px;'>
 					<div class='col-sm-12' style='display:flex; flex-wrap:wrap; gap:4px; align-items:center;'>
 						<button type='button' class='btn btn-default btn-xs' onclick='termosExec(\"bold\")' title='Negrito'><b>B</b></button>
@@ -750,13 +751,9 @@ function form() {
 						<button type='button' class='btn btn-default btn-xs' onclick='termosExec(\"formatBlock\", \"p\")' title='Parágrafo'>&para;</button>
 						<button type='button' class='btn btn-default btn-xs' onclick='termosExec(\"undo\")' title='Desfazer'>&#8630;</button>
 						<button type='button' class='btn btn-default btn-xs' onclick='termosExec(\"redo\")' title='Refazer'>&#8631;</button>
-						<select id='termos_placeholders' class='form-control input-sm' style='display:inline-block;width:auto;max-width:380px;' onchange='termosInserirPlaceholder(this)'>
-							<option value=''>Inserir campo do funcionário...</option>
+						<select id='termos_placeholders' class='form-control input-sm' style='display:inline-block;width:auto;max-width:420px;' onchange='termosInserirPlaceholder(this)'>
+							<option value=''>Inserir campo...</option>
 							{$placeholdersHtml}
-						</select>
-						<select id='termos_tags_ativo' class='form-control input-sm' style='display:inline-block;width:auto;max-width:380px;' onchange='termosInserirPlaceholder(this)' disabled title='Selecione um Ativo para habilitar os dados do ativo'>
-							<option value=''>Inserir dado do ativo...</option>
-							{$tagsAtivoHtml}
 						</select>
 					</div>
 				</div>
@@ -775,6 +772,7 @@ function form() {
 	<script>
 		var TERMOS_CONTEUDO = " . json_encode($conteudo, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ";
 		var TERMOS_TIPOS_ATIVO = " . json_encode($tiposAtivo, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ";
+		var TERMOS_PLACEHOLDERS_ATIVO = " . $ativoPlaceholdersJson . ";
 
 		function termosExec(cmd, arg) {
 			document.execCommand(cmd, false, arg || null);
@@ -795,12 +793,30 @@ function form() {
 			if (!exige) {
 				$('#termos_modelo_ativo').val('');
 			}
-			termosAtualizarTagsAtivo();
+			termosAtualizarPlaceholdersAtivo(exige);
 		}
 
-		function termosAtualizarTagsAtivo() {
-			var temAtivo = String($('#termos_modelo_ativo').val() || '') !== '';
-			$('#termos_tags_ativo').prop('disabled', !temAtivo);
+		function termosAtualizarPlaceholdersAtivo(exige) {
+			var sel = document.getElementById('termos_placeholders');
+			var og = document.getElementById('termos_optgroup_ativo');
+			if (!exige) {
+				if (og) { og.parentNode.removeChild(og); }
+				return;
+			}
+			if (!og) {
+				og = document.createElement('optgroup');
+				og.id = 'termos_optgroup_ativo';
+			}
+			og.label = 'Dados do Equipamento';
+			og.innerHTML = '';
+			for (var token in TERMOS_PLACEHOLDERS_ATIVO) {
+				if (!Object.prototype.hasOwnProperty.call(TERMOS_PLACEHOLDERS_ATIVO, token)) { continue; }
+				var op = document.createElement('option');
+				op.value = token;
+				op.textContent = token + ' — ' + TERMOS_PLACEHOLDERS_ATIVO[token];
+				og.appendChild(op);
+			}
+			sel.appendChild(og);
 		}
 
 		$(function() {
@@ -812,7 +828,6 @@ function form() {
 			termosEditor.addEventListener('input', termosSync);
 			$('form[name=contex_form]').on('submit', termosSync);
 			$('select[name=tipo_doc]').on('change', termosAtualizarCampoAtivo);
-			$('#termos_modelo_ativo').on('change', termosAtualizarTagsAtivo);
 			termosAtualizarCampoAtivo();
 		});
 	</script>

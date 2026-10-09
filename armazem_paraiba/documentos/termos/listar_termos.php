@@ -144,7 +144,7 @@ function index() {
 
 	echo "<h3>Termos Gerados (" . count($linhas) . ")</h3>";
 	echo "<div class='table-responsive'><table class='table table-bordered table-striped'>";
-	echo "<thead><tr><th>ID</th><th>Modelo</th><th>Funcionário</th><th>Matrícula</th><th>Empresa</th><th>Ativo</th><th>Status</th><th>Visualização</th><th>Gerado em</th><th>Ações</th></tr></thead>";
+	echo "<thead><tr><th>ID</th><th>Modelo</th><th>Funcionário</th><th>Matrícula</th><th>Empresa</th><th>Equipamento</th><th>Status</th><th>Visualização</th><th>Gerado em</th><th>Ações</th></tr></thead>";
 	echo "<tbody>";
 
 	if(empty($linhas)){
@@ -162,7 +162,7 @@ function index() {
 
 		$ativoExibe = "<span class='text-muted'>—</span>";
 		if(intval($r["terg_nb_ativo"] ?? 0) > 0){
-			$ativoExibe = termos_h(strval($r["ativo_nome"] ?? ("Ativo #" . intval($r["terg_nb_ativo"]))));
+			$ativoExibe = termos_h(strval($r["ativo_nome"] ?? ("Equipamento #" . intval($r["terg_nb_ativo"]))));
 			$imeiAtivo = trim(strval($r["ativo_imei"] ?? ""));
 			if($imeiAtivo !== ""){
 				$ativoExibe .= "<br><small class='text-muted'>IMEI: " . termos_h($imeiAtivo) . "</small>";
