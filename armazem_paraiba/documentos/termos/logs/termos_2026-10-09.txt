@@ -1,0 +1,4 @@
+[2026-10-09 10:03:43] user=Techps.admin(1) ip=::ffff:172.18.0.1 evento=modelo_criado detalhe=Modelo #3 criado nome=TERMO_DE_ENTREGA,_GUARDA_E_RESPONSABILIDADE_DE_ATIVO_DA_EMPRESA
+[2026-10-09 10:08:02] user=Techps.admin(1) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=3 termo=9 solicitacao=13
+[2026-10-09 10:11:46] user=Techps.admin(1) ip=::ffff:172.18.0.1 evento=modelo_atualizado detalhe=Modelo #3 atualizado nome=TERMO_DE_ENTREGA,_GUARDA_E_RESPONSABILIDADE_DE_ATIVO_DA_EMPRESA notificacao=sim
+[2026-10-09 10:12:15] user=Techps.admin(1) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=3 termo=10 solicitacao=14

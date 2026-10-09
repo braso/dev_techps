@@ -290,6 +290,25 @@
         }
     }
 
+    // Migração da tabela celular: novos campos do cadastro de ativos (termo de responsabilidade).
+    foreach ([
+        "celu_tx_tipo"              => "VARCHAR(50) NULL",
+        "celu_tx_marca"             => "VARCHAR(100) NULL",
+        "celu_tx_modelo"            => "VARCHAR(100) NULL",
+        "celu_tx_imei2"             => "VARCHAR(50) NULL",
+        "celu_tx_numeroSerie"       => "VARCHAR(100) NULL",
+        "celu_tx_acessorios"        => "VARCHAR(255) NULL",
+        "celu_tx_acessoriosOutros"  => "VARCHAR(255) NULL",
+        "celu_tx_aplicativos"       => "VARCHAR(255) NULL",
+        "celu_tx_aplicativosOutros" => "VARCHAR(255) NULL",
+        "celu_tx_estadoConservacao" => "VARCHAR(50) NULL",
+        "celu_tx_observacoes"       => "TEXT NULL",
+        "celu_tx_valorEstimado"     => "VARCHAR(30) NULL",
+        "celu_dt_dataEntrega"       => "DATE NULL",
+    ] as $__colCelular => $__tipoCelular) {
+        bancoGarantirColuna($conn, "celular", $__colCelular, $__tipoCelular);
+    }
+
     // Migração da tabela endosso: colunas necessárias para o cadastro atual
     if (bancoTabelaExiste($conn, "endosso") && !bancoColunaExiste($conn, "endosso", "endo_tx_nome")) {
         mysqli_query($conn, "ALTER TABLE endosso ADD COLUMN endo_tx_nome VARCHAR(255) NULL AFTER endo_nb_entidade");

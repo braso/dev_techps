@@ -7,6 +7,8 @@ if(!defined("TERMOS_MODULO_DIR")){
 	define("TERMOS_MODULO_DIR", dirname(__DIR__, 2));
 }
 
+include_once TERMOS_MODULO_DIR . "/utils/celular_opcoes.php";
+
 function termos_ensure_tables($conn = null): void {
 	global $conn;
 	if(!($conn instanceof mysqli)){
@@ -323,7 +325,7 @@ function termos_rotulo_ativo(array $a): string {
 	}
 	$txt = implode(" — ", $partes);
 	if($txt === ""){
-		$txt = "Ativo #" . intval($a["celu_nb_id"] ?? 0);
+		$txt = "Equipamento #" . intval($a["celu_nb_id"] ?? 0);
 	}
 	$resp = trim(strval($a["responsavel"] ?? ""));
 	if($resp !== ""){
@@ -417,6 +419,10 @@ function termos_dados_funcionario(int $entiId): array {
 			e.enti_tx_admissao, e.enti_tx_matricula, e.enti_tx_ocupacao, e.enti_tx_email,
 			e.enti_tx_cnhRegistro, e.enti_tx_cnhCategoria, e.enti_tx_cnhValidade,
 			e.enti_tx_status,
+			e.enti_setor_id, e.enti_tx_tipoOperacao,
+			e.enti_respSetor_id, e.enti_respSetor_ids,
+			e.enti_respCargo_id, e.enti_respCargo_ids,
+			e.enti_respFuncionario_id, e.enti_respFuncionario_ids,
 			em.empr_nb_id, em.empr_tx_nome, em.empr_tx_cnpj, em.empr_tx_contato, em.empr_tx_email AS empr_email, em.empr_tx_logo,
 			cid.cida_tx_nome, cid.cida_tx_uf,
 			op.oper_tx_nome AS cargo_nome
@@ -429,6 +435,188 @@ function termos_dados_funcionario(int $entiId): array {
 		[$entiId]
 	);
 	return ($res instanceof mysqli_result) ? (mysqli_fetch_assoc($res) ?: []) : [];
+}
+
+function termos_responsaveis_hierarquia(int $entiId, array $dados = []): array {
+	if($entiId <= 0){
+		return [];
+	}
+	if(empty($dados)){
+		$dados = termos_dados_funcionario($entiId);
+	}
+
+	$setorId = intval($dados["enti_setor_id"] ?? 0);
+	$cargoId = intval($dados["enti_tx_tipoOperacao"] ?? 0);
+
+	$selSetor = [];
+	foreach(explode(",", strval($dados["enti_respSetor_ids"] ?? "")) as $p){
+		$v = intval(trim($p));
+		if($v > 0){ $selSetor[$v] = true; }
+	}
+	$selCargo = [];
+	foreach(explode(",", strval($dados["enti_respCargo_ids"] ?? "")) as $p){
+		$v = intval(trim($p));
+		if($v > 0){ $selCargo[$v] = true; }
+	}
+	if(empty($selSetor) && intval($dados["enti_respSetor_id"] ?? 0) > 0){
+		$selSetor[intval($dados["enti_respSetor_id"])] = true;
+	}
+	if(empty($selCargo) && intval($dados["enti_respCargo_id"] ?? 0) > 0){
+		$selCargo[intval($dados["enti_respCargo_id"])] = true;
+	}
+
+	$candidatos = [];
+
+	if($setorId > 0){
+		$res = query(
+			"SELECT e.enti_nb_id AS id, e.enti_tx_nome AS nome, e.enti_tx_email AS email,
+			        (CASE WHEN sr.sres_nb_ordem <= 0 THEN 999999 ELSE sr.sres_nb_ordem END) AS ord,
+			        sr.sres_tx_assinar_governanca AS assina
+			 FROM setor_responsavel sr
+			 INNER JOIN entidade e ON e.enti_nb_id = sr.sres_nb_entidade_id
+			 WHERE sr.sres_nb_setor_id = ? AND sr.sres_tx_status = 'ativo' AND e.enti_tx_status = 'ativo'
+			 ORDER BY ord ASC, e.enti_tx_nome ASC",
+			"i",
+			[$setorId]
+		);
+		while($res instanceof mysqli_result && ($r = mysqli_fetch_assoc($res))){
+			$id = intval($r["id"] ?? 0);
+			if($id <= 0 || $id === $entiId){
+				continue;
+			}
+			$candidatos[$id] = [
+				"enti_nb_id" => $id,
+				"nome" => strval($r["nome"] ?? ""),
+				"email" => strval($r["email"] ?? ""),
+				"ord" => intval($r["ord"] ?? 999999),
+				"assina" => strtolower(trim(strval($r["assina"] ?? "nao"))) === "sim",
+				"selecionado" => isset($selSetor[$id]),
+				"setor" => true,
+				"cargo" => false
+			];
+		}
+	}
+
+	if($cargoId > 0){
+		$res = query(
+			"SELECT e.enti_nb_id AS id, e.enti_tx_nome AS nome, e.enti_tx_email AS email,
+			        (CASE WHEN orv.opre_nb_ordem <= 0 THEN 999999 ELSE orv.opre_nb_ordem END) AS ord,
+			        orv.opre_tx_assinar_governanca AS assina
+			 FROM operacao_responsavel orv
+			 INNER JOIN entidade e ON e.enti_nb_id = orv.opre_nb_entidade_id
+			 WHERE orv.opre_nb_operacao_id = ? AND orv.opre_tx_status = 'ativo' AND e.enti_tx_status = 'ativo'
+			 ORDER BY ord ASC, e.enti_tx_nome ASC",
+			"i",
+			[$cargoId]
+		);
+		while($res instanceof mysqli_result && ($r = mysqli_fetch_assoc($res))){
+			$id = intval($r["id"] ?? 0);
+			if($id <= 0 || $id === $entiId){
+				continue;
+			}
+			$assina = strtolower(trim(strval($r["assina"] ?? "nao"))) === "sim";
+			$ord = intval($r["ord"] ?? 999999);
+			if(isset($candidatos[$id])){
+				$candidatos[$id]["cargo"] = true;
+				$candidatos[$id]["assina"] = $candidatos[$id]["assina"] || $assina;
+				$candidatos[$id]["selecionado"] = $candidatos[$id]["selecionado"] || isset($selCargo[$id]);
+				$candidatos[$id]["ord"] = min(intval($candidatos[$id]["ord"]), $ord);
+			}else{
+				$candidatos[$id] = [
+					"enti_nb_id" => $id,
+					"nome" => strval($r["nome"] ?? ""),
+					"email" => strval($r["email"] ?? ""),
+					"ord" => $ord,
+					"assina" => $assina,
+					"selecionado" => isset($selCargo[$id]),
+					"setor" => false,
+					"cargo" => true
+				];
+			}
+		}
+	}
+
+	if(empty($candidatos)){
+		return [];
+	}
+
+	$temSelecionados = false;
+	$temGovernanca = false;
+	foreach($candidatos as $c){
+		if(!empty($c["selecionado"])){ $temSelecionados = true; }
+		if(!empty($c["assina"])){ $temGovernanca = true; }
+	}
+
+	$filtros = [];
+	if($temSelecionados && $temGovernanca){
+		$filtros[] = fn($c) => !empty($c["selecionado"]) && !empty($c["assina"]);
+	}
+	if($temGovernanca){
+		$filtros[] = fn($c) => !empty($c["assina"]);
+	}
+	if($temSelecionados){
+		$filtros[] = fn($c) => !empty($c["selecionado"]);
+	}
+	$filtros[] = fn($c) => true;
+
+	$filtrados = [];
+	foreach($filtros as $filtro){
+		$filtrados = array_values(array_filter($candidatos, $filtro));
+		if(!empty($filtrados)){
+			break;
+		}
+	}
+
+	usort($filtrados, function($a, $b){
+		$ao = intval($a["ord"] ?? 999999);
+		$bo = intval($b["ord"] ?? 999999);
+		if($ao === $bo){
+			return strcasecmp(strval($a["nome"] ?? ""), strval($b["nome"] ?? ""));
+		}
+		return $ao <=> $bo;
+	});
+
+	$out = [];
+	foreach($filtrados as $c){
+		$out[] = [
+			"enti_nb_id" => intval($c["enti_nb_id"] ?? 0),
+			"nome" => strval($c["nome"] ?? ""),
+			"email" => strval($c["email"] ?? ""),
+			"funcao" => !empty($c["setor"]) ? "Responsável do Setor" : "Responsável do Cargo"
+		];
+	}
+	return $out;
+}
+
+function termos_signatarios_hierarquia(int $entiId, array $dados): array {
+	$responsaveis = termos_responsaveis_hierarquia($entiId, $dados);
+	if(empty($responsaveis)){
+		return [];
+	}
+
+	$signatarios = [];
+	$ordem = 0;
+	foreach($responsaveis as $r){
+		$ordem++;
+		$signatarios[] = [
+			"enti_nb_id" => intval($r["enti_nb_id"] ?? 0),
+			"nome" => strval($r["nome"] ?? ""),
+			"email" => strval($r["email"] ?? ""),
+			"funcao" => strval($r["funcao"] ?? "Responsável"),
+			"ordem" => $ordem,
+			"salvar_documento_funcionario" => "nao"
+		];
+	}
+
+	$signatarios[] = [
+		"enti_nb_id" => $entiId,
+		"nome" => strval($dados["enti_tx_nome"] ?? ""),
+		"email" => strval($dados["enti_tx_email"] ?? ""),
+		"funcao" => "Funcionário",
+		"ordem" => $ordem + 1,
+		"salvar_documento_funcionario" => "sim"
+	];
+	return $signatarios;
 }
 
 function termos_nome_arquivo(array $modelo, array $dados): string {
@@ -588,16 +776,33 @@ function termos_resolver_placeholders(string $conteudo, array $dados, array $mod
 		"cidade" => termos_h($cidadeAss),
 		"data_atual" => date("d/m/Y"),
 		"data_atual_extenso" => termos_data_extenso(date("Y-m-d")),
-		"ativo_nome" => termos_h($ativo["celu_tx_nome"] ?? ""),
-		"ativo_imei" => termos_h($ativo["celu_tx_imei"] ?? ""),
-		"ativo_numero" => termos_h($ativo["celu_tx_numero"] ?? ""),
-		"ativo_operadora" => termos_h($ativo["celu_tx_operadora"] ?? ""),
-		"ativo_cimie" => termos_h($ativo["celu_tx_cimie"] ?? ""),
-		"ativo_sistema_operacional" => termos_h($ativo["celu_tx_sistemaOperacional"] ?? ""),
-		"ativo_marca_modelo" => termos_h($ativo["celu_tx_marcaModelo"] ?? ""),
-		"ativo_responsavel" => termos_h($ativo["responsavel"] ?? ""),
 		"bloco_assinaturas" => termos_bloco_assinaturas($dados, $assinantes)
 	];
+
+	// Campos do equipamento: gerados dinamicamente a partir das colunas da tabela celular.
+	foreach(termos_colunas_ativo() as $token => $info){
+		$coluna = strval($info["coluna"] ?? "");
+		if($coluna === ""){
+			$mapa[$token] = termos_h($ativo["responsavel"] ?? "");
+			continue;
+		}
+		$mapa[$token] = termos_valor_placeholder_ativo($coluna, $ativo);
+	}
+
+	// Compatibilidade com modelos antigos que usavam os tokens {{ativo_*}}.
+	foreach($mapa as $token => $valor){
+		if(strpos($token, "equipamento_") === 0){
+			$mapa["ativo_" . substr($token, strlen("equipamento_"))] = $valor;
+		}
+	}
+	if(isset($mapa["equipamento_iccid"])){
+		$mapa["ativo_cimie"] = $mapa["equipamento_iccid"];
+	}
+	$marcaModelo = trim(strval($ativo["celu_tx_marcaModelo"] ?? ""));
+	if($marcaModelo === ""){
+		$marcaModelo = trim(strval($ativo["celu_tx_marca"] ?? "") . " " . strval($ativo["celu_tx_modelo"] ?? ""));
+	}
+	$mapa["ativo_marca_modelo"] = termos_h($marcaModelo);
 
 	$usados = [];
 	$faltando = [];
@@ -909,6 +1114,31 @@ function termos_email_fallback(array $dados, array $signatario = []): string {
 	return "sememail@techps.com.br";
 }
 
+function termos_enviar_email_primeiro(array $envio, array $signatarios, string $nomeArquivo): void {
+	$primeiro = $signatarios[0] ?? [];
+	$token = strval($envio["tokens"][0] ?? "");
+	$email = trim(strval($primeiro["email"] ?? ""));
+	if($token === "" || $email === "" || !filter_var($email, FILTER_VALIDATE_EMAIL)){
+		return;
+	}
+	if(function_exists("assinatura_integracao_carregarEmail")){
+		assinatura_integracao_carregarEmail();
+	}
+	if(!function_exists("enviarEmailProximo")){
+		return;
+	}
+	enviarEmailProximo(
+		$email,
+		strval($primeiro["nome"] ?? ""),
+		$token,
+		$nomeArquivo,
+		intval($envio["id_documento"] ?? 0),
+		strval($primeiro["funcao"] ?? "Signatário"),
+		strval($envio["caminho_arquivo_abs"] ?? ""),
+		intval($primeiro["enti_nb_id"] ?? 0)
+	);
+}
+
 function termos_enviar_assinatura(int $entiId, array $dados, array $modelo, array $tipo, string $pdfTmp, array $opts): array {
 	require_once dirname(__DIR__) . "/../assinatura/integracao/assinatura_integracao.php";
 
@@ -931,6 +1161,31 @@ function termos_enviar_assinatura(int $entiId, array $dados, array $modelo, arra
 	];
 
 	$assinantes = termos_carregar_assinantes(intval($modelo["mode_nb_id"] ?? 0));
+	if(strtolower(trim(strval($opts["hierarquia"] ?? "nao"))) === "sim" && empty($assinantes)){
+		$signatarios = termos_signatarios_hierarquia($entiId, $dados);
+		if(!empty($signatarios)){
+			if(!$enviarEmail){
+				foreach($signatarios as &$s){
+					$email = trim(strval($s["email"] ?? ""));
+					if($email === "" || !filter_var($email, FILTER_VALIDATE_EMAIL)){
+						$s["email"] = termos_email_fallback($dados, $s);
+					}
+				}
+				unset($s);
+			}
+			$envio = assinatura_integracao_enviarDocumentoParaMultiplosAssinantes(
+				$GLOBALS["conn"],
+				$pdfTmp,
+				$signatarios,
+				array_merge($base, ["enviar_email" => "nao"])
+			);
+			if($enviarEmail && !empty($envio["ok"])){
+				termos_enviar_email_primeiro($envio, $signatarios, $nomeArquivo);
+			}
+			return $envio;
+		}
+	}
+
 	if(empty($assinantes)){
 		$base["funcao"] = "Funcionário";
 		$base["salvar_documento_funcionario"] = "sim";
@@ -1222,7 +1477,7 @@ function termos_processar_um(int $entiId, array $params): array {
 			$ativo = termos_dados_ativo($ativoId);
 		}
 		if(empty($ativo)){
-			return ["ok" => false, "entidade" => $entiId, "nome" => $nomeFunc, "msg" => $nomeFunc . " — selecione o ativo (celular) que será vinculado a este termo."];
+			return ["ok" => false, "entidade" => $entiId, "nome" => $nomeFunc, "msg" => $nomeFunc . " — selecione o equipamento (celular) que será vinculado a este termo."];
 		}
 		$ativoId = intval($ativo["celu_nb_id"]);
 	}else{
@@ -1490,21 +1745,110 @@ function termos_opcoes_setores(): array {
 	return $out;
 }
 
-function termos_lista_placeholders_ativo(): array {
-	return [
-		"{{ativo_nome}}" => "Nome/identificação do ativo (celular)",
-		"{{ativo_imei}}" => "IMEI do celular",
-		"{{ativo_numero}}" => "Número do celular",
-		"{{ativo_operadora}}" => "Operadora do celular",
-		"{{ativo_cimie}}" => "CIMIE do celular",
-		"{{ativo_sistema_operacional}}" => "Sistema operacional do celular",
-		"{{ativo_marca_modelo}}" => "Marca e modelo do celular",
-		"{{ativo_responsavel}}" => "Nome do responsável atual pelo ativo"
+// Colunas da tabela celular expostas como campos do equipamento nos termos.
+// A lista é montada a partir do schema: colunas novas viram opções automaticamente
+// (com rótulo amigável para as conhecidas) e colunas removidas deixam de aparecer.
+function termos_colunas_ativo(): array {
+	global $conn;
+	static $cache = null;
+	if($cache !== null){
+		return $cache;
+	}
+	$cache = [];
+
+	$rotulos = [
+		"celu_tx_nome"               => ["equipamento_nome", "Nome/identificação do equipamento (celular)"],
+		"celu_tx_tipo"               => ["equipamento_tipo", "Tipo do equipamento"],
+		"celu_tx_marca"              => ["equipamento_marca", "Marca do equipamento"],
+		"celu_tx_modelo"             => ["equipamento_modelo", "Modelo do equipamento"],
+		"celu_tx_imei"               => ["equipamento_imei", "IMEI 1 do equipamento"],
+		"celu_tx_imei2"              => ["equipamento_imei2", "IMEI 2 do equipamento"],
+		"celu_tx_numeroSerie"        => ["equipamento_numero_serie", "Número de série do equipamento"],
+		"celu_tx_numero"             => ["equipamento_numero", "Número da linha (chip) do equipamento"],
+		"celu_tx_operadora"          => ["equipamento_operadora", "Operadora do equipamento"],
+		"celu_tx_cimie"              => ["equipamento_iccid", "ICCID do chip do equipamento"],
+		"celu_tx_sistemaOperacional" => ["equipamento_sistema_operacional", "Sistema operacional do equipamento"],
+		"celu_tx_acessorios"         => ["equipamento_acessorios", "Acessórios entregues do equipamento"],
+		"celu_tx_acessoriosOutros"   => ["equipamento_acessorios_outros", "Outros acessórios entregues"],
+		"celu_tx_aplicativos"        => ["equipamento_aplicativos", "Aplicativos instalados no equipamento"],
+		"celu_tx_aplicativosOutros"  => ["equipamento_aplicativos_outros", "Outros aplicativos instalados"],
+		"celu_tx_estadoConservacao"  => ["equipamento_estado_conservacao", "Estado de conservação na entrega"],
+		"celu_tx_observacoes"        => ["equipamento_observacoes", "Observações do equipamento"],
+		"celu_tx_valorEstimado"      => ["equipamento_valor_estimado", "Valor estimado do bem"],
+		"celu_dt_dataEntrega"        => ["equipamento_data_entrega", "Data da entrega do equipamento"],
 	];
+	$ignorar = ["celu_nb_id", "celu_nb_entidade", "celu_tx_dataCadastro", "celu_tx_dataAtualiza", "celu_tx_marcaModelo"];
+
+	if(termos_tabela_ativo_existe()){
+		$res = @mysqli_query($conn, "SHOW COLUMNS FROM celular");
+		while($res instanceof mysqli_result && ($c = mysqli_fetch_assoc($res))){
+			$coluna = strval($c["Field"] ?? "");
+			if($coluna === "" || in_array($coluna, $ignorar, true)){
+				continue;
+			}
+			if(isset($rotulos[$coluna])){
+				$token = $rotulos[$coluna][0];
+				$rotulo = $rotulos[$coluna][1];
+			}else{
+				$token = "equipamento_" . termos_slug_coluna($coluna);
+				$rotulo = "Equipamento: " . termos_rotulo_coluna($coluna);
+			}
+			$cache[$token] = ["coluna" => $coluna, "rotulo" => $rotulo];
+		}
+	}
+
+	$cache["equipamento_responsavel"] = ["coluna" => "", "rotulo" => "Nome do responsável atual pelo equipamento"];
+	return $cache;
 }
 
-function termos_lista_placeholders(): array {
-	return array_merge([
+function termos_slug_coluna(string $coluna): string {
+	$nome = preg_replace('/^celu_(tx|dt|nb)_/', '', $coluna);
+	$nome = preg_replace('/([a-z0-9])([A-Z])/', '$1_$2', strval($nome));
+	return strtolower(strval($nome));
+}
+
+function termos_rotulo_coluna(string $coluna): string {
+	$nome = preg_replace('/^celu_(tx|dt|nb)_/', '', $coluna);
+	$nome = preg_replace('/([a-z0-9])([A-Z])/', '$1 $2', strval($nome));
+	return ucfirst(strval($nome));
+}
+
+function termos_valor_placeholder_ativo(string $coluna, array $ativo): string {
+	$valor = $ativo[$coluna] ?? "";
+	if($coluna === "celu_dt_dataEntrega"){
+		return termos_h(termos_formatar_data($valor));
+	}
+	if($coluna === "celu_tx_acessorios"){
+		return termos_h(termos_rotular_checklist($valor, opcoesAcessorios()));
+	}
+	if($coluna === "celu_tx_aplicativos"){
+		return termos_h(termos_rotular_checklist($valor, opcoesAplicativos()));
+	}
+	return termos_h(strval($valor));
+}
+
+function termos_rotular_checklist($valor, array $opcoes): string {
+	$itens = [];
+	foreach(explode(",", strval($valor)) as $chave){
+		$chave = trim($chave);
+		if($chave === ""){
+			continue;
+		}
+		$itens[] = $opcoes[$chave] ?? $chave;
+	}
+	return implode(", ", $itens);
+}
+
+function termos_lista_placeholders_ativo(): array {
+	$lista = [];
+	foreach(termos_colunas_ativo() as $token => $info){
+		$lista["{{" . $token . "}}"] = strval($info["rotulo"] ?? "");
+	}
+	return $lista;
+}
+
+function termos_lista_placeholders_gerais(): array {
+	return [
 		"{{empresa_razao}}" => "Razão social da empresa do funcionário",
 		"{{empresa_cnpj}}" => "CNPJ da empresa (formatado)",
 		"{{empresa_contato}}" => "Contato cadastrado na empresa",
@@ -1527,5 +1871,19 @@ function termos_lista_placeholders(): array {
 		"{{data_atual_extenso}}" => "Data atual por extenso",
 		"{{bloco_assinaturas}}" => "Linhas de assinatura dos signatários configurados",
 		"{{email_funcionario}}" => "E-mail do funcionário"
-	], termos_lista_placeholders_ativo());
+	];
+}
+
+function termos_lista_placeholders(): array {
+	$lista = array_merge(termos_lista_placeholders_gerais(), termos_lista_placeholders_ativo());
+	// Tokens antigos ({{ativo_*}}) continuam reconhecidos em modelos já gravados, mas não aparecem mais no menu.
+	foreach(termos_lista_placeholders_ativo() as $token => $desc){
+		if(strpos($token, "{{equipamento_") === 0){
+			$antigo = "{{ativo_" . substr($token, strlen("{{equipamento_"));
+			$lista[$antigo] = $desc . " (campo antigo)";
+		}
+	}
+	$lista["{{ativo_cimie}}"] = "ICCID do chip do equipamento (campo antigo)";
+	$lista["{{ativo_marca_modelo}}"] = "Marca e modelo do equipamento (campo antigo)";
+	return $lista;
 }

@@ -442,7 +442,10 @@ function assinatura_integracao_normalizarSignatarios(mysqli $conn, array $signat
 			"nome" => $nome,
 			"email" => $email,
 			"funcao" => trim(strval($s["funcao"] ?? "Signatário")),
-			"ordem" => max(1, intval($s["ordem"] ?? 1))
+			"ordem" => max(1, intval($s["ordem"] ?? 1)),
+			"salvar_documento_funcionario" => array_key_exists("salvar_documento_funcionario", $s)
+				? (strtolower(trim(strval($s["salvar_documento_funcionario"]))) === "sim" ? "sim" : "nao")
+				: null
 		];
 	}
 
@@ -567,8 +570,12 @@ function assinatura_integracao_enviarDocumentoParaMultiplosAssinantes(
 		$email = strval($sig["email"] ?? "");
 		$funcao = strval($sig["funcao"] ?? "Signatário");
 		$ordem = max(1, intval($sig["ordem"] ?? 1));
+		$salvarDocSig = $salvarDoc;
+		if(($sig["salvar_documento_funcionario"] ?? null) !== null){
+			$salvarDocSig = strval($sig["salvar_documento_funcionario"]);
+		}
 
-		mysqli_stmt_bind_param($stmtA, "iisssiss", $idSolicitacao, $idEnt, $nome, $email, $funcao, $ordem, $salvarDoc, $token);
+		mysqli_stmt_bind_param($stmtA, "iisssiss", $idSolicitacao, $idEnt, $nome, $email, $funcao, $ordem, $salvarDocSig, $token);
 		if(!mysqli_stmt_execute($stmtA)){
 			continue;
 		}

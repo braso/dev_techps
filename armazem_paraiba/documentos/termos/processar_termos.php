@@ -45,7 +45,8 @@ $params = [
 	"validar_icp" => strval($dados["validar_icp"] ?? "nao"),
 	"enviar_email" => strval($dados["enviar_email"] ?? "sim"),
 	"forcar" => strval($dados["forcar"] ?? "nao"),
-	"prazo_expiracao_dias" => intval($dados["prazo_expiracao_dias"] ?? 1)
+	"prazo_expiracao_dias" => intval($dados["prazo_expiracao_dias"] ?? 1),
+	"hierarquia" => strval($dados["hierarquia"] ?? "nao")
 ];
 
 $ativos = $dados["ativos"] ?? [];

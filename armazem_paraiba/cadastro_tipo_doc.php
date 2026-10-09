@@ -234,7 +234,7 @@
 			$campoStatus,
             combo("Vencimento", "vencimento", $_POST["vencimento"], 2, ["" => "", "sim" => "Sim", "nao" => "Não"]),
             combo("Assinatura", "assinatura", $_POST["assinatura"], 2, ["" => "", "sim" => "Sim", "nao" => "Não"]),
-            combo("Ativo", "ativo", $_POST["ativo"], 2, ["" => "", "sim" => "Sim", "nao" => "Não"]),
+            combo("Equipamento", "ativo", $_POST["ativo"], 2, ["" => "", "sim" => "Sim", "nao" => "Não"]),
 		];
 
 		$botoes = [
@@ -296,7 +296,7 @@
             "NOME" 			=> "tipo_tx_nome",
             "SETOR" 		=> "grup_tx_nome",
 			"SUBSETOR" 		=> "sbgr_tx_nome",
-            "ATIVO"         => "tipo_tx_ativo_exibe",
+            "EQUIPAMENTO"   => "tipo_tx_ativo_exibe",
             "STATUS" 	    => "tipo_tx_status",
             "MODELOS"       => "qtd_modelos",
         ];

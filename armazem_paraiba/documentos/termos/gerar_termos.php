@@ -184,7 +184,7 @@ function index() {
 	$ativosLista = $exigeAtivo ? termos_listar_ativos() : [];
 	$ativosJson = json_encode($ativosLista, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 	$modeloAtivoJs = intval($modeloSelecionado["mode_nb_ativo"] ?? 0);
-	$infoAtivo = $exigeAtivo ? " <b>Ativo:</b> este modelo pertence a um ativo; selecione o celular de cada funcionário na coluna <b>Ativo</b> (o aparelho já vinculado ao funcionário vem pré-selecionado). &nbsp;" : "";
+	$infoAtivo = $exigeAtivo ? " <b>Equipamento:</b> este modelo pertence a um equipamento; selecione o celular de cada funcionário na coluna <b>Equipamento</b> (o aparelho já vinculado ao funcionário vem pré-selecionado). &nbsp;" : "";
 
 	$filtroEmpresas = $_POST["empresas"] ?? [];
 	if(!is_array($filtroEmpresas)){
@@ -318,7 +318,7 @@ function index() {
 		echo "<h3>" . count($entidades) . " funcionário(s) encontrado(s)</h3>";
 
 		if($exigeAtivo && empty($ativosLista)){
-			echo "<div class='alert alert-warning'>Este modelo pertence a um ativo, mas não há ativos (celulares) cadastrados. Cadastre em <a href='../../cadastro_celular.php' target='_blank'>Cadastro de Celulares</a>.</div>";
+			echo "<div class='alert alert-warning'>Este modelo pertence a um equipamento, mas não há equipamentos (celulares) cadastrados. Cadastre em <a href='../../cadastro_celular.php' target='_blank'>Cadastro de Celulares</a>.</div>";
 		}
 
 		if($temBusca && $filtroModelo > 0 && empty($entidades)){
@@ -335,7 +335,7 @@ function index() {
 			</div>
 		</div>";
 
-		$thAtivo = $exigeAtivo ? "<th>Ativo</th>" : "";
+		$thAtivo = $exigeAtivo ? "<th>Equipamento</th>" : "";
 		echo "<div class='table-responsive'><table class='table table-bordered table-striped'>
 			<thead><tr><th style='width:30px'></th><th>Matrícula</th><th>Nome</th><th>CPF</th><th>Cargo</th><th>Setor</th><th>Empresa</th>{$thAtivo}<th>Termo</th><th>Prévia</th></tr></thead>
 			<tbody>";
@@ -495,7 +495,7 @@ function index() {
 					return;
 				}
 				if (faltando.length > 0) {
-					alert('Selecione o ativo (celular) para: ' + faltando.join(', '));
+					alert('Selecione o equipamento (celular) para: ' + faltando.join(', '));
 					return;
 				}
 				var lote = parseInt($('#tamanho_lote').val() || '5', 10);
