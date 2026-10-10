@@ -48,6 +48,7 @@ function cadastrar(){
         "perfil_tx_status" => $status,
         "perfil_tx_esconderSalario" => (!empty($_POST["esconder_salario"]) ? "sim" : "nao"),
         "perfil_tx_espelhoMes" => (!empty($_POST["espelho_mes"]) ? "sim" : "nao"),
+        "perfil_tx_pontoFacial" => (!empty($_POST["ponto_facial"]) ? "sim" : "nao"),
         "perfil_tx_dataAtualiza" => date("Y-m-d H:i:s")
     ];
 
@@ -218,6 +219,7 @@ function formPerfil(){
 
     $esconderSalarioChecked = (!empty($perfil["perfil_tx_esconderSalario"]) && $perfil["perfil_tx_esconderSalario"] === "sim");
     $espelhoMesChecked = (!empty($perfil["perfil_tx_espelhoMes"]) && $perfil["perfil_tx_espelhoMes"] === "sim");
+    $pontoFacialChecked = (!empty($perfil["perfil_tx_pontoFacial"]) && $perfil["perfil_tx_pontoFacial"] === "sim");
 
     $checksSection = "<div class='row' style='margin-top:10px'>"
 
@@ -249,6 +251,13 @@ function formPerfil(){
                 $checksSection .= "<input type='checkbox' name='espelho_mes' value='1' style='flex-shrink:0;' ".($espelhoMesChecked?"checked":"").">";
                 $checksSection .= "<span style='font-weight:600; min-width:0; overflow-wrap:break-word;'>Espelho/Mês competência</span>";
                 $checksSection .= "</label>";
+                // Flag do totem facial: libera este perfil para registrar ponto pelo
+                // totem de biometria facial (o cadastro da face é feito em Cadastros > Facial).
+                $bgStyleFacial = $pontoFacialChecked ? "background:#eaffea; border-color:#b7e1b7;" : "background:#f9fafb; border-color:#e5e7eb;";
+                $checksSection .= "<label class='menu-check-item' title=\"Perfis marcados podem registrar ponto pelo totem de biometria facial. Quem não estiver marcado deve usar o login normal.\" style='border-radius:10px; padding:10px; border:1px solid; display:flex; align-items:center; gap:10px; box-sizing:border-box; min-width:0; " . $bgStyleFacial . "'>";
+                $checksSection .= "<input type='checkbox' name='ponto_facial' value='1' style='flex-shrink:0;' ".($pontoFacialChecked?"checked":"").">";
+                $checksSection .= "<span style='font-weight:600; min-width:0; overflow-wrap:break-word;'>Registrar Ponto com Facial</span>";
+                $checksSection .= "</label>";
             }
         }
         $checksSection .= "</div>";
@@ -267,7 +276,7 @@ function formPerfil(){
     }
     $checksSection .= "</div>";
     $checksSection .= "<script>(function(){var sync=function(){document.querySelectorAll('.menu-check-item input[type=checkbox]').forEach(function(c){var l=c.closest('.menu-check-item');if(l){if(c.checked){l.style.background='#eaffea';l.style.borderColor='#b7e1b7';}else{l.style.background='#f9fafb';l.style.borderColor='#e5e7eb';}}})};sync();document.addEventListener('change',function(e){var c=e.target;if(c && c.matches('.menu-check-item input[type=checkbox]')){var l=c.closest('.menu-check-item');if(l){if(c.checked){l.style.background='#eaffea';l.style.borderColor='#b7e1b7';}else{l.style.background='#f9fafb';l.style.borderColor='#e5e7eb';}}}});document.addEventListener('click',function(e){var btn=e.target.closest('button');if(btn){var label=btn.textContent.trim();if(label==='Marcar todos'||label==='Desmarcar todos'){e.preventDefault();var sec=btn.getAttribute('data-sec');var scope;if(sec==='__global'){scope=document}else{scope=btn.closest('[data-sec]')||document} Array.prototype.forEach.call(scope.querySelectorAll('.menu-check-item input[type=checkbox]'),function(c){if(label==='Marcar todos' && !c.checked){c.click();} if(label==='Desmarcar todos' && c.checked){c.click();}});}}});})();</script>";
-    $checksSection .= "<script>(function(){function acharCheck(rotulo){var alvo=null;document.querySelectorAll('.menu-check-item span').forEach(function(s){if(s.textContent.trim()===rotulo){var caixa=s.closest('.menu-check-item');var input=caixa?caixa.querySelector('input[type=checkbox]'):null;if(input){alvo=input;}}});return alvo;}var registrar=acharCheck('Registrar Ponto');var solicitar=acharCheck('Solicitar Ajuste');if(!registrar||!solicitar){return;}function sincronizar(){if(registrar.checked&&!solicitar.checked){solicitar.checked=true;solicitar.dispatchEvent(new Event('change',{bubbles:true}));}}registrar.addEventListener('change',sincronizar);sincronizar();})();</script>";
+    $checksSection .= "<script>(function(){function acharCheck(rotulo){var alvo=null;document.querySelectorAll('.menu-check-item span').forEach(function(s){if(s.textContent.trim()===rotulo){var caixa=s.closest('.menu-check-item');var input=caixa?caixa.querySelector('input[type=checkbox]'):null;if(input){alvo=input;}}});return alvo;}var registrar=acharCheck('Registrar Ponto');var solicitar=acharCheck('Solicitar Ajuste');var facial=acharCheck('Registrar Ponto com Facial');function sincronizar(){if(registrar&&solicitar&&registrar.checked&&!solicitar.checked){solicitar.checked=true;solicitar.dispatchEvent(new Event('change',{bubbles:true}));}}function sincronizarFacial(){if(registrar&&facial){if(!registrar.checked&&facial.checked){facial.checked=false;facial.dispatchEvent(new Event('change',{bubbles:true}));}facial.disabled=!registrar.checked;}}if(registrar){registrar.addEventListener('change',sincronizar);registrar.addEventListener('change',sincronizarFacial);}sincronizar();sincronizarFacial();})();</script>";
 
     $campos = [
         campo_hidden("id", ($perfilId > 0 ? $perfilId : "")),

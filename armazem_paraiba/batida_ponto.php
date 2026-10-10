@@ -16,12 +16,16 @@ function cadastraPonto(){
 		$hoje = date("Y-m-d");
 		try {
 			$motorista = mysqli_fetch_assoc(query(
-				"SELECT enti_tx_matricula FROM entidade 
+				"SELECT entidade.*, parametro.* FROM entidade 
+					LEFT JOIN parametro ON para_nb_id = enti_nb_parametro
 					WHERE enti_tx_status = 'ativo' 
 						AND enti_nb_id = {$_SESSION["user_nb_entidade"]}
 					LIMIT 1;"
 			));
-			$novoPonto = conferirErroPonto($motorista["enti_tx_matricula"], new DateTime("{$hoje} ".date("H:i:00")), intval($_POST["idMacro"]), (!empty($_POST["motivo"])? $_POST["motivo"]: 0), (!empty($_POST["justificativa"])? $_POST["justificativa"]: ""));
+			$dataPonto = new DateTime("{$hoje} ".date("H:i:00"));
+			$permitirNovaJornada = (($motorista["para_tx_permitirNovaJornada"] ?? "nao") === "sim");
+			$confirmarNovaJornada = ($permitirNovaJornada && intval($_POST["idMacro"]) === 1 && ($_POST["confirmarNovaJornada"] ?? "") == "1");
+			$novoPonto = conferirErroPonto($motorista["enti_tx_matricula"], $dataPonto, intval($_POST["idMacro"]), (!empty($_POST["motivo"])? $_POST["motivo"]: 0), (!empty($_POST["justificativa"])? $_POST["justificativa"]: ""), $confirmarNovaJornada);
 		} catch (\Exception $e) {
 			set_status("ERRO: ".$e->getMessage());
 			index();
@@ -259,8 +263,9 @@ function index() {
 		}
 
 		$motorista = mysqli_fetch_assoc(query(
-			"SELECT * FROM entidade"
+			"SELECT entidade.*, user.*, parametro.* FROM entidade"
 			." JOIN user ON enti_nb_id = user_nb_entidade"
+			." LEFT JOIN parametro ON para_nb_id = enti_nb_parametro"
 			." WHERE enti_nb_id = ".$_SESSION["user_nb_entidade"].";"
 		));
 		// A ocupação é priorizada de user_tx_nivel (fonte usada no login/perfil),
@@ -285,6 +290,16 @@ function index() {
 				"ultimo" => null
 			];
 		}
+
+		// Parâmetro "Permitir iniciar nova jornada com outra em aberto" (padrão: não)
+		$permitirNovaJornada = (($motorista["para_tx_permitirNovaJornada"] ?? "nao") === "sim");
+		$jornadaAbertaDesde = null;
+		if($permitirNovaJornada){
+			$jornadaAbertaDesde = jornadaAbertaDesdePontos($pontosCompleto);
+		}
+		// No mesmo dia a jornada precisa estar fechada para abrir outra; o botão só
+		// aparece quando a jornada aberta é de um dia anterior.
+		$permitirBotaoNovaJornada = !empty($jornadaAbertaDesde) && substr($jornadaAbertaDesde, 0, 10) < $hoje;
 
 		$inicios = [
 			1  => "inicioJornada", 
@@ -453,6 +468,9 @@ function index() {
 					//$botoes["inicioRefeicao"],
 					$botoes["fimJornada"]
 				];
+				if($permitirBotaoNovaJornada){
+					$botoesVisiveis[] = $botoes["inicioJornada"];
+				}
 			} elseif ($tipoUltimo === 3) {
 				//$botoesVisiveis = [$botoes["fimRefeicao"]];
 			} else {
@@ -475,6 +493,9 @@ function index() {
 					$botoes["inicioRefeicao"], 
 					$botoes["fimJornada"]
 				];
+			}
+			if($permitirBotaoNovaJornada){
+				$botoesVisiveis[] = $botoes["inicioJornada"];
 			}
 		}elseif(in_array($pontos["ultimo"]["pont_tx_tipo"], array_keys($inicios))){
 			$botoesVisiveis = [
@@ -500,6 +521,12 @@ function index() {
                 ."<div class='margin-bottom-10' style='grid-column:1/-1;'><a class='atalho-ajuste-ponto' href='".$CONTEX["path"]."/ajuste_pontofuncionario.php'><i class='fa fa-edit'></i> Solicitar ajuste de ponto</a></div>"
             ."</div>",
         ];
+
+		if(!empty($jornadaAbertaDesde)){
+			$fields[] = "<div class='col-sm-12' style='color:#b45309; font-weight:bold; margin-bottom:5px;'>"
+				."<i class='fa fa-exclamation-triangle'></i> Você tem uma jornada em aberto desde ".date("d/m/Y H:i", strtotime($jornadaAbertaDesde))."."
+			."</div>";
+		}
 
 		$logoutTime = 30; //Utilizado em batida_ponto_html.php
 

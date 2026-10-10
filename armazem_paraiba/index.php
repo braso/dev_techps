@@ -126,6 +126,15 @@
 				$_SESSION[$key] = $value;
 			}
 
+			// Login veio do totem de ponto: no logout o kiosk volta para o totem,
+			// somente para perfis habilitados no registro facial. Os demais perfis
+			// continuam voltando para a tela de login normal.
+			$_SESSION["origem_totem"] = 0;
+			if(!empty($_POST["origem_totem"])){
+				include_once __DIR__."/check_permission.php";
+				$_SESSION["origem_totem"] = perfilUsaPontoFacial(intval($usuario["user_nb_id"])) ? 1 : 0;
+			}
+
 
 				if(!isset($_SESSION["horaEntrada"])){
 					$_SESSION["horaEntrada"] = date("H:i");
