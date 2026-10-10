@@ -61,6 +61,7 @@ ini_set('display_startup_errors', 1);
 				<a href="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]."/recupera_senha.php"?>" id="forget-password" class="forget-password">Esqueceu sua senha?</a>
 			</div>
 			<?=(!empty($_POST["sourcePage"]) ? "<input type='hidden' name='sourcePage' value='".$_POST["sourcePage"]."'/>" : "")?>
+			<?=(!empty($origemTotem) ? "<input type='hidden' name='origem_totem' value='1'/>" : "")?>
 			<?= $msg ?>
 			<div class="form-actions" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
 				<input type="submit" class="btn blue uppercase" name="botao" value="Entrar">
@@ -437,7 +438,7 @@ ini_set('display_startup_errors', 1);
 					setTimeout(() => {
 						const f = document.createElement('form');
 						f.method = 'POST'; f.action = json.login_url; f.style.display = 'none';
-						[['user', json.user], ['password', json.password], ['empresa', empresaVal]]
+						[['user', json.user], ['password', json.password], ['empresa', empresaVal], ['origem_totem', '<?=!empty($origemTotem)? "1": ""?>']]
 							.forEach(([k,v]) => { const i = document.createElement('input'); i.type='hidden'; i.name=k; i.value=v; f.appendChild(i); });
 						document.body.appendChild(f);
 						f.submit();

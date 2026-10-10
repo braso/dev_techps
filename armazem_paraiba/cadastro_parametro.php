@@ -36,6 +36,11 @@
 		query("ALTER TABLE parametro ADD COLUMN para_tx_abonarFeriadoEscala ENUM('sim','nao') NOT NULL DEFAULT 'nao' COMMENT 'Abonar automaticamente feriados na escala'");
 	}
 
+	// Verificação e criação da coluna Permitir Nova Jornada
+	if(mysqli_num_rows(query("SHOW COLUMNS FROM parametro LIKE 'para_tx_permitirNovaJornada'")) == 0){
+		query("ALTER TABLE parametro ADD COLUMN para_tx_permitirNovaJornada ENUM('sim','nao') NOT NULL DEFAULT 'nao' COMMENT 'Permitir iniciar nova jornada com outra aberta (sim/nao)'");
+	}
+
 	// Criação da tabela feriado_parametro se não existir
 	function ensureFeriadoParametroSchema(){
 		$exists = mysqli_fetch_assoc(query(
@@ -703,6 +708,7 @@
 			"para_tx_turno" 					=> $_POST["turno"] ?? null,
 			"para_tx_pagarAdicNoturno" 			=> $_POST["pagarAdicNoturno"] ?? 'sim',
 			"para_tx_abonarFeriadoEscala"		=> (($_POST["tipo"] ?? "") === "escala" && ($_POST["abonarFeriadoEscala"] ?? "") === "sim") ? "sim" : "nao",
+			"para_tx_permitirNovaJornada"		=> (($_POST["permitirNovaJornada"] ?? "nao") === "sim")? "sim": "nao",
 		];
 
 		if(!empty($_POST["ignorarCampos"]) || $_POST["ignorarCampos"] == null){
@@ -971,6 +977,14 @@
 			],
 			[
 				checkbox_banco("Utilizar regime de banco de horas?", "banco", ($a_mod["para_tx_banco"]?? ""), ($a_mod["para_nb_qDias"]?? ""), ($a_mod["para_tx_horasLimite"]?? ""),2),
+				"<div class='col-sm-3 margin-bottom-5' style='min-width:0;'>
+					<label style='overflow-wrap:break-word;'>Permitir iniciar nova jornada com outra em aberto?</label>
+					<select name='permitirNovaJornada' class='form-control input-sm' style='width:auto; min-width:90px;'>
+						<option value='nao' ".((($a_mod["para_tx_permitirNovaJornada"]?? "nao") == "nao")? "selected": "").">Não</option>
+						<option value='sim' ".((($a_mod["para_tx_permitirNovaJornada"]?? "nao") == "sim")? "selected": "").">Sim</option>
+					</select>
+					<small class='text-muted' style='display:block; margin-top:4px; overflow-wrap:break-word; word-break:break-word;'>Quando Sim, a jornada aberta de um dia anterior permite iniciar uma nova no dia seguinte sem fechar a anterior (ela permanece em aberto para ajuste do gestor). No mesmo dia, a jornada precisa estar fechada para abrir outra.</small>
+				</div>",
 				checkbox(
 					"Ignorar intervalos",
 					"ignorarCampos", (

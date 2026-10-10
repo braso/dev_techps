@@ -360,6 +360,15 @@
         mysqli_query($conn, "ALTER TABLE perfil_acesso ADD COLUMN perfil_tx_espelhoMes ENUM('sim','nao') NOT NULL DEFAULT 'nao'");
     };
 
+    // Migração da tabela perfil_acesso: flag que libera o perfil para registrar ponto
+    // pelo totem de biometria facial.
+    if (bancoTabelaExiste($conn, "perfil_acesso") && !bancoColunaExiste($conn, "perfil_acesso", "perfil_tx_pontoFacial")) {
+        mysqli_query($conn, "ALTER TABLE perfil_acesso ADD COLUMN perfil_tx_pontoFacial ENUM('sim','nao') NOT NULL DEFAULT 'nao'");
+    };
+
+    // Migração da tabela ponto: distância facial apurada no registro pelo totem (auditoria).
+    bancoGarantirColuna($conn, "ponto", "pont_tx_faceDistancia", "DECIMAL(6,4) NULL");
+
     // Criação da tabela feriado_funcionario se não existir
     bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS feriado_funcionario (
         fefi_nb_id INT AUTO_INCREMENT PRIMARY KEY,

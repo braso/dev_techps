@@ -123,6 +123,29 @@ function perfilAtivoDoUsuario(): int
 }
 
 /**
+ * O perfil do usuário libera o registro de ponto pelo totem de biometria facial?
+ * Sem usuário informado, usa o usuário da sessão. O totem (sem login) passa o
+ * user_nb_id identificado pela face.
+ */
+function perfilUsaPontoFacial(int $userNbId = 0): bool
+{
+    $userNbId = $userNbId > 0 ? $userNbId : (int)($_SESSION["user_nb_id"] ?? 0);
+    if ($userNbId <= 0) { return false; }
+
+    $rsPerfil = query(
+        "SELECT pa.perfil_tx_pontoFacial
+            FROM usuario_perfil up
+            JOIN perfil_acesso pa ON pa.perfil_nb_id = up.perfil_nb_id
+            WHERE up.ativo = 1 AND up.user_nb_id = ?
+            LIMIT 1",
+        "i",
+        [$userNbId]
+    );
+    $rowPerfil = $rsPerfil ? mysqli_fetch_assoc($rsPerfil) : null;
+    return !empty($rowPerfil["perfil_tx_pontoFacial"]) && $rowPerfil["perfil_tx_pontoFacial"] === "sim";
+}
+
+/**
  * Tela inicial que o usuário logado realmente pode abrir:
  * batida de ponto para quem bate ponto, boas-vindas para quem não bate.
  * Devolve o caminho relativo ao domínio (ex.: "/batida_ponto.php").

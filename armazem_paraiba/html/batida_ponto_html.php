@@ -7,6 +7,7 @@
 	<input type="hidden" name="idMacro" id="idMacro" />
 	<input type="hidden" name="motivo" id="motivo"/>
 	<input type="hidden" name="justificativa" id="justificativa"/>
+	<input type="hidden" name="confirmarNovaJornada" id="confirmarNovaJornada" value=""/>
 	<input type="hidden" name="latitude" id="latitude">
 	<input type="hidden" name="longitude" id="longitude">
 	<input type="hidden" name="placa" id="placa" />
@@ -130,6 +131,7 @@
 			let jornadaEfetiva 			= '".($jornadaEfetiva?? "")."';
 			let primeiroPonto 			= '".($pontos["primeiro"]["pont_tx_data"]?? "")."';
 			let ultimoPonto 			= '".($pontos["ultimo"]["pont_tx_data"]?? "")."';
+			let jornadaAbertaDesde 		= '".($jornadaAbertaDesde?? "")."';
 			let hoje 					= '".$hoje."';
 			let idEntidade 				= '".$_SESSION["user_nb_entidade"]."';
 			let idMotivo 				= '".($motivo["moti_nb_id"]?? "")."';"
@@ -176,6 +178,19 @@
 			}
 		}
 
+		if (idMacro == '1' && jornadaAbertaDesde != '') {
+			let partesData = jornadaAbertaDesde.split(/[- :]/);
+			let dataAberta = partesData[2]+'/'+partesData[1]+'/'+partesData[0]+' às '+partesData[3]+':'+partesData[4];
+			let duracaoAberta = calculateElapsedTime(jornadaAbertaDesde);
+			msg = "<div style='color:#b45309; font-weight:bold;'>"
+					+"ATENÇÃO: você tem uma jornada em aberto desde "+dataAberta+" (há "+duracaoAberta+")."
+				+"</div><br>"
+				+"Ao continuar, uma <b>nova jornada vai começar</b>. A jornada anterior <b>continua em aberto</b>."
+				+"<br><br>"+msg;
+			confirmButtonText = 'INICIAR NOVA';
+			confirmButtonClass = 'btn-primary';
+		}
+
 		const modalContent = document.getElementById('modal-content');
 		modalContent.innerHTML = msg;
 
@@ -193,6 +208,7 @@
                 document.form_submit.placa.value = placa;
                 document.form_submit.idMacro.value = idMacro;
                 document.form_submit.justificativa.value = document.getElementById('justificativa').value;
+                document.form_submit.confirmarNovaJornada.value = (idMacro == '1' && jornadaAbertaDesde != '')? '1': '';
                 if(idMotivo != ''){
                     document.form_submit.motivo.value = idMotivo;
                 }

@@ -9,6 +9,9 @@ error_reporting(E_ALL);
 
 	include_once "load_env.php";
 
+	// Login iniciado a partir do totem de ponto: ao deslogar, volta para o totem.
+	$origemTotem = (!empty($_GET["origem"]) && $_GET["origem"] === "totem") || !empty($_POST["origem_totem"]);
+
 	$error = false;
 	if(!empty($_GET["error"])){
 		$errorMsgs = [
@@ -49,6 +52,7 @@ error_reporting(E_ALL);
 				."<input type='hidden' name='user' value='".($_POST["user"]?? "")."'>"
 				."<input type='hidden' name='password' value='".($_POST["password"]?? "")."'>"
 				.(!empty($_POST["sourcePage"])? "<input type='hidden' name='sourcePage' value='".($_POST["sourcePage"]?? "")."'>": "")
+				.($origemTotem? "<input type='hidden' name='origem_totem' value='1'>": "")
 			."</form>"
 		;
 		echo "<script>document.{$formName}.submit();</script>";

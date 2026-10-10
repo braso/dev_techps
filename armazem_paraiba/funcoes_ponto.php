@@ -495,7 +495,7 @@
 		return;
     }
 
-	function conferirErroPonto(string $matricula, DateTime $dataPonto, int $idMacro, int $motivo = 0, string $justificativa = ""): array{
+	function conferirErroPonto(string $matricula, DateTime $dataPonto, int $idMacro, int $motivo = 0, string $justificativa = "", bool $permitirJornadaAberta = false): array{
 		//Conferir se tem as informações necessárias{
 			if(empty($matricula)){
 				$_POST["errorFields"][] = "motorista";
@@ -561,10 +561,10 @@
 		$ultPontoJornada = null;
 		if($ultimoTipo !== null){
 			if(in_array($ultimoTipo, $codigosJornada)){
-				$ultPontoJornada = ["pont_tx_tipo" => $ultimoTipo];
+				$ultPontoJornada = ["pont_tx_tipo" => $ultimoTipo, "pont_tx_data" => $ultimoPonto["pont_tx_data"]];
 			}else{
 				$ultPontoJornadaRow = mysqli_fetch_assoc(query(
-					"SELECT p.pont_tx_tipo, m.macr_tx_codigoInterno as tipo_interno
+					"SELECT p.pont_tx_tipo, p.pont_tx_data, m.macr_tx_codigoInterno as tipo_interno
 						FROM ponto p
 						LEFT JOIN macroponto m ON (
 							p.pont_tx_tipo = m.macr_tx_codigoInterno
@@ -580,11 +580,24 @@
 						LIMIT 1;"
 				));
 				if(!empty($ultPontoJornadaRow)){
-					$ultPontoJornada = ["pont_tx_tipo" => intval($ultPontoJornadaRow["tipo_interno"] ?? $ultPontoJornadaRow["pont_tx_tipo"])];
+					$ultPontoJornada = [
+						"pont_tx_tipo" => intval($ultPontoJornadaRow["tipo_interno"] ?? $ultPontoJornadaRow["pont_tx_tipo"]),
+						"pont_tx_data" => $ultPontoJornadaRow["pont_tx_data"]
+					];
 				}
 			}
 		}
 
+		// Regra da jornada aberta: no MESMO DIA não permite abrir outra jornada;
+		// a partir do dia seguinte, pode iniciar nova sem fechar a anterior
+		// (quando o parâmetro "permitir nova jornada" estiver ligado).
+		$jornadaAberta = !empty($ultPontoJornada) && intval($ultPontoJornada["pont_tx_tipo"]) == $codigosJornada["inicio"];
+		$jornadaAbertaMesmoDia = $jornadaAberta
+			&& substr(strval($ultPontoJornada["pont_tx_data"]), 0, 10) === $dataPonto->format("Y-m-d");
+
+		if($novoTipo == $codigosJornada["inicio"] && $jornadaAberta && ($jornadaAbertaMesmoDia || !$permitirJornadaAberta)){
+			throw new Exception("Jornada aberta já existente.");
+		}
 
 		if(empty($ultPontoJornada) || ($ultimoTipo !== null && $ultimoTipo == $codigosJornada["fim"])){
 			if($novoTipo != $codigosJornada["inicio"]){
@@ -592,9 +605,6 @@
 			}
 		}else{
 			if($ultimoTipo == $codigosJornada["inicio"]){
-				if($novoTipo == $codigosJornada["inicio"]){
-					throw new Exception("Jornada aberta já existente.");
-				}
 				if($novoTipo%2 == 0 && ($novoTipo != $codigosJornada["fim"])){
 					throw new Exception("Intervalo aberto não encontrado.");
 				}
@@ -614,6 +624,16 @@
 		}
 
 		return $newPonto;
+	}
+
+	function jornadaAbertaDesdePontos(array $pontos): ?string{
+		for($f = count($pontos)-1; $f >= 0; $f--){
+			$tipo = intval($pontos[$f]["pont_tx_tipo"]);
+			if($tipo === 1 || $tipo === 2){
+				return ($tipo === 1)? strval($pontos[$f]["pont_tx_data"]): null;
+			}
+		}
+		return null;
 	}
 
 	function dateTimeToSecs(DateTime $dateTime): int{
