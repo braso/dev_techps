@@ -36,11 +36,6 @@
 		query("ALTER TABLE parametro ADD COLUMN para_tx_abonarFeriadoEscala ENUM('sim','nao') NOT NULL DEFAULT 'nao' COMMENT 'Abonar automaticamente feriados na escala'");
 	}
 
-	// Verificação e criação da coluna Permitir Nova Jornada
-	if(mysqli_num_rows(query("SHOW COLUMNS FROM parametro LIKE 'para_tx_permitirNovaJornada'")) == 0){
-		query("ALTER TABLE parametro ADD COLUMN para_tx_permitirNovaJornada ENUM('sim','nao') NOT NULL DEFAULT 'nao' COMMENT 'Permitir iniciar nova jornada com outra aberta (sim/nao)'");
-	}
-
 	// Criação da tabela feriado_parametro se não existir
 	function ensureFeriadoParametroSchema(){
 		$exists = mysqli_fetch_assoc(query(
@@ -708,7 +703,9 @@
 			"para_tx_turno" 					=> $_POST["turno"] ?? null,
 			"para_tx_pagarAdicNoturno" 			=> $_POST["pagarAdicNoturno"] ?? 'sim',
 			"para_tx_abonarFeriadoEscala"		=> (($_POST["tipo"] ?? "") === "escala" && ($_POST["abonarFeriadoEscala"] ?? "") === "sim") ? "sim" : "nao",
-			"para_tx_permitirNovaJornada"		=> (($_POST["permitirNovaJornada"] ?? "nao") === "sim")? "sim": "nao",
+			"para_tx_almocoInicio"				=> (!empty($_POST["almocoInicio"])? $_POST["almocoInicio"]: null),
+			"para_tx_almocoFim"					=> (!empty($_POST["almocoFim"])? $_POST["almocoFim"]: null),
+			"para_tx_permitirNovaJornadaDiaAnterior" => (($_POST["permitirNovaJornadaDiaAnterior"] ?? "sim") === "nao")? "nao": "sim",
 		];
 
 		if(!empty($_POST["ignorarCampos"]) || $_POST["ignorarCampos"] == null){
@@ -977,13 +974,22 @@
 			],
 			[
 				checkbox_banco("Utilizar regime de banco de horas?", "banco", ($a_mod["para_tx_banco"]?? ""), ($a_mod["para_nb_qDias"]?? ""), ($a_mod["para_tx_horasLimite"]?? ""),2),
+				"<div class='col-sm-4 margin-bottom-5' style='min-width:0;'>
+					<label>Janela de almoço do totem facial</label>
+					<div style='display:flex; align-items:center; gap:8px;'>
+						<input type='time' name='almocoInicio' value='".substr(strval($a_mod["para_tx_almocoInicio"]?? "11:00:00"), 0, 5)."' class='form-control input-sm' style='width:auto;'>
+						<span>até</span>
+						<input type='time' name='almocoFim' value='".substr(strval($a_mod["para_tx_almocoFim"]?? "14:00:00"), 0, 5)."' class='form-control input-sm' style='width:auto;'>
+					</div>
+					<small class='text-muted' style='display:block; margin-top:4px; overflow-wrap:break-word; word-break:break-word;'>Dentro desta janela, o totem registra Início Almoço (se ainda não almoçou na jornada); fora dela, registra Fim Jornada. Padrão: 11:00 às 14:00.</small>
+				</div>",
 				"<div class='col-sm-3 margin-bottom-5' style='min-width:0;'>
-					<label style='overflow-wrap:break-word;'>Permitir iniciar nova jornada com outra em aberto?</label>
-					<select name='permitirNovaJornada' class='form-control input-sm' style='width:auto; min-width:90px;'>
-						<option value='nao' ".((($a_mod["para_tx_permitirNovaJornada"]?? "nao") == "nao")? "selected": "").">Não</option>
-						<option value='sim' ".((($a_mod["para_tx_permitirNovaJornada"]?? "nao") == "sim")? "selected": "").">Sim</option>
+					<label style='overflow-wrap:break-word;'>Permitir abrir nova jornada com a do dia anterior em aberto?</label>
+					<select name='permitirNovaJornadaDiaAnterior' class='form-control input-sm' style='width:auto; min-width:90px;'>
+						<option value='sim' ".((($a_mod["para_tx_permitirNovaJornadaDiaAnterior"]?? "sim") == "sim")? "selected": "").">Sim</option>
+						<option value='nao' ".((($a_mod["para_tx_permitirNovaJornadaDiaAnterior"]?? "sim") == "nao")? "selected": "").">Não</option>
 					</select>
-					<small class='text-muted' style='display:block; margin-top:4px; overflow-wrap:break-word; word-break:break-word;'>Quando Sim, a jornada aberta de um dia anterior permite iniciar uma nova no dia seguinte sem fechar a anterior (ela permanece em aberto para ajuste do gestor). No mesmo dia, a jornada precisa estar fechada para abrir outra.</small>
+					<small class='text-muted' style='display:block; margin-top:4px; overflow-wrap:break-word; word-break:break-word;'>Quando Sim, o funcionário pode iniciar uma nova jornada mesmo com a do dia anterior em aberto (a anterior fica para ajuste do gestor). Quando Não, precisa fechar a anterior. No mesmo dia, a jornada sempre precisa estar fechada.</small>
 				</div>",
 				checkbox(
 					"Ignorar intervalos",

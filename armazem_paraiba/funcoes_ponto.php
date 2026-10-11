@@ -495,7 +495,7 @@
 		return;
     }
 
-	function conferirErroPonto(string $matricula, DateTime $dataPonto, int $idMacro, int $motivo = 0, string $justificativa = "", bool $permitirJornadaAberta = false): array{
+	function conferirErroPonto(string $matricula, DateTime $dataPonto, int $idMacro, int $motivo = 0, string $justificativa = "", bool $bloquearJornadaAnterior = false): array{
 		//Conferir se tem as informações necessárias{
 			if(empty($matricula)){
 				$_POST["errorFields"][] = "motorista";
@@ -588,14 +588,14 @@
 			}
 		}
 
-		// Regra da jornada aberta: no MESMO DIA não permite abrir outra jornada;
-		// a partir do dia seguinte, pode iniciar nova sem fechar a anterior
-		// (quando o parâmetro "permitir nova jornada" estiver ligado).
+		// Regra da jornada aberta: no MESMO DIA nunca permite abrir outra jornada; a partir
+		// do dia seguinte, depende do parâmetro da jornada (quando bloqueado, exige fechar a
+		// anterior; quando liberado, a anterior fica aberta para ajuste do gestor).
 		$jornadaAberta = !empty($ultPontoJornada) && intval($ultPontoJornada["pont_tx_tipo"]) == $codigosJornada["inicio"];
 		$jornadaAbertaMesmoDia = $jornadaAberta
 			&& substr(strval($ultPontoJornada["pont_tx_data"]), 0, 10) === $dataPonto->format("Y-m-d");
 
-		if($novoTipo == $codigosJornada["inicio"] && $jornadaAberta && ($jornadaAbertaMesmoDia || !$permitirJornadaAberta)){
+		if($novoTipo == $codigosJornada["inicio"] && $jornadaAberta && ($jornadaAbertaMesmoDia || $bloquearJornadaAnterior)){
 			throw new Exception("Jornada aberta já existente.");
 		}
 
@@ -634,6 +634,99 @@
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Decide automaticamente o próximo tipo de registro do totem facial.
+	 * Devolve ["macro" => int|null, "motivo" => string]; macro null = não registrar.
+	 * Regras: sem jornada -> início; jornada de dia anterior -> nova jornada (a anterior
+	 * fica para ajuste do gestor), salvo quando o parâmetro da jornada exigir fechar antes;
+	 * almoço aberto -> fim do almoço; intervalo aberto que não é almoço -> não mexe; dentro
+	 * da janela de almoço sem almoço na jornada -> início do almoço; caso contrário -> fim
+	 * da jornada.
+	 */
+	function proximoMacroTotem(string $matricula, DateTime $dataPonto, ?string $almocoInicio = null, ?string $almocoFim = null, bool $bloquearJornadaAnterior = false): array{
+		$dataSql = $dataPonto->format("Y-m-d H:i:s");
+
+		$ultimoPonto = mysqli_fetch_assoc(query(
+			"SELECT p.pont_tx_tipo, p.pont_tx_data, m.macr_tx_codigoInterno as tipo_interno
+				FROM ponto p
+				LEFT JOIN macroponto m ON (
+					p.pont_tx_tipo = m.macr_tx_codigoInterno
+					OR p.pont_tx_tipo = m.macr_nb_id
+					OR p.pont_tx_tipo = m.macr_tx_codigoExterno
+					OR p.pont_tx_tipoOriginal = m.macr_tx_codigoExterno
+				)
+				WHERE p.pont_tx_status = 'ativo'
+					AND p.pont_tx_matricula = '{$matricula}'
+					AND p.pont_tx_data <= STR_TO_DATE('{$dataSql}', '%Y-%m-%d %H:%i:%s')
+				ORDER BY p.pont_tx_data DESC, p.pont_nb_id DESC
+				LIMIT 1;"
+		));
+		$ultimoTipo = !empty($ultimoPonto)? intval($ultimoPonto["tipo_interno"] ?? $ultimoPonto["pont_tx_tipo"]): null;
+
+		$ultJornada = mysqli_fetch_assoc(query(
+			"SELECT p.pont_tx_tipo, p.pont_tx_data, m.macr_tx_codigoInterno as tipo_interno
+				FROM ponto p
+				LEFT JOIN macroponto m ON (
+					p.pont_tx_tipo = m.macr_tx_codigoInterno
+					OR p.pont_tx_tipo = m.macr_nb_id
+					OR p.pont_tx_tipo = m.macr_tx_codigoExterno
+					OR p.pont_tx_tipoOriginal = m.macr_tx_codigoExterno
+				)
+				WHERE p.pont_tx_status = 'ativo'
+					AND p.pont_tx_matricula = '{$matricula}'
+					AND p.pont_tx_data <= STR_TO_DATE('{$dataSql}', '%Y-%m-%d %H:%i:%s')
+					AND m.macr_tx_codigoInterno IN ('1', '2')
+				ORDER BY p.pont_tx_data DESC, p.pont_nb_id DESC
+				LIMIT 1;"
+		));
+		$jornadaAberta = !empty($ultJornada) && intval($ultJornada["tipo_interno"] ?? $ultJornada["pont_tx_tipo"]) == 1;
+
+		if(!$jornadaAberta){
+			return ["macro" => 1, "motivo" => "sem_jornada"];
+		}
+
+		$jornadaMesmoDia = substr(strval($ultJornada["pont_tx_data"]), 0, 10) === $dataPonto->format("Y-m-d");
+		if(!$jornadaMesmoDia){
+			if($bloquearJornadaAnterior){
+				return ["macro" => null, "motivo" => "jornada_anterior_bloqueada"];
+			}
+			return ["macro" => 1, "motivo" => "nova_jornada_dia_seguinte"];
+		}
+
+		if($ultimoTipo == 3){
+			return ["macro" => 4, "motivo" => "fim_almoco"];
+		}
+		if($ultimoTipo !== null && $ultimoTipo > 2 && $ultimoTipo%2 == 1){
+			return ["macro" => null, "motivo" => "intervalo_aberto"];
+		}
+
+		$inicio = (!empty($almocoInicio)? $almocoInicio: "11:00:00");
+		$fim = (!empty($almocoFim)? $almocoFim: "14:00:00");
+		if(strlen($inicio) == 5){ $inicio .= ":00"; }
+		if(strlen($fim) == 5){ $fim .= ":00"; }
+
+		$horaAtual = $dataPonto->format("H:i:s");
+		$dentroJanela = ($horaAtual >= $inicio && $horaAtual <= $fim);
+
+		$jaAlmocou = false;
+		if($dentroJanela){
+			$jaAlmocou = !empty(mysqli_fetch_assoc(query(
+				"SELECT p.pont_nb_id FROM ponto p
+					WHERE p.pont_tx_status = 'ativo'
+						AND p.pont_tx_matricula = '{$matricula}'
+						AND p.pont_tx_tipo = 3
+						AND p.pont_tx_data >= '{$ultJornada["pont_tx_data"]}'
+						AND p.pont_tx_data <= STR_TO_DATE('{$dataSql}', '%Y-%m-%d %H:%i:%s')
+					LIMIT 1;"
+			)));
+		}
+
+		if($dentroJanela && !$jaAlmocou){
+			return ["macro" => 3, "motivo" => "inicio_almoco"];
+		}
+		return ["macro" => 2, "motivo" => "fim_jornada"];
 	}
 
 	function dateTimeToSecs(DateTime $dateTime): int{
