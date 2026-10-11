@@ -7,7 +7,6 @@
 	<input type="hidden" name="idMacro" id="idMacro" />
 	<input type="hidden" name="motivo" id="motivo"/>
 	<input type="hidden" name="justificativa" id="justificativa"/>
-	<input type="hidden" name="confirmarNovaJornada" id="confirmarNovaJornada" value=""/>
 	<input type="hidden" name="latitude" id="latitude">
 	<input type="hidden" name="longitude" id="longitude">
 	<input type="hidden" name="placa" id="placa" />
@@ -208,7 +207,6 @@
                 document.form_submit.placa.value = placa;
                 document.form_submit.idMacro.value = idMacro;
                 document.form_submit.justificativa.value = document.getElementById('justificativa').value;
-                document.form_submit.confirmarNovaJornada.value = (idMacro == '1' && jornadaAbertaDesde != '')? '1': '';
                 if(idMotivo != ''){
                     document.form_submit.motivo.value = idMotivo;
                 }

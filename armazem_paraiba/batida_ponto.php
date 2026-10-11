@@ -16,16 +16,15 @@ function cadastraPonto(){
 		$hoje = date("Y-m-d");
 		try {
 			$motorista = mysqli_fetch_assoc(query(
-				"SELECT entidade.*, parametro.* FROM entidade 
+				"SELECT entidade.enti_tx_matricula, parametro.para_tx_permitirNovaJornadaDiaAnterior FROM entidade 
 					LEFT JOIN parametro ON para_nb_id = enti_nb_parametro
 					WHERE enti_tx_status = 'ativo' 
 						AND enti_nb_id = {$_SESSION["user_nb_entidade"]}
 					LIMIT 1;"
 			));
+			$bloquearJornadaAnterior = (($motorista["para_tx_permitirNovaJornadaDiaAnterior"] ?? "sim") === "nao");
 			$dataPonto = new DateTime("{$hoje} ".date("H:i:00"));
-			$permitirNovaJornada = (($motorista["para_tx_permitirNovaJornada"] ?? "nao") === "sim");
-			$confirmarNovaJornada = ($permitirNovaJornada && intval($_POST["idMacro"]) === 1 && ($_POST["confirmarNovaJornada"] ?? "") == "1");
-			$novoPonto = conferirErroPonto($motorista["enti_tx_matricula"], $dataPonto, intval($_POST["idMacro"]), (!empty($_POST["motivo"])? $_POST["motivo"]: 0), (!empty($_POST["justificativa"])? $_POST["justificativa"]: ""), $confirmarNovaJornada);
+			$novoPonto = conferirErroPonto($motorista["enti_tx_matricula"], $dataPonto, intval($_POST["idMacro"]), (!empty($_POST["motivo"])? $_POST["motivo"]: 0), (!empty($_POST["justificativa"])? $_POST["justificativa"]: ""), $bloquearJornadaAnterior);
 		} catch (\Exception $e) {
 			set_status("ERRO: ".$e->getMessage());
 			index();
@@ -263,7 +262,7 @@ function index() {
 		}
 
 		$motorista = mysqli_fetch_assoc(query(
-			"SELECT entidade.*, user.*, parametro.* FROM entidade"
+			"SELECT entidade.*, user.*, parametro.para_tx_permitirNovaJornadaDiaAnterior FROM entidade"
 			." JOIN user ON enti_nb_id = user_nb_entidade"
 			." LEFT JOIN parametro ON para_nb_id = enti_nb_parametro"
 			." WHERE enti_nb_id = ".$_SESSION["user_nb_entidade"].";"
@@ -291,15 +290,12 @@ function index() {
 			];
 		}
 
-		// Parâmetro "Permitir iniciar nova jornada com outra em aberto" (padrão: não)
-		$permitirNovaJornada = (($motorista["para_tx_permitirNovaJornada"] ?? "nao") === "sim");
-		$jornadaAbertaDesde = null;
-		if($permitirNovaJornada){
-			$jornadaAbertaDesde = jornadaAbertaDesdePontos($pontosCompleto);
-		}
-		// No mesmo dia a jornada precisa estar fechada para abrir outra; o botão só
-		// aparece quando a jornada aberta é de um dia anterior.
-		$permitirBotaoNovaJornada = !empty($jornadaAbertaDesde) && substr($jornadaAbertaDesde, 0, 10) < $hoje;
+		// Jornada aberta: no mesmo dia o botão de nova jornada não aparece (precisa estar
+		// fechada); de dia anterior, aparece quando o parâmetro da jornada permitir (a
+		// anterior fica em aberto para o gestor).
+		$bloquearJornadaAnterior = (($motorista["para_tx_permitirNovaJornadaDiaAnterior"] ?? "sim") === "nao");
+		$jornadaAbertaDesde = jornadaAbertaDesdePontos($pontosCompleto);
+		$permitirBotaoNovaJornada = !empty($jornadaAbertaDesde) && substr($jornadaAbertaDesde, 0, 10) < $hoje && !$bloquearJornadaAnterior;
 
 		$inicios = [
 			1  => "inicioJornada", 

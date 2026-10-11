@@ -369,6 +369,16 @@
     // Migração da tabela ponto: distância facial apurada no registro pelo totem (auditoria).
     bancoGarantirColuna($conn, "ponto", "pont_tx_faceDistancia", "DECIMAL(6,4) NULL");
 
+    // Migração da tabela parametro: janela de almoço usada pelo totem facial automático.
+    // Dentro da janela (e sem almoço na jornada) o totem registra Início Almoço; fora dela
+    // registra Fim Jornada.
+    bancoGarantirColuna($conn, "parametro", "para_tx_almocoInicio", "TIME NULL DEFAULT '11:00:00'");
+    bancoGarantirColuna($conn, "parametro", "para_tx_almocoFim", "TIME NULL DEFAULT '14:00:00'");
+
+    // Migração da tabela parametro: habilita abrir nova jornada mesmo com a jornada do dia
+    // anterior em aberto (padrão: sim). O bloqueio do MESMO DIA continua valendo sempre.
+    bancoGarantirColuna($conn, "parametro", "para_tx_permitirNovaJornadaDiaAnterior", "ENUM('sim','nao') NOT NULL DEFAULT 'sim'");
+
     // Criação da tabela feriado_funcionario se não existir
     bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS feriado_funcionario (
         fefi_nb_id INT AUTO_INCREMENT PRIMARY KEY,

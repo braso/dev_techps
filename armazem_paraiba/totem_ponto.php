@@ -17,10 +17,10 @@
 
 	function totemMacros(): array{
 		return [
-			1 => ["nome" => "Início Jornada", "curto" => "INÍCIO<br>JORNADA", "classe" => "inicio"],
-			3 => ["nome" => "Início Almoço",  "curto" => "INÍCIO<br>ALMOÇO",  "classe" => "inicio"],
-			4 => ["nome" => "Fim Almoço",     "curto" => "FIM<br>ALMOÇO",     "classe" => "fim"],
-			2 => ["nome" => "Fim Jornada",    "curto" => "FIM<br>JORNADA",    "classe" => "fim"],
+			1 => ["nome" => "Início Jornada"],
+			3 => ["nome" => "Início Almoço"],
+			4 => ["nome" => "Fim Almoço"],
+			2 => ["nome" => "Fim Jornada"],
 		];
 	}
 
@@ -39,7 +39,6 @@
 	}
 
 	function index(){
-		$macros = totemMacros();
 		$modelUrl = $_ENV["URL_BASE"].$_ENV["APP_PATH"]."/face_models";
 		$loginUrl = $_ENV["URL_BASE"].$_ENV["APP_PATH"]."/index.php?origem=totem";
 		?>
@@ -57,22 +56,13 @@
 
 	/* Tela ociosa */
 	#tela-ociosa { cursor:pointer; text-align:center; background:linear-gradient(160deg,#0f172a,#1e293b); }
-	#relogio { font-size:110px; font-weight:800; letter-spacing:4px; line-height:1; }
+	#relogio { font-size:clamp(56px, 12vw, 100px); font-weight:800; letter-spacing:4px; line-height:1; }
 	#data { font-size:26px; color:#94a3b8; margin-top:10px; text-transform:capitalize; }
 	#toque { margin-top:70px; font-size:24px; font-weight:700; color:#38bdf8; animation:pisca 1.6s infinite; }
 	@keyframes pisca { 0%,100%{opacity:1} 50%{opacity:.35} }
 
-	/* Tela de botões */
-	#tela-botoes { background:linear-gradient(160deg,#0f172a,#1e293b); }
-	#barra-topo { position:absolute; top:0; left:0; right:0; display:flex; align-items:center; justify-content:space-between; padding:14px 22px; font-size:22px; color:#94a3b8; }
-	#btn-ocioso { background:transparent; border:2px solid #475569; color:#94a3b8; font-size:20px; width:44px; height:44px; border-radius:50%; cursor:pointer; }
-	#grid-botoes { display:grid; grid-template-columns:1fr 1fr; gap:22px; width:min(92vw, 900px); }
-	.botao { border:none; border-radius:22px; color:#fff; font-size:clamp(22px, 3.2vw, 40px); font-weight:800; line-height:1.15; padding:34px 10px; cursor:pointer; box-shadow:0 8px 0 rgba(0,0,0,.35); transition:transform .08s, filter .15s; }
-	.botao:active { transform:translateY(4px); box-shadow:0 4px 0 rgba(0,0,0,.35); }
-	.botao.inicio { background:#16a34a; }
-	.botao.fim { background:#dc2626; }
-	.botao:hover { filter:brightness(1.1); }
-	#login-fallback { display:none; margin-top:26px; }
+	/* Login de fallback (apos 3 falhas) */
+	#login-fallback { display:none; margin-top:40px; }
 	#login-fallback a { display:inline-block; background:#334155; color:#fff; text-decoration:none; font-size:20px; font-weight:700; padding:14px 28px; border-radius:12px; border:2px solid #475569; }
 
 	/* Câmera */
@@ -101,15 +91,6 @@
 	<div id="relogio">--:--</div>
 	<div id="data"></div>
 	<div id="toque">Toque na tela para registrar seu ponto</div>
-</div>
-
-<div id="tela-botoes" class="tela" style="display:none">
-	<div id="barra-topo"><span id="relogio2">--:--</span><button id="btn-ocioso" title="Voltar">✕</button></div>
-	<div id="grid-botoes">
-		<?php foreach($macros as $idMacro => $macro){ ?>
-			<button type="button" class="botao <?=$macro["classe"]?>" data-macro="<?=$idMacro?>"><?=$macro["curto"]?></button>
-		<?php } ?>
-	</div>
 	<div id="login-fallback"><a href="<?=htmlspecialchars($loginUrl, ENT_QUOTES)?>">ENTRAR COM LOGIN</a></div>
 </div>
 
@@ -136,7 +117,6 @@
 	const ENDPOINT  = 'totem_ponto.php';
 
 	const telaOciosa  = document.getElementById('tela-ociosa');
-	const telaBotoes  = document.getElementById('tela-botoes');
 	const modalCamera = document.getElementById('modal-camera');
 	const resultadoEl = document.getElementById('resultado');
 	const videoEl     = document.getElementById('video');
@@ -149,9 +129,8 @@
 	let detLoop = null;
 	let processando = false;
 	let identificando = false;
-	let macroSelecionado = null;
 	let falhas = 0;
-	let idleTimer = null;
+	let cameraTimer = null;
 	let resultadoTimer = null;
 
 	// ── Relógio ─────────────────────────────────────────────────────────
@@ -159,8 +138,8 @@
 		const now = new Date();
 		const h = String(now.getHours()).padStart(2,'0');
 		const m = String(now.getMinutes()).padStart(2,'0');
-		document.getElementById('relogio').textContent = h+':'+m;
-		document.getElementById('relogio2').textContent = h+':'+m;
+		const s = String(now.getSeconds()).padStart(2,'0');
+		document.getElementById('relogio').textContent = h+':'+m+':'+s;
 		const dias  = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
 		const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 		document.getElementById('data').textContent = dias[now.getDay()]+', '+now.getDate()+' de '+meses[now.getMonth()]+' de '+now.getFullYear();
@@ -172,43 +151,28 @@
 	function mostrarOciosa(){
 		pararCamera();
 		telaOciosa.style.display = 'flex';
-		telaBotoes.style.display = 'none';
 		modalCamera.style.display = 'none';
 		resultadoEl.style.display = 'none';
-		resetIdle();
+		loginFallback.style.display = (falhas >= 3)? 'block': 'none';
 	}
-	function mostrarBotoes(){
-		pararCamera();
-		telaOciosa.style.display = 'none';
-		telaBotoes.style.display = 'flex';
-		modalCamera.style.display = 'none';
-		resultadoEl.style.display = 'none';
-		resetIdle();
-	}
-	function resetIdle(){
-		if(idleTimer) clearTimeout(idleTimer);
-		if(telaBotoes.style.display === 'flex'){
-			idleTimer = setTimeout(mostrarOciosa, 60000);
-		}
-	}
-	telaOciosa.addEventListener('click', mostrarBotoes);
-	document.getElementById('btn-ocioso').addEventListener('click', mostrarOciosa);
 
-	document.querySelectorAll('#grid-botoes .botao').forEach(function(btn){
-		btn.addEventListener('click', function(){
-			resetIdle();
-			iniciarFacial(parseInt(btn.getAttribute('data-macro'), 10));
-		});
+	telaOciosa.addEventListener('click', function(e){
+		if(e.target.closest('#login-fallback')){ return; }
+		iniciarFacial();
 	});
 
 	// ── Câmera e reconhecimento ─────────────────────────────────────────
-	async function iniciarFacial(idMacro){
-		macroSelecionado = idMacro;
+	async function iniciarFacial(){
 		identificando = false;
 		processando = false;
-		if(idleTimer){ clearTimeout(idleTimer); idleTimer = null; }
+		if(cameraTimer){ clearTimeout(cameraTimer); }
+		cameraTimer = setTimeout(function(){
+			if(modalCamera.style.display === 'flex' && !identificando){
+				statusEl.textContent = 'Tempo esgotado. Toque para tentar novamente.';
+				mostrarOciosa();
+			}
+		}, 45000);
 		modalCamera.style.display = 'flex';
-		telaBotoes.style.display = 'none';
 		resultadoEl.style.display = 'none';
 		statusEl.style.color = '#38bdf8';
 		statusEl.textContent = 'Carregando reconhecimento facial...';
@@ -247,6 +211,7 @@
 	}
 
 	function pararCamera(){
+		if(cameraTimer){ clearTimeout(cameraTimer); cameraTimer = null; }
 		if(detLoop){ clearInterval(detLoop); detLoop = null; }
 		if(stream){ stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; }
 	}
@@ -331,7 +296,6 @@
 	async function enviarDescritor(descriptor){
 		const fd = new FormData();
 		fd.append('acao', 'registrarPontoFacial');
-		fd.append('idMacro', macroSelecionado);
 		fd.append('descritor', JSON.stringify(Array.from(descriptor)));
 		try {
 			const res = await fetch(ENDPOINT, { method: 'POST', body: fd });
@@ -350,20 +314,17 @@
 
 	function finalizarSucesso(json){
 		pararCamera();
-		mostrarResultado('ok', '✔', json.nome || 'Registro efetuado', (json.macro || '') + ' às ' + (json.hora || ''), 'Registro efetuado com sucesso.', false);
-		resultadoTimer = setTimeout(mostrarBotoes, 6000);
+		const msg = json.aviso || 'Registro efetuado com sucesso.';
+		mostrarResultado('ok', '✔', json.nome || 'Registro efetuado', (json.macro || '') + ' às ' + (json.hora || ''), msg, false);
+		resultadoTimer = setTimeout(mostrarOciosa, json.aviso ? 9000 : 6000);
 	}
 
 	function finalizarFalha(msg, exigirLogin){
 		pararCamera();
 		falhas++;
-		if(exigirLogin || falhas >= 3){
-			loginFallback.style.display = 'block';
-			mostrarResultado('erro', '✕', 'Não reconhecido', msg, falhas >= 3 ? 'Após 3 tentativas, use o login para registrar.' : '', true);
-		}else{
-			mostrarResultado('erro', '✕', 'Não reconhecido', msg, 'Tentativa ' + falhas + ' de 3.', false);
-		}
-		resultadoTimer = setTimeout(mostrarBotoes, 5000);
+		const comLogin = exigirLogin || falhas >= 3;
+		mostrarResultado('erro', '✕', 'Não reconhecido', msg, comLogin ? 'Após 3 tentativas, use o login para registrar.' : ('Tentativa ' + falhas + ' de 3.'), comLogin);
+		resultadoTimer = setTimeout(mostrarOciosa, 5000);
 	}
 
 	function mostrarResultado(tipo, icone, titulo, sub, msg, comLogin){
@@ -377,8 +338,7 @@
 		resultadoEl.style.display = 'flex';
 	}
 
-	document.getElementById('btn-cancelar').addEventListener('click', mostrarBotoes);
-	document.addEventListener('click', function(){ resetIdle(); });
+	document.getElementById('btn-cancelar').addEventListener('click', mostrarOciosa);
 })();
 </script>
 </body>
@@ -387,6 +347,8 @@
 	}
 
 	function registrarPontoFacial(){
+		global $conn;
+
 		header("Content-Type: application/json; charset=utf-8");
 		header("Cache-Control: no-store");
 
@@ -400,7 +362,7 @@
 			$idMacro = intval($_POST["idMacro"] ?? 0);
 			$macros = totemMacros();
 
-			if($descritorRaw === "" || !isset($macros[$idMacro])){
+			if($descritorRaw === "" || ($idMacro > 0 && !isset($macros[$idMacro]))){
 				$responder(["ok" => false, "msg" => "Dados inválidos. Tente novamente."]);
 			}
 
@@ -411,24 +373,30 @@
 
 			$THRESHOLD = 0.38;
 
+			// A identificação não depende de outras tabelas: só o usuário e a entidade.
 			$rs = query(
 				"SELECT u.user_nb_id, u.user_tx_nome, u.user_tx_face_descriptor,
-						e.enti_tx_matricula, e.enti_nb_parametro, p.para_tx_permitirNovaJornada
+						e.enti_tx_matricula, e.enti_nb_parametro
 					FROM user u
 					JOIN entidade e ON e.enti_nb_id = u.user_nb_entidade
-					LEFT JOIN parametro p ON p.para_nb_id = e.enti_nb_parametro
 					WHERE u.user_tx_status = 'ativo'
 						AND e.enti_tx_status = 'ativo'
 						AND u.user_tx_face_descriptor IS NOT NULL
 						AND u.user_tx_face_descriptor != ''
 					LIMIT 5000"
 			);
+			if($rs === false || $rs === true){
+				error_log("Totem facial: falha ao consultar biometrias - ".strval($GLOBALS["last_sql_error"] ?? "erro desconhecido"));
+				$responder(["ok" => false, "msg" => "Erro interno ao consultar biometrias. Procure o RH."]);
+			}
 
 			$melhorUsuario = null;
 			$melhorDistancia = PHP_FLOAT_MAX;
-			while($rs && ($row = mysqli_fetch_assoc($rs))){
+			$comparados = 0;
+			while($row = mysqli_fetch_assoc($rs)){
 				$descBanco = json_decode(strval($row["user_tx_face_descriptor"]), true);
 				if(!is_array($descBanco) || count($descBanco) !== count($descritor)){ continue; }
+				$comparados++;
 				$soma = 0.0;
 				foreach($descBanco as $i => $v){
 					$diff = floatval($v) - floatval($descritor[$i] ?? 0);
@@ -442,7 +410,12 @@
 			}
 
 			if(empty($melhorUsuario) || $melhorDistancia > $THRESHOLD){
-				$responder(["ok" => false, "msg" => "Rosto não reconhecido. Posicione o rosto e tente novamente."]);
+				$responder([
+					"ok" => false,
+					"msg" => "Rosto não reconhecido. Posicione o rosto e tente novamente.",
+					"distancia" => empty($melhorUsuario)? null: round($melhorDistancia, 4),
+					"comparados" => $comparados
+				]);
 			}
 
 			if(!perfilUsaPontoFacial(intval($melhorUsuario["user_nb_id"]))){
@@ -467,8 +440,53 @@
 				$responder(["ok" => false, "msg" => "Registro efetuado há instantes. Aguarde alguns segundos."]);
 			}
 
-			$permitirNovaJornada = (($melhorUsuario["para_tx_permitirNovaJornada"] ?? "nao") === "sim");
+			// Janela de almoço e regra de nova jornada do parâmetro (colunas garantidas pelo
+			// conecta.php). Se por algum motivo uma coluna não existir, assume o padrão em
+			// vez de derrubar a identificação.
+			$almocoInicio = null;
+			$almocoFim = null;
+			$bloquearJornadaAnterior = false;
+			$parametroId = intval($melhorUsuario["enti_nb_parametro"] ?? 0);
+			if($parametroId > 0){
+				$colunasParametro = ["para_tx_almocoInicio", "para_tx_almocoFim", "para_tx_permitirNovaJornadaDiaAnterior"];
+				$selectParametro = [];
+				foreach($colunasParametro as $colunaParametro){
+					if(bancoColunaExiste($conn, "parametro", $colunaParametro)){
+						$selectParametro[] = $colunaParametro;
+					}
+				}
+				if(!empty($selectParametro)){
+					$parametroJornada = mysqli_fetch_assoc(query(
+						"SELECT ".implode(", ", $selectParametro)." FROM parametro WHERE para_nb_id = ? LIMIT 1",
+						"i",
+						[$parametroId]
+					));
+					$almocoInicio = $parametroJornada["para_tx_almocoInicio"] ?? null;
+					$almocoFim = $parametroJornada["para_tx_almocoFim"] ?? null;
+					$bloquearJornadaAnterior = (($parametroJornada["para_tx_permitirNovaJornadaDiaAnterior"] ?? "sim") === "nao");
+				}
+			}
 			$dataPonto = new DateTime(date("Y-m-d H:i:s"));
+			$avisoSucesso = null;
+
+			// Sem tipo escolhido, o servidor decide o próximo registro automaticamente.
+			if(!isset($macros[$idMacro])){
+				$proximo = proximoMacroTotem($matricula, $dataPonto, $almocoInicio, $almocoFim, $bloquearJornadaAnterior);
+				if(empty($proximo["macro"])){
+					$mensagensProximo = [
+						"intervalo_aberto" => "Você tem um intervalo em aberto (Espera/Descanso/Repouso). Procure o RH para ajustar.",
+						"jornada_anterior_bloqueada" => "Você tem uma jornada de outro dia em aberto. Procure o gestor para ajustar."
+					];
+					$responder([
+						"ok" => false,
+						"msg" => $mensagensProximo[$proximo["motivo"]] ?? "Não foi possível identificar o próximo registro. Procure o RH."
+					]);
+				}
+				if($proximo["motivo"] === "nova_jornada_dia_seguinte"){
+					$avisoSucesso = "Atenção: você tinha uma jornada de outro dia em aberto. Ela ficou para ajuste do gestor.";
+				}
+				$idMacro = intval($proximo["macro"]);
+			}
 
 			$sessaoAnterior = $_SESSION["user_nb_id"] ?? null;
 			$_SESSION["user_nb_id"] = intval($melhorUsuario["user_nb_id"]);
@@ -479,7 +497,7 @@
 					$idMacro,
 					0,
 					"Registro pelo totem facial",
-					($idMacro === 1 && $permitirNovaJornada)
+					$bloquearJornadaAnterior
 				);
 			} catch (Throwable $e) {
 				if($sessaoAnterior === null){ unset($_SESSION["user_nb_id"]); } else { $_SESSION["user_nb_id"] = $sessaoAnterior; }
@@ -500,6 +518,7 @@
 				"nome" => $melhorUsuario["user_tx_nome"],
 				"macro" => $macros[$idMacro]["nome"],
 				"hora" => $dataPonto->format("H:i"),
+				"aviso" => $avisoSucesso,
 				"msg" => "Registro efetuado com sucesso."
 			]);
 		} catch (Throwable $e) {
