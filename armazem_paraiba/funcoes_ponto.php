@@ -639,13 +639,14 @@
 	/**
 	 * Decide automaticamente o próximo tipo de registro do totem facial.
 	 * Devolve ["macro" => int|null, "motivo" => string]; macro null = não registrar.
-	 * Regras: sem jornada -> início; jornada de dia anterior -> nova jornada (a anterior
-	 * fica para ajuste do gestor), salvo quando o parâmetro da jornada exigir fechar antes;
-	 * almoço aberto -> fim do almoço; intervalo aberto que não é almoço -> não mexe; dentro
-	 * da janela de almoço sem almoço na jornada -> início do almoço; caso contrário -> fim
-	 * da jornada.
+	 * Regra por QUANTIDADE de pontos da jornada aberta (a hora não decide):
+	 * 1ª batida = Entrada (1); 2ª = Início Almoço (3); 3ª = Fim Almoço (4);
+	 * 4ª = Fim Jornada (2). Com "Almoço pré assinalado" ligado, o funcionário faz só
+	 * Entrada e Fim Jornada (o almoço é inserido no Fim Jornada). Jornada de dia anterior:
+	 * abre nova (salvo quando o parâmetro exigir fechar antes). Intervalo aberto que não é
+	 * almoço não é mexido (gestor ajusta).
 	 */
-	function proximoMacroTotem(string $matricula, DateTime $dataPonto, ?string $almocoInicio = null, ?string $almocoFim = null, bool $bloquearJornadaAnterior = false): array{
+	function proximoMacroTotem(string $matricula, DateTime $dataPonto, bool $bloquearJornadaAnterior = false, bool $almocoPreAssinalado = false): array{
 		$dataSql = $dataPonto->format("Y-m-d H:i:s");
 
 		$ultimoPonto = mysqli_fetch_assoc(query(
@@ -687,6 +688,11 @@
 			return ["macro" => 1, "motivo" => "sem_jornada"];
 		}
 
+		// Intervalo aberto que não é almoço (espera/descanso/repouso): não mexe.
+		if($ultimoTipo !== null && $ultimoTipo > 3 && $ultimoTipo%2 == 1){
+			return ["macro" => null, "motivo" => "intervalo_aberto"];
+		}
+
 		$jornadaMesmoDia = substr(strval($ultJornada["pont_tx_data"]), 0, 10) === $dataPonto->format("Y-m-d");
 		if(!$jornadaMesmoDia){
 			if($bloquearJornadaAnterior){
@@ -695,38 +701,87 @@
 			return ["macro" => 1, "motivo" => "nova_jornada_dia_seguinte"];
 		}
 
-		if($ultimoTipo == 3){
-			return ["macro" => 4, "motivo" => "fim_almoco"];
+		// Regra por quantidade: conta os pontos da jornada aberta (inclui a entrada).
+		$qtdPontos = intval(mysqli_fetch_assoc(query(
+			"SELECT COUNT(*) as q FROM ponto
+				WHERE pont_tx_status = 'ativo'
+					AND pont_tx_matricula = '{$matricula}'
+					AND pont_tx_data >= '{$ultJornada["pont_tx_data"]}'
+					AND pont_tx_data <= STR_TO_DATE('{$dataSql}', '%Y-%m-%d %H:%i:%s')"
+		))["q"] ?? 0);
+
+		if($almocoPreAssinalado && $qtdPontos <= 1){
+			return ["macro" => 2, "motivo" => "fim_jornada_almoco_pre"];
 		}
-		if($ultimoTipo !== null && $ultimoTipo > 2 && $ultimoTipo%2 == 1){
-			return ["macro" => null, "motivo" => "intervalo_aberto"];
-		}
-
-		$inicio = (!empty($almocoInicio)? $almocoInicio: "11:00:00");
-		$fim = (!empty($almocoFim)? $almocoFim: "14:00:00");
-		if(strlen($inicio) == 5){ $inicio .= ":00"; }
-		if(strlen($fim) == 5){ $fim .= ":00"; }
-
-		$horaAtual = $dataPonto->format("H:i:s");
-		$dentroJanela = ($horaAtual >= $inicio && $horaAtual <= $fim);
-
-		$jaAlmocou = false;
-		if($dentroJanela){
-			$jaAlmocou = !empty(mysqli_fetch_assoc(query(
-				"SELECT p.pont_nb_id FROM ponto p
-					WHERE p.pont_tx_status = 'ativo'
-						AND p.pont_tx_matricula = '{$matricula}'
-						AND p.pont_tx_tipo = 3
-						AND p.pont_tx_data >= '{$ultJornada["pont_tx_data"]}'
-						AND p.pont_tx_data <= STR_TO_DATE('{$dataSql}', '%Y-%m-%d %H:%i:%s')
-					LIMIT 1;"
-			)));
-		}
-
-		if($dentroJanela && !$jaAlmocou){
+		if($qtdPontos <= 1){
 			return ["macro" => 3, "motivo" => "inicio_almoco"];
 		}
-		return ["macro" => 2, "motivo" => "fim_jornada"];
+		if($qtdPontos == 2){
+			return ["macro" => 4, "motivo" => "fim_almoco"];
+		}
+		if($qtdPontos == 3){
+			return ["macro" => 2, "motivo" => "fim_jornada"];
+		}
+		return ["macro" => null, "motivo" => "registros_alem_do_esperado"];
+	}
+
+	/**
+	 * Jornada aberta de um dia anterior com exatamente 2 pontos: considera o 2º ponto como
+	 * Fim de Jornada (a jornada não teve 3º ponto) para que a nova jornada abra normalmente.
+	 * Devolve true quando converteu.
+	 */
+	function fecharJornadaDoisPontos(string $matricula, DateTime $dataPonto): bool{
+		$dataSql = $dataPonto->format("Y-m-d H:i:s");
+
+		$ultJornada = mysqli_fetch_assoc(query(
+			"SELECT p.pont_tx_tipo, p.pont_tx_data, m.macr_tx_codigoInterno as tipo_interno
+				FROM ponto p
+				LEFT JOIN macroponto m ON (
+					p.pont_tx_tipo = m.macr_tx_codigoInterno
+					OR p.pont_tx_tipo = m.macr_nb_id
+					OR p.pont_tx_tipo = m.macr_tx_codigoExterno
+					OR p.pont_tx_tipoOriginal = m.macr_tx_codigoExterno
+				)
+				WHERE p.pont_tx_status = 'ativo'
+					AND p.pont_tx_matricula = '{$matricula}'
+					AND p.pont_tx_data <= STR_TO_DATE('{$dataSql}', '%Y-%m-%d %H:%i:%s')
+					AND m.macr_tx_codigoInterno IN ('1', '2')
+				ORDER BY p.pont_tx_data DESC, p.pont_nb_id DESC
+				LIMIT 1;"
+		));
+		$jornadaAberta = !empty($ultJornada) && intval($ultJornada["tipo_interno"] ?? $ultJornada["pont_tx_tipo"]) == 1;
+		if(!$jornadaAberta){ return false; }
+
+		$inicioJornada = $ultJornada["pont_tx_data"];
+		if(substr(strval($inicioJornada), 0, 10) === $dataPonto->format("Y-m-d")){ return false; }
+
+		$pontos = mysqli_fetch_all(query(
+			"SELECT pont_nb_id, pont_tx_tipo FROM ponto
+				WHERE pont_tx_status = 'ativo'
+					AND pont_tx_matricula = '{$matricula}'
+					AND pont_tx_data >= '{$inicioJornada}'
+					AND pont_tx_data <= STR_TO_DATE('{$dataSql}', '%Y-%m-%d %H:%i:%s')
+				ORDER BY pont_tx_data ASC, pont_nb_id ASC;"
+		), MYSQLI_ASSOC);
+		if(count($pontos) != 2){ return false; }
+
+		$macroFim = mysqli_fetch_assoc(query(
+			"SELECT macr_tx_codigoInterno, macr_tx_codigoExterno FROM macroponto
+				WHERE macr_tx_status = 'ativo'
+					AND macr_tx_codigoInterno = 2
+				LIMIT 1;"
+		));
+		if(empty($macroFim)){ return false; }
+
+		$segundoPonto = $pontos[1];
+		query(
+			"UPDATE ponto
+				SET pont_tx_tipo = '{$macroFim["macr_tx_codigoInterno"]}',
+					pont_tx_tipoOriginal = '{$macroFim["macr_tx_codigoExterno"]}',
+					pont_tx_justificativa = 'Fechamento automático: jornada com 2 pontos (sem 3º ponto).'
+				WHERE pont_nb_id = ".intval($segundoPonto["pont_nb_id"])
+		);
+		return true;
 	}
 
 	function dateTimeToSecs(DateTime $dateTime): int{

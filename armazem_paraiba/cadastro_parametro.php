@@ -190,6 +190,22 @@
 						}
 					});
 				});
+
+				// Campos do totem facial: so ficam editaveis quando o Acordo Sindical esta
+				// marcado como Sim.
+				function atualizarCamposAcordo(){
+					var selAcordo = document.getElementsByName('acordo')[0];
+					var habilitar = !!(selAcordo && selAcordo.value === 'sim');
+					document.querySelectorAll('.campo-acordo-totem').forEach(function(bloco){
+						bloco.style.opacity = habilitar ? '1' : '0.55';
+						bloco.querySelectorAll('input, select').forEach(function(el){ el.disabled = !habilitar; });
+					});
+				}
+				(function(){
+					var selAcordo = document.getElementsByName('acordo')[0];
+					if(selAcordo){ selAcordo.addEventListener('change', atualizarCamposAcordo); }
+					atualizarCamposAcordo();
+				})();
 	</script>"
 		;
 
@@ -706,6 +722,7 @@
 			"para_tx_almocoInicio"				=> (!empty($_POST["almocoInicio"])? $_POST["almocoInicio"]: null),
 			"para_tx_almocoFim"					=> (!empty($_POST["almocoFim"])? $_POST["almocoFim"]: null),
 			"para_tx_permitirNovaJornadaDiaAnterior" => (($_POST["permitirNovaJornadaDiaAnterior"] ?? "sim") === "nao")? "nao": "sim",
+			"para_tx_almocoPreAssinalado"		=> (($_POST["almocoPreAssinalado"] ?? "nao") === "sim")? "sim": "nao",
 		];
 
 		if(!empty($_POST["ignorarCampos"]) || $_POST["ignorarCampos"] == null){
@@ -720,6 +737,11 @@
 		if(!empty($_POST["acordo"]) && $_POST["acordo"] == "nao"){
 			unset($novoParametro["para_tx_inicioAcordo"]);
 			unset($novoParametro["para_tx_fimAcordo"]);
+			// Campos do totem facial: so valem quando o acordo sindical esta marcado.
+			unset($novoParametro["para_tx_almocoInicio"]);
+			unset($novoParametro["para_tx_almocoFim"]);
+			unset($novoParametro["para_tx_permitirNovaJornadaDiaAnterior"]);
+			unset($novoParametro["para_tx_almocoPreAssinalado"]);
 		}
 		
 
@@ -970,20 +992,17 @@
 				campo_data("Início do Acordo*", "inicioAcordo", ($a_mod["para_tx_inicioAcordo"]?? ""), 1),
 				campo_data("Fim do Acordo*", "fimAcordo", ($a_mod["para_tx_fimAcordo"]?? ""), 1),
 				campo("Categoria", "categoria", ($a_mod["para_tx_categoria"]?? ""), 3),
-				campo("Sindicato", "sindicato", ($a_mod["para_tx_sindicato"]?? ""), 3)
-			],
-			[
-				checkbox_banco("Utilizar regime de banco de horas?", "banco", ($a_mod["para_tx_banco"]?? ""), ($a_mod["para_nb_qDias"]?? ""), ($a_mod["para_tx_horasLimite"]?? ""),2),
-				"<div class='col-sm-4 margin-bottom-5' style='min-width:0;'>
-					<label>Janela de almoço do totem facial</label>
+				campo("Sindicato", "sindicato", ($a_mod["para_tx_sindicato"]?? ""), 3),
+				"<div class='col-sm-4 margin-bottom-5 campo-acordo-totem' style='min-width:0;'>
+					<label>Horário do almoço pré assinalado</label>
 					<div style='display:flex; align-items:center; gap:8px;'>
 						<input type='time' name='almocoInicio' value='".substr(strval($a_mod["para_tx_almocoInicio"]?? "11:00:00"), 0, 5)."' class='form-control input-sm' style='width:auto;'>
 						<span>até</span>
 						<input type='time' name='almocoFim' value='".substr(strval($a_mod["para_tx_almocoFim"]?? "14:00:00"), 0, 5)."' class='form-control input-sm' style='width:auto;'>
 					</div>
-					<small class='text-muted' style='display:block; margin-top:4px; overflow-wrap:break-word; word-break:break-word;'>Dentro desta janela, o totem registra Início Almoço (se ainda não almoçou na jornada); fora dela, registra Fim Jornada. Padrão: 11:00 às 14:00.</small>
+					<small class='text-muted' style='display:block; margin-top:4px; overflow-wrap:break-word; word-break:break-word;'>Usado quando 'Almoço pré assinalado?' = Sim: no Fim Jornada, o sistema registra o Início e o Fim Almoço nesses horários (se a jornada atravessar a janela). Padrão: 11:00 às 14:00.</small>
 				</div>",
-				"<div class='col-sm-3 margin-bottom-5' style='min-width:0;'>
+				"<div class='col-sm-3 margin-bottom-5 campo-acordo-totem' style='min-width:0;'>
 					<label style='overflow-wrap:break-word;'>Permitir abrir nova jornada com a do dia anterior em aberto?</label>
 					<select name='permitirNovaJornadaDiaAnterior' class='form-control input-sm' style='width:auto; min-width:90px;'>
 						<option value='sim' ".((($a_mod["para_tx_permitirNovaJornadaDiaAnterior"]?? "sim") == "sim")? "selected": "").">Sim</option>
@@ -991,6 +1010,17 @@
 					</select>
 					<small class='text-muted' style='display:block; margin-top:4px; overflow-wrap:break-word; word-break:break-word;'>Quando Sim, o funcionário pode iniciar uma nova jornada mesmo com a do dia anterior em aberto (a anterior fica para ajuste do gestor). Quando Não, precisa fechar a anterior. No mesmo dia, a jornada sempre precisa estar fechada.</small>
 				</div>",
+				"<div class='col-sm-3 margin-bottom-5 campo-acordo-totem' style='min-width:0;'>
+					<label style='overflow-wrap:break-word;'>Almoço pré assinalado?</label>
+					<select name='almocoPreAssinalado' class='form-control input-sm' style='width:auto; min-width:90px;'>
+						<option value='nao' ".((($a_mod["para_tx_almocoPreAssinalado"]?? "nao") == "nao")? "selected": "").">Não</option>
+						<option value='sim' ".((($a_mod["para_tx_almocoPreAssinalado"]?? "nao") == "sim")? "selected": "").">Sim</option>
+					</select>
+					<small class='text-muted' style='display:block; margin-top:4px; overflow-wrap:break-word; word-break:break-word;'>Quando Sim, o funcionário registra apenas Entrada e Fim Jornada; o almoço é registrado automaticamente nos horários acima. Se o Fim Jornada for antes da janela, a jornada é finalizada com observação.</small>
+				</div>"
+			],
+			[
+				checkbox_banco("Utilizar regime de banco de horas?", "banco", ($a_mod["para_tx_banco"]?? ""), ($a_mod["para_nb_qDias"]?? ""), ($a_mod["para_tx_horasLimite"]?? ""),2),
 				checkbox(
 					"Ignorar intervalos",
 					"ignorarCampos", (
