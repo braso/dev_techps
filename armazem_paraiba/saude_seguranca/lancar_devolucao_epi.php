@@ -79,6 +79,88 @@ function obterUltimaEntregaAjax() {
     exit;
 }
 
+function obterEpisEntreguesAjax() {
+    // Lista a quantidade EM POSSE de cada colaborador por EPI/variação:
+    // soma das entregas ativas menos as devoluções/substituições/perdas já registradas.
+    $colaboradores = $_GET["colaboradores"] ?? "";
+    $empresa_id = isset($_GET["empresa_id"]) ? (int)$_GET["empresa_id"] : 0;
+
+    $ids = array_values(array_filter(array_map('intval', explode(',', $colaboradores))));
+    ob_clean();
+    if (empty($ids)) {
+        echo json_encode([]);
+        exit;
+    }
+    $idsSql = implode(',', $ids);
+
+    $condEmpresa = "";
+    if ($empresa_id > 0) {
+        $condEmpresa = " AND (ent.ss_e_nb_empresa_id = {$empresa_id} OR ent.ss_e_nb_empresa_id IS NULL OR ent.ss_e_nb_empresa_id = 0)";
+    }
+
+    $sql = query(
+        "SELECT ent.ss_e_nb_colaborador_id,
+                ent.ss_e_nb_epi_id,
+                IFNULL(ent.ss_e_tx_variacao, '') AS variacao,
+                GREATEST(0, SUM(CASE WHEN ent.ss_e_tx_status = 'ativo' THEN ent.ss_e_nb_quantidade ELSE -ent.ss_e_nb_quantidade END)) AS posse,
+                epi.ss_e_tx_grupo, epi.ss_e_tx_subgrupo, epi.ss_e_tx_item, epi.ss_e_tx_ca,
+                epi.ss_e_tx_variacoes
+         FROM ss_epi_entrega ent
+         JOIN ss_epi epi ON ent.ss_e_nb_epi_id = epi.ss_e_nb_id
+         WHERE ent.ss_e_nb_colaborador_id IN ({$idsSql})
+           AND ent.ss_e_tx_status IN ('ativo', 'devolvido', 'substituido', 'perdido')
+           {$condEmpresa}
+         GROUP BY ent.ss_e_nb_colaborador_id, ent.ss_e_nb_epi_id, variacao,
+                  epi.ss_e_tx_grupo, epi.ss_e_tx_subgrupo, epi.ss_e_tx_item, epi.ss_e_tx_ca, epi.ss_e_tx_variacoes
+         HAVING posse > 0
+         ORDER BY epi.ss_e_tx_grupo ASC, epi.ss_e_tx_subgrupo ASC, epi.ss_e_tx_item ASC"
+    );
+
+    $list = [];
+    if ($sql) {
+        while ($row = mysqli_fetch_assoc($sql)) {
+            $list[] = [
+                "colaborador_id" => (int)$row["ss_e_nb_colaborador_id"],
+                "epi_id"         => (int)$row["ss_e_nb_epi_id"],
+                "quantidade"     => (int)$row["posse"],
+                "variacao"       => $row["variacao"],
+                "nome"           => ($row["ss_e_tx_subgrupo"] ?? "") . " / " . ($row["ss_e_tx_item"] ?? "") . " / " . $row["ss_e_tx_grupo"] . " (CA: " . ($row["ss_e_tx_ca"] ?? "N/A") . ")",
+                "variacoes"      => $row["ss_e_tx_variacoes"] ?? ""
+            ];
+        }
+    }
+    echo json_encode($list);
+    exit;
+}
+
+/**
+ * Retorna a quantidade em posse de um colaborador para um EPI (e variação, quando
+ * informada): entregas ativas menos devoluções/substituições/perdas já registradas.
+ */
+function ss_quantidadeEmPosse($colaborador_id, $epi_id, $variacao = null) {
+    global $conn;
+    $colaborador_id = (int)$colaborador_id;
+    $epi_id = (int)$epi_id;
+    if ($colaborador_id <= 0 || $epi_id <= 0) return 0;
+
+    $condVar = "";
+    if ($variacao !== null && trim($variacao) !== '') {
+        $condVar = " AND IFNULL(ss_e_tx_variacao, '') = '" . mysqli_real_escape_string($conn, trim($variacao)) . "'";
+    }
+
+    $sql = query(
+        "SELECT GREATEST(0, SUM(CASE WHEN ss_e_tx_status = 'ativo' THEN ss_e_nb_quantidade ELSE -ss_e_nb_quantidade END)) AS posse
+         FROM ss_epi_entrega
+         WHERE ss_e_nb_colaborador_id = ? AND ss_e_nb_epi_id = ?
+           AND ss_e_tx_status IN ('ativo', 'devolvido', 'substituido', 'perdido')
+           {$condVar}",
+        "ii",
+        [$colaborador_id, $epi_id]
+    );
+    $row = $sql ? mysqli_fetch_assoc($sql) : null;
+    return $row ? max(0, (int)$row["posse"]) : 0;
+}
+
 function cadastrarDevolucaoLoteAjax() {
     $lotes = json_decode($_POST["lotes"] ?? "[]", true);
     $colaborador_id = (int)($_POST["colaborador_id"] ?? 0);
@@ -139,6 +221,13 @@ function cadastrarDevolucaoLoteAjax() {
         $temVariacoes = !empty($epi["ss_e_tx_variacoes"]);
         if ($temVariacoes && empty($variacao)) {
             $erros[] = "O EPI '{$epi['ss_e_tx_subgrupo']} / {$epi['ss_e_tx_item']}' possui variações cadastradas. Selecione a variação (numeração/tamanho).";
+            continue;
+        }
+
+        // Regra de quantidade: não pode devolver mais do que está em posse do colaborador
+        $posse = ss_quantidadeEmPosse($item_colaborador_id, $epi_id, $variacao);
+        if ($quantidade > $posse) {
+            $erros[] = "Quantidade ({$quantidade}) maior que a quantidade em posse ({$posse}) do colaborador para o EPI '{$epi['ss_e_tx_subgrupo']} / {$epi['ss_e_tx_item']}'.";
             continue;
         }
 
@@ -208,48 +297,9 @@ function layoutDevolucao() {
 
     $temFiliais = ss_tem_filiais_cadastradas();
 
-    // EPIs: TODOS os ativos do tipo estoque (independente de saldo)
-    $sqlEpis = query("SELECT ss_e_nb_id, ss_e_tx_grupo, ss_e_tx_subgrupo, ss_e_tx_item, ss_e_tx_ca, ss_e_tx_variacoes, ss_e_tx_foto
-                      FROM ss_epi
-                      WHERE ss_e_tx_status = 'ativo' AND ss_e_tx_cadastro_tipo = 'estoque'
-                      ORDER BY ss_e_tx_grupo ASC, ss_e_tx_subgrupo ASC, ss_e_tx_item ASC");
-    $allEpis = [];
-    $epiOptions = ["" => "Selecione o EPI"];
-    if ($sqlEpis) {
-        while ($row = mysqli_fetch_assoc($sqlEpis)) {
-            $allEpis[] = [
-                "id" => (int)$row["ss_e_nb_id"],
-                "nome" => ($row["ss_e_tx_subgrupo"] ?? "") . " / " . ($row["ss_e_tx_item"] ?? "") . " / " . $row["ss_e_tx_grupo"] . " (CA: " . ($row["ss_e_tx_ca"] ?? "N/A") . ")",
-                "variacoes" => $row["ss_e_tx_variacoes"] ?? ""
-            ];
-            $epiOptions[$row["ss_e_nb_id"]] = $allEpis[count($allEpis) - 1]["nome"];
-        }
-    }
-
-    // Saldos por EPI/filial (apenas para informação)
-    $sqlBalances = query("SELECT ss_e_nb_epi_id, IFNULL(ss_e_nb_empresa_id, 0) AS empresa_id,
-                                 SUM(CASE WHEN ss_e_tx_tipo = 'entrada' THEN ss_e_nb_quantidade ELSE -ss_e_nb_quantidade END) AS saldo
-                          FROM ss_epi_estoque
-                          GROUP BY ss_e_nb_epi_id, empresa_id");
-    $epiBalances = [];
+    // A lista de EPIs agora é montada via AJAX apenas com os itens em posse dos
+    // colaboradores selecionados (obterEpisEntreguesAjax).
     $user_empresa = !empty($_SESSION["user_nb_empresa"]) ? (int)$_SESSION["user_nb_empresa"] : 0;
-    if ($sqlBalances) {
-        while ($row = mysqli_fetch_assoc($sqlBalances)) {
-            $epiId = (int)$row["ss_e_nb_epi_id"];
-            $empId = (int)$row["empresa_id"];
-            $saldo = (int)$row["saldo"];
-            if ($empId == 0 || $empId == $user_empresa) {
-                $empId = $user_empresa;
-            }
-            if (!isset($epiBalances[$epiId])) {
-                $epiBalances[$epiId] = [];
-            }
-            if (!isset($epiBalances[$epiId][$empId])) {
-                $epiBalances[$epiId][$empId] = 0;
-            }
-            $epiBalances[$epiId][$empId] += $saldo;
-        }
-    }
 
     $empresaOptions = ["" => "Todas as Empresas"];
     $sqlEmpresas = query("SELECT empr_nb_id, empr_tx_nome FROM empresa WHERE empr_tx_status = 'ativo' ORDER BY empr_tx_nome ASC");
@@ -282,7 +332,7 @@ function layoutDevolucao() {
 
     $campo_epi = "
         <div class='col-sm-12 margin-bottom-5 campo-fit-content' id='container_epi_lista' style='position: relative;'>
-            <label>EPI* (marque um ou mais itens — busque por nome ou CA)</label>
+            <label>EPI* (somente os EPIs em posse dos colaboradores selecionados)</label>
             <input type='text' id='busca_epi_lista' class='form-control input-sm' placeholder='Clique aqui e filtre por nome, grupo ou CA...' autocomplete='off'>
             <div id='lista_epis_checkboxes' style='display: none; position: absolute; z-index: 1050; left: 15px; right: 15px; max-height: 260px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; padding: 8px; background: #fff; box-shadow: 0 6px 18px rgba(0,0,0,0.15);'></div>
             <div id='epis_selecionados_tags' style='margin-top: 6px;'></div>
@@ -381,8 +431,8 @@ function layoutDevolucao() {
     ';
 
     echo "<script>
-    var allEpis = " . json_encode($allEpis) . ";
-    var epiBalances = " . json_encode($epiBalances) . ";
+    var episEntregues = [];
+    var episEmPosseAgrupados = [];
     var empresasNomes = " . json_encode($empresasJsArr) . ";
     var userEmpresaId = " . (int)$user_empresa . ";
     var itensDevolucaoLote = [];
@@ -479,19 +529,63 @@ function layoutDevolucao() {
 
         var quantidadesEpis = {};
 
+        function carregarEpisEntregues(callback) {
+            var ids = obterColaboradoresSelecionados().map(function(c) { return c.id; });
+            if (ids.length === 0) {
+                episEntregues = [];
+                montarListaEpis();
+                if (typeof callback === 'function') callback();
+                return;
+            }
+            var empresaId = $('select[name=\"empresa_id\"]').val() || '0';
+            $.getJSON('lancar_devolucao_epi.php?acao=obterEpisEntreguesAjax&colaboradores=' + ids.join(',') + '&empresa_id=' + empresaId, function(data) {
+                episEntregues = data || [];
+                montarListaEpis();
+                if (typeof callback === 'function') callback();
+            });
+        }
+
         function montarListaEpis() {
             var container = $('#lista_epis_checkboxes');
             container.empty();
-            allEpis.forEach(function(epi) {
-                const balances = epiBalances[epi.id] || {};
-                let saldoTotal = 0;
-                Object.keys(balances).forEach(function(eid) { saldoTotal += balances[eid] || 0; });
-                var row = $('<div>', { class: 'epi_checkbox_item', 'data-termo': (epi.nome || '').toLowerCase() })
+            episEmPosseAgrupados = [];
+
+            var colabs = obterColaboradoresSelecionados();
+            if (colabs.length === 0) {
+                container.append('<div class=\"text-muted\" style=\"padding: 8px;\">Selecione um ou mais colaboradores para listar os EPIs em posse deles.</div>');
+                atualizarTabelaSelecionados();
+                return;
+            }
+
+            // Agrupa por EPI (união dos EPIs em posse dos colaboradores selecionados)
+            var porEpi = {};
+            episEntregues.forEach(function(posse) {
+                if (!porEpi[posse.epi_id]) {
+                    porEpi[posse.epi_id] = { id: posse.epi_id, nome: posse.nome, variacoes: posse.variacoes || '', colaboradores: {} };
+                }
+                var registro = porEpi[posse.epi_id];
+                registro.colaboradores[posse.colaborador_id] = (registro.colaboradores[posse.colaborador_id] || 0) + posse.quantidade;
+            });
+            episEmPosseAgrupados = Object.keys(porEpi).map(function(k) { return porEpi[k]; });
+
+            if (episEmPosseAgrupados.length === 0) {
+                container.append('<div class=\"text-muted\" style=\"padding: 8px;\">Nenhum EPI em posse dos colaboradores selecionados.</div>');
+                atualizarTabelaSelecionados();
+                return;
+            }
+
+            episEmPosseAgrupados.forEach(function(epi) {
+                var detalhes = Object.keys(epi.colaboradores).map(function(cid) {
+                    var nome = colaboradoresSelecionadosMap[cid] || ('Colaborador ' + cid);
+                    return nome + ' (' + epi.colaboradores[cid] + ')';
+                }).join(', ');
+                var termo = (epi.nome + ' ' + detalhes).toLowerCase();
+                var row = $('<div>', { class: 'epi_checkbox_item', 'data-termo': termo })
                     .css({ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 6px', borderBottom: '1px solid #eee', cursor: 'pointer' });
                 var chk = $('<input>', { type: 'checkbox', class: 'chk_seleciona_epi', value: epi.id })
                     .css({ minWidth: '16px', height: '16px', position: 'relative' });
                 var lbl = $('<label>', { style: 'margin: 0; font-weight: normal; cursor: pointer;' })
-                    .text(epi.nome + ' (Saldo total: ' + saldoTotal + ')');
+                    .html(destacarItemEpi(epi.nome) + ' <small class=\"text-muted\">— Em posse: ' + detalhes + '</small>');
                 row.append(chk).append(lbl);
                 row.on('click', function(e) {
                     if (e.target !== chk[0] && e.target !== lbl[0] && !$(e.target).is('input')) {
@@ -515,11 +609,11 @@ function layoutDevolucao() {
             var total = 0;
             $('#lista_epis_checkboxes .chk_seleciona_epi:checked').each(function() {
                 var id = $(this).val();
-                var epi = allEpis.find(function(e) { return e.id == id; });
+                var epi = episEmPosseAgrupados.find(function(e) { return e.id == id; });
                 if (!epi) return;
                 total++;
                 var tr = $('<tr>');
-                tr.append($('<td style=\"vertical-align: middle;\">').text(epi.nome));
+                tr.append($('<td style=\"vertical-align: middle;\">').html(destacarItemEpi(epi.nome)));
                 var tdQtd = $('<td style=\"text-align: center; vertical-align: middle;\">');
                 var inputQtd = $('<input>', { type: 'number', class: 'form-control input-sm qtd_epi_selecionado', min: '1', 'data-epi-id': id })
                     .css({ width: '70px', textAlign: 'center', margin: 'auto' })
@@ -662,7 +756,7 @@ function layoutDevolucao() {
                     '<div class=\"table-responsive\"><table class=\"table table-striped table-bordered table-hover\">' +
                     '<thead><tr>' +
                         '<th>EPI</th>' +
-                        '<th style=\"text-align: center; width: 70px;\">Qtd</th>' +
+                        '<th style=\"text-align: center; width: 100px;\">Qtd</th>' +
                         '<th style=\"width: 110px;\">Variação</th>' +
                         '<th style=\"text-align: center; width: 130px;\">Tipo</th>' +
                         '<th style=\"width: 220px;\">Justificativa</th>' +
@@ -694,9 +788,12 @@ function layoutDevolucao() {
                             variacaoCellHtml = '<select class=\"form-control input-sm sel_var_devolucao\" data-unique=\"' + item.unique_id + '\">' + opts + '</select>';
                         }
                     }
+                    var qtdMaxAtual = obterQtdMaxItem(item);
+                    var qtdCellHtml = '<input type=\"number\" class=\"form-control input-sm qtd_devolucao\" data-unique=\"' + item.unique_id + '\" min=\"1\" max=\"' + qtdMaxAtual + '\" value=\"' + item.quantidade + '\" style=\"width: 70px; text-align: center; margin: auto;\">' +
+                        '<small class=\"text-muted\" style=\"display: block;\">posse: ' + qtdMaxAtual + '</small>';
                     tableHtml += '<tr>' +
                         '<td>' + destacarItemEpi(item.epi_nome) + '</td>' +
-                        '<td style=\"text-align: center; font-weight: bold;\">' + item.quantidade + '</td>' +
+                        '<td style=\"text-align: center; font-weight: bold;\">' + qtdCellHtml + '</td>' +
                         '<td style=\"text-align: center;\">' + variacaoCellHtml + '</td>' +
                         '<td style=\"text-align: center;\">' + tipoLabel + '</td>' +
                         '<td style=\"font-size: 12px;\">' + item.justificativa + '</td>' +
@@ -712,9 +809,11 @@ function layoutDevolucao() {
         }
 
         $('select[name=\"empresa_id\"]').on('change', function() {
-            // Ao trocar de empresa, limpa a seleção de colaboradores e recarrega a lista
+            // Ao trocar de empresa, limpa a seleção de colaboradores e recarrega as listas
             $('#lista_colaboradores_checkboxes .chk_seleciona_colaborador').prop('checked', false);
-            carregarColaboradoresEmpresa();
+            carregarColaboradoresEmpresa(function() {
+                carregarEpisEntregues();
+            });
             exibirInfoUltimaEntrega();
         });
 
@@ -736,6 +835,8 @@ function layoutDevolucao() {
             atualizarTagsColaboradores();
             filtrarListaColaboradores();
             exibirInfoUltimaEntrega();
+            // Recarrega os EPIs em posse dos colaboradores selecionados
+            carregarEpisEntregues();
         });
 
         // Filtro e seleção dos EPIs na lista com checkboxes (abre ao clicar no filtro)
@@ -765,17 +866,37 @@ function layoutDevolucao() {
             quantidadesEpis[id] = (qtd > 0) ? qtd : 1;
         });
 
-        // Seleção de variação na sacola
+        // Seleção de variação na sacola (reajusta o limite de quantidade da posse)
         $(document).on('change', '.sel_var_devolucao', function() {
             var uniqueId = $(this).attr('data-unique');
             var item = itensDevolucaoLote.find(function(it) { return it.unique_id === uniqueId; });
             if (item) {
                 item.variacao = $(this).val() || '';
+                var max = obterQtdMaxItem(item);
+                if (max > 0 && item.quantidade > max) {
+                    item.quantidade = max;
+                }
+                desenharListas();
             }
         });
 
-        montarListaEpis();
+        // Quantidade editável na sacola, limitada à quantidade em posse do colaborador
+        $(document).on('input change', '.qtd_devolucao', function() {
+            var uniqueId = $(this).attr('data-unique');
+            var item = itensDevolucaoLote.find(function(it) { return it.unique_id === uniqueId; });
+            if (!item) return;
+            var max = obterQtdMaxItem(item);
+            var qtd = parseInt($(this).val(), 10);
+            if (isNaN(qtd) || qtd < 1) qtd = 1;
+            if (max > 0 && qtd > max) {
+                qtd = max;
+                $(this).val(qtd);
+            }
+            item.quantidade = qtd;
+        });
+
         carregarColaboradoresEmpresa();
+        montarListaEpis();
 
     function adicionarItemALista() {
         var colabs = obterColaboradoresSelecionados();
@@ -787,7 +908,7 @@ function layoutDevolucao() {
         var itensMarcados = [];
         $('#lista_epis_checkboxes .chk_seleciona_epi:checked').each(function() {
             var id = $(this).val();
-            var epi = allEpis.find(function(e) { return e.id == id; });
+            var epi = episEmPosseAgrupados.find(function(e) { return e.id == id; });
             if (!epi) return;
             var qtd = quantidadesEpis[id] || 1;
             itensMarcados.push({ epi: epi, quantidade: qtd });
@@ -795,15 +916,57 @@ function layoutDevolucao() {
         if (itensMarcados.length === 0) { alert('Marque ao menos um EPI na lista.'); return; }
         var tipoEvento = $('select[name=\"tipo_evento\"]').val();
 
-        function adicionarTodos(justificativa, destino) {
-            // Cruzamento: cada EPI selecionado é lançado para cada colaborador selecionado
-            itensMarcados.forEach(function(m) {
-                colabs.forEach(function(colab) {
-                    adicionarItem(m.epi.id, m.epi.nome, m.quantidade, tipoEvento, empresaId, '', justificativa, destino, m.epi.variacoes, colab.id, colab.nome);
+        // Vincula cada EPI somente aos colaboradores que o possuem (em lote, a união
+        // dos EPIs em posse de cada colaborador selecionado), limitando a quantidade à posse
+        var vinculos = [];
+        var ajustesQuantidade = [];
+        itensMarcados.forEach(function(m) {
+            colabs.forEach(function(colab) {
+                var posses = episEntregues.filter(function(posse) {
+                    return posse.epi_id == m.epi.id && posse.colaborador_id == colab.id;
                 });
+                if (posses.length === 0) return;
+
+                // Posse por variação ('' = sem variação) e total
+                var possesVariacao = {};
+                var posseTotal = 0;
+                posses.forEach(function(p) {
+                    var v = p.variacao || '';
+                    possesVariacao[v] = (possesVariacao[v] || 0) + p.quantidade;
+                    posseTotal += p.quantidade;
+                });
+
+                var variacoesPossuidas = Object.keys(possesVariacao).filter(Boolean);
+                var variacaoPosse = (variacoesPossuidas.length === 1) ? variacoesPossuidas[0] : '';
+                var qtdMax = variacaoPosse ? (possesVariacao[variacaoPosse] || posseTotal) : posseTotal;
+                var qtdFinal = Math.min(m.quantidade, qtdMax);
+                if (m.quantidade > qtdMax) {
+                    ajustesQuantidade.push(m.epi.nome + ' — ' + colab.nome + ' (posse: ' + qtdMax + ')');
+                }
+                vinculos.push({
+                    epi: m.epi, quantidade: qtdFinal, colab: colab, variacao: variacaoPosse,
+                    qtdMax: qtdMax, possesVariacao: possesVariacao, posseTotal: posseTotal
+                });
+            });
+        });
+        if (vinculos.length === 0) {
+            alert('Nenhum dos EPIs marcados está em posse dos colaboradores selecionados.');
+            return;
+        }
+
+        function adicionarTodos(justificativa, destino) {
+            vinculos.forEach(function(v) {
+                adicionarItem(v.epi.id, v.epi.nome, v.quantidade, tipoEvento, empresaId, v.variacao, justificativa, destino, v.epi.variacoes, v.colab.id, v.colab.nome, v.qtdMax, v.possesVariacao);
             });
             limparSelecaoEpis();
             desenharListas();
+            if (ajustesQuantidade.length > 0) {
+                Swal.fire({
+                    title: 'Quantidade ajustada',
+                    html: 'A quantidade foi limitada ao que está em posse do colaborador:<br><br><b>' + ajustesQuantidade.join('<br>') + '</b>',
+                    icon: 'warning'
+                });
+            }
         }
 
         // Sempre pergunta a justificativa e o destino (estoque / inspeção / descarte) a cada adição
@@ -821,7 +984,16 @@ function layoutDevolucao() {
         return '<strong>' + nome + '</strong>';
     }
 
-    function adicionarItem(epiId, epiNome, quantidade, status, empresaId, variacao, justificativa, destino, variacoes, colabId, colabNome) {
+    // Limite de devolução do item: posse da variação selecionada (ou posse total)
+    function obterQtdMaxItem(item) {
+        var v = item.variacao || '';
+        if (item.posses_variacao) {
+            return item.posses_variacao[v] || 0;
+        }
+        return item.qtd_max || item.quantidade;
+    }
+
+    function adicionarItem(epiId, epiNome, quantidade, status, empresaId, variacao, justificativa, destino, variacoes, colabId, colabNome, qtdMax, possesVariacao) {
         var uniqueId = new Date().getTime() + '_' + Math.random().toString(36).substr(2, 5);
         itensDevolucaoLote.push({
             unique_id: uniqueId,
@@ -830,6 +1002,8 @@ function layoutDevolucao() {
             epi_id: epiId,
             epi_nome: epiNome,
             quantidade: quantidade,
+            qtd_max: qtdMax || quantidade,
+            posses_variacao: possesVariacao || {},
             status: status,
             empresa_id: empresaId,
             variacao: variacao || '',
@@ -861,6 +1035,23 @@ function layoutDevolucao() {
         });
         if (semVariacao.length > 0) {
             alert('Um ou mais itens possuem variações (numeração/tamanho) sem seleção. Selecione a variação de cada item na lista antes de gravar.');
+            return;
+        }
+
+        // Regra de quantidade: não pode devolver mais do que está em posse do colaborador
+        var excedidos = itensDevolucaoLote.filter(function(item) {
+            var max = obterQtdMaxItem(item);
+            return max <= 0 || !item.quantidade || item.quantidade > max;
+        });
+        if (excedidos.length > 0) {
+            var nomes = excedidos.map(function(item) {
+                return item.epi_nome + ' — ' + (item.colaborador_nome || ('Colaborador ' + item.colaborador_id)) + ' (posse: ' + obterQtdMaxItem(item) + ', informado: ' + item.quantidade + ')';
+            });
+            Swal.fire({
+                title: 'Quantidade acima da posse',
+                html: 'Ajuste as quantidades antes de gravar:<br><br><b>' + nomes.join('<br>') + '</b>',
+                icon: 'warning'
+            });
             return;
         }
         

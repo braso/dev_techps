@@ -1110,6 +1110,28 @@ function modificarEntrega() {
         </div>';
     }
 
+    // Overlay com indicador de carregamento (processamento das entregas)
+    echo '
+    <div id="overlay_progresso_entrega" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.55); z-index: 12000; align-items: center; justify-content: center;">
+        <div style="background: #fff; border-radius: 10px; padding: 30px 40px; width: 380px; max-width: calc(100vw - 40px); box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center;">
+            <div class="girar-entrega"></div>
+            <div style="font-size: 15px; font-weight: bold; color: #333; margin-top: 14px;"><span id="progresso_entrega_titulo">Processando entrega...</span></div>
+            <div id="progresso_entrega_texto" style="font-size: 12.5px; color: #777; margin-top: 4px;">Isso pode levar alguns segundos. Não feche a página.</div>
+        </div>
+    </div>
+    <style>
+        @keyframes girar_progresso_entrega { 100% { transform: rotate(360deg); } }
+        .girar-entrega {
+            width: 70px;
+            height: 70px;
+            margin: 0 auto;
+            border-radius: 100%;
+            border: 6px solid #e3e8ec;
+            border-top: 6px solid #36c6d3;
+            animation: girar_progresso_entrega 1s linear infinite;
+        }
+    </style>';
+
     echo "
     <script>
     var itensEntregaLote = [];
@@ -1811,6 +1833,16 @@ function modificarEntrega() {
         }
     });
 
+    // Barra de progresso no envio do formulário (entrega individual/kit)
+    $('form[name=\"contex_form\"]').on('submit', function(e) {
+        var evento = e;
+        setTimeout(function() {
+            if (!evento.isDefaultPrevented()) {
+                mostrarProgressoEntrega('Registrando entrega...');
+            }
+        }, 0);
+    });
+
     function destacarItemEpi(nome) {
         // Formato esperado: Item / Subgrupo / Grupo (CA: X)
         var partes = nome.split(' / ');
@@ -2251,6 +2283,17 @@ function modificarEntrega() {
         }
     });
 
+    // ===== Indicador de carregamento do processamento das entregas =====
+    function mostrarProgressoEntrega(titulo) {
+        $('#progresso_entrega_titulo').text(titulo || 'Processando entrega...');
+        $('#progresso_entrega_texto').text('Isso pode levar alguns segundos. Não feche a página.');
+        $('#overlay_progresso_entrega').css('display', 'flex');
+    }
+
+    function ocultarProgressoEntrega() {
+        $('#overlay_progresso_entrega').hide();
+    }
+
     function removerItemEntrega(uniqueId) {
         itensEntregaLote = itensEntregaLote.filter(function(it) { return it.unique_id !== uniqueId; });
         desenharListas();
@@ -2293,6 +2336,8 @@ function modificarEntrega() {
         }
         
         if (!confirm('Deseja salvar as entregas de ' + colabNome + '?')) return;
+
+        mostrarProgressoEntrega('Registrando entregas de ' + colabNome + '...');
         
         $.ajax({
             url: 'entrega_epi.php?acao=cadastrarEntregaLoteAjax',
@@ -2304,26 +2349,35 @@ function modificarEntrega() {
             },
             dataType: 'json',
             success: function(response) {
-                if (response.status === 'success' || response.status === 'partial') {
-                    var idsSalvos = response.ids || [];
-                    itensEntregaLote = itensEntregaLote.filter(function(item) {
-                        if (item.colaborador_id != colabId) return true;
-                        return idsSalvos.indexOf(item.unique_id) === -1;
-                    });
-                    desenharListas();
-                    
+                if (response.status === 'success') {
+                    // Sucesso total: sem popup — mantém o indicador e atualiza a página
+                    $('#progresso_entrega_titulo').text('Entregas de ' + colabNome + ' registradas com sucesso!');
+                    $('#progresso_entrega_texto').text('Atualizando a página...');
+                    window.location.href = 'entrega_epi.php';
+                    return;
+                }
+
+                ocultarProgressoEntrega();
+
+                var idsSalvos = response.ids || [];
+                itensEntregaLote = itensEntregaLote.filter(function(item) {
+                    if (item.colaborador_id != colabId) return true;
+                    return idsSalvos.indexOf(item.unique_id) === -1;
+                });
+                desenharListas();
+
+                if (response.status === 'partial') {
                     var msg = response.sucessos > 0
-                        ? 'Entregas de ' + colabNome + ' registradas com sucesso!'
-                        : 'Nenhuma entrega foi registrada.';
-                    if (response.erros && response.erros.length > 0) {
-                        msg += '\\n\\nFalhas:\\n' + response.erros.join('\\n');
-                    }
+                        ? 'Algumas entregas de ' + colabNome + ' foram registradas, mas houve falhas:'
+                        : 'Nenhuma entrega de ' + colabNome + ' foi registrada:';
+                    msg += '\\n\\n' + (response.erros || []).join('\\n');
                     alert(msg);
                 } else {
                     alert('Erro ao registrar entregas: ' + (response.message || ''));
                 }
             },
             error: function(xhr) {
+                ocultarProgressoEntrega();
                 var msg = '';
                 try {
                     var parsed = JSON.parse(xhr.responseText);
@@ -2368,6 +2422,8 @@ function modificarEntrega() {
         }
         
         if (!confirm('Deseja salvar todas as entregas adicionadas na lista de todos os funcionários?')) return;
+
+        mostrarProgressoEntrega('Registrando todas as entregas...');
         
         $.ajax({
             url: 'entrega_epi.php?acao=cadastrarEntregaLoteAjax',
@@ -2379,31 +2435,33 @@ function modificarEntrega() {
             },
             dataType: 'json',
             success: function(response) {
-                if (response.status === 'success' || response.status === 'partial') {
+                if (response.status === 'success') {
+                    // Sucesso total: sem popup — mantém o indicador e atualiza a página
+                    $('#progresso_entrega_titulo').text('Entregas registradas com sucesso!');
+                    $('#progresso_entrega_texto').text('Atualizando a página...');
+                    window.location.href = 'entrega_epi.php';
+                    return;
+                }
+
+                ocultarProgressoEntrega();
+
+                if (response.status === 'partial') {
                     var idsSalvos = response.ids || [];
                     itensEntregaLote = itensEntregaLote.filter(function(item) {
                         return idsSalvos.indexOf(item.unique_id) === -1;
                     });
                     desenharListas();
-                    
-                    var msg = '';
-                    if (response.status === 'success') {
-                        msg = 'Todas as entregas registradas com sucesso!';
-                        alert(msg);
-                        window.location.href = 'entrega_epi.php';
-                        return;
-                    }
-                    if (response.sucessos > 0) {
-                        msg = 'Algumas entregas foram registradas, mas houve falhas:\\n\\n' + (response.erros || []).join('\\n');
-                    } else {
-                        msg = 'Nenhuma entrega foi registrada:\\n\\n' + (response.erros || []).join('\\n');
-                    }
+
+                    var msg = response.sucessos > 0
+                        ? 'Algumas entregas foram registradas, mas houve falhas:\\n\\n' + (response.erros || []).join('\\n')
+                        : 'Nenhuma entrega foi registrada:\\n\\n' + (response.erros || []).join('\\n');
                     alert(msg);
                 } else {
                     alert('Erro ao registrar entregas: ' + (response.message || ''));
                 }
             },
             error: function(xhr) {
+                ocultarProgressoEntrega();
                 var msg = '';
                 try {
                     var parsed = JSON.parse(xhr.responseText);
