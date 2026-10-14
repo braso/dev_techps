@@ -587,12 +587,19 @@ function ss_inicializar_tabelas() {
         ss_k_nb_id INT AUTO_INCREMENT PRIMARY KEY,
         ss_k_tx_nome VARCHAR(255) NOT NULL,
         ss_k_tx_status VARCHAR(30) DEFAULT 'ativo',
+        ss_k_tx_foto TEXT DEFAULT NULL,
         ss_k_nb_userCadastro INT DEFAULT NULL,
         ss_k_tx_dataCadastro DATETIME DEFAULT NULL,
         ss_k_nb_userAtualiza INT DEFAULT NULL,
         ss_k_tx_dataAtualiza DATETIME DEFAULT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
     mysqli_query($conn, $sql_kit);
+
+    // Garante que a coluna de foto do kit exista em bancos já criados
+    $check_column_kit_foto = mysqli_query($conn, "SHOW COLUMNS FROM ss_kit LIKE 'ss_k_tx_foto'");
+    if ($check_column_kit_foto && mysqli_num_rows($check_column_kit_foto) == 0) {
+        mysqli_query($conn, "ALTER TABLE ss_kit ADD COLUMN ss_k_tx_foto TEXT DEFAULT NULL AFTER ss_k_tx_status");
+    }
 
     // 6. Tabela ss_kit_item
     $sql_kit_item = "CREATE TABLE IF NOT EXISTS ss_kit_item (

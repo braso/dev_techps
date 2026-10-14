@@ -225,6 +225,12 @@ $sqlKit = "CREATE TABLE IF NOT EXISTS ss_kit (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;";
 mysqli_query($conn, $sqlKit) or die("Erro ao criar tabela ss_kit: " . mysqli_error($conn));
 
+// Foto do kit (cadastro do kit — mesmo padrão das fotos de EPI)
+$checkKitFoto = mysqli_query($conn, "SHOW COLUMNS FROM ss_kit LIKE 'ss_k_tx_foto'");
+if ($checkKitFoto && mysqli_num_rows($checkKitFoto) == 0) {
+    mysqli_query($conn, "ALTER TABLE ss_kit ADD COLUMN ss_k_tx_foto TEXT NULL AFTER ss_k_tx_status;");
+}
+
 // 6. Tabela ss_kit_item (Itens do Kit)
 $sqlKitItem = "CREATE TABLE IF NOT EXISTS ss_kit_item (
     ss_ki_nb_id INT AUTO_INCREMENT PRIMARY KEY,

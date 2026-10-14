@@ -180,7 +180,7 @@ if (!empty($queryResult)) {
                 }
             }
 
-            if ($key === 'ss_e_tx_foto' || $key === 'ss_e_tx_foto_epi' || $key === 'poi_tx_imagem') {
+            if ($key === 'ss_e_tx_foto' || $key === 'ss_e_tx_foto_epi' || $key === 'ss_k_tx_foto' || $key === 'poi_tx_imagem') {
                 if ($data !== null && $data !== '') {
                     $paths = array_filter(explode(",", $data));
                     $imgs = [];

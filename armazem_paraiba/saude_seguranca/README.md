@@ -58,7 +58,7 @@ O módulo cria e gerencia as seguintes tabelas MySQL:
 * `ss_e_tx_justificativa_exclusao`: Justificativa obrigatória preenchida no caso de exclusão da entrega.
 
 ### `ss_kit` & `ss_kit_item` (Composição de Kits)
-* `ss_kit`: Código e nome do kit (ex: "Kit Motorista").
+* `ss_kit`: Código, nome e fotos do kit (`ss_k_tx_foto`, mesmo padrão das fotos de EPI: caminhos separados por vírgula em `arquivos/kit/{id}/`).
 * `ss_kit_item`: Tabela pivô contendo o ID do kit, o ID do EPI vinculado e a quantidade padrão recomendada para entrega daquele item no lote.
 
 ---

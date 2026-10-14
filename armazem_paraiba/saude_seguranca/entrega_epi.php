@@ -779,7 +779,7 @@ function modificarEntrega() {
     }
 
     // Carregar Kits Ativos para a página
-    $sqlKits = query("SELECT ss_k_nb_id, ss_k_tx_nome FROM ss_kit WHERE ss_k_tx_status = 'ativo' ORDER BY ss_k_tx_nome ASC");
+    $sqlKits = query("SELECT ss_k_nb_id, ss_k_tx_nome, ss_k_tx_foto FROM ss_kit WHERE ss_k_tx_status = 'ativo' ORDER BY ss_k_tx_nome ASC");
     $kitsData = [];
     if ($sqlKits) {
         while ($row = mysqli_fetch_assoc($sqlKits)) {
@@ -812,6 +812,7 @@ function modificarEntrega() {
             $kitsData[$kitId] = [
                 "id" => $kitId,
                 "nome" => $row["ss_k_tx_nome"],
+                "foto" => $row["ss_k_tx_foto"] ?? "",
                 "itens" => $itens
             ];
         }
@@ -946,6 +947,7 @@ function modificarEntrega() {
     }
     $campo_kit .= "
             </select>
+            <div id='kit_foto_preview' style='margin-top: 6px;'></div>
         </div>
     ";
 
@@ -1006,6 +1008,7 @@ function modificarEntrega() {
             <input name='foto_cam[]' id='foto_camera_input' type='file' accept='image/*' capture='environment' data-camera style='display: none;'>
             <div id='existing_photos_container' style='margin-top: 10px; display: block;'>{$foto_atual_html}</div>
             <div id='new_photos_container' style='margin-top: 10px; display: block;'></div>
+            <div id='dica_foto_kit' style='margin-top: 8px; font-size: 12px; color: #555;'></div>
         </div>
     ";
 
@@ -1110,6 +1113,7 @@ function modificarEntrega() {
     echo "
     <script>
     var itensEntregaLote = [];
+    var ultimoKitLote = null;
     var kitsData = " . json_encode($kitsData) . ";
     var empresasNomes = " . $jsEmpresas . ";
     var epiFotosMap = " . json_encode($epiFotosMap) . ";
@@ -1186,6 +1190,25 @@ function modificarEntrega() {
 
         ajustarLarguraKit();
         $(window).on('resize', ajustarLarguraKit);
+
+        // Mostra a foto cadastrada do kit selecionado (referência para a entrega)
+        function atualizarPreviewFotoKit() {
+            var kitId = $('#kit_id').val();
+            var container = $('#kit_foto_preview');
+            container.empty();
+            if (!kitId || !kitsData[kitId] || !kitsData[kitId].foto) return;
+            var paths = String(kitsData[kitId].foto).split(',').filter(Boolean);
+            if (paths.length === 0) return;
+            var html = '<span style=\"font-size: 11px; color: #777; display: block;\">Foto do kit:</span>';
+            paths.forEach(function(p) {
+                var src = ssResolveFotoUrl(p);
+                html += '<img src=\"' + src + '\" style=\"max-height: 70px; max-width: 70px; border-radius: 4px; border: 1px solid #ccc; object-fit: cover; cursor: pointer; margin: 2px;\" onclick=\"verImagemMaior(\'' + src + '\')\">';
+            });
+            container.html(html);
+        }
+
+        $('#kit_id').on('change', atualizarPreviewFotoKit);
+        atualizarPreviewFotoKit();
 
         if (typeof window.verImagemMaior === 'undefined') {
             window.verImagemMaior = function(src) {
@@ -1502,8 +1525,8 @@ function modificarEntrega() {
                 $('#preview_epi_individual_container').hide();
                 $('#saldo_individual_badge').hide();
                 
-                // No lançamento em lote a foto é anexada por item na lista de entregas (abaixo)
-                $('#container_foto').hide();
+                // Foto do Kit Completo: aparece depois que houver itens do kit na lista
+                atualizarVisibilidadeFotoKit();
                 if ($('#preview_substituido').attr('src')) {
                     $('#preview_substituido_container').show();
                 } else {
@@ -1879,33 +1902,21 @@ function modificarEntrega() {
         var empresaId = $('select[name=\"empresa_id\"]').length > 0 ? $('select[name=\"empresa_id\"]').val() : '0';
         if (empresaId === '') empresaId = '0';
         
-        function adicionarItensKit(payload) {
-            kit.itens.forEach(function(item) {
-                var epiNome = item.subgrupo + ' / ' + item.item + ' / ' + item.grupo + ' (CA: ' + (item.ca || 'N/A') + ')';
-                addItemObj(colabId, colabNome, item.epi_id, epiNome, item.quantidade, 'ativo', empresaId, payload, '', item.variacoes);
-            });
-            $('#kit_id').val('').trigger('change');
-        }
+        var kitLoteId = 'kit_' + new Date().getTime() + '_' + Math.random().toString(36).substr(2, 5);
+        kit.itens.forEach(function(item) {
+            var epiNome = item.subgrupo + ' / ' + item.item + ' / ' + item.grupo + ' (CA: ' + (item.ca || 'N/A') + ')';
+            addItemObj(colabId, colabNome, item.epi_id, epiNome, item.quantidade, 'ativo', empresaId, '', '', item.variacoes, { kit_lote_id: kitLoteId, kit_nome: kit.nome });
+        });
 
-        // Foto do kit completo (campo #foto): aplicada a todos os itens do kit,
-        // permitindo o comparativo no grid entre as fotos individuais e a do kit entregue
-        var fotoInput = $('#foto')[0];
-        var files = (fotoInput && fotoInput.files) ? fotoInput.files : [];
-        
-        if (files && files.length > 0) {
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                adicionarItensKit(e.target.result);
-                $('#foto').val('');
-                $('#new_photos_container').empty();
-            };
-            reader.readAsDataURL(files[0]);
-        } else {
-            adicionarItensKit(\"\");
-        }
+        // Guarda o último kit adicionado: a Foto do Kit Completo será aplicada a estes itens
+        ultimoKitLote = { id: kitLoteId, nome: kit.nome };
+        $('#kit_id').val('').trigger('change');
+        $('#foto').val('');
+        $('#new_photos_container').empty();
+        atualizarVisibilidadeFotoKit();
     }
 
-    function addItemObj(colabId, colabNome, epiId, epiNome, quantidade, status, empresaId, fotoPayload, variacao, variacoes) {
+    function addItemObj(colabId, colabNome, epiId, epiNome, quantidade, status, empresaId, fotoPayload, variacao, variacoes, kitInfo) {
         var uniqueId = new Date().getTime() + '_' + Math.random().toString(36).substr(2, 5);
         
         var item = {
@@ -1920,6 +1931,8 @@ function modificarEntrega() {
             variacao: variacao || '',
             variacoes: variacoes || epiVariacoes[epiId] || '',
             foto_payload: fotoPayload,
+            kit_lote_id: (kitInfo && kitInfo.kit_lote_id) ? kitInfo.kit_lote_id : '',
+            kit_nome: (kitInfo && kitInfo.kit_nome) ? kitInfo.kit_nome : '',
             import_de: \"\"
         };
         
@@ -1955,9 +1968,61 @@ function modificarEntrega() {
         });
     }
 
+    // Foto do Kit Completo: aparece somente depois que houver itens de kit na lista
+    function atualizarVisibilidadeFotoKit() {
+        if (isEditMode) return;
+        var tipo = $('select[name=\"tipo_entrega\"]').val();
+        var temKitNaLista = itensEntregaLote.some(function(it) { return !!it.kit_lote_id; });
+        if (tipo === 'kit' && temKitNaLista) {
+            $('#container_foto').show();
+            $('#container_foto').find('label').text('Foto do Kit Completo (Opcional)');
+            atualizarDicaFotoKit();
+        } else {
+            $('#container_foto').hide();
+        }
+    }
+
+    function atualizarDicaFotoKit() {
+        var dica = '';
+        if (ultimoKitLote) {
+            var qtd = itensEntregaLote.filter(function(it) { return it.kit_lote_id === ultimoKitLote.id; }).length;
+            if (qtd > 0) {
+                dica = 'A foto abaixo será aplicada aos ' + qtd + ' item(ns) do kit \"' + ultimoKitLote.nome + '\". Ajuste individualmente pela lista, se precisar.';
+            }
+        }
+        $('#dica_foto_kit').text(dica);
+    }
+
+    // Aplica a foto do kit completo a todos os itens do último kit adicionado à lista
+    $('#foto').on('change', function() {
+        if (isEditMode) return;
+        var tipo = $('select[name=\"tipo_entrega\"]').val();
+        if (tipo !== 'kit' || !ultimoKitLote) return;
+        var input = this;
+        if (!input.files || input.files.length === 0) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var payload = e.target.result;
+            var aplicados = 0;
+            itensEntregaLote.forEach(function(it) {
+                if (it.kit_lote_id === ultimoKitLote.id) {
+                    it.foto_payload = payload;
+                    aplicados++;
+                }
+            });
+            $('#new_photos_container').html('<img src=\"' + payload + '\" style=\"max-height: 80px; max-width: 80px; border-radius: 4px; border: 1px solid #ccc; object-fit: cover;\">');
+            $('#dica_foto_kit').html('Foto aplicada a <strong>' + aplicados + '</strong> item(ns) do kit \"' + ultimoKitLote.nome + '\".');
+            desenharListas();
+        };
+        reader.readAsDataURL(input.files[0]);
+        input.value = '';
+    });
+
     function desenharListas() {
         var container = $('#container_listas_entregas');
         container.empty();
+
+        atualizarVisibilidadeFotoKit();
 
         // Estilos para itens sem saldo (cinza — não serão lançados)
         if (!$('#estilo_sem_saldo_epi').length) {
@@ -2683,9 +2748,6 @@ function index() {
                     <td style="text-align: center; vertical-align: middle;">' . data($alertaItem["ss_e_tx_data_entrega"]) . '</td>
                     <td style="text-align: center; vertical-align: middle;"><strong>' . data($alertaItem["ss_e_tx_vencimento"]) . '</strong></td>
                     <td style="text-align: center; vertical-align: middle;">' . (int)$alertaItem["ss_e_nb_quantidade"] . '</td>
-                    <td style="text-align: center; vertical-align: middle;">
-                        <button type="button" class="btn btn-xs btn-primary btn-abrir-troca" data-id="' . (int)$alertaItem["ss_e_nb_id"] . '" title="Abrir entrega"><i class="fa fa-edit"></i> Abrir</button>
-                    </td>
                 </tr>';
         }
 
@@ -2714,7 +2776,6 @@ function index() {
                                 <th style="text-align: center;">Entrega</th>
                                 <th style="text-align: center;">Troca Prevista</th>
                                 <th style="text-align: center;">Qtd</th>
-                                <th style="text-align: center; width: 80px;">Ação</th>
                             </tr>
                         </thead>
                         <tbody>' . $linhasAlerta . '</tbody>
@@ -2726,28 +2787,6 @@ function index() {
         $(document).on("click", "#btn_toggle_alertas_troca", function() {
             $("#container_alertas_troca").slideToggle(150);
             $(this).find("i").toggleClass("fa-chevron-up fa-chevron-down");
-        });
-        $(document).on("click", ".btn-abrir-troca", function() {
-            var id = $(this).attr("data-id");
-            if (typeof window.submitPost === "function") {
-                submitPost("", { acao: "modificarEntrega", id: id });
-            } else {
-                var form = document.createElement("form");
-                form.setAttribute("method", "post");
-                form.setAttribute("action", "");
-                var inputAcao = document.createElement("input");
-                inputAcao.setAttribute("type", "hidden");
-                inputAcao.setAttribute("name", "acao");
-                inputAcao.setAttribute("value", "modificarEntrega");
-                var inputId = document.createElement("input");
-                inputId.setAttribute("type", "hidden");
-                inputId.setAttribute("name", "id");
-                inputId.setAttribute("value", id);
-                form.appendChild(inputAcao);
-                form.appendChild(inputId);
-                document.body.appendChild(form);
-                form.submit();
-            }
         });
         </script>';
     }
@@ -2876,18 +2915,11 @@ function index() {
                   ) AS ent";
 
     $gridFields["actions"] = [
-        '<span class="fa fa-edit acao-editar-entrega" title="Alterar" style="color:#337ab7; cursor:pointer; font-size:16px; margin-right:8px;"></span>',
         '<span class="fa fa-trash acao-excluir-entrega" title="Excluir" style="color:#d9534f; cursor:pointer; font-size:16px;"></span>'
     ];
 
     $jsAcoes = '
         var funcoesInternas = function(){
-            // Bind Alterar click
-            $(".acao-editar-entrega").off("click").on("click", function(event) {
-                var id = $(this).closest("tr").attr("data-row-id");
-                submitPost("", { acao: "modificarEntrega", id: id });
-            });
-
             // Bind Excluir click
             $(".acao-excluir-entrega").off("click").on("click", function(event) {
                 var row = $(this).closest("tr");
@@ -2989,7 +3021,8 @@ function listarKits() {
         "TIPOS DE EPI"  => "qtd_tipos",
         "TOTAL DE EPIS" => "qtd_total",
         "EPIs NO KIT"   => "itens_detalhes",
-        "STATUS"        => "ss_k_tx_status"
+        "STATUS"        => "ss_k_tx_status",
+        "FOTO DO KIT"   => "ss_k_tx_foto"
     ];
 
     $camposBusca = [
@@ -3000,6 +3033,7 @@ function listarKits() {
                     ss_k_nb_id, 
                     ss_k_tx_nome, 
                     ss_k_tx_status,
+                    ss_k_tx_foto,
                     (SELECT COUNT(ki.ss_ki_nb_id) FROM ss_kit_item ki WHERE ki.ss_ki_nb_kit_id = ss_kit.ss_k_nb_id) AS qtd_tipos,
                     IFNULL((SELECT SUM(ki.ss_ki_nb_quantidade) FROM ss_kit_item ki WHERE ki.ss_ki_nb_kit_id = ss_kit.ss_k_nb_id), 0) AS qtd_total,
                     IFNULL((SELECT GROUP_CONCAT(CONCAT('<strong>', IFNULL(e.ss_e_tx_subgrupo, ''), '</strong> <small>', IFNULL(e.ss_e_tx_item, ''), ' / ', IFNULL(e.ss_e_tx_grupo, ''), '</small> <b>(x', ki.ss_ki_nb_quantidade, ')</b>') SEPARATOR '<br>') FROM ss_kit_item ki JOIN ss_epi e ON ki.ss_ki_nb_epi_id = e.ss_e_nb_id WHERE ki.ss_ki_nb_kit_id = ss_kit.ss_k_nb_id), '<span class=\"text-muted\">Nenhum item</span>') AS itens_detalhes
@@ -3150,6 +3184,10 @@ function modificarKit() {
         $kitItens = [];
     }
 
+    // Fotos já cadastradas do kit
+    $kitFotoAtual = $kit["ss_k_tx_foto"] ?? "";
+    $kitFotos = array_filter(explode(",", $kitFotoAtual));
+
     // Carregar EPIs de estoque para o kit (EPI/subgrupo em destaque na ordem)
     $sqlEpi = query("SELECT ss_e_nb_id, CONCAT(IFNULL(ss_e_tx_subgrupo, ''), ' / ', IFNULL(ss_e_tx_item, ''), ' / ', ss_e_tx_grupo, ' (CA: ', IFNULL(ss_e_tx_ca, 'N/A'), ')') AS epi_nome 
                      FROM ss_epi 
@@ -3179,6 +3217,35 @@ function modificarKit() {
     $campo_epi = combo("EPI para Adicionar", "kit_epi_id", "", 6, $epiOptions);
     $campo_qtd = campo("Quantidade do Item", "kit_epi_qtd", "1", 2, "MASCARA_NUMERO");
     $btn_add   = '<div class="col-sm-4 margin-bottom-5 campo-fit-content" style="margin-top:23px;"><button type="button" class="btn btn-primary" id="btn_add_epi_kit">Adicionar ao Kit</button></div>';
+
+    // Fotos do kit (mesmo padrão das fotos do EPI individual)
+    $fotos_kit_html = "";
+    foreach ($kitFotos as $f) {
+        $src = ss_resolve_foto_url($f);
+        $fotos_kit_html .= '
+            <div class="preview-item" data-path="' . htmlspecialchars($f) . '" style="display: inline-flex; align-items: center; gap: 5px; margin-right: 10px; margin-bottom: 10px; border: 1px solid #ccc; padding: 5px; border-radius: 4px;">
+                <img src="' . $src . '" style="max-height: 80px; max-width: 80px; object-fit: cover; cursor: pointer;" onclick="verImagemMaior(\'' . $src . '\')">
+                <button type="button" class="btn btn-danger btn-xs btn_remover_foto_kit_existente" data-path="' . htmlspecialchars($f) . '" title="Remover"><i class="fa fa-remove"></i></button>
+            </div>';
+    }
+
+    $campo_foto_kit = '
+        <div class="col-sm-12 margin-bottom-5 campo-fit-content" data-dropzone-foto>
+            <label>Fotos do Kit (Opcional)</label>
+            <div id="dropzone_foto_kit" data-dropzone-area style="border: 2px dashed #b0b9c4; border-radius: 8px; background: #f8fafc; padding: 22px 15px; text-align: center; cursor: pointer; transition: all .2s;">
+                <div style="font-size: 30px; color: #337ab7;"><i class="fa fa-cloud-upload"></i></div>
+                <div style="font-size: 15px; font-weight: bold; color: #333; margin-top: 6px;">Arraste e solte as imagens aqui</div>
+                <div style="color: #888; margin-top: 3px;">Você também pode clicar aqui para escolher da galeria ou usar a câmera</div>
+                <div style="margin-top: 12px;">
+                    <button type="button" class="btn btn-sm btn-primary" data-galeria><i class="fa fa-folder-open"></i> Escolher da Galeria</button>
+                    <button type="button" class="btn btn-sm btn-success" data-camera-btn><i class="fa fa-camera"></i> Tirar Foto (Câmera)</button>
+                </div>
+            </div>
+            <input name="kit_foto[]" id="kit_foto_input" autocomplete="off" type="file" accept="image/*" multiple style="display: none;">
+            <input name="kit_foto_cam[]" id="kit_foto_camera_input" autocomplete="off" type="file" accept="image/*" capture="environment" data-camera style="display: none;">
+            <div id="kit_existing_photos_container" style="margin-top: 10px; display: block;">' . $fotos_kit_html . '</div>
+            <div id="kit_new_photos_container" style="margin-top: 10px; display: block;"></div>
+        </div>';
 
     echo abre_form("Dados Gerais do Kit");
     echo linha_form([$campo_nome, $campo_status]);
@@ -3212,6 +3279,8 @@ function modificarKit() {
     echo '<input type="hidden" name="id" value="' . ($_POST["id"] ?? "") . '">';
     echo '<input type="hidden" name="nome_kit" id="final_nome_kit" value="">';
     echo '<input type="hidden" name="status" id="final_status" value="">';
+    echo '<input type="hidden" name="fotos_mantidas" id="kit_fotos_mantidas" value="' . htmlspecialchars($kitFotoAtual) . '">';
+    echo linha_form([$campo_foto_kit]);
 
     $final_buttons = [];
     $final_buttons[] = botao("Salvar Kit", "cadastrarKit", "", "", "", "", "btn btn-success");
@@ -3314,6 +3383,35 @@ function modificarKit() {
             renderKitTable();
         });
 
+        // Fotos do kit: preview dos novos arquivos e remoção das existentes
+        $('#kit_foto_input').on('change', function() {
+            $('#kit_new_photos_container').empty();
+            var files = this.files;
+            if (!files || files.length === 0) return;
+            var allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+            for (var i = 0; i < files.length; i++) {
+                (function(file) {
+                    if (allowedTypes.indexOf(file.type) === -1) {
+                        Swal.fire('Atenção', 'O arquivo \"' + file.name + '\" não é uma imagem válida (JPEG, JPG, PNG ou WEBP).', 'warning');
+                        return;
+                    }
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        $('#kit_new_photos_container').append('<div class=\"preview-item-new\" style=\"display: inline-flex; align-items: center; gap: 5px; margin-right: 10px; margin-bottom: 10px; border: 1px solid #aaa; padding: 5px; border-radius: 4px; background: #f9f9f9;\"><img src=\"' + e.target.result + '\" style=\"max-height: 80px; max-width: 80px; object-fit: cover; cursor: pointer;\" onclick=\"verImagemMaior(\'' + e.target.result + '\')\" title=\"Nova Imagem\"></div>');
+                    };
+                    reader.readAsDataURL(file);
+                })(files[i]);
+            }
+        });
+
+        $(document).on('click', '.btn_remover_foto_kit_existente', function() {
+            var pathToRemove = $(this).attr('data-path');
+            $(this).closest('.preview-item').remove();
+            var mantidas = ($('#kit_fotos_mantidas').val() || '').split(',').filter(Boolean);
+            mantidas = mantidas.filter(function(p) { return p !== pathToRemove; });
+            $('#kit_fotos_mantidas').val(mantidas.join(','));
+        });
+
         const initialKitItensStr = JSON.stringify(kitItens);
         const initialNomeKit = $('input[name=\"nome_kit\"]').val() || '';
         const initialStatus = $('select[name=\"status\"]').val() || 'ativo';
@@ -3379,6 +3477,8 @@ function modificarKit() {
     </script>
     ";
 
+    echo '<script src="' . $_ENV["APP_PATH"] . '/armazem_paraiba/saude_seguranca/js/dropzone_foto.js"></script>';
+
     rodape();
 }
 
@@ -3414,6 +3514,33 @@ function cadastrarKit() {
         $kit["ss_k_tx_dataAtualiza"] = $dataCadastro;
         atualizar("ss_kit", array_keys($kit), array_values($kit), $kitId);
     }
+
+    // Fotos do kit: mantém as existentes e processa os novos uploads (galeria + câmera)
+    $fotos_mantidas = !empty($_POST["fotos_mantidas"]) ? $_POST["fotos_mantidas"] : "";
+    $fotos_kit = array_filter(explode(",", $fotos_mantidas));
+
+    $allowed_fotos = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
+    foreach (["kit_foto", "kit_foto_cam"] as $campoFoto) {
+        if (empty($_FILES[$campoFoto]["name"][0])) continue;
+        $total_files = count($_FILES[$campoFoto]["name"]);
+        $dir_foto = "arquivos/kit/{$kitId}/";
+        $dir_foto_abs = $_SERVER["DOCUMENT_ROOT"] . $_ENV["APP_PATH"] . "/" . $dir_foto;
+        if (!is_dir($dir_foto_abs)) {
+            mkdir($dir_foto_abs, 0777, true);
+        }
+        for ($i = 0; $i < $total_files; $i++) {
+            if ($_FILES[$campoFoto]["error"][$i] !== UPLOAD_ERR_OK) continue;
+            if (!in_array($_FILES[$campoFoto]["type"][$i], $allowed_fotos)) continue;
+            $ext = pathinfo(basename($_FILES[$campoFoto]["name"][$i]), PATHINFO_EXTENSION);
+            $target_name = "KIT_{$kitId}_" . time() . "_{$i}." . $ext;
+            if (move_uploaded_file($_FILES[$campoFoto]["tmp_name"][$i], $dir_foto_abs . $target_name)) {
+                $fotos_kit[] = $dir_foto . $target_name;
+            }
+        }
+    }
+
+    $fotoStr = !empty($fotos_kit) ? implode(",", $fotos_kit) : null;
+    atualizar("ss_kit", ["ss_k_tx_foto"], [$fotoStr], $kitId);
 
     // Atualizar itens
     query("DELETE FROM ss_kit_item WHERE ss_ki_nb_kit_id = {$kitId}");
