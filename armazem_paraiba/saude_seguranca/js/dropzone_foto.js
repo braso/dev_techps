@@ -114,6 +114,11 @@
         return navigator.maxTouchPoints > 1;
     }
 
+    // Permite reutilizar a câmera em tempo real fora dos containers [data-dropzone-foto]
+    // (ex.: botão de foto por item na lista de entregas de EPI)
+    window.dropzoneFotoAbrirCamera = abrirCameraWebcam;
+    window.dropzoneFotoEhDispositivoMovel = eDispositivoMovel;
+
     $(document).ready(function () {
         var containers = document.querySelectorAll('[data-dropzone-foto]');
         containers.forEach(function (container) {

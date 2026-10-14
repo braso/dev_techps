@@ -27,7 +27,7 @@ O módulo cria e gerencia as seguintes tabelas MySQL:
 * `ss_e_tx_subgrupo`: Subgrupo (ex: Sapato de Segurança, Abafador de Ruídos).
 * `ss_e_tx_item`: Nome do item.
 * `ss_e_tx_ca`: Número do Certificado de Aprovação (CA) emitido pelo Ministério do Trabalho.
-* `ss_e_nb_vida_util`: Tempo estimado de vida útil do equipamento em dias (usado para prever o vencimento).
+* `ss_e_nb_vida_util`: Periodicidade de troca do equipamento em dias (ex: 180 = troca a cada 6 meses). É a base do cálculo de vencimento da entrega.
 * `ss_e_tx_cadastro_tipo`: Definido como `'estoque'` por padrão.
 * `ss_e_tx_foto`: Caminho do arquivo de imagem do equipamento.
 * `ss_e_tx_status`: Status (`'ativo'` ou `'inativo'`).
@@ -50,7 +50,7 @@ O módulo cria e gerencia as seguintes tabelas MySQL:
 * `ss_e_nb_empresa_id` (FK): ID da filial em que a entrega foi faturada/realizada.
 * `ss_e_tx_data_entrega`: Data em que o EPI foi entregue ao funcionário.
 * `ss_e_nb_quantidade`: Quantidade entregue.
-* `ss_e_tx_vencimento`: Data de vencimento prevista para o EPI (calculada a partir da vida útil).
+* `ss_e_tx_vencimento`: Data prevista de troca/vencimento (a menor data entre "data da entrega + periodicidade de troca" e a validade do lote em estoque, quando informada).
 * `ss_e_tx_status`: Status da entrega (`'ativo'` [Entregue], `'substituido'`, `'devolvido'`, `'perdido'`, `'nao_entregue'`, `'inativo'` [Excluído]).
 * `ss_e_tx_assinatura`: Assinatura eletrônica baseada em vetor de imagem/coordenadas.
 * `ss_e_tx_foto`: Caminhos das fotos anexas dos recibos/comprovantes.
@@ -74,8 +74,14 @@ O módulo cria e gerencia as seguintes tabelas MySQL:
 #### `registrarMovimentacaoEstoque(int $idEpi, int $qtd, string $tipo, string $motivo, ... ?int $empresaId = null, ?string $variacao = null): bool`
 * **Finalidade**: Insere um registro de movimentação de entrada/saída na tabela `ss_epi_estoque` para atualizar os saldos. O parâmetro `$variacao` (opcional) registra a numeração/tamanho movimentada (ex: bota 42).
 
-#### `calcularVencimentoEpi(string $dataEntrega, int $vidaUtilDias): string`
-* **Finalidade**: Calcula e retorna a data exata de vencimento estimada somando os dias de vida útil à data de entrega original.
+#### `calcularVencimentoEpi(string $dataEntrega, int $vidaUtilDias, ?string $validadeLimite = null): string`
+* **Finalidade**: Calcula a data prevista de troca do EPI: soma a periodicidade de troca à data de entrega. Se a validade do lote em estoque (`$validadeLimite`) for anterior, ela prevalece.
+
+#### `ss_obter_validade_estoque(int $idEpi, ?int $empresaId = null, ?string $variacao = null, ?string $dataReferencia = null): ?string`
+* **Finalidade**: Retorna a validade mais próxima entre os lotes de entrada em estoque do EPI (empresa/variação), usada para limitar o vencimento da entrega. Retorna `null` quando não há validade cadastrada.
+
+#### `ss_listar_alertas_troca(int $diasAntecedencia = 30): array`
+* **Finalidade**: Lista as entregas ativas com troca prevista para os próximos N dias ou já vencidas, considerando apenas a entrega mais recente de cada colaborador + EPI + variação. Alimenta o painel "Alertas de Troca de EPI" em `entrega_epi.php`.
 
 ### `entrega_epi.php`
 
@@ -104,3 +110,10 @@ O módulo cria e gerencia as seguintes tabelas MySQL:
    * No grid de lançamentos (sacola), se o usuário adicionar um item sem estoque na filial atual mas com saldo em outra, o sistema exibe um alerta de estoque insuficiente na cor vermelha e oferece um link de ação: *"Importar de [Nome da Filial] (Saldo: X)"*. Clicar no link define o campo `import_de` com o ID da filial externa, efetuando o débito da movimentação no local correto ao gravar.
 5. **Filtro de Exclusão Física no Grid**:
    * Registros com status `'inativo'` (excluídos) são filtrados diretamente no SQL da query do grid (`ss_e_tx_status <> 'inativo'`), garantindo que nunca mais apareçam em relatórios ou buscas gerais, independentemente dos filtros de busca.
+6. **Periodicidade de Troca x Validade do Lote**:
+   * O vencimento de cada entrega é a **menor data** entre "data da entrega + periodicidade de troca" e a validade do lote em estoque (informada na Movimentação de Estoque). Sem validade cadastrada, vale apenas a periodicidade.
+   * Transferências de estoque entre filiais propagam a validade do lote de origem para a entrada no destino.
+   * **Bloqueio de entrega**: quando todos os lotes com validade cadastrada para o EPI (empresa/variação) estão vencidos na data da entrega, o lançamento é bloqueado (`ss_validade_estoque_vencida()`). Sem validade cadastrada não há bloqueio.
+   * A validade do CA (`ss_e_tx_validade_ca`) é apenas **informativa** (gera alerta no estoque), não bloqueia a entrega.
+7. **Alertas de Troca**:
+   * A listagem de Entregas exibe o painel "Alertas de Troca de EPI" com as entregas vencidas ou com troca prevista para os próximos 30 dias, permitindo abrir a entrega diretamente para registrar a substituição.

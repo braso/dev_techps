@@ -12,6 +12,7 @@ services:
         - .:/var/www/html/braso/
     ports:
       - 80:80
+      - 8000:80
 
   adminer:
     image: adminer
@@ -20,4 +21,4 @@ services:
     environment:
       UPLOAD: 4096M
     ports:
-      - 8000:8080
+      - 8002:8080

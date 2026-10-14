@@ -175,12 +175,48 @@ function saldoEstoquePorEmpresa($epi_id, $empresaId, $variacao = null) {
 }
 
 function obterSaldoEpiAjax() {
+    global $conn;
     $epi_id = (int)($_GET["epi_id"] ?? 0);
     $empresa_id = (int)($_GET["empresa_id"] ?? 0);
     $variacao = trim($_GET["variacao"] ?? "");
-    $saldo = saldoEstoquePorEmpresa($epi_id, $empresa_id === 0 ? null : $empresa_id, $variacao);
+    $empresaClean = $empresa_id === 0 ? null : $empresa_id;
+    $saldo = saldoEstoquePorEmpresa($epi_id, $empresaClean, $variacao);
+
+    // Quebra do saldo por variação na empresa (para exibir "Saldo na Origem" detalhado)
+    $variacoes = [];
+    $saldoTotal = $saldo;
+    if ($epi_id > 0) {
+        $condEmpresa = ($empresaClean === null)
+            ? "(ss_e_nb_empresa_id IS NULL OR ss_e_nb_empresa_id = 0)"
+            : "ss_e_nb_empresa_id = " . (int)$empresaClean;
+        $sqlVar = "SELECT ss_e_tx_variacao,
+                          SUM(CASE WHEN ss_e_tx_tipo = 'entrada' THEN ss_e_nb_quantidade ELSE -ss_e_nb_quantidade END) AS saldo_var
+                   FROM ss_epi_estoque
+                   WHERE ss_e_nb_epi_id = {$epi_id} AND {$condEmpresa}
+                     AND IFNULL(ss_e_tx_variacao, '') <> ''
+                   GROUP BY ss_e_tx_variacao
+                   ORDER BY ss_e_tx_variacao ASC";
+        $resVar = mysqli_query($conn, $sqlVar);
+        if ($resVar) {
+            while ($rowVar = mysqli_fetch_assoc($resVar)) {
+                $variacoes[] = [
+                    "variacao" => $rowVar["ss_e_tx_variacao"],
+                    "saldo" => (int)$rowVar["saldo_var"]
+                ];
+            }
+        }
+        if ($variacao !== "") {
+            $saldoTotal = saldoEstoquePorEmpresa($epi_id, $empresaClean, null);
+        }
+    }
+
     ob_clean();
-    echo json_encode(["status" => "success", "saldo" => $saldo]);
+    echo json_encode([
+        "status" => "success",
+        "saldo" => $saldo,
+        "saldo_total" => $saldoTotal,
+        "variacoes" => $variacoes
+    ]);
     exit;
 }
 
@@ -240,6 +276,9 @@ function transferirEstoqueAjax() {
     $descSaida = "Transferência de estoque: {$nomeOrigem} → {$nomeDestino}{$sufixo}" . ($motivo_e !== "" ? " - {$motivo_e}" : "");
     $descEntrada = "Transferência recebida de {$nomeOrigem}{$sufixo}" . ($motivo_e !== "" ? " - {$motivo_e}" : "");
 
+    // Mantém a validade do lote da origem na entrada do destino
+    $validadeOrigem = ss_obter_validade_estoque($epi_id, $origemClean, $variacao);
+
     mysqli_begin_transaction($conn);
     $s1 = registrarMovimentacaoEstoque($epi_id, $quantidade, 'saida', $descSaida, null, null, '', null, null, $origemClean, null, null, $variacao);
     if (!$s1) {
@@ -248,7 +287,7 @@ function transferirEstoqueAjax() {
         echo json_encode(["status" => "error", "message" => "Erro ao registrar a saída na origem."]);
         exit;
     }
-    $s2 = registrarMovimentacaoEstoque($epi_id, $quantidade, 'entrada', $descEntrada, null, null, '', null, null, $destinoClean, null, null, $variacao);
+    $s2 = registrarMovimentacaoEstoque($epi_id, $quantidade, 'entrada', $descEntrada, null, null, '', null, null, $destinoClean, null, $validadeOrigem, $variacao);
     if (!$s2) {
         mysqli_rollback($conn);
         ob_clean();
@@ -489,7 +528,7 @@ function index() {
                 <button type="button" class="btn btn-success btn-sm" id="btn_novo_fornecedor" title="Cadastrar novo fornecedor" style="white-space: nowrap; flex-shrink: 0;"><i class="fa fa-plus"></i> Novo</button>
             </div>
         </div>';
-    $campo_validade_epi   = campo_data("Validade do EPI", "validade_epi", $_POST["validade_epi"] ?? "", 3);
+    $campo_validade_epi   = campo_data("Validade do EPI", "validade_epi", $_POST["validade_epi"] ?? "", 3, "title='Data de validade do lote recebido. Quando informada, prevalece sobre a periodicidade de troca do EPI: o vencimento da entrega passa a ser a data mais próxima entre as duas.'");
 
     $buttons = [];
     $buttons[] = '<button type="button" class="btn btn-primary" id="btn_adicionar_item" onclick="adicionarItemALista()"><i class="fa fa-plus"></i> Adicionar Item à Lista</button>';
@@ -552,19 +591,31 @@ function index() {
             <form id="form_transferencia" onsubmit="return false;">
                 <div class="row">
                     <div class="col-sm-3 margin-bottom-5">
+                        <label class="control-label">Empresa Origem*</label>
+                        <select name="transf_empresa_origem" id="transf_empresa_origem" class="form-control input-sm">
+                            ' . $transferOrigemHtml . '
+                        </select>
+                    </div>
+                    <div class="col-sm-4 margin-bottom-5">
                         <label class="control-label">EPI*</label>
                         <select name="transf_epi_id" id="transf_epi_id" class="form-control input-sm">
                             ' . $epiOptionsHtml . '
                         </select>
                     </div>
+                    <div class="col-sm-5 margin-bottom-5">
+                        <label class="control-label">Saldo na Origem</label>
+                        <div id="transf_saldo_origem" class="form-control input-sm" style="font-weight: bold; color: #31708f; height: auto; min-height: 30px; padding-top: 5px; white-space: normal;">-</div>
+                    </div>
+                </div>
+                <div class="row">
                     <div class="col-sm-2 margin-bottom-5">
-                        <label class="control-label">Quantidade*</label>
+                        <label class="control-label">Qnt a transferir*</label>
                         <input type="number" name="transf_quantidade" id="transf_quantidade" class="form-control input-sm" min="1" step="1" style="height: 30px;">
                     </div>
                     <div class="col-sm-3 margin-bottom-5">
-                        <label class="control-label">Empresa Origem*</label>
-                        <select name="transf_empresa_origem" id="transf_empresa_origem" class="form-control input-sm">
-                            ' . $transferOrigemHtml . '
+                        <label class="control-label">Variação (se o EPI tiver)</label>
+                        <select name="transf_variacao" id="transf_variacao" class="form-control input-sm">
+                            <option value="">Selecione a variação</option>
                         </select>
                     </div>
                     <div class="col-sm-3 margin-bottom-5">
@@ -573,24 +624,12 @@ function index() {
                             ' . $transferDestinoHtml . '
                         </select>
                     </div>
-                    <div class="col-sm-1 margin-bottom-5" style="padding-top: 23px;">
-                        <button type="button" class="btn btn-warning btn-sm" id="btn_transferir" title="Transferir estoque" style="width: 100%;"><i class="fa fa-exchange"></i> Transferir</button>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-sm-4 margin-bottom-5">
-                        <label class="control-label">Variação (se o EPI tiver)</label>
-                        <select name="transf_variacao" id="transf_variacao" class="form-control input-sm">
-                            <option value="">Selecione a variação</option>
-                        </select>
-                    </div>
-                    <div class="col-sm-4 margin-bottom-5">
-                        <label class="control-label">Saldo na Origem</label>
-                        <div id="transf_saldo_origem" class="form-control input-sm" style="font-weight: bold; color: #31708f; height: 30px; padding-top: 5px;">-</div>
-                    </div>
-                    <div class="col-sm-4 margin-bottom-5">
+                    <div class="col-sm-3 margin-bottom-5">
                         <label class="control-label">Motivo / Observação</label>
                         <input type="text" name="transf_motivo" id="transf_motivo" class="form-control input-sm" maxlength="255" style="height: 30px;">
+                    </div>
+                    <div class="col-sm-1 margin-bottom-5" style="padding-top: 23px;">
+                        <button type="button" class="btn btn-warning btn-sm" id="btn_transferir" title="Transferir estoque" style="width: 100%;"><i class="fa fa-exchange"></i> Transferir</button>
                     </div>
                 </div>
             </form>
@@ -1087,11 +1126,30 @@ function index() {
                 return;
             }
             $.get('movimentacao_estoque.php?acao=obterSaldoEpiAjax', { epi_id: epiId, empresa_id: origem, variacao: variacao }, function(resp) {
-                if (resp && resp.status === 'success') {
-                    $('#transf_saldo_origem').text(resp.saldo + ' unidade(s)');
-                } else {
+                if (!resp || resp.status !== 'success') {
                     $('#transf_saldo_origem').text('-');
+                    return;
                 }
+
+                var variacoes = resp.variacoes || [];
+                var html = '';
+                if (variacao) {
+                    html = 'Var. ' + variacao + ': <span style="color: #3c763d;">' + resp.saldo + ' unidade(s)</span>';
+                } else if (variacoes.length > 0) {
+                    html = 'Total: ' + resp.saldo_total + ' unidade(s)';
+                } else {
+                    html = resp.saldo + ' unidade(s)';
+                }
+
+                // Lista a quantidade por variação quando o EPI tiver variações
+                if (variacoes.length > 0) {
+                    var partes = variacoes.map(function(v) {
+                        return '<span style="white-space: nowrap;">' + v.variacao + ': <strong>' + v.saldo + '</strong></span>';
+                    });
+                    html += '<div style="font-weight: normal; color: #555; margin-top: 3px;">Por variação: ' + partes.join(' &nbsp;&bull;&nbsp; ') + '</div>';
+                }
+
+                $('#transf_saldo_origem').html(html);
             }, 'json');
         }
 
@@ -1137,7 +1195,7 @@ function index() {
                     } else {
                         alert(resp.message || 'Erro ao transferir estoque.');
                         if (resp.saldo_origem !== undefined) {
-                            $('#transf_saldo_origem').text(resp.saldo_origem + ' unidade(s)');
+                            atualizarSaldoOrigem();
                         }
                     }
                 },

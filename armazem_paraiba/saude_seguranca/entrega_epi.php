@@ -228,6 +228,14 @@ function cadastrarEntregaLoteAjax() {
         } else {
             $import_de_clean = $import_de;
         }
+
+        // A validade do CA é apenas informativa (não bloqueia). O bloqueio ocorre
+        // quando a validade do lote do EPI em estoque está vencida.
+        $empresaValidade = ($import_de !== null) ? $import_de_clean : $empresa_id;
+        if (ss_validade_estoque_vencida($epi_id, $empresaValidade, $variacao, $data_entrega)) {
+            $erros[] = "A validade do EPI '{$epi['ss_e_tx_subgrupo']} / {$epi['ss_e_tx_item']}' em estoque está vencida. Entrega bloqueada.";
+            continue;
+        }
         
         // 1. Process inter-branch stock transfer if specified
         if ($import_de !== null) {
@@ -241,7 +249,9 @@ function cadastrarEntregaLoteAjax() {
             $sucessoSaida = registrarMovimentacaoEstoque($epi_id, $quantidade, 'saida', $descSaida, null, null, '', null, null, $import_de_clean, null, null, $variacao);
             
             $descEntrada = "Transferência inter-filial recebida de Filial ID " . ($import_de_clean ?? "Matriz") . " para entrega Colaborador ID: " . $item_colaborador_id;
-            $sucessoEntrada = registrarMovimentacaoEstoque($epi_id, $quantidade, 'entrada', $descEntrada, null, null, '', null, null, $empresa_id, null, null, $variacao);
+            // Mantém a validade do lote da origem na entrada do destino
+            $validadeImport = ss_obter_validade_estoque($epi_id, $import_de_clean, $variacao, $data_entrega);
+            $sucessoEntrada = registrarMovimentacaoEstoque($epi_id, $quantidade, 'entrada', $descEntrada, null, null, '', null, null, $empresa_id, null, $validadeImport, $variacao);
             
             if (!$sucessoSaida || !$sucessoEntrada) {
                 $erros[] = "Erro interno ao realizar transferência de estoque para o EPI ID {$epi_id}.";
@@ -256,7 +266,8 @@ function cadastrarEntregaLoteAjax() {
             continue;
         }
         
-        $vencimento = calcularVencimentoEpi($data_entrega, (int)$epi["ss_e_nb_vida_util"]);
+        $validadeLote = ss_obter_validade_estoque($epi_id, $empresa_id, $variacao, $data_entrega);
+        $vencimento = calcularVencimentoEpi($data_entrega, (int)$epi["ss_e_nb_vida_util"], $validadeLote);
         
         $entrega = [
             "ss_e_nb_colaborador_id"      => $item_colaborador_id,
@@ -436,6 +447,13 @@ function cadastrarEntrega() {
                     modificarEntrega();
                     exit;
                 }
+
+                // A validade do CA é apenas informativa; bloqueia se a validade do lote estiver vencida
+                if (ss_validade_estoque_vencida($epiId, $empresa_id, $variacao, $data_entrega)) {
+                    set_status("ERRO: A validade do EPI '{$epiKit['ss_e_tx_subgrupo']} / {$epiKit['ss_e_tx_item']}' em estoque está vencida. Entrega bloqueada.");
+                    modificarEntrega();
+                    exit;
+                }
             }
         }
 
@@ -450,7 +468,10 @@ function cadastrarEntrega() {
             $variacao = !empty($item["variacao"]) ? trim($item["variacao"]) : null;
             
             if ($entregar == 1) {
-                $vencimento = calcularVencimentoEpi($data_entrega, (int)$item["vida_util"]);
+                $epiKitLoop = carregar("ss_epi", $epiId);
+                $vidaUtilKit = (int)($epiKitLoop["ss_e_nb_vida_util"] ?? 0);
+                $validadeLote = ss_obter_validade_estoque($epiId, $empresa_id, $variacao, $data_entrega);
+                $vencimento = calcularVencimentoEpi($data_entrega, $vidaUtilKit, $validadeLote);
                 $entrega = [
                     "ss_e_nb_colaborador_id" => $colaborador_id,
                     "ss_e_nb_epi_id"         => $epiId,
@@ -567,13 +588,13 @@ function cadastrarEntrega() {
             exit;
         }
 
-        if (!empty($epi["ss_e_tx_validade_ca"])) {
-            if (verificarCAVencido($data_entrega, $epi["ss_e_tx_validade_ca"])) {
-                $_POST["errorFields"][] = "data_entrega";
-                set_status("ERRO: Certificado de Aprovação (CA nº {$epi['ss_e_tx_ca']}) vencido em " . data($epi["ss_e_tx_validade_ca"]) . ". Entrega bloqueada.");
-                modificarEntrega();
-                exit;
-            }
+        // A validade do CA é apenas informativa (não bloqueia). O bloqueio ocorre
+        // quando a validade do lote do EPI em estoque está vencida.
+        if (ss_validade_estoque_vencida($epi_id, $empresa_id, $variacao, $data_entrega)) {
+            $_POST["errorFields"][] = "data_entrega";
+            set_status("ERRO: A validade do EPI em estoque está vencida. Entrega bloqueada.");
+            modificarEntrega();
+            exit;
         }
 
         if (empty($_POST["id"])) {
@@ -624,7 +645,8 @@ function cadastrarEntrega() {
         $final_paths = array_merge($fotos_existentes_array, $new_paths);
         $foto_caminho = implode(",", $final_paths);
 
-        $vencimento = calcularVencimentoEpi($data_entrega, (int)$epi["ss_e_nb_vida_util"]);
+        $validadeLote = ss_obter_validade_estoque($epi_id, $empresa_id, $variacao, $data_entrega);
+        $vencimento = calcularVencimentoEpi($data_entrega, (int)$epi["ss_e_nb_vida_util"], $validadeLote);
 
         // Gestão de devolução: justificativa e estorno informados pelo operador
         $justificativa = trim($_POST["status_justificativa"] ?? "");
@@ -1068,6 +1090,8 @@ function modificarEntrega() {
     }
     
     echo '<input type="hidden" name="kit_itens_entrega_json" id="kit_itens_entrega_json" value="">';
+    echo '<input type="file" id="foto_item_lote_input" accept="image/*" style="display: none;">';
+    echo '<input type="file" id="foto_item_camera_input" accept="image/*" capture="environment" data-camera="true" style="display: none;">';
     
     echo fecha_form($buttons);
 
@@ -1118,6 +1142,50 @@ function modificarEntrega() {
                 templateSelection: formatEpiOption
             });
         }
+
+        // Ajusta a largura do campo \"Kit de EPIs\" ao nome mais longo cadastrado,
+        // para o nome do kit não ficar cortado no select2.
+        function ajustarLarguraKit() {
+            const kitSelect = $('#kit_id');
+            if (!kitSelect.length) return;
+
+            const opcoes = kitSelect.find('option');
+            if (!opcoes.length) return;
+
+            let maiorTexto = 0;
+            let maiorComprimento = 0;
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                const referencia = kitSelect.next('.select2-container').find('.select2-selection__rendered');
+                ctx.font = referencia.length
+                    ? referencia.css('font-style') + ' ' + referencia.css('font-weight') + ' ' + referencia.css('font-size') + ' ' + referencia.css('font-family')
+                    : '12px \"Open Sans\", sans-serif';
+            }
+
+            opcoes.each(function() {
+                const texto = $(this).text() || '';
+                maiorComprimento = Math.max(maiorComprimento, texto.length);
+                if (ctx) {
+                    maiorTexto = Math.max(maiorTexto, ctx.measureText(texto).width);
+                }
+            });
+
+            // Reserva espaço para a seta e paddings do select2 (fallback por caracteres)
+            let larguraCampo = Math.ceil(maiorTexto > 0 ? maiorTexto : maiorComprimento * 6.8) + 60;
+
+            // Largura mínima para o campo manter aparência de formulário
+            larguraCampo = Math.max(200, larguraCampo);
+
+            // Em telas pequenas o campo não pode ultrapassar a largura visível
+            larguraCampo = Math.min(larguraCampo, Math.max(220, window.innerWidth - 60));
+
+            $('#container_kit').css({ 'width': 'auto', 'min-width': larguraCampo + 'px' });
+            kitSelect.next('.select2-container').css({ 'width': larguraCampo + 'px', 'min-width': larguraCampo + 'px' });
+        }
+
+        ajustarLarguraKit();
+        $(window).on('resize', ajustarLarguraKit);
 
         if (typeof window.verImagemMaior === 'undefined') {
             window.verImagemMaior = function(src) {
@@ -1434,8 +1502,8 @@ function modificarEntrega() {
                 $('#preview_epi_individual_container').hide();
                 $('#saldo_individual_badge').hide();
                 
-                $('#container_foto').show();
-                $('#container_foto').find('label').text('Foto do Kit Completo (Opcional)');
+                // No lançamento em lote a foto é anexada por item na lista de entregas (abaixo)
+                $('#container_foto').hide();
                 if ($('#preview_substituido').attr('src')) {
                     $('#preview_substituido_container').show();
                 } else {
@@ -1443,6 +1511,7 @@ function modificarEntrega() {
                 }
                 
                 $('#container_kit').show();
+                ajustarLarguraKit();
                 if (isEditMode) {
                     $('#container_itens_kit_entrega').show();
                 } else {
@@ -1452,8 +1521,13 @@ function modificarEntrega() {
                 $('select[name=\"epi_id\"]').closest('.col-sm-4').show();
                 $('input[name=\"quantidade\"]').closest('.col-sm-2').show();
                 
-                $('#container_foto').show();
-                $('#container_foto').find('label').text('Foto do EPI Entregue');
+                if (isEditMode) {
+                    $('#container_foto').show();
+                    $('#container_foto').find('label').text('Foto do EPI Entregue');
+                } else {
+                    // No lançamento em lote a foto é anexada por item na lista de entregas (abaixo)
+                    $('#container_foto').hide();
+                }
                 if ($('#preview_substituido').attr('src')) {
                     $('#preview_substituido_container').show();
                 } else {
@@ -1926,7 +2000,7 @@ function modificarEntrega() {
                         '<table class=\"table table-striped table-bordered table-hover\">' +
                             '<thead>' +
                                 '<tr>' +
-                                    '<th style=\"width: 70px; text-align: center;\">Foto</th>' +
+                                    '<th style=\"width: 100px; text-align: center;\">Foto da Entrega</th>' +
                                     '<th>EPI</th>' +
                                     '<th style=\"text-align: center; width: 80px;\">Qtd</th>' +
                                     '<th style=\"width: 120px;\">Variação</th>' +
@@ -1939,19 +2013,19 @@ function modificarEntrega() {
                             '<tbody>';
                             
             grupo.itens.forEach(function(item) {
-                // Mostra a foto do kit entregue (quando houver) E a foto individual do EPI,
+                // Mostra a foto anexada na própria lista (quando houver) E a foto individual do EPI,
                 // permitindo o comparativo na própria sacola
                 var fotosHtml = [];
                 if (item.foto_payload && item.foto_payload.indexOf('data:image/') === 0) {
                     var resolvedKit = ssResolveFotoUrl(item.foto_payload);
-                    fotosHtml.push('<img src=\"' + resolvedKit + '\" title=\"Foto do kit entregue\" style=\"max-height: 45px; max-width: 45px; border-radius: 4px; object-fit: cover; cursor: pointer;\" onclick=\"verImagemMaior(\'' + resolvedKit + '\')\">');
+                    fotosHtml.push('<img src=\"' + resolvedKit + '\" title=\"Foto anexada à entrega\" style=\"max-height: 45px; max-width: 45px; border-radius: 4px; object-fit: cover; cursor: pointer;\" onclick=\"verImagemMaior(\'' + resolvedKit + '\')\">');
                 }
                 var defaultFoto = epiFotosMap[item.epi_id];
                 if (defaultFoto) {
                     var resolvedSrc = ssResolveFotoUrl(defaultFoto);
                     fotosHtml.push('<img src=\"' + resolvedSrc + '\" title=\"Foto do EPI\" style=\"max-height: 45px; max-width: 45px; border-radius: 4px; object-fit: cover; cursor: pointer;\" onclick=\"verImagemMaior(\'' + resolvedSrc + '\')\">');
                 }
-                var fotoHtml = fotosHtml.length > 0 ? fotosHtml.join(' ') : '-';
+                var fotoHtml = fotosHtml.length > 0 ? fotosHtml.join(' ') : '';
                 
                 var statusLabel = '<span class=\"label label-sm label-success\">Ativo</span>';
                 if (item.status === 'devolvido') statusLabel = '<span class=\"label label-sm label-info\">Devolvido</span>';
@@ -1996,6 +2070,20 @@ function modificarEntrega() {
                 // Item sem saldo: permanece na lista em cinza e NÃO será lançado
                 var semSaldo = (currentStock < item.quantidade);
                 item.semSaldo = semSaldo ? true : false;
+
+                // Anexo de foto por item da lista (apenas para itens com saldo para entrega)
+                if (!semSaldo) {
+                    fotoHtml += '<div style=\"margin-top: 4px; white-space: nowrap;\">' +
+                        '<button type=\"button\" class=\"btn btn-default btn-xs btn-anexar-foto-lote\" data-unique=\"' + item.unique_id + '\" title=\"Escolher foto da galeria/arquivo\"><i class=\"fa fa-folder-open\"></i></button> ' +
+                        '<button type=\"button\" class=\"btn btn-success btn-xs btn-camera-foto-lote\" data-unique=\"' + item.unique_id + '\" title=\"Tirar foto em tempo real\"><i class=\"fa fa-camera\"></i></button>';
+                    if (item.foto_payload) {
+                        fotoHtml += ' <button type=\"button\" class=\"btn btn-danger btn-xs btn-remover-foto-lote\" data-unique=\"' + item.unique_id + '\" title=\"Remover foto anexada\"><i class=\"fa fa-times\"></i></button>';
+                    }
+                    fotoHtml += '</div>';
+                }
+                if (!fotoHtml) {
+                    fotoHtml = '-';
+                }
                 
                 var estoqueBadge = '';
                 if (!semSaldo) {
@@ -2049,6 +2137,55 @@ function modificarEntrega() {
         }
     });
     
+    // Foto por item da lista: cada linha define a entrega alvo (galeria/arquivo ou câmera)
+    var fotoLoteUniqueIdAtual = null;
+
+    $(document).on('click', '.btn-anexar-foto-lote', function() {
+        fotoLoteUniqueIdAtual = $(this).attr('data-unique');
+        $('#foto_item_lote_input').val('').trigger('click');
+    });
+
+    $(document).on('click', '.btn-camera-foto-lote', function() {
+        fotoLoteUniqueIdAtual = $(this).attr('data-unique');
+        var movel = (typeof window.dropzoneFotoEhDispositivoMovel === 'function') ? window.dropzoneFotoEhDispositivoMovel() : false;
+        var inputGaleria = document.getElementById('foto_item_lote_input');
+        if (!movel && navigator.mediaDevices && navigator.mediaDevices.getUserMedia && typeof window.dropzoneFotoAbrirCamera === 'function' && inputGaleria) {
+            // Notebook/desktop: câmera em tempo real (webcam) no modal compartilhado
+            inputGaleria.value = '';
+            window.dropzoneFotoAbrirCamera(inputGaleria);
+            return;
+        }
+        // Celular/tablet: abre o app de câmera direto para captura em tempo real
+        var inputCamera = document.getElementById('foto_item_camera_input');
+        if (inputCamera) {
+            inputCamera.value = '';
+            inputCamera.click();
+        }
+    });
+
+    $(document).on('change', '#foto_item_lote_input, #foto_item_camera_input', function() {
+        if (!fotoLoteUniqueIdAtual || !this.files || this.files.length === 0) return;
+        var item = itensEntregaLote.find(function(it) { return it.unique_id === fotoLoteUniqueIdAtual; });
+        if (!item) return;
+        var arquivo = this.files[0];
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            item.foto_payload = e.target.result;
+            fotoLoteUniqueIdAtual = null;
+            desenharListas();
+        };
+        reader.readAsDataURL(arquivo);
+    });
+
+    $(document).on('click', '.btn-remover-foto-lote', function() {
+        var uniqueId = $(this).attr('data-unique');
+        var item = itensEntregaLote.find(function(it) { return it.unique_id === uniqueId; });
+        if (item) {
+            item.foto_payload = '';
+            desenharListas();
+        }
+    });
+
     function removerItemEntrega(uniqueId) {
         itensEntregaLote = itensEntregaLote.filter(function(it) { return it.unique_id !== uniqueId; });
         desenharListas();
@@ -2514,6 +2651,105 @@ function index() {
         <div class="alert alert-warning" style="margin-bottom: 15px;">
             <i class="fa fa-exclamation-triangle"></i> <strong>Informativo:</strong> Para que o Recibo de EPI seja gerado e enviado para assinatura eletrônica, é necessário cadastrar um Tipo de Documento com o nome exato <strong>Recibo de EPI</strong> e marcar a opção <strong>Assinatura</strong> como "Sim" na página de <a href="../cadastro_tipo_doc.php" target="_blank" style="font-weight: bold; text-decoration: underline;">Cadastro de Tipo de Documento</a>.
         </div>';
+    }
+
+    // Alerta de troca de EPI: entregas ativas vencidas ou próximas do vencimento/troca
+    $alertaDias = 30;
+    $alertasTroca = ss_listar_alertas_troca($alertaDias);
+    if (!empty($alertasTroca)) {
+        $qtdVencidos = 0;
+        $qtdAVencer = 0;
+        $linhasAlerta = "";
+        foreach ($alertasTroca as $alertaItem) {
+            $diasRestantes = (int)$alertaItem["dias_restantes"];
+            if ($diasRestantes < 0) {
+                $qtdVencidos++;
+                $situacaoBadge = '<span class="label label-danger" style="font-weight: bold;">Vencido há ' . abs($diasRestantes) . ' dia(s)</span>';
+            } elseif ($diasRestantes === 0) {
+                $qtdAVencer++;
+                $situacaoBadge = '<span class="label label-warning" style="font-weight: bold;">Vence hoje</span>';
+            } else {
+                $qtdAVencer++;
+                $situacaoBadge = '<span class="label label-warning" style="font-weight: bold;">Vence em ' . $diasRestantes . ' dia(s)</span>';
+            }
+
+            $variacaoAlerta = !empty($alertaItem["ss_e_tx_variacao"]) ? ' <small class="text-muted">(Var: ' . htmlspecialchars($alertaItem["ss_e_tx_variacao"]) . ')</small>' : '';
+            $linhasAlerta .= '
+                <tr>
+                    <td style="text-align: center; vertical-align: middle;">' . $situacaoBadge . '</td>
+                    <td style="vertical-align: middle;">' . htmlspecialchars($alertaItem["colaborador_nome"]) . '</td>
+                    <td style="vertical-align: middle;">' . htmlspecialchars($alertaItem["epi_nome"]) . $variacaoAlerta . '</td>
+                    <td style="vertical-align: middle;">' . htmlspecialchars($alertaItem["filial_nome"]) . '</td>
+                    <td style="text-align: center; vertical-align: middle;">' . data($alertaItem["ss_e_tx_data_entrega"]) . '</td>
+                    <td style="text-align: center; vertical-align: middle;"><strong>' . data($alertaItem["ss_e_tx_vencimento"]) . '</strong></td>
+                    <td style="text-align: center; vertical-align: middle;">' . (int)$alertaItem["ss_e_nb_quantidade"] . '</td>
+                    <td style="text-align: center; vertical-align: middle;">
+                        <button type="button" class="btn btn-xs btn-primary btn-abrir-troca" data-id="' . (int)$alertaItem["ss_e_nb_id"] . '" title="Abrir entrega"><i class="fa fa-edit"></i> Abrir</button>
+                    </td>
+                </tr>';
+        }
+
+        echo '
+        <div class="portlet light bordered" style="margin-bottom: 15px; border-left: 4px solid #e87e04;">
+            <div class="portlet-title" style="margin-bottom: 5px;">
+                <div class="caption font-dark">
+                    <i class="fa fa-bell font-dark"></i>
+                    <span class="caption-subject bold uppercase">Alertas de Troca de EPI</span>
+                </div>
+                <div class="actions" style="float: right; margin-top: -2px;">
+                    <button type="button" class="btn btn-default btn-xs" id="btn_toggle_alertas_troca"><i class="fa fa-chevron-up"></i> Ocultar</button>
+                </div>
+            </div>
+            <div class="portlet-body" id="container_alertas_troca">
+                ' . ($qtdVencidos > 0 ? '<div class="alert alert-danger" style="margin-bottom: 8px; padding: 8px 12px; font-size: 12px;"><i class="fa fa-exclamation-triangle"></i> <strong>' . $qtdVencidos . ' entrega(s) com a troca vencida.</strong> Providencie a substituição do EPI.</div>' : '') . '
+                ' . ($qtdAVencer > 0 ? '<div class="alert alert-warning" style="margin-bottom: 8px; padding: 8px 12px; font-size: 12px;"><i class="fa fa-clock-o"></i> <strong>' . $qtdAVencer . ' entrega(s) com troca prevista para os próximos ' . $alertaDias . ' dias.</strong></div>' : '') . '
+                <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+                    <table class="table table-striped table-bordered table-hover">
+                        <thead>
+                            <tr style="background-color: #f9f9f9;">
+                                <th style="text-align: center; width: 150px;">Situação</th>
+                                <th>Colaborador</th>
+                                <th>EPI</th>
+                                <th>Filial</th>
+                                <th style="text-align: center;">Entrega</th>
+                                <th style="text-align: center;">Troca Prevista</th>
+                                <th style="text-align: center;">Qtd</th>
+                                <th style="text-align: center; width: 80px;">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>' . $linhasAlerta . '</tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <script>
+        $(document).on("click", "#btn_toggle_alertas_troca", function() {
+            $("#container_alertas_troca").slideToggle(150);
+            $(this).find("i").toggleClass("fa-chevron-up fa-chevron-down");
+        });
+        $(document).on("click", ".btn-abrir-troca", function() {
+            var id = $(this).attr("data-id");
+            if (typeof window.submitPost === "function") {
+                submitPost("", { acao: "modificarEntrega", id: id });
+            } else {
+                var form = document.createElement("form");
+                form.setAttribute("method", "post");
+                form.setAttribute("action", "");
+                var inputAcao = document.createElement("input");
+                inputAcao.setAttribute("type", "hidden");
+                inputAcao.setAttribute("name", "acao");
+                inputAcao.setAttribute("value", "modificarEntrega");
+                var inputId = document.createElement("input");
+                inputId.setAttribute("type", "hidden");
+                inputId.setAttribute("name", "id");
+                inputId.setAttribute("value", id);
+                form.appendChild(inputAcao);
+                form.appendChild(inputId);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+        </script>';
     }
 
     if (!isset($_POST["busca_status"])) {

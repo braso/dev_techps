@@ -299,11 +299,22 @@ function detalhesEpiAjax() {
         $variacoesHtml = '<span class="text-muted">Sem variações cadastradas para este item.</span>';
     }
 
+    // Periodicidade de troca exibida de forma amigável (dias e meses)
+    $vidaUtilDias = (int)($epi["ss_e_nb_vida_util"] ?? 0);
+    if ($vidaUtilDias <= 0) {
+        $vidaUtilTexto = "Sem troca periódica";
+    } elseif ($vidaUtilDias % 30 === 0) {
+        $mesesVidaUtil = (int)($vidaUtilDias / 30);
+        $vidaUtilTexto = $vidaUtilDias . " dias (" . $mesesVidaUtil . ($mesesVidaUtil === 1 ? " mês)" : " meses)");
+    } else {
+        $vidaUtilTexto = $vidaUtilDias . " dias";
+    }
+
     // Alertas (criatividade: CA vencido, validade do EPI e estoque baixo)
     $alertsHtml = "";
     $hoje = date("Y-m-d");
     if (!empty($epi["ss_e_tx_validade_ca"]) && $epi["ss_e_tx_validade_ca"] != "0000-00-00" && $epi["ss_e_tx_validade_ca"] < $hoje) {
-        $alertsHtml .= '<div class="alert alert-danger" style="margin-bottom: 8px; padding: 8px 12px; font-size: 12px;"><i class="fa fa-exclamation-triangle"></i> <strong>CA vencido em ' . date("d/m/Y", strtotime($epi["ss_e_tx_validade_ca"])) . '!</strong> Este EPI não pode ser utilizado legalmente até a renovação do Certificado de Aprovação.</div>';
+        $alertsHtml .= '<div class="alert alert-danger" style="margin-bottom: 8px; padding: 8px 12px; font-size: 12px;"><i class="fa fa-exclamation-triangle"></i> <strong>CA vencido em ' . date("d/m/Y", strtotime($epi["ss_e_tx_validade_ca"])) . '!</strong> Recomenda-se regularizar o Certificado de Aprovação junto ao fornecedor.</div>';
     }
     if (!empty($epi["ss_e_tx_validade_epi"]) && $epi["ss_e_tx_validade_epi"] != "0000-00-00" && $epi["ss_e_tx_validade_epi"] < $hoje) {
         $alertsHtml .= '<div class="alert alert-warning" style="margin-bottom: 8px; padding: 8px 12px; font-size: 12px;"><i class="fa fa-clock-o"></i> <strong>Validade do EPI expirada em ' . date("d/m/Y", strtotime($epi["ss_e_tx_validade_epi"])) . '.</strong> Verifique a necessidade de descarte/renovação do lote.</div>';
@@ -343,7 +354,7 @@ function detalhesEpiAjax() {
                 </tr>
                 <tr>
                     <td style="border: none; padding: 2px 8px 2px 0;"><strong>Validade EPI:</strong></td><td style="border: none; padding: 2px 8px;">' . (!empty($epi["ss_e_tx_validade_epi"]) && $epi["ss_e_tx_validade_epi"] != "0000-00-00" ? date("d/m/Y", strtotime($epi["ss_e_tx_validade_epi"])) : "-") . '</td>
-                    <td style="border: none; padding: 2px 8px 2px 20px;"><strong>Vida útil:</strong></td><td style="border: none; padding: 2px 8px;">' . (int)($epi["ss_e_nb_vida_util"] ?? 0) . ' dias</td>
+                    <td style="border: none; padding: 2px 8px 2px 20px;"><strong>Periodicidade de troca:</strong></td><td style="border: none; padding: 2px 8px;">' . $vidaUtilTexto . '</td>
                 </tr>
                 ' . (!empty($epi["ss_e_tx_descricao"]) ? '<tr><td colspan="4" style="border: none; padding: 4px 8px 2px 0;"><em>' . htmlspecialchars($epi["ss_e_tx_descricao"]) . '</em></td></tr>' : '') . '
             </table>
@@ -440,7 +451,7 @@ function index() {
             }
         }
         
-        $cores = ["blue-madison", "red-intense", "green-haze", "purple-plum", "yellow-crust", "blue-hoki", "grey-cascade"];
+        $cores = ["blue-madison", "red-intense", "green-haze", "purple-plum", "yellow-crusta", "blue-hoki", "grey-cascade"];
         $corIdx = 0;
         
         echo '
@@ -559,6 +570,7 @@ function index() {
         .custom-dashboard-card.purple-plum { background: linear-gradient(135deg, #8775a7, #594576) !important; }
         .custom-dashboard-card.blue-hoki { background: linear-gradient(135deg, #67809f, #3b5066) !important; }
         .custom-dashboard-card.yellow-crusta { background: linear-gradient(135deg, #f2784b, #c04e22) !important; }
+        .custom-dashboard-card.grey-cascade { background: linear-gradient(135deg, #a5b3b4, #75858a) !important; }
         
         .custom-dashboard-card .card-icon-badge {
             position: absolute;

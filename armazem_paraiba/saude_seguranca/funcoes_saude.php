@@ -136,35 +136,184 @@ function registrarMovimentacaoEstoque(
 }
 
 /**
- * Calcula a data estimada de vencimento de um EPI entregue.
+ * Calcula a data estimada de vencimento/troca de um EPI entregue.
+ *
+ * Regra: parte da data da entrega e soma a periodicidade de troca (dias).
+ * Quando há uma validade de lote em estoque informada, ela prevalece se for
+ * anterior à data calculada (o EPI precisa ser trocado antes de vencer).
  *
  * @param string $dataEntrega ('Y-m-d')
- * @param int $vidaUtilDias
+ * @param int $vidaUtilDias Periodicidade de troca em dias (0 = sem periodicidade)
+ * @param string|null $validadeLimite ('Y-m-d') Validade do lote em estoque
  * @return string ('Y-m-d')
  */
-function calcularVencimentoEpi(string $dataEntrega, int $vidaUtilDias): string {
+function calcularVencimentoEpi(string $dataEntrega, int $vidaUtilDias, ?string $validadeLimite = null): string {
+    $candidatos = [];
+
     $vidaUtilDias = (int)$vidaUtilDias;
-    if ($vidaUtilDias <= 0) return $dataEntrega;
-    
-    $date = new DateTime($dataEntrega);
-    $date->modify("+{$vidaUtilDias} days");
-    return $date->format('Y-m-d');
+    if ($vidaUtilDias > 0) {
+        $date = new DateTime($dataEntrega);
+        $date->modify("+{$vidaUtilDias} days");
+        $candidatos[] = $date->format('Y-m-d');
+    }
+
+    $validadeLimite = trim(strval($validadeLimite));
+    if ($validadeLimite !== '' && $validadeLimite !== '0000-00-00') {
+        $candidatos[] = $validadeLimite;
+    }
+
+    if (empty($candidatos)) return $dataEntrega;
+
+    return min($candidatos);
 }
 
 /**
- * Verifica se o Certificado de Aprovação (CA) está vencido na data de entrega do EPI.
+ * Retorna a validade mais próxima (menor data) entre os lotes de entrada em
+ * estoque de um EPI, para a empresa/variação informadas. É usada para limitar
+ * o vencimento da entrega: se o lote vence antes da troca periódica, o
+ * vencimento passa a ser a validade do lote.
  *
- * @param string $dataEntrega ('Y-m-d')
- * @param string|null $dataValidadeCA ('Y-m-d')
- * @return bool True se o CA estiver vencido, False caso contrário.
+ * @param int $idEpi
+ * @param int|null $empresaId (null/0 = Matriz)
+ * @param string|null $variacao
+ * @param string|null $dataReferencia ('Y-m-d') Ignora validades anteriores a esta data
+ * @return string|null ('Y-m-d') ou null quando não há validade cadastrada
  */
-function verificarCAVencido(string $dataEntrega, ?string $dataValidadeCA): bool {
-    if (empty($dataValidadeCA)) return false;
-    
-    $entrega = new DateTime($dataEntrega);
-    $validade = new DateTime($dataValidadeCA);
-    
-    return $entrega > $validade;
+function ss_obter_validade_estoque(int $idEpi, ?int $empresaId = null, ?string $variacao = null, ?string $dataReferencia = null): ?string {
+    global $conn;
+
+    $idEpi = (int)$idEpi;
+    if ($idEpi <= 0) return null;
+
+    if ($empresaId === null || $empresaId <= 0) {
+        $condEmpresa = " AND (ss_e_nb_empresa_id IS NULL OR ss_e_nb_empresa_id = 0)";
+    } else {
+        $condEmpresa = " AND ss_e_nb_empresa_id = " . (int)$empresaId;
+    }
+
+    $condVariacao = "";
+    if ($variacao !== null && trim($variacao) !== '') {
+        $condVariacao = " AND ss_e_tx_variacao = '" . mysqli_real_escape_string($conn, trim($variacao)) . "'";
+    }
+
+    $dataReferencia = !empty($dataReferencia) ? $dataReferencia : date("Y-m-d");
+    $dataRefEsc = mysqli_real_escape_string($conn, $dataReferencia);
+
+    $sql = "SELECT MIN(ss_e_tx_validade) AS validade
+            FROM ss_epi_estoque
+            WHERE ss_e_nb_epi_id = {$idEpi}
+              AND ss_e_tx_tipo = 'entrada'
+              AND ss_e_tx_validade IS NOT NULL
+              AND ss_e_tx_validade > '0000-00-00'
+              AND ss_e_tx_validade >= '{$dataRefEsc}'
+              {$condEmpresa} {$condVariacao}";
+
+    $res = mysqli_query($conn, $sql);
+    if ($res && ($row = mysqli_fetch_assoc($res)) && !empty($row["validade"])) {
+        return $row["validade"];
+    }
+
+    return null;
+}
+
+/**
+ * Lista as entregas ativas com troca/vencimento próximos ou já vencidos.
+ * Considera apenas a entrega mais recente de cada colaborador + EPI + variação.
+ *
+ * @param int $diasAntecedencia Inclui vencimentos nos próximos N dias
+ * @return array<int, array<string, mixed>>
+ */
+function ss_listar_alertas_troca(int $diasAntecedencia = 30): array {
+    global $conn;
+
+    $diasAntecedencia = max(0, (int)$diasAntecedencia);
+
+    $sql = "SELECT ent.ss_e_nb_id,
+                   ent.ss_e_nb_epi_id,
+                   ent.ss_e_nb_colaborador_id,
+                   ent.ss_e_tx_data_entrega,
+                   ent.ss_e_tx_vencimento,
+                   ent.ss_e_tx_variacao,
+                   ent.ss_e_nb_quantidade,
+                   col.enti_tx_nome AS colaborador_nome,
+                   CONCAT(IFNULL(epi.ss_e_tx_subgrupo, ''), ' / ', IFNULL(epi.ss_e_tx_item, ''), ' / ', epi.ss_e_tx_grupo) AS epi_nome,
+                   epi.ss_e_tx_foto AS epi_foto,
+                   IFNULL(emp.empr_tx_nome, 'Matriz') AS filial_nome,
+                   DATEDIFF(ent.ss_e_tx_vencimento, CURDATE()) AS dias_restantes
+            FROM ss_epi_entrega ent
+            JOIN entidade col ON ent.ss_e_nb_colaborador_id = col.enti_nb_id
+            JOIN ss_epi epi ON ent.ss_e_nb_epi_id = epi.ss_e_nb_id
+            LEFT JOIN empresa emp ON ent.ss_e_nb_empresa_id = emp.empr_nb_id
+            WHERE ent.ss_e_tx_status = 'ativo'
+              AND ent.ss_e_tx_vencimento IS NOT NULL
+              AND ent.ss_e_tx_vencimento <= DATE_ADD(CURDATE(), INTERVAL {$diasAntecedencia} DAY)
+              AND NOT EXISTS (
+                    SELECT 1 FROM ss_epi_entrega ent2
+                    WHERE ent2.ss_e_nb_colaborador_id = ent.ss_e_nb_colaborador_id
+                      AND ent2.ss_e_nb_epi_id = ent.ss_e_nb_epi_id
+                      AND IFNULL(ent2.ss_e_tx_variacao, '') = IFNULL(ent.ss_e_tx_variacao, '')
+                      AND ent2.ss_e_tx_status = 'ativo'
+                      AND (ent2.ss_e_tx_data_entrega > ent.ss_e_tx_data_entrega
+                           OR (ent2.ss_e_tx_data_entrega = ent.ss_e_tx_data_entrega AND ent2.ss_e_nb_id > ent.ss_e_nb_id))
+              )
+            ORDER BY ent.ss_e_tx_vencimento ASC, col.enti_tx_nome ASC";
+
+    $res = mysqli_query($conn, $sql);
+    $itens = [];
+    if ($res) {
+        while ($row = mysqli_fetch_assoc($res)) {
+            $itens[] = $row;
+        }
+    }
+    return $itens;
+}
+
+/**
+ * Verifica se a validade do EPI em estoque está vencida para a empresa/variação
+ * informadas. Considera vencida quando TODOS os lotes com validade cadastrada
+ * estão com data anterior à data de referência. Sem validade cadastrada, não
+ * há bloqueio. Obs.: a validade do CA é apenas informativa e não bloqueia.
+ *
+ * @param int $idEpi
+ * @param int|null $empresaId (null/0 = Matriz)
+ * @param string|null $variacao
+ * @param string|null $dataReferencia ('Y-m-d')
+ * @return bool
+ */
+function ss_validade_estoque_vencida(int $idEpi, ?int $empresaId = null, ?string $variacao = null, ?string $dataReferencia = null): bool {
+    global $conn;
+
+    $idEpi = (int)$idEpi;
+    if ($idEpi <= 0) return false;
+
+    if ($empresaId === null || $empresaId <= 0) {
+        $condEmpresa = " AND (ss_e_nb_empresa_id IS NULL OR ss_e_nb_empresa_id = 0)";
+    } else {
+        $condEmpresa = " AND ss_e_nb_empresa_id = " . (int)$empresaId;
+    }
+
+    $condVariacao = "";
+    if ($variacao !== null && trim($variacao) !== '') {
+        $condVariacao = " AND ss_e_tx_variacao = '" . mysqli_real_escape_string($conn, trim($variacao)) . "'";
+    }
+
+    $dataReferencia = !empty($dataReferencia) ? $dataReferencia : date("Y-m-d");
+    $dataRefEsc = mysqli_real_escape_string($conn, $dataReferencia);
+
+    $sql = "SELECT MAX(ss_e_tx_validade) AS ultima_validade
+            FROM ss_epi_estoque
+            WHERE ss_e_nb_epi_id = {$idEpi}
+              AND ss_e_tx_tipo = 'entrada'
+              AND ss_e_tx_validade IS NOT NULL
+              AND ss_e_tx_validade > '0000-00-00'
+              {$condEmpresa} {$condVariacao}";
+
+    $res = mysqli_query($conn, $sql);
+    if ($res && ($row = mysqli_fetch_assoc($res)) && !empty($row["ultima_validade"])) {
+        return $row["ultima_validade"] < $dataReferencia;
+    }
+
+    return false;
 }
 
 /**
