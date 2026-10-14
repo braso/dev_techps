@@ -180,7 +180,24 @@ if (!empty($queryResult)) {
                 }
             }
 
-            if ($key === 'ss_e_tx_foto' || $key === 'ss_e_tx_foto_epi' || $key === 'poi_tx_imagem') {
+            if ($key === 'assinatura_status') {
+                switch ($data) {
+                    case 'assinado':
+                        $data = '<span class="label label-success" style="font-weight: bold;">Assinado</span>';
+                        break;
+                    case 'aguardando':
+                        $data = '<span class="label label-warning" style="font-weight: bold;">Aguardando assinatura</span>';
+                        break;
+                    case 'expirado':
+                        $data = '<span class="label label-danger" style="font-weight: bold;">Assinatura expirada</span>';
+                        break;
+                    case 'sem_assinatura':
+                        $data = '<span class="label label-default">Sem assinatura</span>';
+                        break;
+                }
+            }
+
+            if ($key === 'ss_e_tx_foto' || $key === 'ss_e_tx_foto_epi' || $key === 'ss_k_tx_foto' || $key === 'poi_tx_imagem') {
                 if ($data !== null && $data !== '') {
                     $paths = array_filter(explode(",", $data));
                     $imgs = [];

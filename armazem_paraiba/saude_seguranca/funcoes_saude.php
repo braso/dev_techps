@@ -136,35 +136,184 @@ function registrarMovimentacaoEstoque(
 }
 
 /**
- * Calcula a data estimada de vencimento de um EPI entregue.
+ * Calcula a data estimada de vencimento/troca de um EPI entregue.
+ *
+ * Regra: parte da data da entrega e soma a periodicidade de troca (dias).
+ * Quando há uma validade de lote em estoque informada, ela prevalece se for
+ * anterior à data calculada (o EPI precisa ser trocado antes de vencer).
  *
  * @param string $dataEntrega ('Y-m-d')
- * @param int $vidaUtilDias
+ * @param int $vidaUtilDias Periodicidade de troca em dias (0 = sem periodicidade)
+ * @param string|null $validadeLimite ('Y-m-d') Validade do lote em estoque
  * @return string ('Y-m-d')
  */
-function calcularVencimentoEpi(string $dataEntrega, int $vidaUtilDias): string {
+function calcularVencimentoEpi(string $dataEntrega, int $vidaUtilDias, ?string $validadeLimite = null): string {
+    $candidatos = [];
+
     $vidaUtilDias = (int)$vidaUtilDias;
-    if ($vidaUtilDias <= 0) return $dataEntrega;
-    
-    $date = new DateTime($dataEntrega);
-    $date->modify("+{$vidaUtilDias} days");
-    return $date->format('Y-m-d');
+    if ($vidaUtilDias > 0) {
+        $date = new DateTime($dataEntrega);
+        $date->modify("+{$vidaUtilDias} days");
+        $candidatos[] = $date->format('Y-m-d');
+    }
+
+    $validadeLimite = trim(strval($validadeLimite));
+    if ($validadeLimite !== '' && $validadeLimite !== '0000-00-00') {
+        $candidatos[] = $validadeLimite;
+    }
+
+    if (empty($candidatos)) return $dataEntrega;
+
+    return min($candidatos);
 }
 
 /**
- * Verifica se o Certificado de Aprovação (CA) está vencido na data de entrega do EPI.
+ * Retorna a validade mais próxima (menor data) entre os lotes de entrada em
+ * estoque de um EPI, para a empresa/variação informadas. É usada para limitar
+ * o vencimento da entrega: se o lote vence antes da troca periódica, o
+ * vencimento passa a ser a validade do lote.
  *
- * @param string $dataEntrega ('Y-m-d')
- * @param string|null $dataValidadeCA ('Y-m-d')
- * @return bool True se o CA estiver vencido, False caso contrário.
+ * @param int $idEpi
+ * @param int|null $empresaId (null/0 = Matriz)
+ * @param string|null $variacao
+ * @param string|null $dataReferencia ('Y-m-d') Ignora validades anteriores a esta data
+ * @return string|null ('Y-m-d') ou null quando não há validade cadastrada
  */
-function verificarCAVencido(string $dataEntrega, ?string $dataValidadeCA): bool {
-    if (empty($dataValidadeCA)) return false;
-    
-    $entrega = new DateTime($dataEntrega);
-    $validade = new DateTime($dataValidadeCA);
-    
-    return $entrega > $validade;
+function ss_obter_validade_estoque(int $idEpi, ?int $empresaId = null, ?string $variacao = null, ?string $dataReferencia = null): ?string {
+    global $conn;
+
+    $idEpi = (int)$idEpi;
+    if ($idEpi <= 0) return null;
+
+    if ($empresaId === null || $empresaId <= 0) {
+        $condEmpresa = " AND (ss_e_nb_empresa_id IS NULL OR ss_e_nb_empresa_id = 0)";
+    } else {
+        $condEmpresa = " AND ss_e_nb_empresa_id = " . (int)$empresaId;
+    }
+
+    $condVariacao = "";
+    if ($variacao !== null && trim($variacao) !== '') {
+        $condVariacao = " AND ss_e_tx_variacao = '" . mysqli_real_escape_string($conn, trim($variacao)) . "'";
+    }
+
+    $dataReferencia = !empty($dataReferencia) ? $dataReferencia : date("Y-m-d");
+    $dataRefEsc = mysqli_real_escape_string($conn, $dataReferencia);
+
+    $sql = "SELECT MIN(ss_e_tx_validade) AS validade
+            FROM ss_epi_estoque
+            WHERE ss_e_nb_epi_id = {$idEpi}
+              AND ss_e_tx_tipo = 'entrada'
+              AND ss_e_tx_validade IS NOT NULL
+              AND ss_e_tx_validade > '0000-00-00'
+              AND ss_e_tx_validade >= '{$dataRefEsc}'
+              {$condEmpresa} {$condVariacao}";
+
+    $res = mysqli_query($conn, $sql);
+    if ($res && ($row = mysqli_fetch_assoc($res)) && !empty($row["validade"])) {
+        return $row["validade"];
+    }
+
+    return null;
+}
+
+/**
+ * Lista as entregas ativas com troca/vencimento próximos ou já vencidos.
+ * Considera apenas a entrega mais recente de cada colaborador + EPI + variação.
+ *
+ * @param int $diasAntecedencia Inclui vencimentos nos próximos N dias
+ * @return array<int, array<string, mixed>>
+ */
+function ss_listar_alertas_troca(int $diasAntecedencia = 30): array {
+    global $conn;
+
+    $diasAntecedencia = max(0, (int)$diasAntecedencia);
+
+    $sql = "SELECT ent.ss_e_nb_id,
+                   ent.ss_e_nb_epi_id,
+                   ent.ss_e_nb_colaborador_id,
+                   ent.ss_e_tx_data_entrega,
+                   ent.ss_e_tx_vencimento,
+                   ent.ss_e_tx_variacao,
+                   ent.ss_e_nb_quantidade,
+                   col.enti_tx_nome AS colaborador_nome,
+                   CONCAT(IFNULL(epi.ss_e_tx_subgrupo, ''), ' / ', IFNULL(epi.ss_e_tx_item, ''), ' / ', epi.ss_e_tx_grupo) AS epi_nome,
+                   epi.ss_e_tx_foto AS epi_foto,
+                   IFNULL(emp.empr_tx_nome, 'Matriz') AS filial_nome,
+                   DATEDIFF(ent.ss_e_tx_vencimento, CURDATE()) AS dias_restantes
+            FROM ss_epi_entrega ent
+            JOIN entidade col ON ent.ss_e_nb_colaborador_id = col.enti_nb_id
+            JOIN ss_epi epi ON ent.ss_e_nb_epi_id = epi.ss_e_nb_id
+            LEFT JOIN empresa emp ON ent.ss_e_nb_empresa_id = emp.empr_nb_id
+            WHERE ent.ss_e_tx_status = 'ativo'
+              AND ent.ss_e_tx_vencimento IS NOT NULL
+              AND ent.ss_e_tx_vencimento <= DATE_ADD(CURDATE(), INTERVAL {$diasAntecedencia} DAY)
+              AND NOT EXISTS (
+                    SELECT 1 FROM ss_epi_entrega ent2
+                    WHERE ent2.ss_e_nb_colaborador_id = ent.ss_e_nb_colaborador_id
+                      AND ent2.ss_e_nb_epi_id = ent.ss_e_nb_epi_id
+                      AND IFNULL(ent2.ss_e_tx_variacao, '') = IFNULL(ent.ss_e_tx_variacao, '')
+                      AND ent2.ss_e_tx_status = 'ativo'
+                      AND (ent2.ss_e_tx_data_entrega > ent.ss_e_tx_data_entrega
+                           OR (ent2.ss_e_tx_data_entrega = ent.ss_e_tx_data_entrega AND ent2.ss_e_nb_id > ent.ss_e_nb_id))
+              )
+            ORDER BY ent.ss_e_tx_vencimento ASC, col.enti_tx_nome ASC";
+
+    $res = mysqli_query($conn, $sql);
+    $itens = [];
+    if ($res) {
+        while ($row = mysqli_fetch_assoc($res)) {
+            $itens[] = $row;
+        }
+    }
+    return $itens;
+}
+
+/**
+ * Verifica se a validade do EPI em estoque está vencida para a empresa/variação
+ * informadas. Considera vencida quando TODOS os lotes com validade cadastrada
+ * estão com data anterior à data de referência. Sem validade cadastrada, não
+ * há bloqueio. Obs.: a validade do CA é apenas informativa e não bloqueia.
+ *
+ * @param int $idEpi
+ * @param int|null $empresaId (null/0 = Matriz)
+ * @param string|null $variacao
+ * @param string|null $dataReferencia ('Y-m-d')
+ * @return bool
+ */
+function ss_validade_estoque_vencida(int $idEpi, ?int $empresaId = null, ?string $variacao = null, ?string $dataReferencia = null): bool {
+    global $conn;
+
+    $idEpi = (int)$idEpi;
+    if ($idEpi <= 0) return false;
+
+    if ($empresaId === null || $empresaId <= 0) {
+        $condEmpresa = " AND (ss_e_nb_empresa_id IS NULL OR ss_e_nb_empresa_id = 0)";
+    } else {
+        $condEmpresa = " AND ss_e_nb_empresa_id = " . (int)$empresaId;
+    }
+
+    $condVariacao = "";
+    if ($variacao !== null && trim($variacao) !== '') {
+        $condVariacao = " AND ss_e_tx_variacao = '" . mysqli_real_escape_string($conn, trim($variacao)) . "'";
+    }
+
+    $dataReferencia = !empty($dataReferencia) ? $dataReferencia : date("Y-m-d");
+    $dataRefEsc = mysqli_real_escape_string($conn, $dataReferencia);
+
+    $sql = "SELECT MAX(ss_e_tx_validade) AS ultima_validade
+            FROM ss_epi_estoque
+            WHERE ss_e_nb_epi_id = {$idEpi}
+              AND ss_e_tx_tipo = 'entrada'
+              AND ss_e_tx_validade IS NOT NULL
+              AND ss_e_tx_validade > '0000-00-00'
+              {$condEmpresa} {$condVariacao}";
+
+    $res = mysqli_query($conn, $sql);
+    if ($res && ($row = mysqli_fetch_assoc($res)) && !empty($row["ultima_validade"])) {
+        return $row["ultima_validade"] < $dataReferencia;
+    }
+
+    return false;
 }
 
 /**
@@ -433,17 +582,30 @@ function ss_inicializar_tabelas() {
         mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_tx_variacao VARCHAR(100) DEFAULT NULL AFTER ss_e_nb_empresa_id");
     }
 
+    // Garante que a coluna de coleta da assinatura do responsável exista em ss_epi_entrega
+    $check_column_ent_coletar = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_entrega LIKE 'ss_e_tx_coletar_assinatura_resp'");
+    if ($check_column_ent_coletar && mysqli_num_rows($check_column_ent_coletar) == 0) {
+        mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_tx_coletar_assinatura_resp ENUM('sim','nao') NOT NULL DEFAULT 'sim'");
+    }
+
     // 5. Tabela ss_kit
     $sql_kit = "CREATE TABLE IF NOT EXISTS ss_kit (
         ss_k_nb_id INT AUTO_INCREMENT PRIMARY KEY,
         ss_k_tx_nome VARCHAR(255) NOT NULL,
         ss_k_tx_status VARCHAR(30) DEFAULT 'ativo',
+        ss_k_tx_foto TEXT DEFAULT NULL,
         ss_k_nb_userCadastro INT DEFAULT NULL,
         ss_k_tx_dataCadastro DATETIME DEFAULT NULL,
         ss_k_nb_userAtualiza INT DEFAULT NULL,
         ss_k_tx_dataAtualiza DATETIME DEFAULT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
     mysqli_query($conn, $sql_kit);
+
+    // Garante que a coluna de foto do kit exista em bancos já criados
+    $check_column_kit_foto = mysqli_query($conn, "SHOW COLUMNS FROM ss_kit LIKE 'ss_k_tx_foto'");
+    if ($check_column_kit_foto && mysqli_num_rows($check_column_kit_foto) == 0) {
+        mysqli_query($conn, "ALTER TABLE ss_kit ADD COLUMN ss_k_tx_foto TEXT DEFAULT NULL AFTER ss_k_tx_status");
+    }
 
     // 6. Tabela ss_kit_item
     $sql_kit_item = "CREATE TABLE IF NOT EXISTS ss_kit_item (
@@ -753,8 +915,8 @@ function ss_gerar_pdf_ficha_epi($colaborador_id, $delivery_ids = [], $recibo_uui
                     $this->Image($logoPath, 15, 6, 25, 8); // x, y, width, height
                 }
                 $this->SetFont('helvetica', 'B', 11);
-                $this->SetX(45);
-                $this->Cell(0, 8, $this->custom_header, 0, false, 'L', 0, '', 0, false, 'T', 'M');
+                $this->SetX(15);
+                $this->Cell(0, 8, $this->custom_header, 0, false, 'C', 0, '', 0, false, 'T', 'M');
                 $this->Line(15, 18, 195, 18);
             }
             public function Footer() {
@@ -854,6 +1016,9 @@ function ss_gerar_pdf_ficha_epi($colaborador_id, $delivery_ids = [], $recibo_uui
                    ent.ss_e_nb_quantidade, 
                    ent.ss_e_tx_vencimento, 
                    ent.ss_e_tx_status,
+                   ent.ss_e_nb_userCadastro,
+                   ent.ss_e_tx_dataCadastro,
+                   ent.ss_e_tx_coletar_assinatura_resp,
                    IFNULL(s.id_documento, '-') AS ss_e_tx_identificador
             FROM ss_epi_entrega ent 
             JOIN ss_epi epi ON ent.ss_e_nb_epi_id = epi.ss_e_nb_id 
@@ -866,6 +1031,26 @@ function ss_gerar_pdf_ficha_epi($colaborador_id, $delivery_ids = [], $recibo_uui
     if ($res) {
         while ($row = mysqli_fetch_assoc($res)) {
             $rows[] = $row;
+        }
+    }
+
+    // Responsável pelo registro (usuário logado na entrega) — bloco exibido quando
+    // a assinatura do responsável não foi coletada nesta entrega
+    $responsavelRegistro = null;
+    if (!empty($rows)) {
+        $primeiraEntrega = $rows[0];
+        if (strtolower(trim(strval($primeiraEntrega["ss_e_tx_coletar_assinatura_resp"] ?? "sim"))) === "nao") {
+            $respUserId = (int)($primeiraEntrega["ss_e_nb_userCadastro"] ?? 0);
+            if ($respUserId > 0) {
+                $sqlResp = query("SELECT user_tx_nome, user_tx_cpf FROM user WHERE user_nb_id = {$respUserId} LIMIT 1");
+                if ($sqlResp && $rowResp = mysqli_fetch_assoc($sqlResp)) {
+                    $responsavelRegistro = [
+                        "nome" => trim(strval($rowResp["user_tx_nome"] ?? "")),
+                        "cpf" => trim(strval($rowResp["user_tx_cpf"] ?? "")),
+                        "data" => !empty($primeiraEntrega["ss_e_tx_dataCadastro"]) ? date('d/m/Y H:i', strtotime($primeiraEntrega["ss_e_tx_dataCadastro"])) : ''
+                    ];
+                }
+            }
         }
     }
     
@@ -945,6 +1130,24 @@ function ss_gerar_pdf_ficha_epi($colaborador_id, $delivery_ids = [], $recibo_uui
         </table>';
     }
 
+    // Bloco do responsável pelo registro (quando a assinatura do responsável não foi coletada)
+    if (!empty($responsavelRegistro)) {
+        $cpfRespFmt = $responsavelRegistro["cpf"] ? preg_replace("/(\d{3})(\d{3})(\d{3})(\d{2})/", "$1.$2.$3-$4", preg_replace('/[^0-9]/', '', $responsavelRegistro["cpf"])) : '---';
+        $html .= '
+        <br><br>
+        <table cellpadding="6" style="width:100%; border:1px solid #999; background-color:#f7f7f7;">
+            <tr>
+                <td>
+                    <span style="font-weight:bold; font-size:10pt;">RESPONSÁVEL PELO REGISTRO</span><br>
+                    <span style="font-size:8.5pt; line-height:1.4;">
+                        Registro realizado por <b>' . htmlspecialchars($responsavelRegistro["nome"]) . '</b> (CPF: ' . htmlspecialchars($cpfRespFmt) . ') em <b>' . htmlspecialchars($responsavelRegistro["data"]) . '</b>.<br>
+                        <span style="color:#555; font-size:7.5pt;">Assinatura do responsável dispensada nesta entrega, conforme opção registrada no lançamento.</span>
+                    </span>
+                </td>
+            </tr>
+        </table>';
+    }
+
     $pdf->writeHTML($html, true, false, true, false, '');
     
     // Salva no arquivo
@@ -953,7 +1156,7 @@ function ss_gerar_pdf_ficha_epi($colaborador_id, $delivery_ids = [], $recibo_uui
     return 'arquivos/entrega_epi/' . $nomeArquivo;
 }
 
-function ss_enviar_ficha_para_assinatura($colaborador_id, $delivery_ids) {
+function ss_enviar_ficha_para_assinatura($colaborador_id, $delivery_ids, $coletarAssinaturaResp = true) {
     global $conn;
     
     $tipoDocId = ss_verificar_assinatura_ativa();
@@ -970,8 +1173,9 @@ function ss_enviar_ficha_para_assinatura($colaborador_id, $delivery_ids) {
         return false;
     }
     
-    // 2. Busca responsáveis do colaborador (Setor ou Cargo)
-    $managers = ss_obter_responsaveis_colaborador($colaborador_id);
+    // 2. Busca responsáveis do colaborador (Setor ou Cargo) — somente quando a coleta
+    // da assinatura do responsável está ativa (opção "Sim" no lançamento da entrega)
+    $managers = $coletarAssinaturaResp ? ss_obter_responsaveis_colaborador($colaborador_id) : [];
     
     // 3. Chama integração da assinatura para múltiplos assinantes
     require_once dirname(__DIR__) . "/assinatura/integracao/assinatura_integracao.php";

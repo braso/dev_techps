@@ -7,6 +7,7 @@ function cadastrarEpiEstoque() {
         // Direct single-item update
         $id = (int)$_POST["id"];
         $vida_util = !empty($_POST["vida_util"]) ? (int)$_POST["vida_util"] : 0;
+        $validade_ca = !empty($_POST["validade_ca"]) ? $_POST["validade_ca"] : null;
         
         $epi = [
             "ss_e_tx_grupo"         => $_POST["grupo"],
@@ -17,6 +18,7 @@ function cadastrarEpiEstoque() {
             "ss_e_tx_modelo"        => $_POST["modelo"] ?? "",
             "ss_e_tx_variacoes"     => $_POST["variacoes"] ?? "",
             "ss_e_tx_ca"            => $_POST["ca"],
+            "ss_e_tx_validade_ca"   => $validade_ca,
             "ss_e_nb_vida_util"     => $vida_util,
             "ss_e_tx_status"        => $_POST["status"] ?? "ativo"
         ];
@@ -70,6 +72,7 @@ function cadastrarEpiEstoque() {
     $gravados = 0;
     foreach ($itens as $item) {
         $vida_util = !empty($item["vida_util"]) ? (int)$item["vida_util"] : 0;
+        $validade_ca = !empty($item["validade_ca"]) ? $item["validade_ca"] : null;
         
         $epi = [
             "ss_e_tx_grupo"         => $item["grupo"],
@@ -80,6 +83,7 @@ function cadastrarEpiEstoque() {
             "ss_e_tx_modelo"        => $item["modelo"] ?? "",
             "ss_e_tx_variacoes"     => $item["variacoes"] ?? "",
             "ss_e_tx_ca"            => $item["ca"],
+            "ss_e_tx_validade_ca"   => $validade_ca,
             "ss_e_nb_vida_util"     => $vida_util,
             "ss_e_tx_status"        => $item["status"] ?? "ativo",
             "ss_e_tx_cadastro_tipo" => "estoque"
@@ -304,7 +308,8 @@ function index() {
         </div>';
     $campo_modelo       = campo("Modelo", "modelo", $_POST["modelo"] ?? "", 3, "", "maxlength='100'");
     $campo_ca           = campo("MTE Certificado de Aprovacão (CA)", "ca", $_POST["ca"] ?? "", 3, "", "maxlength='50'");
-    $campo_vida_util    = campo("Vida Útil (dias)", "vida_util", $_POST["vida_util"] ?? "0", 3, "MASCARA_NUMERO");
+    $campo_validade_ca  = campo_data("Validade do CA", "validade_ca", $_POST["validade_ca"] ?? "", 3, "title='Data de validade do Certificado de Aprovação (CA). O CA vencido gera alerta, mas não bloqueia a entrega — o bloqueio ocorre pela validade do EPI em estoque.'");
+    $campo_vida_util    = campo("Periodicidade de Troca (dias)", "vida_util", $_POST["vida_util"] ?? "0", 3, "MASCARA_NUMERO", "title='Tempo, em dias, para a troca obrigatória do EPI após a entrega. Ex.: 180 = 6 meses.' placeholder='Ex: 180 (6 meses)'");
 
     $campo_variacoes    = campo("Variações (Numeração/Tamanho)", "variacoes", $_POST["variacoes"] ?? "", 3, "", "maxlength='255' placeholder='Ex: 42, 44, 46'");
 
@@ -363,8 +368,9 @@ function index() {
     echo campo_hidden("remover_foto_atual", "0");
     echo campo_hidden("fotos_mantidas", $_POST["foto"] ?? "");
     echo linha_form([$campo_grupo, $campo_subgrupo, $campo_item]);
-    echo linha_form([$campo_fabricante, $campo_modelo, $campo_ca, $campo_vida_util]);
-    echo linha_form([$campo_variacoes, $campo_status, $campo_foto]);
+    echo linha_form([$campo_fabricante, $campo_modelo, $campo_ca, $campo_validade_ca]);
+    echo linha_form([$campo_vida_util, $campo_variacoes, $campo_status]);
+    echo linha_form([$campo_foto]);
     echo linha_form([$preview_div]);
     echo linha_form([$campo_descricao]);
     echo fecha_form($buttons);
@@ -391,7 +397,8 @@ function index() {
                                 <th>Modelo</th>
                                 <th>Variações</th>
                                 <th>CA</th>
-                                <th>Vida Útil</th>
+                                <th>Validade do CA</th>
+                                <th>Periodicidade de Troca</th>
                                 <th>Imagem</th>
                                 <th>Status</th>
                                 <th style='width: 100px;'>Ações</th>
@@ -766,13 +773,32 @@ function index() {
             // Lógica de lista temporária de cadastro em lote
             let itemsList = [];
             let editIndex = null;
+
+            // Exibe datas no formato brasileiro (o input date envia Y-m-d)
+            function formatarDataBr(dataIso) {
+                if (!dataIso) return '---';
+                const partes = String(dataIso).split('-');
+                if (partes.length !== 3) return dataIso;
+                return partes[2] + '/' + partes[1] + '/' + partes[0];
+            }
+
+            // Exibe a periodicidade de troca de forma amigável (dias e meses)
+            function formatarPeriodicidadeTroca(dias) {
+                dias = parseInt(dias, 10) || 0;
+                if (dias <= 0) return 'Sem troca periódica';
+                if (dias % 30 === 0) {
+                    const meses = dias / 30;
+                    return dias + ' dias (' + meses + (meses === 1 ? ' mês' : ' meses') + ')';
+                }
+                return dias + ' dias';
+            }
             
             function renderTable() {
                 const tbody = $('#tabela_itens_temp tbody');
                 tbody.empty();
                 
                 if (itemsList.length === 0) {
-                    tbody.append('<tr><td colspan="11" style="text-align: center; color: #999;">Nenhum item adicionado à lista.</td></tr>');
+                    tbody.append('<tr><td colspan="12" style="text-align: center; color: #999;">Nenhum item adicionado à lista.</td></tr>');
                     $('#itens_json').val('');
                     return;
                 }
@@ -786,7 +812,8 @@ function index() {
                     row.append($('<td>').text(item.modelo || '---'));
                     row.append($('<td>').text(item.variacoes || '---'));
                     row.append($('<td>').text(item.ca || '---'));
-                    row.append($('<td>').text(item.vida_util + ' dias'));
+                    row.append($('<td>').text(formatarDataBr(item.validade_ca)));
+                    row.append($('<td>').text(formatarPeriodicidadeTroca(item.vida_util)));
                     
                     let fotosHtml = '';
                     let allFotos = [];
@@ -834,6 +861,7 @@ function index() {
                 $('input[name="modelo"]').val(item.modelo || '');
                 $('input[name="variacoes"]').val(item.variacoes || '');
                 $('input[name="ca"]').val(item.ca);
+                $('input[name="validade_ca"]').val(item.validade_ca || '');
                 $('input[name="vida_util"]').val(item.vida_util);
                 $('select[name="status"]').val(item.status).trigger('change');
                 $('textarea[name="descricao"]').val(item.descricao);
@@ -912,6 +940,7 @@ function index() {
                 $('input[name="modelo"]').val('');
                 $('input[name="variacoes"]').val('');
                 $('input[name="ca"]').val('');
+                $('input[name="validade_ca"]').val('');
                 $('input[name="vida_util"]').val('0');
                 $('select[name="status"]').val('ativo').trigger('change');
                 $('textarea[name="descricao"]').val('');
@@ -938,6 +967,7 @@ function index() {
                     modelo: $('input[name="modelo"]').val(),
                     variacoes: $('input[name="variacoes"]').val(),
                     ca: $('input[name="ca"]').val(),
+                    validade_ca: $('input[name="validade_ca"]').val(),
                     vida_util: parseInt($('input[name="vida_util"]').val(), 10) || 0,
                     status: $('select[name="status"]').val() || 'ativo',
                     descricao: $('textarea[name="descricao"]').val(),

@@ -363,12 +363,12 @@
 			$macros = totemMacros();
 
 			if($descritorRaw === "" || ($idMacro > 0 && !isset($macros[$idMacro]))){
-				$responder(["ok" => false, "msg" => "Dados inválidos. Tente novamente."]);
+				$responder(["ok" => false, "codigo" => "dados", "msg" => "Dados inválidos. Tente novamente."]);
 			}
 
 			$descritor = json_decode($descritorRaw, true);
 			if(!is_array($descritor) || count($descritor) < 64){
-				$responder(["ok" => false, "msg" => "Leitura facial inválida. Tente novamente."]);
+				$responder(["ok" => false, "codigo" => "dados", "msg" => "Leitura facial inválida. Tente novamente."]);
 			}
 
 			$THRESHOLD = 0.38;
@@ -387,7 +387,7 @@
 			);
 			if($rs === false || $rs === true){
 				error_log("Totem facial: falha ao consultar biometrias - ".strval($GLOBALS["last_sql_error"] ?? "erro desconhecido"));
-				$responder(["ok" => false, "msg" => "Erro interno ao consultar biometrias. Procure o RH."]);
+				$responder(["ok" => false, "codigo" => "interno", "msg" => "Erro interno ao consultar biometrias. Procure o RH."]);
 			}
 
 			$melhorUsuario = null;
@@ -412,6 +412,7 @@
 			if(empty($melhorUsuario) || $melhorDistancia > $THRESHOLD){
 				$responder([
 					"ok" => false,
+					"codigo" => "rosto",
 					"msg" => "Rosto não reconhecido. Posicione o rosto e tente novamente.",
 					"distancia" => empty($melhorUsuario)? null: round($melhorDistancia, 4),
 					"comparados" => $comparados
@@ -421,6 +422,7 @@
 			if(!perfilUsaPontoFacial(intval($melhorUsuario["user_nb_id"]))){
 				$responder([
 					"ok" => false,
+					"codigo" => "perfil",
 					"login" => true,
 					"msg" => "Seu perfil não está habilitado para o registro facial. Use o login."
 				]);
@@ -437,18 +439,19 @@
 				[$matricula]
 			));
 			if(!empty($ultimoRegistro["pont_tx_dataCadastro"]) && (time() - strtotime($ultimoRegistro["pont_tx_dataCadastro"])) < 30){
-				$responder(["ok" => false, "msg" => "Registro efetuado há instantes. Aguarde alguns segundos."]);
+				$responder(["ok" => false, "codigo" => "cooldown", "msg" => "Registro efetuado há instantes. Aguarde alguns segundos."]);
 			}
 
-			// Janela de almoço e regra de nova jornada do parâmetro (colunas garantidas pelo
-			// conecta.php). Se por algum motivo uma coluna não existir, assume o padrão em
-			// vez de derrubar a identificação.
+			// Janela de almoço e regras do parâmetro (colunas garantidas pelo conecta.php).
+			// Se por algum motivo uma coluna não existir, assume o padrão em vez de derrubar
+			// a identificação.
 			$almocoInicio = null;
 			$almocoFim = null;
 			$bloquearJornadaAnterior = false;
+			$almocoPreAssinalado = false;
 			$parametroId = intval($melhorUsuario["enti_nb_parametro"] ?? 0);
 			if($parametroId > 0){
-				$colunasParametro = ["para_tx_almocoInicio", "para_tx_almocoFim", "para_tx_permitirNovaJornadaDiaAnterior"];
+				$colunasParametro = ["para_tx_almocoInicio", "para_tx_almocoFim", "para_tx_permitirNovaJornadaDiaAnterior", "para_tx_almocoPreAssinalado"];
 				$selectParametro = [];
 				foreach($colunasParametro as $colunaParametro){
 					if(bancoColunaExiste($conn, "parametro", $colunaParametro)){
@@ -464,21 +467,29 @@
 					$almocoInicio = $parametroJornada["para_tx_almocoInicio"] ?? null;
 					$almocoFim = $parametroJornada["para_tx_almocoFim"] ?? null;
 					$bloquearJornadaAnterior = (($parametroJornada["para_tx_permitirNovaJornadaDiaAnterior"] ?? "sim") === "nao");
+					$almocoPreAssinalado = (($parametroJornada["para_tx_almocoPreAssinalado"] ?? "nao") === "sim");
 				}
 			}
 			$dataPonto = new DateTime(date("Y-m-d H:i:s"));
 			$avisoSucesso = null;
 
+			// Jornada de dia anterior com exatamente 2 pontos: considera o 2º como Fim de
+			// Jornada (sem 3º ponto) para abrir a nova jornada normalmente.
+			fecharJornadaDoisPontos($matricula, $dataPonto);
+
 			// Sem tipo escolhido, o servidor decide o próximo registro automaticamente.
+			$proximo = null;
 			if(!isset($macros[$idMacro])){
-				$proximo = proximoMacroTotem($matricula, $dataPonto, $almocoInicio, $almocoFim, $bloquearJornadaAnterior);
+				$proximo = proximoMacroTotem($matricula, $dataPonto, $bloquearJornadaAnterior, $almocoPreAssinalado);
 				if(empty($proximo["macro"])){
 					$mensagensProximo = [
 						"intervalo_aberto" => "Você tem um intervalo em aberto (Espera/Descanso/Repouso). Procure o RH para ajustar.",
-						"jornada_anterior_bloqueada" => "Você tem uma jornada de outro dia em aberto. Procure o gestor para ajustar."
+						"jornada_anterior_bloqueada" => "Você tem uma jornada de outro dia em aberto. Procure o gestor para ajustar.",
+						"registros_alem_do_esperado" => "Sua jornada tem registros além do esperado. Procure o RH para ajustar."
 					];
 					$responder([
 						"ok" => false,
+						"codigo" => "regra",
 						"msg" => $mensagensProximo[$proximo["motivo"]] ?? "Não foi possível identificar o próximo registro. Procure o RH."
 					]);
 				}
@@ -490,18 +501,71 @@
 
 			$sessaoAnterior = $_SESSION["user_nb_id"] ?? null;
 			$_SESSION["user_nb_id"] = intval($melhorUsuario["user_nb_id"]);
+
+			// Almoço pré assinalado: no Fim de Jornada, insere o par de almoço nos horários
+			// da janela quando a jornada atravessou a janela inteira. Se a saída foi antes
+			// (ou no meio) da janela, finaliza e marca a observação.
+			$justificativaPonto = "Registro pelo totem facial";
+			if($idMacro === 2 && !empty($proximo) && ($proximo["motivo"] ?? "") === "fim_jornada_almoco_pre" && $almocoInicio && $almocoFim){
+				$inicioAlmoco = (strlen($almocoInicio) == 5)? $almocoInicio.":00": $almocoInicio;
+				$fimAlmoco = (strlen($almocoFim) == 5)? $almocoFim.":00": $almocoFim;
+
+				$ultJornadaAberta = mysqli_fetch_assoc(query(
+					"SELECT p.pont_tx_data FROM ponto p
+						LEFT JOIN macroponto m ON (
+							p.pont_tx_tipo = m.macr_tx_codigoInterno
+							OR p.pont_tx_tipo = m.macr_nb_id
+							OR p.pont_tx_tipo = m.macr_tx_codigoExterno
+							OR p.pont_tx_tipoOriginal = m.macr_tx_codigoExterno
+						)
+						WHERE p.pont_tx_status = 'ativo'
+							AND p.pont_tx_matricula = '{$matricula}'
+							AND p.pont_tx_data <= STR_TO_DATE('{$dataPonto->format("Y-m-d H:i:s")}', '%Y-%m-%d %H:%i:%s')
+							AND m.macr_tx_codigoInterno = '1'
+						ORDER BY p.pont_tx_data DESC, p.pont_nb_id DESC
+						LIMIT 1;"
+				));
+				if(!empty($ultJornadaAberta["pont_tx_data"])){
+					$dataJornada = substr(strval($ultJornadaAberta["pont_tx_data"]), 0, 10);
+					$inicioJornadaDt = new DateTime($ultJornadaAberta["pont_tx_data"]);
+					$janelaInicio = new DateTime($dataJornada." ".$inicioAlmoco);
+					$janelaFim = new DateTime($dataJornada." ".$fimAlmoco);
+
+					if($janelaInicio >= $inicioJornadaDt && $dataPonto >= $janelaInicio){
+						// Fim dentro ou depois da janela: registra o par de almoço. Se o fim
+						// foi no meio da janela, o Fim Almoço recebe o horário da batida.
+						$fimAlmocoEfetivo = ($dataPonto < $janelaFim)? clone $dataPonto: $janelaFim;
+						foreach([[3, $janelaInicio], [4, $fimAlmocoEfetivo]] as $parAlmoco){
+							try {
+								$pontoAlmoco = conferirErroPonto($matricula, $parAlmoco[1], $parAlmoco[0], 0, "Almoço pré assinalado");
+								$pontoAlmoco["pont_tx_descricao"] = "Almoço pré assinalado";
+								inserir("ponto", array_keys($pontoAlmoco), array_values($pontoAlmoco));
+							} catch (Throwable $e) {
+								error_log("Totem facial: falha ao inserir almoço pré assinalado - ".$e->getMessage());
+							}
+						}
+						if($avisoSucesso === null){
+							$avisoSucesso = "Almoço pré assinalado registrado automaticamente (".substr($inicioAlmoco, 0, 5)." às ".$fimAlmocoEfetivo->format("H:i").").";
+						}
+					}elseif($dataPonto < $janelaInicio){
+						$justificativaPonto = "Saída antes do almoço pré assinalado.";
+						$avisoSucesso = $justificativaPonto;
+					}
+				}
+			}
+
 			try {
 				$novoPonto = conferirErroPonto(
 					$matricula,
 					$dataPonto,
 					$idMacro,
 					0,
-					"Registro pelo totem facial",
+					$justificativaPonto,
 					$bloquearJornadaAnterior
 				);
 			} catch (Throwable $e) {
 				if($sessaoAnterior === null){ unset($_SESSION["user_nb_id"]); } else { $_SESSION["user_nb_id"] = $sessaoAnterior; }
-				$responder(["ok" => false, "msg" => totemMensagemErro($e->getMessage())]);
+				$responder(["ok" => false, "codigo" => "regra", "msg" => totemMensagemErro($e->getMessage())]);
 			}
 			if($sessaoAnterior === null){ unset($_SESSION["user_nb_id"]); } else { $_SESSION["user_nb_id"] = $sessaoAnterior; }
 
@@ -510,7 +574,7 @@
 
 			$resultado = inserir("ponto", array_keys($novoPonto), array_values($novoPonto));
 			if(!empty($resultado[0]) && is_object($resultado[0])){
-				$responder(["ok" => false, "msg" => "Não foi possível gravar o registro. Procure o RH."]);
+				$responder(["ok" => false, "codigo" => "interno", "msg" => "Não foi possível gravar o registro. Procure o RH."]);
 			}
 
 			$responder([
@@ -522,6 +586,6 @@
 				"msg" => "Registro efetuado com sucesso."
 			]);
 		} catch (Throwable $e) {
-			$responder(["ok" => false, "msg" => "Erro inesperado. Procure o RH."]);
+			$responder(["ok" => false, "codigo" => "interno", "msg" => "Erro inesperado. Procure o RH."]);
 		}
 	}

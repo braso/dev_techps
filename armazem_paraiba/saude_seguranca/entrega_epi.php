@@ -150,6 +150,8 @@ function cadastrarEntregaLoteAjax() {
     $lotes = json_decode($_POST["lotes"] ?? "[]", true);
     $colaborador_id = (int)($_POST["colaborador_id"] ?? 0);
     $data_entrega = $_POST["data_entrega"];
+    // Opção do lançamento: coletar (sim) ou dispensar (nao) a assinatura do responsável
+    $coletarAssinaturaResp = (($_POST["coletar_assinatura_responsavel"] ?? "sim") === "nao") ? "nao" : "sim";
     
     if (empty($data_entrega)) {
         echo json_encode(["status" => "error", "message" => "Data de entrega inválida."]);
@@ -228,6 +230,14 @@ function cadastrarEntregaLoteAjax() {
         } else {
             $import_de_clean = $import_de;
         }
+
+        // A validade do CA é apenas informativa (não bloqueia). O bloqueio ocorre
+        // quando a validade do lote do EPI em estoque está vencida.
+        $empresaValidade = ($import_de !== null) ? $import_de_clean : $empresa_id;
+        if (ss_validade_estoque_vencida($epi_id, $empresaValidade, $variacao, $data_entrega)) {
+            $erros[] = "A validade do EPI '{$epi['ss_e_tx_subgrupo']} / {$epi['ss_e_tx_item']}' em estoque está vencida. Entrega bloqueada.";
+            continue;
+        }
         
         // 1. Process inter-branch stock transfer if specified
         if ($import_de !== null) {
@@ -241,7 +251,9 @@ function cadastrarEntregaLoteAjax() {
             $sucessoSaida = registrarMovimentacaoEstoque($epi_id, $quantidade, 'saida', $descSaida, null, null, '', null, null, $import_de_clean, null, null, $variacao);
             
             $descEntrada = "Transferência inter-filial recebida de Filial ID " . ($import_de_clean ?? "Matriz") . " para entrega Colaborador ID: " . $item_colaborador_id;
-            $sucessoEntrada = registrarMovimentacaoEstoque($epi_id, $quantidade, 'entrada', $descEntrada, null, null, '', null, null, $empresa_id, null, null, $variacao);
+            // Mantém a validade do lote da origem na entrada do destino
+            $validadeImport = ss_obter_validade_estoque($epi_id, $import_de_clean, $variacao, $data_entrega);
+            $sucessoEntrada = registrarMovimentacaoEstoque($epi_id, $quantidade, 'entrada', $descEntrada, null, null, '', null, null, $empresa_id, null, $validadeImport, $variacao);
             
             if (!$sucessoSaida || !$sucessoEntrada) {
                 $erros[] = "Erro interno ao realizar transferência de estoque para o EPI ID {$epi_id}.";
@@ -256,7 +268,8 @@ function cadastrarEntregaLoteAjax() {
             continue;
         }
         
-        $vencimento = calcularVencimentoEpi($data_entrega, (int)$epi["ss_e_nb_vida_util"]);
+        $validadeLote = ss_obter_validade_estoque($epi_id, $empresa_id, $variacao, $data_entrega);
+        $vencimento = calcularVencimentoEpi($data_entrega, (int)$epi["ss_e_nb_vida_util"], $validadeLote);
         
         $entrega = [
             "ss_e_nb_colaborador_id"      => $item_colaborador_id,
@@ -273,6 +286,7 @@ function cadastrarEntregaLoteAjax() {
             "ss_e_tx_estornado"           => $estornar,
             "ss_e_tx_data_devolucao"      => $data_devolucao,
             "ss_e_nb_entrega_anterior_id" => $entrega_anterior_id,
+            "ss_e_tx_coletar_assinatura_resp" => $coletarAssinaturaResp,
             "ss_e_nb_userCadastro"        => $userCadastro,
             "ss_e_tx_dataCadastro"        => $dataCadastro
         ];
@@ -328,7 +342,7 @@ function cadastrarEntregaLoteAjax() {
     if ($sucessos > 0 && !empty($inserted_ids_by_colab)) {
         foreach ($inserted_ids_by_colab as $colab_id => $delivery_ids) {
             try {
-                ss_enviar_ficha_para_assinatura($colab_id, $delivery_ids);
+                ss_enviar_ficha_para_assinatura($colab_id, $delivery_ids, $coletarAssinaturaResp === "sim");
             } catch (Throwable $t) {
                 $erros[] = "Erro ao enviar ficha para assinatura: " . $t->getMessage();
             }
@@ -348,6 +362,8 @@ function cadastrarEntregaLoteAjax() {
 function cadastrarEntrega() {
     $colaborador_id = (int)$_POST["colaborador_id"];
     $data_entrega   = $_POST["data_entrega"];
+    // Opção do lançamento: coletar (sim) ou dispensar (nao) a assinatura do responsável
+    $coletarAssinaturaResp = (($_POST["coletar_assinatura_responsavel"] ?? "sim") === "nao") ? "nao" : "sim";
     
     if ($colaborador_id <= 0) {
         $_POST["errorFields"][] = "colaborador_id";
@@ -436,6 +452,13 @@ function cadastrarEntrega() {
                     modificarEntrega();
                     exit;
                 }
+
+                // A validade do CA é apenas informativa; bloqueia se a validade do lote estiver vencida
+                if (ss_validade_estoque_vencida($epiId, $empresa_id, $variacao, $data_entrega)) {
+                    set_status("ERRO: A validade do EPI '{$epiKit['ss_e_tx_subgrupo']} / {$epiKit['ss_e_tx_item']}' em estoque está vencida. Entrega bloqueada.");
+                    modificarEntrega();
+                    exit;
+                }
             }
         }
 
@@ -450,7 +473,10 @@ function cadastrarEntrega() {
             $variacao = !empty($item["variacao"]) ? trim($item["variacao"]) : null;
             
             if ($entregar == 1) {
-                $vencimento = calcularVencimentoEpi($data_entrega, (int)$item["vida_util"]);
+                $epiKitLoop = carregar("ss_epi", $epiId);
+                $vidaUtilKit = (int)($epiKitLoop["ss_e_nb_vida_util"] ?? 0);
+                $validadeLote = ss_obter_validade_estoque($epiId, $empresa_id, $variacao, $data_entrega);
+                $vencimento = calcularVencimentoEpi($data_entrega, $vidaUtilKit, $validadeLote);
                 $entrega = [
                     "ss_e_nb_colaborador_id" => $colaborador_id,
                     "ss_e_nb_epi_id"         => $epiId,
@@ -462,6 +488,7 @@ function cadastrarEntrega() {
                     "ss_e_tx_status"         => 'ativo',
                     "ss_e_tx_assinatura"     => $assinatura,
                     "ss_e_tx_foto"           => $foto_kit_completo,
+                    "ss_e_tx_coletar_assinatura_resp" => $coletarAssinaturaResp,
                     "ss_e_nb_userCadastro"   => $userCadastro,
                     "ss_e_tx_dataCadastro"   => $dataCadastro
                 ];
@@ -521,7 +548,7 @@ function cadastrarEntrega() {
 
         if ($sucesso > 0 && !empty($inserted_delivery_ids)) {
             try {
-                ss_enviar_ficha_para_assinatura($colaborador_id, $inserted_delivery_ids);
+                ss_enviar_ficha_para_assinatura($colaborador_id, $inserted_delivery_ids, $coletarAssinaturaResp === "sim");
             } catch (Throwable $t) {
                 // Captura erros silenciosamente para não quebrar a inserção da entrega
             }
@@ -567,13 +594,13 @@ function cadastrarEntrega() {
             exit;
         }
 
-        if (!empty($epi["ss_e_tx_validade_ca"])) {
-            if (verificarCAVencido($data_entrega, $epi["ss_e_tx_validade_ca"])) {
-                $_POST["errorFields"][] = "data_entrega";
-                set_status("ERRO: Certificado de Aprovação (CA nº {$epi['ss_e_tx_ca']}) vencido em " . data($epi["ss_e_tx_validade_ca"]) . ". Entrega bloqueada.");
-                modificarEntrega();
-                exit;
-            }
+        // A validade do CA é apenas informativa (não bloqueia). O bloqueio ocorre
+        // quando a validade do lote do EPI em estoque está vencida.
+        if (ss_validade_estoque_vencida($epi_id, $empresa_id, $variacao, $data_entrega)) {
+            $_POST["errorFields"][] = "data_entrega";
+            set_status("ERRO: A validade do EPI em estoque está vencida. Entrega bloqueada.");
+            modificarEntrega();
+            exit;
         }
 
         if (empty($_POST["id"])) {
@@ -624,7 +651,8 @@ function cadastrarEntrega() {
         $final_paths = array_merge($fotos_existentes_array, $new_paths);
         $foto_caminho = implode(",", $final_paths);
 
-        $vencimento = calcularVencimentoEpi($data_entrega, (int)$epi["ss_e_nb_vida_util"]);
+        $validadeLote = ss_obter_validade_estoque($epi_id, $empresa_id, $variacao, $data_entrega);
+        $vencimento = calcularVencimentoEpi($data_entrega, (int)$epi["ss_e_nb_vida_util"], $validadeLote);
 
         // Gestão de devolução: justificativa e estorno informados pelo operador
         $justificativa = trim($_POST["status_justificativa"] ?? "");
@@ -670,7 +698,8 @@ function cadastrarEntrega() {
             "ss_e_tx_justificativa"       => $justificativa,
             "ss_e_tx_estornado"           => $estornar,
             "ss_e_tx_data_devolucao"      => $data_devolucao,
-            "ss_e_nb_entrega_anterior_id" => $entrega_anterior_id
+            "ss_e_nb_entrega_anterior_id" => $entrega_anterior_id,
+            "ss_e_tx_coletar_assinatura_resp" => $coletarAssinaturaResp
         ];
 
         if (empty($_POST["id"])) {
@@ -695,7 +724,7 @@ function cadastrarEntrega() {
                 }
                 
                 try {
-                    ss_enviar_ficha_para_assinatura($colaborador_id, [$id]);
+                    ss_enviar_ficha_para_assinatura($colaborador_id, [$id], $coletarAssinaturaResp === "sim");
                 } catch (Throwable $t) {
                     // Captura erros silenciosamente para não quebrar a inserção da entrega
                 }
@@ -757,7 +786,7 @@ function modificarEntrega() {
     }
 
     // Carregar Kits Ativos para a página
-    $sqlKits = query("SELECT ss_k_nb_id, ss_k_tx_nome FROM ss_kit WHERE ss_k_tx_status = 'ativo' ORDER BY ss_k_tx_nome ASC");
+    $sqlKits = query("SELECT ss_k_nb_id, ss_k_tx_nome, ss_k_tx_foto FROM ss_kit WHERE ss_k_tx_status = 'ativo' ORDER BY ss_k_tx_nome ASC");
     $kitsData = [];
     if ($sqlKits) {
         while ($row = mysqli_fetch_assoc($sqlKits)) {
@@ -790,6 +819,7 @@ function modificarEntrega() {
             $kitsData[$kitId] = [
                 "id" => $kitId,
                 "nome" => $row["ss_k_tx_nome"],
+                "foto" => $row["ss_k_tx_foto"] ?? "",
                 "itens" => $itens
             ];
         }
@@ -924,11 +954,24 @@ function modificarEntrega() {
     }
     $campo_kit .= "
             </select>
+            <div id='kit_foto_preview' style='margin-top: 6px;'></div>
         </div>
     ";
 
     $campo_data        = campo_data("Data de Entrega*", "data_entrega", $_POST["data_entrega"] ?? date("Y-m-d"), 2);
     $campo_quant       = campo("Quantidade*", "quantidade", $_POST["quantidade"] ?? "1", 2, "MASCARA_NUMERO");
+
+    $campo_coletar_assinatura_resp = combo(
+        "Coletar assinatura do responsável?",
+        "coletar_assinatura_responsavel",
+        $_POST["coletar_assinatura_responsavel"] ?? $_POST["coletar_assinatura_resp"] ?? "sim",
+        6,
+        [
+            "sim" => "Sim (fluxo normal de assinatura)",
+            "nao" => "Não (apenas registrar o responsável no recibo)"
+        ],
+        "title='Sim: envia o recibo para os responsáveis assinarem (fluxo atual). Não: o recibo apenas identifica quem registrou a entrega, sem exigir assinatura do responsável.'"
+    );
 
     $campo_variacao = '
         <div class="col-sm-2 margin-bottom-5 campo-fit-content" id="container_variacao" style="display: none;">
@@ -984,6 +1027,7 @@ function modificarEntrega() {
             <input name='foto_cam[]' id='foto_camera_input' type='file' accept='image/*' capture='environment' data-camera style='display: none;'>
             <div id='existing_photos_container' style='margin-top: 10px; display: block;'>{$foto_atual_html}</div>
             <div id='new_photos_container' style='margin-top: 10px; display: block;'></div>
+            <div id='dica_foto_kit' style='margin-top: 8px; font-size: 12px; color: #555;'></div>
         </div>
     ";
 
@@ -1051,7 +1095,7 @@ function modificarEntrega() {
     echo linha_form([$campo_empresa, $campo_colaborador, $campo_tipo_entrega]);
     echo linha_form([$campo_epi, $campo_kit]);
     echo linha_form([$preview_epi_div]);
-    echo linha_form([$campo_data, $campo_quant, $campo_variacao]);
+    echo linha_form([$campo_data, $campo_quant, $campo_variacao, $campo_coletar_assinatura_resp]);
     echo linha_form([$campo_foto]);
     
     $legenda_html = '
@@ -1068,6 +1112,8 @@ function modificarEntrega() {
     }
     
     echo '<input type="hidden" name="kit_itens_entrega_json" id="kit_itens_entrega_json" value="">';
+    echo '<input type="file" id="foto_item_lote_input" accept="image/*" style="display: none;">';
+    echo '<input type="file" id="foto_item_camera_input" accept="image/*" capture="environment" data-camera="true" style="display: none;">';
     
     echo fecha_form($buttons);
 
@@ -1083,9 +1129,32 @@ function modificarEntrega() {
         </div>';
     }
 
+    // Overlay com indicador de carregamento (processamento das entregas)
+    echo '
+    <div id="overlay_progresso_entrega" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.55); z-index: 12000; align-items: center; justify-content: center;">
+        <div style="background: #fff; border-radius: 10px; padding: 30px 40px; width: 380px; max-width: calc(100vw - 40px); box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center;">
+            <div class="girar-entrega"></div>
+            <div style="font-size: 15px; font-weight: bold; color: #333; margin-top: 14px;"><span id="progresso_entrega_titulo">Processando entrega...</span></div>
+            <div id="progresso_entrega_texto" style="font-size: 12.5px; color: #777; margin-top: 4px;">Isso pode levar alguns segundos. Não feche a página.</div>
+        </div>
+    </div>
+    <style>
+        @keyframes girar_progresso_entrega { 100% { transform: rotate(360deg); } }
+        .girar-entrega {
+            width: 70px;
+            height: 70px;
+            margin: 0 auto;
+            border-radius: 100%;
+            border: 6px solid #e3e8ec;
+            border-top: 6px solid #36c6d3;
+            animation: girar_progresso_entrega 1s linear infinite;
+        }
+    </style>';
+
     echo "
     <script>
     var itensEntregaLote = [];
+    var ultimoKitLote = null;
     var kitsData = " . json_encode($kitsData) . ";
     var empresasNomes = " . $jsEmpresas . ";
     var epiFotosMap = " . json_encode($epiFotosMap) . ";
@@ -1118,6 +1187,69 @@ function modificarEntrega() {
                 templateSelection: formatEpiOption
             });
         }
+
+        // Ajusta a largura do campo \"Kit de EPIs\" ao nome mais longo cadastrado,
+        // para o nome do kit não ficar cortado no select2.
+        function ajustarLarguraKit() {
+            const kitSelect = $('#kit_id');
+            if (!kitSelect.length) return;
+
+            const opcoes = kitSelect.find('option');
+            if (!opcoes.length) return;
+
+            let maiorTexto = 0;
+            let maiorComprimento = 0;
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                const referencia = kitSelect.next('.select2-container').find('.select2-selection__rendered');
+                ctx.font = referencia.length
+                    ? referencia.css('font-style') + ' ' + referencia.css('font-weight') + ' ' + referencia.css('font-size') + ' ' + referencia.css('font-family')
+                    : '12px \"Open Sans\", sans-serif';
+            }
+
+            opcoes.each(function() {
+                const texto = $(this).text() || '';
+                maiorComprimento = Math.max(maiorComprimento, texto.length);
+                if (ctx) {
+                    maiorTexto = Math.max(maiorTexto, ctx.measureText(texto).width);
+                }
+            });
+
+            // Reserva espaço para a seta e paddings do select2 (fallback por caracteres)
+            let larguraCampo = Math.ceil(maiorTexto > 0 ? maiorTexto : maiorComprimento * 6.8) + 60;
+
+            // Largura mínima para o campo manter aparência de formulário
+            larguraCampo = Math.max(200, larguraCampo);
+
+            // Em telas pequenas o campo não pode ultrapassar a largura visível
+            larguraCampo = Math.min(larguraCampo, Math.max(220, window.innerWidth - 60));
+
+            $('#container_kit').css({ 'width': 'auto', 'min-width': larguraCampo + 'px' });
+            kitSelect.next('.select2-container').css({ 'width': larguraCampo + 'px', 'min-width': larguraCampo + 'px' });
+        }
+
+        ajustarLarguraKit();
+        $(window).on('resize', ajustarLarguraKit);
+
+        // Mostra a foto cadastrada do kit selecionado (referência para a entrega)
+        function atualizarPreviewFotoKit() {
+            var kitId = $('#kit_id').val();
+            var container = $('#kit_foto_preview');
+            container.empty();
+            if (!kitId || !kitsData[kitId] || !kitsData[kitId].foto) return;
+            var paths = String(kitsData[kitId].foto).split(',').filter(Boolean);
+            if (paths.length === 0) return;
+            var html = '<span style=\"font-size: 11px; color: #777; display: block;\">Foto do kit:</span>';
+            paths.forEach(function(p) {
+                var src = ssResolveFotoUrl(p);
+                html += '<img src=\"' + src + '\" style=\"max-height: 70px; max-width: 70px; border-radius: 4px; border: 1px solid #ccc; object-fit: cover; cursor: pointer; margin: 2px;\" onclick=\"verImagemMaior(\'' + src + '\')\">';
+            });
+            container.html(html);
+        }
+
+        $('#kit_id').on('change', atualizarPreviewFotoKit);
+        atualizarPreviewFotoKit();
 
         if (typeof window.verImagemMaior === 'undefined') {
             window.verImagemMaior = function(src) {
@@ -1434,8 +1566,8 @@ function modificarEntrega() {
                 $('#preview_epi_individual_container').hide();
                 $('#saldo_individual_badge').hide();
                 
-                $('#container_foto').show();
-                $('#container_foto').find('label').text('Foto do Kit Completo (Opcional)');
+                // Foto do Kit Completo: aparece depois que houver itens do kit na lista
+                atualizarVisibilidadeFotoKit();
                 if ($('#preview_substituido').attr('src')) {
                     $('#preview_substituido_container').show();
                 } else {
@@ -1443,6 +1575,7 @@ function modificarEntrega() {
                 }
                 
                 $('#container_kit').show();
+                ajustarLarguraKit();
                 if (isEditMode) {
                     $('#container_itens_kit_entrega').show();
                 } else {
@@ -1452,8 +1585,13 @@ function modificarEntrega() {
                 $('select[name=\"epi_id\"]').closest('.col-sm-4').show();
                 $('input[name=\"quantidade\"]').closest('.col-sm-2').show();
                 
-                $('#container_foto').show();
-                $('#container_foto').find('label').text('Foto do EPI Entregue');
+                if (isEditMode) {
+                    $('#container_foto').show();
+                    $('#container_foto').find('label').text('Foto do EPI Entregue');
+                } else {
+                    // No lançamento em lote a foto é anexada por item na lista de entregas (abaixo)
+                    $('#container_foto').hide();
+                }
                 if ($('#preview_substituido').attr('src')) {
                     $('#preview_substituido_container').show();
                 } else {
@@ -1714,6 +1852,16 @@ function modificarEntrega() {
         }
     });
 
+    // Barra de progresso no envio do formulário (entrega individual/kit)
+    $('form[name=\"contex_form\"]').on('submit', function(e) {
+        var evento = e;
+        setTimeout(function() {
+            if (!evento.isDefaultPrevented()) {
+                mostrarProgressoEntrega('Registrando entrega...');
+            }
+        }, 0);
+    });
+
     function destacarItemEpi(nome) {
         // Formato esperado: Item / Subgrupo / Grupo (CA: X)
         var partes = nome.split(' / ');
@@ -1805,33 +1953,21 @@ function modificarEntrega() {
         var empresaId = $('select[name=\"empresa_id\"]').length > 0 ? $('select[name=\"empresa_id\"]').val() : '0';
         if (empresaId === '') empresaId = '0';
         
-        function adicionarItensKit(payload) {
-            kit.itens.forEach(function(item) {
-                var epiNome = item.subgrupo + ' / ' + item.item + ' / ' + item.grupo + ' (CA: ' + (item.ca || 'N/A') + ')';
-                addItemObj(colabId, colabNome, item.epi_id, epiNome, item.quantidade, 'ativo', empresaId, payload, '', item.variacoes);
-            });
-            $('#kit_id').val('').trigger('change');
-        }
+        var kitLoteId = 'kit_' + new Date().getTime() + '_' + Math.random().toString(36).substr(2, 5);
+        kit.itens.forEach(function(item) {
+            var epiNome = item.subgrupo + ' / ' + item.item + ' / ' + item.grupo + ' (CA: ' + (item.ca || 'N/A') + ')';
+            addItemObj(colabId, colabNome, item.epi_id, epiNome, item.quantidade, 'ativo', empresaId, '', '', item.variacoes, { kit_lote_id: kitLoteId, kit_nome: kit.nome });
+        });
 
-        // Foto do kit completo (campo #foto): aplicada a todos os itens do kit,
-        // permitindo o comparativo no grid entre as fotos individuais e a do kit entregue
-        var fotoInput = $('#foto')[0];
-        var files = (fotoInput && fotoInput.files) ? fotoInput.files : [];
-        
-        if (files && files.length > 0) {
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                adicionarItensKit(e.target.result);
-                $('#foto').val('');
-                $('#new_photos_container').empty();
-            };
-            reader.readAsDataURL(files[0]);
-        } else {
-            adicionarItensKit(\"\");
-        }
+        // Guarda o último kit adicionado: a Foto do Kit Completo será aplicada a estes itens
+        ultimoKitLote = { id: kitLoteId, nome: kit.nome };
+        $('#kit_id').val('').trigger('change');
+        $('#foto').val('');
+        $('#new_photos_container').empty();
+        atualizarVisibilidadeFotoKit();
     }
 
-    function addItemObj(colabId, colabNome, epiId, epiNome, quantidade, status, empresaId, fotoPayload, variacao, variacoes) {
+    function addItemObj(colabId, colabNome, epiId, epiNome, quantidade, status, empresaId, fotoPayload, variacao, variacoes, kitInfo) {
         var uniqueId = new Date().getTime() + '_' + Math.random().toString(36).substr(2, 5);
         
         var item = {
@@ -1846,6 +1982,8 @@ function modificarEntrega() {
             variacao: variacao || '',
             variacoes: variacoes || epiVariacoes[epiId] || '',
             foto_payload: fotoPayload,
+            kit_lote_id: (kitInfo && kitInfo.kit_lote_id) ? kitInfo.kit_lote_id : '',
+            kit_nome: (kitInfo && kitInfo.kit_nome) ? kitInfo.kit_nome : '',
             import_de: \"\"
         };
         
@@ -1881,9 +2019,61 @@ function modificarEntrega() {
         });
     }
 
+    // Foto do Kit Completo: aparece somente depois que houver itens de kit na lista
+    function atualizarVisibilidadeFotoKit() {
+        if (isEditMode) return;
+        var tipo = $('select[name=\"tipo_entrega\"]').val();
+        var temKitNaLista = itensEntregaLote.some(function(it) { return !!it.kit_lote_id; });
+        if (tipo === 'kit' && temKitNaLista) {
+            $('#container_foto').show();
+            $('#container_foto').find('label').text('Foto do Kit Completo (Opcional)');
+            atualizarDicaFotoKit();
+        } else {
+            $('#container_foto').hide();
+        }
+    }
+
+    function atualizarDicaFotoKit() {
+        var dica = '';
+        if (ultimoKitLote) {
+            var qtd = itensEntregaLote.filter(function(it) { return it.kit_lote_id === ultimoKitLote.id; }).length;
+            if (qtd > 0) {
+                dica = 'A foto abaixo será aplicada aos ' + qtd + ' item(ns) do kit \"' + ultimoKitLote.nome + '\". Ajuste individualmente pela lista, se precisar.';
+            }
+        }
+        $('#dica_foto_kit').text(dica);
+    }
+
+    // Aplica a foto do kit completo a todos os itens do último kit adicionado à lista
+    $('#foto').on('change', function() {
+        if (isEditMode) return;
+        var tipo = $('select[name=\"tipo_entrega\"]').val();
+        if (tipo !== 'kit' || !ultimoKitLote) return;
+        var input = this;
+        if (!input.files || input.files.length === 0) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var payload = e.target.result;
+            var aplicados = 0;
+            itensEntregaLote.forEach(function(it) {
+                if (it.kit_lote_id === ultimoKitLote.id) {
+                    it.foto_payload = payload;
+                    aplicados++;
+                }
+            });
+            $('#new_photos_container').html('<img src=\"' + payload + '\" style=\"max-height: 80px; max-width: 80px; border-radius: 4px; border: 1px solid #ccc; object-fit: cover;\">');
+            $('#dica_foto_kit').html('Foto aplicada a <strong>' + aplicados + '</strong> item(ns) do kit \"' + ultimoKitLote.nome + '\".');
+            desenharListas();
+        };
+        reader.readAsDataURL(input.files[0]);
+        input.value = '';
+    });
+
     function desenharListas() {
         var container = $('#container_listas_entregas');
         container.empty();
+
+        atualizarVisibilidadeFotoKit();
 
         // Estilos para itens sem saldo (cinza — não serão lançados)
         if (!$('#estilo_sem_saldo_epi').length) {
@@ -1926,7 +2116,7 @@ function modificarEntrega() {
                         '<table class=\"table table-striped table-bordered table-hover\">' +
                             '<thead>' +
                                 '<tr>' +
-                                    '<th style=\"width: 70px; text-align: center;\">Foto</th>' +
+                                    '<th style=\"width: 100px; text-align: center;\">Foto da Entrega</th>' +
                                     '<th>EPI</th>' +
                                     '<th style=\"text-align: center; width: 80px;\">Qtd</th>' +
                                     '<th style=\"width: 120px;\">Variação</th>' +
@@ -1939,19 +2129,19 @@ function modificarEntrega() {
                             '<tbody>';
                             
             grupo.itens.forEach(function(item) {
-                // Mostra a foto do kit entregue (quando houver) E a foto individual do EPI,
+                // Mostra a foto anexada na própria lista (quando houver) E a foto individual do EPI,
                 // permitindo o comparativo na própria sacola
                 var fotosHtml = [];
                 if (item.foto_payload && item.foto_payload.indexOf('data:image/') === 0) {
                     var resolvedKit = ssResolveFotoUrl(item.foto_payload);
-                    fotosHtml.push('<img src=\"' + resolvedKit + '\" title=\"Foto do kit entregue\" style=\"max-height: 45px; max-width: 45px; border-radius: 4px; object-fit: cover; cursor: pointer;\" onclick=\"verImagemMaior(\'' + resolvedKit + '\')\">');
+                    fotosHtml.push('<img src=\"' + resolvedKit + '\" title=\"Foto anexada à entrega\" style=\"max-height: 45px; max-width: 45px; border-radius: 4px; object-fit: cover; cursor: pointer;\" onclick=\"verImagemMaior(\'' + resolvedKit + '\')\">');
                 }
                 var defaultFoto = epiFotosMap[item.epi_id];
                 if (defaultFoto) {
                     var resolvedSrc = ssResolveFotoUrl(defaultFoto);
                     fotosHtml.push('<img src=\"' + resolvedSrc + '\" title=\"Foto do EPI\" style=\"max-height: 45px; max-width: 45px; border-radius: 4px; object-fit: cover; cursor: pointer;\" onclick=\"verImagemMaior(\'' + resolvedSrc + '\')\">');
                 }
-                var fotoHtml = fotosHtml.length > 0 ? fotosHtml.join(' ') : '-';
+                var fotoHtml = fotosHtml.length > 0 ? fotosHtml.join(' ') : '';
                 
                 var statusLabel = '<span class=\"label label-sm label-success\">Ativo</span>';
                 if (item.status === 'devolvido') statusLabel = '<span class=\"label label-sm label-info\">Devolvido</span>';
@@ -1996,6 +2186,20 @@ function modificarEntrega() {
                 // Item sem saldo: permanece na lista em cinza e NÃO será lançado
                 var semSaldo = (currentStock < item.quantidade);
                 item.semSaldo = semSaldo ? true : false;
+
+                // Anexo de foto por item da lista (apenas para itens com saldo para entrega)
+                if (!semSaldo) {
+                    fotoHtml += '<div style=\"margin-top: 4px; white-space: nowrap;\">' +
+                        '<button type=\"button\" class=\"btn btn-default btn-xs btn-anexar-foto-lote\" data-unique=\"' + item.unique_id + '\" title=\"Escolher foto da galeria/arquivo\"><i class=\"fa fa-folder-open\"></i></button> ' +
+                        '<button type=\"button\" class=\"btn btn-success btn-xs btn-camera-foto-lote\" data-unique=\"' + item.unique_id + '\" title=\"Tirar foto em tempo real\"><i class=\"fa fa-camera\"></i></button>';
+                    if (item.foto_payload) {
+                        fotoHtml += ' <button type=\"button\" class=\"btn btn-danger btn-xs btn-remover-foto-lote\" data-unique=\"' + item.unique_id + '\" title=\"Remover foto anexada\"><i class=\"fa fa-times\"></i></button>';
+                    }
+                    fotoHtml += '</div>';
+                }
+                if (!fotoHtml) {
+                    fotoHtml = '-';
+                }
                 
                 var estoqueBadge = '';
                 if (!semSaldo) {
@@ -2049,6 +2253,66 @@ function modificarEntrega() {
         }
     });
     
+    // Foto por item da lista: cada linha define a entrega alvo (galeria/arquivo ou câmera)
+    var fotoLoteUniqueIdAtual = null;
+
+    $(document).on('click', '.btn-anexar-foto-lote', function() {
+        fotoLoteUniqueIdAtual = $(this).attr('data-unique');
+        $('#foto_item_lote_input').val('').trigger('click');
+    });
+
+    $(document).on('click', '.btn-camera-foto-lote', function() {
+        fotoLoteUniqueIdAtual = $(this).attr('data-unique');
+        var movel = (typeof window.dropzoneFotoEhDispositivoMovel === 'function') ? window.dropzoneFotoEhDispositivoMovel() : false;
+        var inputGaleria = document.getElementById('foto_item_lote_input');
+        if (!movel && navigator.mediaDevices && navigator.mediaDevices.getUserMedia && typeof window.dropzoneFotoAbrirCamera === 'function' && inputGaleria) {
+            // Notebook/desktop: câmera em tempo real (webcam) no modal compartilhado
+            inputGaleria.value = '';
+            window.dropzoneFotoAbrirCamera(inputGaleria);
+            return;
+        }
+        // Celular/tablet: abre o app de câmera direto para captura em tempo real
+        var inputCamera = document.getElementById('foto_item_camera_input');
+        if (inputCamera) {
+            inputCamera.value = '';
+            inputCamera.click();
+        }
+    });
+
+    $(document).on('change', '#foto_item_lote_input, #foto_item_camera_input', function() {
+        if (!fotoLoteUniqueIdAtual || !this.files || this.files.length === 0) return;
+        var item = itensEntregaLote.find(function(it) { return it.unique_id === fotoLoteUniqueIdAtual; });
+        if (!item) return;
+        var arquivo = this.files[0];
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            item.foto_payload = e.target.result;
+            fotoLoteUniqueIdAtual = null;
+            desenharListas();
+        };
+        reader.readAsDataURL(arquivo);
+    });
+
+    $(document).on('click', '.btn-remover-foto-lote', function() {
+        var uniqueId = $(this).attr('data-unique');
+        var item = itensEntregaLote.find(function(it) { return it.unique_id === uniqueId; });
+        if (item) {
+            item.foto_payload = '';
+            desenharListas();
+        }
+    });
+
+    // ===== Indicador de carregamento do processamento das entregas =====
+    function mostrarProgressoEntrega(titulo) {
+        $('#progresso_entrega_titulo').text(titulo || 'Processando entrega...');
+        $('#progresso_entrega_texto').text('Isso pode levar alguns segundos. Não feche a página.');
+        $('#overlay_progresso_entrega').css('display', 'flex');
+    }
+
+    function ocultarProgressoEntrega() {
+        $('#overlay_progresso_entrega').hide();
+    }
+
     function removerItemEntrega(uniqueId) {
         itensEntregaLote = itensEntregaLote.filter(function(it) { return it.unique_id !== uniqueId; });
         desenharListas();
@@ -2091,6 +2355,8 @@ function modificarEntrega() {
         }
         
         if (!confirm('Deseja salvar as entregas de ' + colabNome + '?')) return;
+
+        mostrarProgressoEntrega('Registrando entregas de ' + colabNome + '...');
         
         $.ajax({
             url: 'entrega_epi.php?acao=cadastrarEntregaLoteAjax',
@@ -2098,30 +2364,40 @@ function modificarEntrega() {
             data: {
                 colaborador_id: colabId,
                 data_entrega: dataEntrega,
+                coletar_assinatura_responsavel: $('select[name=\"coletar_assinatura_responsavel\"]').val() || 'sim',
                 lotes: JSON.stringify(itensFunc)
             },
             dataType: 'json',
             success: function(response) {
-                if (response.status === 'success' || response.status === 'partial') {
-                    var idsSalvos = response.ids || [];
-                    itensEntregaLote = itensEntregaLote.filter(function(item) {
-                        if (item.colaborador_id != colabId) return true;
-                        return idsSalvos.indexOf(item.unique_id) === -1;
-                    });
-                    desenharListas();
-                    
+                if (response.status === 'success') {
+                    // Sucesso total: sem popup — mantém o indicador e atualiza a página
+                    $('#progresso_entrega_titulo').text('Entregas de ' + colabNome + ' registradas com sucesso!');
+                    $('#progresso_entrega_texto').text('Atualizando a página...');
+                    window.location.href = 'entrega_epi.php';
+                    return;
+                }
+
+                ocultarProgressoEntrega();
+
+                var idsSalvos = response.ids || [];
+                itensEntregaLote = itensEntregaLote.filter(function(item) {
+                    if (item.colaborador_id != colabId) return true;
+                    return idsSalvos.indexOf(item.unique_id) === -1;
+                });
+                desenharListas();
+
+                if (response.status === 'partial') {
                     var msg = response.sucessos > 0
-                        ? 'Entregas de ' + colabNome + ' registradas com sucesso!'
-                        : 'Nenhuma entrega foi registrada.';
-                    if (response.erros && response.erros.length > 0) {
-                        msg += '\\n\\nFalhas:\\n' + response.erros.join('\\n');
-                    }
+                        ? 'Algumas entregas de ' + colabNome + ' foram registradas, mas houve falhas:'
+                        : 'Nenhuma entrega de ' + colabNome + ' foi registrada:';
+                    msg += '\\n\\n' + (response.erros || []).join('\\n');
                     alert(msg);
                 } else {
                     alert('Erro ao registrar entregas: ' + (response.message || ''));
                 }
             },
             error: function(xhr) {
+                ocultarProgressoEntrega();
                 var msg = '';
                 try {
                     var parsed = JSON.parse(xhr.responseText);
@@ -2166,6 +2442,8 @@ function modificarEntrega() {
         }
         
         if (!confirm('Deseja salvar todas as entregas adicionadas na lista de todos os funcionários?')) return;
+
+        mostrarProgressoEntrega('Registrando todas as entregas...');
         
         $.ajax({
             url: 'entrega_epi.php?acao=cadastrarEntregaLoteAjax',
@@ -2173,35 +2451,38 @@ function modificarEntrega() {
             data: {
                 colaborador_id: 0,
                 data_entrega: dataEntrega,
+                coletar_assinatura_responsavel: $('select[name=\"coletar_assinatura_responsavel\"]').val() || 'sim',
                 lotes: JSON.stringify(itensParaGravar)
             },
             dataType: 'json',
             success: function(response) {
-                if (response.status === 'success' || response.status === 'partial') {
+                if (response.status === 'success') {
+                    // Sucesso total: sem popup — mantém o indicador e atualiza a página
+                    $('#progresso_entrega_titulo').text('Entregas registradas com sucesso!');
+                    $('#progresso_entrega_texto').text('Atualizando a página...');
+                    window.location.href = 'entrega_epi.php';
+                    return;
+                }
+
+                ocultarProgressoEntrega();
+
+                if (response.status === 'partial') {
                     var idsSalvos = response.ids || [];
                     itensEntregaLote = itensEntregaLote.filter(function(item) {
                         return idsSalvos.indexOf(item.unique_id) === -1;
                     });
                     desenharListas();
-                    
-                    var msg = '';
-                    if (response.status === 'success') {
-                        msg = 'Todas as entregas registradas com sucesso!';
-                        alert(msg);
-                        window.location.href = 'entrega_epi.php';
-                        return;
-                    }
-                    if (response.sucessos > 0) {
-                        msg = 'Algumas entregas foram registradas, mas houve falhas:\\n\\n' + (response.erros || []).join('\\n');
-                    } else {
-                        msg = 'Nenhuma entrega foi registrada:\\n\\n' + (response.erros || []).join('\\n');
-                    }
+
+                    var msg = response.sucessos > 0
+                        ? 'Algumas entregas foram registradas, mas houve falhas:\\n\\n' + (response.erros || []).join('\\n')
+                        : 'Nenhuma entrega foi registrada:\\n\\n' + (response.erros || []).join('\\n');
                     alert(msg);
                 } else {
                     alert('Erro ao registrar entregas: ' + (response.message || ''));
                 }
             },
             error: function(xhr) {
+                ocultarProgressoEntrega();
                 var msg = '';
                 try {
                     var parsed = JSON.parse(xhr.responseText);
@@ -2315,6 +2596,27 @@ function imprimirFicha() {
         }
     }
 
+    // Assinaturas dos responsáveis na mesma solicitação (exibidas junto à do colaborador)
+    $responsaveisAssinados = [];
+    if ($assinaturaDados && !empty($assinaturaDados["id"])) {
+        $idSolicitacaoSig = (int)$assinaturaDados["id"];
+        $sqlRespSig = "SELECT a.nome, a.cpf, a.funcao, a.status, a.data_assinatura, ae.ip_address, ae.hash_assinatura
+                       FROM assinantes a
+                       JOIN solicitacoes_assinatura s ON s.id = a.id_solicitacao
+                       LEFT JOIN assinatura_eletronica ae ON CONVERT(ae.id_documento USING utf8mb4) COLLATE utf8mb4_general_ci = CONVERT(s.id_documento USING utf8mb4) COLLATE utf8mb4_general_ci AND CONVERT(ae.cpf USING utf8mb4) COLLATE utf8mb4_general_ci = CONVERT(a.cpf USING utf8mb4) COLLATE utf8mb4_general_ci
+                       WHERE a.id_solicitacao = {$idSolicitacaoSig}
+                         AND a.enti_nb_id <> {$colaborador_id}
+                         AND LOWER(a.funcao) LIKE '%respons%'
+                         AND LOWER(a.status) = 'assinado'
+                       ORDER BY a.ordem ASC, a.id ASC";
+        $resRespSig = mysqli_query($conn, $sqlRespSig);
+        if ($resRespSig) {
+            while ($rowRespSig = mysqli_fetch_assoc($resRespSig)) {
+                $responsaveisAssinados[] = $rowRespSig;
+            }
+        }
+    }
+
     $colabRaw = carregar("entidade", $colaborador_id);
     if (empty($colabRaw)) {
         echo "Colaborador não cadastrado.";
@@ -2340,6 +2642,17 @@ function imprimirFicha() {
                    ent.ss_e_nb_quantidade, 
                    ent.ss_e_tx_vencimento, 
                    ent.ss_e_tx_status,
+                   ent.ss_e_tx_data_devolucao,
+                   ent.ss_e_tx_justificativa,
+                   ent.ss_e_nb_userCadastro,
+                   ent.ss_e_tx_dataCadastro,
+                   ent.ss_e_tx_coletar_assinatura_resp,
+                   CASE
+                       WHEN ent.ss_e_nb_assinatura_id IS NULL THEN 'sem_assinatura'
+                       WHEN LOWER(IFNULL(s.status, '')) IN ('assinado', 'concluido') THEN 'assinado'
+                       WHEN LOWER(IFNULL(s.status, '')) = 'expirado' THEN 'expirado'
+                       ELSE 'aguardando'
+                   END AS assinatura_status,
                    IFNULL(s.id_documento, '-') AS ss_e_tx_identificador
             FROM ss_epi_entrega ent 
             JOIN ss_epi epi ON ent.ss_e_nb_epi_id = epi.ss_e_nb_id 
@@ -2348,34 +2661,77 @@ function imprimirFicha() {
             ORDER BY ent.ss_e_tx_data_entrega DESC, ent.ss_e_nb_id DESC";
             
     $res = mysqli_query($conn, $sql);
-    $entregas = [];
+    $entregasTodas = [];
     if ($res) {
         while ($row = mysqli_fetch_assoc($res)) {
-            $entregas[] = $row;
+            $entregasTodas[] = $row;
         }
     }
 
-    $spans = [];
-    $n = count($entregas);
-    $i = 0;
-    while ($i < $n) {
-        $val = $entregas[$i]["ss_e_tx_identificador"];
-        $count = 1;
-        $j = $i + 1;
-        while ($j < $n && $entregas[$j]["ss_e_tx_identificador"] === $val) {
-            $count++;
-            $j++;
+    // Separa as entregas dos eventos de devolução/substituição/perda para exibir em blocos distintos
+    $entregas = [];
+    $devolucoes = [];
+    foreach ($entregasTodas as $linha) {
+        $stLinha = strtolower(trim(strval($linha["ss_e_tx_status"] ?? "")));
+        if (in_array($stLinha, ["devolvido", "substituido", "perdido"])) {
+            $devolucoes[] = $linha;
+        } else {
+            $entregas[] = $linha;
         }
-        $spans[$i] = $count;
-        $i = $j;
     }
+
+    // Responsável pelo registro (usuário logado na entrega mais recente) — sempre exibido,
+    // atualizado conforme as entregas (mesma lógica da assinatura mais recente do colaborador)
+    $responsavelRegistro = null;
+    $responsavelAssinaturaDispensada = false;
+    if (!empty($entregas)) {
+        $primeiraEntrega = $entregas[0];
+        $responsavelAssinaturaDispensada = (strtolower(trim(strval($primeiraEntrega["ss_e_tx_coletar_assinatura_resp"] ?? "sim"))) === "nao");
+        $respUserId = (int)($primeiraEntrega["ss_e_nb_userCadastro"] ?? 0);
+        if ($respUserId > 0) {
+            $sqlResp = mysqli_query($conn, "SELECT user_tx_nome, user_tx_cpf FROM user WHERE user_nb_id = {$respUserId} LIMIT 1");
+            if ($sqlResp && $rowResp = mysqli_fetch_assoc($sqlResp)) {
+                $responsavelRegistro = [
+                    "nome" => trim(strval($rowResp["user_tx_nome"] ?? "")),
+                    "cpf" => trim(strval($rowResp["user_tx_cpf"] ?? "")),
+                    "data" => !empty($primeiraEntrega["ss_e_tx_dataCadastro"]) ? date('d/m/Y H:i', strtotime($primeiraEntrega["ss_e_tx_dataCadastro"])) : ''
+                ];
+            }
+        }
+    }
+
+    // Agrupa o identificador (recibo) por linha, separadamente em cada bloco
+    $calcularSpans = function($linhas) {
+        $spans = [];
+        $n = count($linhas);
+        $i = 0;
+        while ($i < $n) {
+            $val = strval($linhas[$i]["ss_e_tx_identificador"] ?? "");
+            if ($val === "" || $val === "-") {
+                $spans[$i] = 1;
+                $i++;
+                continue;
+            }
+            $count = 1;
+            $j = $i + 1;
+            while ($j < $n && strval($linhas[$j]["ss_e_tx_identificador"] ?? "") === $val) {
+                $count++;
+                $j++;
+            }
+            $spans[$i] = $count;
+            $i = $j;
+        }
+        return $spans;
+    };
+    $spansEntregas = $calcularSpans($entregas);
+    $spansDevolucoes = $calcularSpans($devolucoes);
 
     ?>
     <!DOCTYPE html>
     <html lang="pt-br">
     <head>
         <meta charset="UTF-8">
-        <title>Recibo de EPI - <?=$colaborador["ss_c_tx_nome"]?></title>
+        <title>Ficha de EPI - <?=$colaborador["ss_c_tx_nome"]?></title>
         <style>
             body { font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.4; color: #333; margin: 30px; }
             h1, h2 { text-align: center; margin-bottom: 5px; }
@@ -2397,13 +2753,13 @@ function imprimirFicha() {
     </head>
     <body>
         <div class="no-print" style="margin-bottom: 20px; text-align: right;">
-            <button onclick="window.print()" style="padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Imprimir Recibo</button>
+            <button onclick="window.print()" style="padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Imprimir Ficha</button>
         </div>
         
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-            <img src="../imagens/logo_topo_cliente.png" style="height: 40px; object-fit: contain;">
-            <div style="text-align: right;">
-                <h2 style="margin: 0; font-size: 16pt;">RECIBO DE ENTREGA DE EPI</h2>
+        <div style="position: relative; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; min-height: 48px;">
+            <img src="../imagens/logo_topo_cliente.png" style="height: 40px; object-fit: contain; position: absolute; left: 0; top: 50%; transform: translateY(-50%);">
+            <div style="text-align: center;">
+                <h2 style="margin: 0; font-size: 16pt;">FICHA DE EPI</h2>
                 <p style="margin: 0; font-size: 9pt; font-weight: bold; color: #666;">(Norma Regulamentadora NR-6 - Portaria 3.214/78)</p>
             </div>
         </div>
@@ -2429,38 +2785,88 @@ function imprimirFicha() {
             <strong>Declaração do Empregado:</strong> Declaro que recebi gratuitamente os Equipamentos de Proteção Individual (EPI) abaixo relacionados, adequados ao risco de minhas atividades. Comprometo-me a usá-los obrigatoriamente durante o horário de trabalho, zelar pela sua guarda e conservação, e comunicar imediatamente ao setor de segurança qualquer alteração que os torne impróprios para uso, sob pena de infração disciplinar nos termos da legislação trabalhista brasileira (Art. 158 da CLT).
         </div>
         
+        <h3 style="margin-top: 25px; margin-bottom: 0; font-size: 12pt; color: #333; border-bottom: 2px solid #333; padding-bottom: 4px;">ENTREGAS DE EPI</h3>
         <table class="data-table">
             <thead>
                 <tr>
                     <th style="width: 5%;">Cód.</th>
-                    <th style="width: 52%;">Equipamento (EPI)</th>
-                    <th style="width: 15%;">CA MTE</th>
-                    <th style="width: 15%;">Data Entrega</th>
+                    <th style="width: 36%;">Equipamento (EPI)</th>
+                    <th style="width: 10%;">CA MTE</th>
+                    <th style="width: 11%;">Data Entrega</th>
                     <th style="width: 5%;">Quant.</th>
+                    <th style="width: 10%;">Situação</th>
+                    <th style="width: 15%;">Assinatura</th>
                     <th style="width: 8%;">Identificador</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($entregas)): ?>
                     <tr>
-                        <td colspan="6" style="text-align: center;">Nenhum EPI entregue cadastrado no histórico deste colaborador.</td>
+                        <td colspan="8" style="text-align: center;">Nenhuma entrega registrada no histórico deste colaborador.</td>
                     </tr>
                 <?php else: ?>
                     <?php foreach ($entregas as $index => $e): ?>
+                        <?php
+                            $situacaoEntrega = (strtolower(trim(strval($e["ss_e_tx_status"] ?? ""))) === "nao_entregue") ? "Não entregue" : "Entregue";
+                            $assinaturaEntrega = [
+                                "assinado" => "Assinado",
+                                "aguardando" => "Aguardando assinatura",
+                                "expirado" => "Assinatura expirada",
+                                "sem_assinatura" => "Sem assinatura"
+                            ][strtolower(trim(strval($e["assinatura_status"] ?? "")))] ?? "-";
+                        ?>
                         <tr>
                             <td style="width: 5%;"><?=$e["ss_e_nb_id"]?></td>
-                            <td style="width: 52%;"><?=$e["ss_e_tx_nome"]?></td>
-                            <td style="width: 15%;"><?=$e["ss_e_tx_ca"] ?: '---'?></td>
-                            <td style="width: 15%;"><?=data($e["ss_e_tx_data_entrega"])?></td>
+                            <td style="width: 36%;"><?=$e["ss_e_tx_nome"]?></td>
+                            <td style="width: 10%;"><?=$e["ss_e_tx_ca"] ?: '---'?></td>
+                            <td style="width: 11%;"><?=data($e["ss_e_tx_data_entrega"])?></td>
                             <td style="width: 5%;"><?=$e["ss_e_nb_quantidade"]?></td>
-                            <?php if (isset($spans[$index])): ?>
-                                <td rowspan="<?=$spans[$index]?>" style="width: 8%; font-family: monospace; font-size: 8.5pt; vertical-align: middle; text-align: center;"><?=$e["ss_e_tx_identificador"]?></td>
+                            <td style="width: 10%; text-align: center;"><?=$situacaoEntrega?></td>
+                            <td style="width: 15%; text-align: center;<?=($assinaturaEntrega === 'Aguardando assinatura' ? ' font-weight: bold;' : '')?>"><?=$assinaturaEntrega?></td>
+                            <?php if (isset($spansEntregas[$index])): ?>
+                                <td rowspan="<?=$spansEntregas[$index]?>" style="width: 8%; font-family: monospace; font-size: 8.5pt; vertical-align: middle; text-align: center;"><?=$e["ss_e_tx_identificador"]?></td>
                             <?php endif; ?>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
         </table>
+
+        <?php if (!empty($devolucoes)): ?>
+            <h3 style="margin-top: 30px; margin-bottom: 0; font-size: 12pt; color: #333; border-bottom: 2px solid #333; padding-bottom: 4px;">DEVOLUÇÕES, SUBSTITUIÇÕES E PERDAS</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 5%;">Cód.</th>
+                        <th style="width: 35%;">Equipamento (EPI)</th>
+                        <th style="width: 12%;">CA MTE</th>
+                        <th style="width: 12%;">Data</th>
+                        <th style="width: 5%;">Quant.</th>
+                        <th style="width: 13%;">Tipo</th>
+                        <th style="width: 18%;">Justificativa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($devolucoes as $index => $d): ?>
+                        <?php
+                            $stDev = strtolower(trim(strval($d["ss_e_tx_status"] ?? "")));
+                            $tiposDev = ["devolvido" => "Devolvido", "substituido" => "Substituído", "perdido" => "Perdido/Extraviado"];
+                            $tipoDev = $tiposDev[$stDev] ?? $stDev;
+                            $dataDev = !empty($d["ss_e_tx_data_devolucao"]) ? $d["ss_e_tx_data_devolucao"] : $d["ss_e_tx_data_entrega"];
+                        ?>
+                        <tr>
+                            <td style="width: 5%;"><?=$d["ss_e_nb_id"]?></td>
+                            <td style="width: 35%;"><?=$d["ss_e_tx_nome"]?></td>
+                            <td style="width: 12%;"><?=$d["ss_e_tx_ca"] ?: '---'?></td>
+                            <td style="width: 12%;"><?=data($dataDev)?></td>
+                            <td style="width: 5%;"><?=$d["ss_e_nb_quantidade"]?></td>
+                            <td style="width: 13%; text-align: center;"><?=$tipoDev?></td>
+                            <td style="width: 18%; font-size: 8.5pt;"><?=htmlspecialchars($d["ss_e_tx_justificativa"] ?? "")?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
         
         <?php if ($assinaturaDados && $assinaturaDados['status'] === 'assinado'): ?>
             <?php 
@@ -2497,6 +2903,38 @@ function imprimirFicha() {
                 </tr>
             </table>
         <?php endif; ?>
+
+        <?php foreach ($responsaveisAssinados as $respSig): ?>
+            <?php
+            $cpfRespSigFmt = $respSig["cpf"] ? preg_replace("/(\d{3})(\d{3})(\d{3})(\d{2})/", "$1.$2.$3-$4", preg_replace('/[^0-9]/', '', $respSig["cpf"])) : '---';
+            $dataRespSig = !empty($respSig['data_assinatura']) ? date('d/m/Y H:i', strtotime($respSig['data_assinatura'])) : '';
+            $ipRespSig = $respSig['ip_address'] ?? '---';
+            $hashRespSig = $respSig['hash_assinatura'] ?? '---';
+            ?>
+            <div style="margin-top: 15px; border: 1.5px solid #0056b3; background-color: #f4f8fc; padding: 15px; border-radius: 5px; font-size: 10pt;">
+                <h4 style="color: #0056b3; margin: 0 0 5px 0; font-size: 11pt;">ASSINATURA ELETRÔNICA — RESPONSÁVEL (<?=htmlspecialchars($respSig['funcao'] ?? 'Responsável')?>)</h4>
+                <p style="margin: 0; line-height: 1.5;">
+                    Este documento foi assinado eletronicamente por <strong><?=htmlspecialchars($respSig['nome'])?></strong> (CPF: <?=htmlspecialchars($cpfRespSigFmt)?>) em <strong><?=$dataRespSig?></strong>.<br>
+                    IP de Origem: <strong><?=htmlspecialchars($ipRespSig)?></strong> | Protocolo/Hash: <strong><?=htmlspecialchars($hashRespSig)?></strong>.<br>
+                    <span style="color: #555; font-size: 8pt; display: block; margin-top: 5px;">A concordância expressa do responsável valida legalmente a assinatura nos termos da Medida Provisória nº 2.200-2/2001.</span>
+                </p>
+            </div>
+        <?php endforeach; ?>
+
+        <?php if ($responsavelRegistro && $responsavelAssinaturaDispensada): ?>
+            <?php $cpfRespFmt = $responsavelRegistro["cpf"] ? preg_replace("/(\d{3})(\d{3})(\d{3})(\d{2})/", "$1.$2.$3-$4", preg_replace('/[^0-9]/', '', $responsavelRegistro["cpf"])) : '---'; ?>
+            <div style="margin-top: 30px; border: 1.5px solid #999; background-color: #f7f7f7; padding: 15px; border-radius: 5px; font-size: 10pt;">
+                <h4 style="margin: 0 0 5px 0; font-size: 11pt; color: #333;">RESPONSÁVEL PELO REGISTRO</h4>
+                <p style="margin: 0; line-height: 1.5;">
+                    Registro realizado por <strong><?=htmlspecialchars($responsavelRegistro["nome"])?></strong> (CPF: <?=htmlspecialchars($cpfRespFmt)?>) em <strong><?=htmlspecialchars($responsavelRegistro["data"])?></strong>.<br>
+                    <span style="color: #555; font-size: 8pt; display: block; margin-top: 5px;">Assinatura do responsável dispensada nesta entrega, conforme opção registrada no lançamento.</span>
+                </p>
+            </div>
+        <?php endif; ?>
+
+        <div style="margin-top: 20px; border: 1px solid #ccc; background-color: #fbfbfb; padding: 12px 15px; border-radius: 5px; font-size: 9.5pt; color: #444;">
+            <strong>Observação:</strong> esta ficha exibe a assinatura eletrônica mais recente do colaborador. Ao assinar o recibo mais recente, o colaborador declara ciência e concordância com todo o histórico de entregas de EPI registrado nesta ficha. Cada recibo permanece arquivado e rastreável individualmente pelo seu identificador.
+        </div>
     </body>
     </html>
     <?php
@@ -2514,6 +2952,79 @@ function index() {
         <div class="alert alert-warning" style="margin-bottom: 15px;">
             <i class="fa fa-exclamation-triangle"></i> <strong>Informativo:</strong> Para que o Recibo de EPI seja gerado e enviado para assinatura eletrônica, é necessário cadastrar um Tipo de Documento com o nome exato <strong>Recibo de EPI</strong> e marcar a opção <strong>Assinatura</strong> como "Sim" na página de <a href="../cadastro_tipo_doc.php" target="_blank" style="font-weight: bold; text-decoration: underline;">Cadastro de Tipo de Documento</a>.
         </div>';
+    }
+
+    // Alerta de troca de EPI: entregas ativas vencidas ou próximas do vencimento/troca
+    $alertaDias = 30;
+    $alertasTroca = ss_listar_alertas_troca($alertaDias);
+    if (!empty($alertasTroca)) {
+        $qtdVencidos = 0;
+        $qtdAVencer = 0;
+        $linhasAlerta = "";
+        foreach ($alertasTroca as $alertaItem) {
+            $diasRestantes = (int)$alertaItem["dias_restantes"];
+            if ($diasRestantes < 0) {
+                $qtdVencidos++;
+                $situacaoBadge = '<span class="label label-danger" style="font-weight: bold;">Vencido há ' . abs($diasRestantes) . ' dia(s)</span>';
+            } elseif ($diasRestantes === 0) {
+                $qtdAVencer++;
+                $situacaoBadge = '<span class="label label-warning" style="font-weight: bold;">Vence hoje</span>';
+            } else {
+                $qtdAVencer++;
+                $situacaoBadge = '<span class="label label-warning" style="font-weight: bold;">Vence em ' . $diasRestantes . ' dia(s)</span>';
+            }
+
+            $variacaoAlerta = !empty($alertaItem["ss_e_tx_variacao"]) ? ' <small class="text-muted">(Var: ' . htmlspecialchars($alertaItem["ss_e_tx_variacao"]) . ')</small>' : '';
+            $linhasAlerta .= '
+                <tr>
+                    <td style="text-align: center; vertical-align: middle;">' . $situacaoBadge . '</td>
+                    <td style="vertical-align: middle;">' . htmlspecialchars($alertaItem["colaborador_nome"]) . '</td>
+                    <td style="vertical-align: middle;">' . htmlspecialchars($alertaItem["epi_nome"]) . $variacaoAlerta . '</td>
+                    <td style="vertical-align: middle;">' . htmlspecialchars($alertaItem["filial_nome"]) . '</td>
+                    <td style="text-align: center; vertical-align: middle;">' . data($alertaItem["ss_e_tx_data_entrega"]) . '</td>
+                    <td style="text-align: center; vertical-align: middle;"><strong>' . data($alertaItem["ss_e_tx_vencimento"]) . '</strong></td>
+                    <td style="text-align: center; vertical-align: middle;">' . (int)$alertaItem["ss_e_nb_quantidade"] . '</td>
+                </tr>';
+        }
+
+        echo '
+        <div class="portlet light bordered" style="margin-bottom: 15px; border-left: 4px solid #e87e04;">
+            <div class="portlet-title" style="margin-bottom: 5px;">
+                <div class="caption font-dark">
+                    <i class="fa fa-bell font-dark"></i>
+                    <span class="caption-subject bold uppercase">Alertas de Troca de EPI</span>
+                </div>
+                <div class="actions" style="float: right; margin-top: -2px;">
+                    <button type="button" class="btn btn-default btn-xs" id="btn_toggle_alertas_troca"><i class="fa fa-chevron-up"></i> Ocultar</button>
+                </div>
+            </div>
+            <div class="portlet-body" id="container_alertas_troca">
+                ' . ($qtdVencidos > 0 ? '<div class="alert alert-danger" style="margin-bottom: 8px; padding: 8px 12px; font-size: 12px;"><i class="fa fa-exclamation-triangle"></i> <strong>' . $qtdVencidos . ' entrega(s) com a troca vencida.</strong> Providencie a substituição do EPI.</div>' : '') . '
+                ' . ($qtdAVencer > 0 ? '<div class="alert alert-warning" style="margin-bottom: 8px; padding: 8px 12px; font-size: 12px;"><i class="fa fa-clock-o"></i> <strong>' . $qtdAVencer . ' entrega(s) com troca prevista para os próximos ' . $alertaDias . ' dias.</strong></div>' : '') . '
+                <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+                    <table class="table table-striped table-bordered table-hover">
+                        <thead>
+                            <tr style="background-color: #f9f9f9;">
+                                <th style="text-align: center; width: 150px;">Situação</th>
+                                <th>Colaborador</th>
+                                <th>EPI</th>
+                                <th>Filial</th>
+                                <th style="text-align: center;">Entrega</th>
+                                <th style="text-align: center;">Troca Prevista</th>
+                                <th style="text-align: center;">Qtd</th>
+                            </tr>
+                        </thead>
+                        <tbody>' . $linhasAlerta . '</tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <script>
+        $(document).on("click", "#btn_toggle_alertas_troca", function() {
+            $("#container_alertas_troca").slideToggle(150);
+            $(this).find("i").toggleClass("fa-chevron-up fa-chevron-down");
+        });
+        </script>';
     }
 
     if (!isset($_POST["busca_status"])) {
@@ -2597,6 +3108,7 @@ function index() {
         "FOTO DO EPI"         => "ss_e_tx_foto_epi",
         "EPI"                 => "epi_nome",
         "DATA ENTREGA"        => "ss_e_tx_data_entrega_formatado",
+        "ASSINATURA"          => "assinatura_status",
         "QUANTIDADE"          => "ss_e_nb_quantidade",
         "VENCIMENTO ESTIMADO" => "ss_e_tx_vencimento_formatado",
         "IDENTIFICADOR"       => "ss_e_tx_identificador",
@@ -2628,7 +3140,14 @@ function index() {
                                WHEN 'devolvido' THEN 'Devolvido'
                                WHEN 'perdido' THEN 'Perdido/Extraviado'
                                ELSE ent.ss_e_tx_status 
-                           END AS ss_e_tx_status_formatado, ent.ss_e_tx_foto, ent.ss_e_tx_observacao,
+                           END AS ss_e_tx_status_formatado,
+                           CASE
+                               WHEN ent.ss_e_nb_assinatura_id IS NULL THEN 'sem_assinatura'
+                               WHEN LOWER(IFNULL(s.status, '')) IN ('assinado', 'concluido') THEN 'assinado'
+                               WHEN LOWER(IFNULL(s.status, '')) = 'expirado' THEN 'expirado'
+                               ELSE 'aguardando'
+                           END AS assinatura_status,
+                           ent.ss_e_tx_foto, ent.ss_e_tx_observacao,
                            ent.ss_e_nb_colaborador_id, ent.ss_e_nb_epi_id,
                            IFNULL(s.id_documento, '-') AS ss_e_tx_identificador
                     FROM ss_epi_entrega ent 
@@ -2640,18 +3159,11 @@ function index() {
                   ) AS ent";
 
     $gridFields["actions"] = [
-        '<span class="fa fa-edit acao-editar-entrega" title="Alterar" style="color:#337ab7; cursor:pointer; font-size:16px; margin-right:8px;"></span>',
         '<span class="fa fa-trash acao-excluir-entrega" title="Excluir" style="color:#d9534f; cursor:pointer; font-size:16px;"></span>'
     ];
 
     $jsAcoes = '
         var funcoesInternas = function(){
-            // Bind Alterar click
-            $(".acao-editar-entrega").off("click").on("click", function(event) {
-                var id = $(this).closest("tr").attr("data-row-id");
-                submitPost("", { acao: "modificarEntrega", id: id });
-            });
-
             // Bind Excluir click
             $(".acao-excluir-entrega").off("click").on("click", function(event) {
                 var row = $(this).closest("tr");
@@ -2753,7 +3265,8 @@ function listarKits() {
         "TIPOS DE EPI"  => "qtd_tipos",
         "TOTAL DE EPIS" => "qtd_total",
         "EPIs NO KIT"   => "itens_detalhes",
-        "STATUS"        => "ss_k_tx_status"
+        "STATUS"        => "ss_k_tx_status",
+        "FOTO DO KIT"   => "ss_k_tx_foto"
     ];
 
     $camposBusca = [
@@ -2764,6 +3277,7 @@ function listarKits() {
                     ss_k_nb_id, 
                     ss_k_tx_nome, 
                     ss_k_tx_status,
+                    ss_k_tx_foto,
                     (SELECT COUNT(ki.ss_ki_nb_id) FROM ss_kit_item ki WHERE ki.ss_ki_nb_kit_id = ss_kit.ss_k_nb_id) AS qtd_tipos,
                     IFNULL((SELECT SUM(ki.ss_ki_nb_quantidade) FROM ss_kit_item ki WHERE ki.ss_ki_nb_kit_id = ss_kit.ss_k_nb_id), 0) AS qtd_total,
                     IFNULL((SELECT GROUP_CONCAT(CONCAT('<strong>', IFNULL(e.ss_e_tx_subgrupo, ''), '</strong> <small>', IFNULL(e.ss_e_tx_item, ''), ' / ', IFNULL(e.ss_e_tx_grupo, ''), '</small> <b>(x', ki.ss_ki_nb_quantidade, ')</b>') SEPARATOR '<br>') FROM ss_kit_item ki JOIN ss_epi e ON ki.ss_ki_nb_epi_id = e.ss_e_nb_id WHERE ki.ss_ki_nb_kit_id = ss_kit.ss_k_nb_id), '<span class=\"text-muted\">Nenhum item</span>') AS itens_detalhes
@@ -2914,6 +3428,10 @@ function modificarKit() {
         $kitItens = [];
     }
 
+    // Fotos já cadastradas do kit
+    $kitFotoAtual = $kit["ss_k_tx_foto"] ?? "";
+    $kitFotos = array_filter(explode(",", $kitFotoAtual));
+
     // Carregar EPIs de estoque para o kit (EPI/subgrupo em destaque na ordem)
     $sqlEpi = query("SELECT ss_e_nb_id, CONCAT(IFNULL(ss_e_tx_subgrupo, ''), ' / ', IFNULL(ss_e_tx_item, ''), ' / ', ss_e_tx_grupo, ' (CA: ', IFNULL(ss_e_tx_ca, 'N/A'), ')') AS epi_nome 
                      FROM ss_epi 
@@ -2943,6 +3461,35 @@ function modificarKit() {
     $campo_epi = combo("EPI para Adicionar", "kit_epi_id", "", 6, $epiOptions);
     $campo_qtd = campo("Quantidade do Item", "kit_epi_qtd", "1", 2, "MASCARA_NUMERO");
     $btn_add   = '<div class="col-sm-4 margin-bottom-5 campo-fit-content" style="margin-top:23px;"><button type="button" class="btn btn-primary" id="btn_add_epi_kit">Adicionar ao Kit</button></div>';
+
+    // Fotos do kit (mesmo padrão das fotos do EPI individual)
+    $fotos_kit_html = "";
+    foreach ($kitFotos as $f) {
+        $src = ss_resolve_foto_url($f);
+        $fotos_kit_html .= '
+            <div class="preview-item" data-path="' . htmlspecialchars($f) . '" style="display: inline-flex; align-items: center; gap: 5px; margin-right: 10px; margin-bottom: 10px; border: 1px solid #ccc; padding: 5px; border-radius: 4px;">
+                <img src="' . $src . '" style="max-height: 80px; max-width: 80px; object-fit: cover; cursor: pointer;" onclick="verImagemMaior(\'' . $src . '\')">
+                <button type="button" class="btn btn-danger btn-xs btn_remover_foto_kit_existente" data-path="' . htmlspecialchars($f) . '" title="Remover"><i class="fa fa-remove"></i></button>
+            </div>';
+    }
+
+    $campo_foto_kit = '
+        <div class="col-sm-12 margin-bottom-5 campo-fit-content" data-dropzone-foto>
+            <label>Fotos do Kit (Opcional)</label>
+            <div id="dropzone_foto_kit" data-dropzone-area style="border: 2px dashed #b0b9c4; border-radius: 8px; background: #f8fafc; padding: 22px 15px; text-align: center; cursor: pointer; transition: all .2s;">
+                <div style="font-size: 30px; color: #337ab7;"><i class="fa fa-cloud-upload"></i></div>
+                <div style="font-size: 15px; font-weight: bold; color: #333; margin-top: 6px;">Arraste e solte as imagens aqui</div>
+                <div style="color: #888; margin-top: 3px;">Você também pode clicar aqui para escolher da galeria ou usar a câmera</div>
+                <div style="margin-top: 12px;">
+                    <button type="button" class="btn btn-sm btn-primary" data-galeria><i class="fa fa-folder-open"></i> Escolher da Galeria</button>
+                    <button type="button" class="btn btn-sm btn-success" data-camera-btn><i class="fa fa-camera"></i> Tirar Foto (Câmera)</button>
+                </div>
+            </div>
+            <input name="kit_foto[]" id="kit_foto_input" autocomplete="off" type="file" accept="image/*" multiple style="display: none;">
+            <input name="kit_foto_cam[]" id="kit_foto_camera_input" autocomplete="off" type="file" accept="image/*" capture="environment" data-camera style="display: none;">
+            <div id="kit_existing_photos_container" style="margin-top: 10px; display: block;">' . $fotos_kit_html . '</div>
+            <div id="kit_new_photos_container" style="margin-top: 10px; display: block;"></div>
+        </div>';
 
     echo abre_form("Dados Gerais do Kit");
     echo linha_form([$campo_nome, $campo_status]);
@@ -2976,6 +3523,8 @@ function modificarKit() {
     echo '<input type="hidden" name="id" value="' . ($_POST["id"] ?? "") . '">';
     echo '<input type="hidden" name="nome_kit" id="final_nome_kit" value="">';
     echo '<input type="hidden" name="status" id="final_status" value="">';
+    echo '<input type="hidden" name="fotos_mantidas" id="kit_fotos_mantidas" value="' . htmlspecialchars($kitFotoAtual) . '">';
+    echo linha_form([$campo_foto_kit]);
 
     $final_buttons = [];
     $final_buttons[] = botao("Salvar Kit", "cadastrarKit", "", "", "", "", "btn btn-success");
@@ -3078,6 +3627,35 @@ function modificarKit() {
             renderKitTable();
         });
 
+        // Fotos do kit: preview dos novos arquivos e remoção das existentes
+        $('#kit_foto_input').on('change', function() {
+            $('#kit_new_photos_container').empty();
+            var files = this.files;
+            if (!files || files.length === 0) return;
+            var allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+            for (var i = 0; i < files.length; i++) {
+                (function(file) {
+                    if (allowedTypes.indexOf(file.type) === -1) {
+                        Swal.fire('Atenção', 'O arquivo \"' + file.name + '\" não é uma imagem válida (JPEG, JPG, PNG ou WEBP).', 'warning');
+                        return;
+                    }
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        $('#kit_new_photos_container').append('<div class=\"preview-item-new\" style=\"display: inline-flex; align-items: center; gap: 5px; margin-right: 10px; margin-bottom: 10px; border: 1px solid #aaa; padding: 5px; border-radius: 4px; background: #f9f9f9;\"><img src=\"' + e.target.result + '\" style=\"max-height: 80px; max-width: 80px; object-fit: cover; cursor: pointer;\" onclick=\"verImagemMaior(\'' + e.target.result + '\')\" title=\"Nova Imagem\"></div>');
+                    };
+                    reader.readAsDataURL(file);
+                })(files[i]);
+            }
+        });
+
+        $(document).on('click', '.btn_remover_foto_kit_existente', function() {
+            var pathToRemove = $(this).attr('data-path');
+            $(this).closest('.preview-item').remove();
+            var mantidas = ($('#kit_fotos_mantidas').val() || '').split(',').filter(Boolean);
+            mantidas = mantidas.filter(function(p) { return p !== pathToRemove; });
+            $('#kit_fotos_mantidas').val(mantidas.join(','));
+        });
+
         const initialKitItensStr = JSON.stringify(kitItens);
         const initialNomeKit = $('input[name=\"nome_kit\"]').val() || '';
         const initialStatus = $('select[name=\"status\"]').val() || 'ativo';
@@ -3143,6 +3721,8 @@ function modificarKit() {
     </script>
     ";
 
+    echo '<script src="' . $_ENV["APP_PATH"] . '/armazem_paraiba/saude_seguranca/js/dropzone_foto.js"></script>';
+
     rodape();
 }
 
@@ -3178,6 +3758,33 @@ function cadastrarKit() {
         $kit["ss_k_tx_dataAtualiza"] = $dataCadastro;
         atualizar("ss_kit", array_keys($kit), array_values($kit), $kitId);
     }
+
+    // Fotos do kit: mantém as existentes e processa os novos uploads (galeria + câmera)
+    $fotos_mantidas = !empty($_POST["fotos_mantidas"]) ? $_POST["fotos_mantidas"] : "";
+    $fotos_kit = array_filter(explode(",", $fotos_mantidas));
+
+    $allowed_fotos = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
+    foreach (["kit_foto", "kit_foto_cam"] as $campoFoto) {
+        if (empty($_FILES[$campoFoto]["name"][0])) continue;
+        $total_files = count($_FILES[$campoFoto]["name"]);
+        $dir_foto = "arquivos/kit/{$kitId}/";
+        $dir_foto_abs = $_SERVER["DOCUMENT_ROOT"] . $_ENV["APP_PATH"] . "/" . $dir_foto;
+        if (!is_dir($dir_foto_abs)) {
+            mkdir($dir_foto_abs, 0777, true);
+        }
+        for ($i = 0; $i < $total_files; $i++) {
+            if ($_FILES[$campoFoto]["error"][$i] !== UPLOAD_ERR_OK) continue;
+            if (!in_array($_FILES[$campoFoto]["type"][$i], $allowed_fotos)) continue;
+            $ext = pathinfo(basename($_FILES[$campoFoto]["name"][$i]), PATHINFO_EXTENSION);
+            $target_name = "KIT_{$kitId}_" . time() . "_{$i}." . $ext;
+            if (move_uploaded_file($_FILES[$campoFoto]["tmp_name"][$i], $dir_foto_abs . $target_name)) {
+                $fotos_kit[] = $dir_foto . $target_name;
+            }
+        }
+    }
+
+    $fotoStr = !empty($fotos_kit) ? implode(",", $fotos_kit) : null;
+    atualizar("ss_kit", ["ss_k_tx_foto"], [$fotoStr], $kitId);
 
     // Atualizar itens
     query("DELETE FROM ss_kit_item WHERE ss_ki_nb_kit_id = {$kitId}");

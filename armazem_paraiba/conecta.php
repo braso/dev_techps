@@ -379,6 +379,10 @@
     // anterior em aberto (padrão: sim). O bloqueio do MESMO DIA continua valendo sempre.
     bancoGarantirColuna($conn, "parametro", "para_tx_permitirNovaJornadaDiaAnterior", "ENUM('sim','nao') NOT NULL DEFAULT 'sim'");
 
+    // Migração da tabela parametro: flag "Almoço pré assinalado" (reservada; ainda não altera
+    // nenhum comportamento).
+    bancoGarantirColuna($conn, "parametro", "para_tx_almocoPreAssinalado", "ENUM('sim','nao') NOT NULL DEFAULT 'nao'");
+
     // Criação da tabela feriado_funcionario se não existir
     bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS feriado_funcionario (
         fefi_nb_id INT AUTO_INCREMENT PRIMARY KEY,

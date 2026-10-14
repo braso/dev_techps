@@ -225,6 +225,12 @@ $sqlKit = "CREATE TABLE IF NOT EXISTS ss_kit (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;";
 mysqli_query($conn, $sqlKit) or die("Erro ao criar tabela ss_kit: " . mysqli_error($conn));
 
+// Foto do kit (cadastro do kit — mesmo padrão das fotos de EPI)
+$checkKitFoto = mysqli_query($conn, "SHOW COLUMNS FROM ss_kit LIKE 'ss_k_tx_foto'");
+if ($checkKitFoto && mysqli_num_rows($checkKitFoto) == 0) {
+    mysqli_query($conn, "ALTER TABLE ss_kit ADD COLUMN ss_k_tx_foto TEXT NULL AFTER ss_k_tx_status;");
+}
+
 // 6. Tabela ss_kit_item (Itens do Kit)
 $sqlKitItem = "CREATE TABLE IF NOT EXISTS ss_kit_item (
     ss_ki_nb_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -311,6 +317,12 @@ if ($checkDataInspecao && mysqli_num_rows($checkDataInspecao) == 0) {
 $checkObsInspecao = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_entrega LIKE 'ss_e_tx_obs_inspecao'");
 if ($checkObsInspecao && mysqli_num_rows($checkObsInspecao) == 0) {
     mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_tx_obs_inspecao VARCHAR(500) NULL AFTER ss_e_tx_data_inspecao;");
+}
+
+// Coleta da assinatura do responsável (sim = fluxo normal de assinatura; nao = apenas registra o responsável no recibo)
+$checkColetarAssinaturaResp = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_entrega LIKE 'ss_e_tx_coletar_assinatura_resp'");
+if ($checkColetarAssinaturaResp && mysqli_num_rows($checkColetarAssinaturaResp) == 0) {
+    mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_tx_coletar_assinatura_resp ENUM('sim','nao') NOT NULL DEFAULT 'sim' AFTER ss_e_tx_obs_inspecao;");
 }
 
 // 8. Modificações para controle por filial, data recebimento e chave NF

@@ -9,27 +9,31 @@ Commit de referencia: `5cd46c1` - "nova funcionalidade para bater ponto com faci
 
 ## 1. Visao geral
 
-O totem e uma pagina publica da empresa (sem login) onde o funcionario:
+O registro de ponto por facial roda dentro do **Modo Totem da tela de login** (raiz do sistema).
+O funcionario ativa o Modo Totem (a empresa e configurada uma vez), toca na tela e a camera abre.
+O sistema identifica a pessoa (1:N) e decide:
 
-1. toca na tela ociosa (relogio) para comecar;
-2. a camera abre na hora para o reconhecimento facial;
-3. o sistema identifica a pessoa e **decide sozinho o tipo do registro**
-   (inicio de jornada, inicio/fim de almoco ou fim de jornada);
-4. recebe um alerta de sucesso ou falha e volta para a tela ociosa.
+- se o perfil dela tem **"Registrar Ponto com Facial" = Sim** -> registra o ponto (fluxo
+  automatico, secoes 4.4 a 4.6) e mostra o resultado na tela;
+- senao -> segue o **fluxo de login do totem** (entra no sistema), como sempre funcionou.
 
-O sistema identifica a pessoa pela face (1:N), valida o perfil e a sequencia da jornada e grava
-o ponto com a evidencia da distancia facial apurada.
+Assim existe um unico Modo Totem: ele bate o ponto de quem tem o perfil habilitado e loga os
+demais. O backend do ponto e o endpoint `acao=registrarPontoFacial` do arquivo
+`.../<pasta_da_empresa>/totem_ponto.php`; a pagina HTML desse arquivo continua acessivel, mas o
+modo oficial e o da tela de login.
 
-A pagina fica na pasta da empresa, usando o banco e o `.env` da propria empresa:
+A empresa do totem e a pasta do deployment, que define o banco:
 
 ```
-https://<dominio>/<APP_PATH>/<pasta_da_empresa>/totem_ponto.php
+https://<dominio>/<APP_PATH>/<pasta_da_empresa>/totem_ponto.php   (endpoint)
+https://<dominio>/<APP_PATH>/index.php                            (tela de login / Modo Totem)
 ```
 
 Exemplo no ambiente de desenvolvimento:
 
 ```
 http://localhost/braso/armazem_paraiba/totem_ponto.php
+http://localhost/braso/index.php
 ```
 
 ---
@@ -38,11 +42,12 @@ http://localhost/braso/armazem_paraiba/totem_ponto.php
 
 | Etapa | O que acontece |
 |---|---|
-| Tela ociosa | Relogio, data e a mensagem "Toque na tela para registrar seu ponto". Apos 3 falhas, aparece tambem o botao **ENTRAR COM LOGIN**. |
-| Camera | O toque na tela abre a camera na hora (sem botoes). O sistema aguarda rosto real, valida a qualidade e captura o descritor facial. Se ninguem aparecer em 45s, a camera fecha e volta para a tela ociosa. |
-| Registro | Com a face reconhecida, o servidor decide o tipo (regra da secao 4.5) e grava o ponto. |
-| Resultado | Alerta grande: verde com nome + tipo + hora (6s), ou vermelho com a mensagem amigavel (5s). Depois volta para a tela ociosa. |
-| Falhas | Cada falha conta 1 tentativa. Apos 3 falhas aparece o botao **ENTRAR COM LOGIN**. O contador zera com um sucesso ou ao recarregar a pagina. |
+| Modo Totem | Ativado pela tela de login (`index.php`); a empresa fica salva no dispositivo. |
+| Toque | O toque na tela abre a camera (modelos e camera ja pre-carregados em background). |
+| Identificacao | O sistema aguarda rosto real, valida a qualidade e captura o descritor facial. |
+| Perfil com ponto facial | O endpoint registra o ponto automaticamente (regra da secao 4.5) e mostra nome + tipo + hora (verde). Se houver jornada de outro dia, mostra tambem o aviso. |
+| Perfil comum | Segue o fluxo de login do totem (entra no sistema), como antes. |
+| Regras da jornada | Quando a regra nao permite (intervalo aberto, jornada de outro dia bloqueada, cooldown etc.), mostra a mensagem amigavel e volta ao totem. |
 
 ---
 
@@ -77,14 +82,18 @@ http://localhost/braso/armazem_paraiba/totem_ponto.php
     ajuste do gestor.".
   - **Nao**: nao abre; o totem mostra "Voce tem uma jornada de outro dia em aberto. Procure o
     gestor para ajustar." e o botao JORNADA nao aparece na tela web.
-- Configuracao: **Cadastros > Parametro**, secao "Outros".
+- Configuracao: **Cadastros > Parametro**, secao **"Acordo Sindical"** (editavel somente quando
+  "Acordo Sindical" = Sim).
 
-### 3.4 Janela de almoco do totem
+### 3.4 Horario do almoco pre assinalado
 
-- Tela: **Cadastros > Parametro**, secao "Outros": **"Janela de almoco do totem facial"**
-  (`para_tx_almocoInicio` / `para_tx_almocoFim`).
-- Padrao: **11:00 as 14:00**. Dentro da janela (e sem almoco na jornada atual) o totem registra
-  **Inicio Almoco**; fora dela (ou se ja almocou) registra **Fim Jornada**.
+- Tela: **Cadastros > Parametro**, secao **"Acordo Sindical"** (editavel somente quando
+  "Acordo Sindical" = Sim): **"Horario do almoco pre assinalado"**
+  (`para_tx_almocoInicio` / `para_tx_almocoFim`), padrao **11:00 as 14:00**.
+- Usado quando **"Almoco pre assinalado?" = Sim**: no Fim Jornada, o sistema registra o Inicio e
+  o Fim Almoco nesses horarios (quando a jornada atravessa a janela).
+- A flag **"Almoco pre assinalado?"** (`para_tx_almocoPreAssinalado`, padrao Nao) faz o
+  funcionario registrar apenas Entrada e Fim Jornada; o almoco entra automaticamente (secao 4.5).
 
 ### 3.5 Camera
 
@@ -142,17 +151,32 @@ Valida a ordem dos registros (mesma regra da tela normal de ponto e dos ajustes)
 
 ### 4.5 Decisao automatica do tipo (totem sem botoes)
 
-O servidor decide o proximo registro pelo estado do funcionario (helper `proximoMacroTotem()`):
+A decisao e por **quantidade de pontos** da jornada aberta (a hora nao decide), pelo helper
+`proximoMacroTotem()`:
 
 | Estado | Tipo registrado |
 |---|---|
 | Sem jornada aberta | **Inicio Jornada (1)** |
+| Jornada aberta com **1 ponto** (so a entrada) | **Inicio Almoco (3)** |
+| Jornada aberta com **2 pontos** | **Fim Almoco (4)** |
+| Jornada aberta com **3 pontos** | **Fim Jornada (2)** |
+| Jornada aberta com **4+ pontos** | **Nao registra** ("registros alem do esperado. Procure o RH.") |
+| **Almoco pre assinalado = Sim** + jornada com 1 ponto | **Fim Jornada (2)** com o almoco inserido automaticamente (abaixo) |
 | Jornada aberta de **dia anterior** + parametro "Permitir nova jornada" = Sim | **Inicio Jornada (1)** (nova; a anterior fica aberta e o resultado mostra um aviso) |
 | Jornada aberta de **dia anterior** + parametro "Permitir nova jornada" = Nao | **Nao registra** ("jornada de outro dia em aberto. Procure o gestor.") |
-| Almoco aberto (ultimo ponto = 3) | **Fim Almoco (4)** |
+| Jornada de dia anterior com exatamente **2 pontos** | O 2º ponto e convertido em **Fim Jornada** (sem 3º ponto) e a nova jornada abre normalmente |
 | Intervalo aberto que nao e almoco (5/7/9/11) | **Nao registra** ("intervalo em aberto. Procure o RH.") |
-| Jornada aberta hoje, sem intervalo aberto, **dentro da janela de almoco** e sem almoco na jornada | **Inicio Almoco (3)** |
-| Jornada aberta hoje, fora da janela **ou** ja almocou | **Fim Jornada (2)** |
+
+**Almoco pre assinalado (flag Sim):** o funcionario faz apenas Entrada e Fim Jornada. No Fim
+Jornada:
+
+- Fim **depois** da janela: insere o **Inicio Almoco** e o **Fim Almoco** nos horarios da janela;
+- Fim **dentro** da janela: insere o **Inicio Almoco** no inicio da janela e o **Fim Almoco** no
+  horario da propria batida (ex.: janela 10:00-11:00 e fim as 10:30 -> almoco 10:00-10:30);
+- Fim **antes** da janela: nao insere o almoco e finaliza com a observacao "Saida antes do
+  almoco pre assinalado." na justificativa.
+
+Os pontos automaticos usam a descricao `Almoco pre assinalado`.
 
 - Depois de decidir, o registro passa pelas mesmas validacoes do `conferirErroPonto()`
   (secao 4.4) e pela regra de data (secao 4.6).
@@ -229,7 +253,8 @@ Regra do retorno no logout:
 | `armazem_paraiba/cadastro_perfil_acesso.php` | Checkbox "Registrar Ponto com Facial". |
 | `armazem_paraiba/cadastro_parametro.php` | Janela de almoco do totem e "Permitir abrir nova jornada com a do dia anterior em aberto?". |
 | `armazem_paraiba/cadastro_facial.php` | Cadastro da biometria (ja existente). |
-| `index.php` / `login.php` (raiz) e `armazem_paraiba/index.php` / `logout.php` | Propagacao da origem totem e retorno no logout. |
+| `index.php` / `login.php` (raiz) | Modo Totem unificado: identifica a pessoa e registra o ponto (perfil habilitado) ou segue o login normal do totem. |
+| `armazem_paraiba/index.php` / `logout.php` | Propagacao da origem totem (pagina avulsa) e retorno no logout. |
 | `armazem_paraiba/batida_ponto.php` | Botao/aviso de nova jornada na tela normal de ponto. |
 
 ### 6.2 Banco de dados
@@ -239,6 +264,7 @@ Regra do retorno no logout:
 - `parametro.para_tx_almocoInicio TIME NULL DEFAULT '11:00:00'`
 - `parametro.para_tx_almocoFim TIME NULL DEFAULT '14:00:00'`
 - `parametro.para_tx_permitirNovaJornadaDiaAnterior ENUM('sim','nao') NOT NULL DEFAULT 'sim'`
+- `parametro.para_tx_almocoPreAssinalado ENUM('sim','nao') NOT NULL DEFAULT 'nao'` (almoço automático)
 - `user.user_tx_face_descriptor LONGTEXT` (ja existia, guarda o vetor facial)
 
 As colunas novas sao criadas automaticamente pelas migracoes de `conecta.php` quando qualquer
@@ -270,10 +296,12 @@ pagina da empresa e carregada (inclusive o proprio totem). Perfis existentes ass
 2. **Liberar o perfil**: Cadastros > Perfil de Acesso > marcar "Registrar Ponto" e
    "Registrar Ponto com Facial" > salvar. Garantir que os funcionarios estejam vinculados a esse
    perfil (Cadastros > Permissoes de usuarios).
-3. **Regra de jornada e almoco**: Cadastros > Parametro > jornada usada pela empresa >
-   "Permitir abrir nova jornada com a do dia anterior em aberto?" (padrao Sim) e a
-   "Janela de almoco do totem facial" (padrao 11:00 as 14:00) > salvar.
-4. **Abrir o totem** na URL da empresa: `.../<pasta_da_empresa>/totem_ponto.php`.
+3. **Regra de jornada e almoco**: Cadastros > Parametro > jornada usada pela empresa, secao
+   "Acordo Sindical" (campos so editaveis com Acordo = Sim): "Permitir abrir nova jornada com a
+   do dia anterior em aberto?" (padrao Sim), "Horario do almoco pre assinalado" (padrao 11:00 as
+   14:00) e "Almoco pre assinalado?" (padrao Nao) > salvar.
+4. **Ativar o Modo Totem**: abrir a tela de login (`.../index.php`), clicar em **Modo Totem**,
+   selecionar a empresa (fica salva no dispositivo) e usar a tela cheia.
 
 ---
 
@@ -300,12 +328,12 @@ pagina da empresa e carregada (inclusive o proprio totem). Perfis existentes ass
 - Regressao do modulo de ponto:
   `docker compose exec apache php /var/www/html/braso/armazem_paraiba/testes_regressao/run.php`
 - Checklist manual:
-  1. perfil sem a marcacao: totem recusa e oferece login;
-  2. rosto desconhecido: 3 falhas e botao de login;
+  1. perfil sem a marcacao: o totem segue o login normal no sistema;
+  2. perfil com a marcacao: o totem registra o ponto automaticamente;
   3. toque na tela: camera abre direto (sem botoes);
   4. sem jornada: reconhecer e registrar Inicio Jornada automaticamente;
-  5. dentro da janela de almoco: registrar Inicio Almoco; fora dela: Fim Jornada;
-  6. almoco aberto: registrar Fim Almoco; intervalo nao-almoco aberto: mensagem, sem gravacao;
-  7. jornada aberta de dia anterior: com parametro Sim registra nova jornada e mostra o aviso; com Nao orienta o gestor; jornada aberta no mesmo dia: inicio de jornada bloqueado (mesmo via totem);
+  5. regra por quantidade: 2ª batida = Inicio Almoco; 3ª = Fim Almoco; 4ª = Fim Jornada;
+  6. "Almoco pre assinalado" = Sim: 2ª batida registra Fim Jornada e insere o almoço na janela; se o Fim Jornada for antes da janela, finaliza com observacao;
+  7. jornada aberta de dia anterior: com parametro Sim registra nova jornada e mostra o aviso; com Nao orienta o gestor; jornada de 2 pontos do dia anterior: 2º ponto vira Fim Jornada e a nova abre normal; intervalo nao-almoco aberto: mensagem, sem gravacao;
   8. conferir no banco `pont_tx_descricao = 'Facial'` e `pont_tx_faceDistancia` preenchida;
-  9. login pelo fallback e logout: retorna ao totem apenas com perfil marcado.
+  9. pagina avulsa do totem (URL antiga): login pelo fallback e logout voltam ao totem apenas com perfil marcado.

@@ -468,6 +468,8 @@ ini_set('display_startup_errors', 1);
 		const MODEL_URL  = '<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/face_models';
 		const ENDPOINT   = '<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/login_facial.php';
 		const TOTEM_KEY  = 'totem_empresa';
+		const EMPRESAS   = <?=json_encode($empresas ?? [], JSON_UNESCAPED_UNICODE)?>;
+		const PONTO_BASE = '<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>';
 
 		let totemAtivo   = false;
 		let totemEmpresa = '';
@@ -775,11 +777,63 @@ ini_set('display_startup_errors', 1);
 			}, 300);
 		}
 
+		function mostrarSucessoPontoTotem(json) {
+			pararCamTotem();
+			totemStatus.style.color = '#27ae60';
+			totemStatus.textContent = '✔ ' + (json.nome || '');
+			totemVideo.style.display = 'none';
+			totemCanvas.style.display = 'none';
+			totemVideo.parentElement.style.background = 'transparent';
+			const aviso = json.aviso
+				? '<div style="font-size:13px;color:#ffd479;max-width:520px;margin-top:10px;">' + json.aviso + '</div>'
+				: '';
+			totemRes.innerHTML =
+				'<div style="display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:8px;">' +
+					'<div style="width:100px;height:100px;border-radius:50%;background:#27ae60;display:flex;align-items:center;justify-content:center;">' +
+						'<i class="fa fa-check" style="font-size:48px;color:#fff;"></i>' +
+					'</div>' +
+					'<div style="font-size:22px;font-weight:700;color:#fff;">' + (json.nome || '') + '</div>' +
+					'<div style="font-size:18px;color:#fff;">' + (json.macro || '') + ' às ' + (json.hora || '') + '</div>' +
+					aviso +
+				'</div>';
+			setTimeout(() => fecharCamTotem(), json.aviso ? 9000 : 6000);
+		}
+
 		async function autenticarTotem(descriptor) {
 			totemStatus.textContent = 'Consultando servidor...';
+			const descritorJson = JSON.stringify(Array.from(descriptor));
+
+			// 1) Tenta registrar o ponto: o endpoint valida se o perfil do identificado tem
+			//    "Registrar Ponto com Facial". Se tiver, segue o fluxo automatico de ponto.
+			const folder = EMPRESAS[totemEmpresa] || '';
+			if (folder) {
+				try {
+					const fdPonto = new FormData();
+					fdPonto.append('acao', 'registrarPontoFacial');
+					fdPonto.append('descritor', descritorJson);
+					const resPonto = await fetch(PONTO_BASE + '/' + folder + '/totem_ponto.php', { method: 'POST', body: fdPonto });
+					const jsonPonto = await resPonto.json();
+					if (jsonPonto.ok) {
+						mostrarSucessoPontoTotem(jsonPonto);
+						return;
+					}
+					if (jsonPonto.codigo && jsonPonto.codigo !== 'rosto' && jsonPonto.codigo !== 'perfil') {
+						// Regra de jornada/cooldown/erro interno: mostra e volta ao totem.
+						totemRes.innerHTML = '<div style="color:#e74c3c;font-size:15px;margin-top:8px"><i class="fa fa-times-circle"></i> ' + jsonPonto.msg + '</div>';
+						setTimeout(() => fecharCamTotem(), 3500);
+						return;
+					}
+					// 'rosto' (nao encontrado nessa base) ou 'perfil' (sem registro facial de
+					// ponto): segue o fluxo de login do totem.
+				} catch(e) {
+					// Falha no endpoint de ponto nao pode travar o login: segue o fluxo normal.
+				}
+			}
+
+			// 2) Fluxo de login do totem (existente).
 			const fd = new FormData();
 			fd.append('empresa_key', totemEmpresa);
-			fd.append('descritor', JSON.stringify(Array.from(descriptor)));
+			fd.append('descritor', descritorJson);
 			try {
 				const res  = await fetch(ENDPOINT, { method: 'POST', body: fd });
 				const json = await res.json();
