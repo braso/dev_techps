@@ -117,3 +117,14 @@ O módulo cria e gerencia as seguintes tabelas MySQL:
    * A validade do CA (`ss_e_tx_validade_ca`) é apenas **informativa** (gera alerta no estoque), não bloqueia a entrega.
 7. **Alertas de Troca**:
    * A listagem de Entregas exibe o painel "Alertas de Troca de EPI" com as entregas vencidas ou com troca prevista para os próximos 30 dias, permitindo abrir a entrega diretamente para registrar a substituição.
+8. **Coleta da Assinatura do Responsável**:
+   * No lançamento da entrega (lote, individual ou kit) existe a opção **"Coletar assinatura do responsável?"**:
+     * **Sim** (padrão): mantém o fluxo normal de assinatura — colaborador + responsáveis de setor/cargo.
+     * **Não**: o recibo é enviado apenas para o colaborador assinar e o recibo/ficha ganha o bloco **"Responsável pelo registro"** com nome/CPF do usuário logado que registrou a entrega e data/hora, **sem exigir assinatura** do responsável.
+   * A escolha fica gravada em `ss_epi_entrega.ss_e_tx_coletar_assinatura_resp` (padrão `'sim'`).
+9. **Ficha x Recibo**:
+   * **Recibo de Entrega de EPI**: PDF gerado a cada entrega e enviado para assinatura (título "RECIBO DE ENTREGA DE EPI").
+   * **Ficha de EPI**: impressão consolidada do histórico do colaborador (título "FICHA DE EPI"), com **blocos separados**: "Entregas de EPI" (com situação Entregue/Não entregue) e "Devoluções, Substituições e Perdas" (tipo + justificativa), quando houver.
+   * A ficha exibe a **assinatura eletrônica mais recente do colaborador** e, quando houver, a **assinatura eletrônica do responsável** (mesma solicitação). O bloco **"Responsável pelo registro"** (usuário logado na entrega mais recente) aparece **apenas quando a assinatura do responsável foi dispensada** (opção "Não" no lançamento).
+   * O grid de Entregas e a ficha (bloco "Entregas de EPI") têm a coluna **"Assinatura"** com a situação de cada recibo: Assinado, Aguardando assinatura, Assinatura expirada ou Sem assinatura.
+   * A ficha traz a observação de que, ao assinar o recibo mais recente, o colaborador dá ciência de todo o histórico; os recibos individuais permanecem arquivados e rastreáveis pelo identificador.

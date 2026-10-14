@@ -150,6 +150,8 @@ function cadastrarEntregaLoteAjax() {
     $lotes = json_decode($_POST["lotes"] ?? "[]", true);
     $colaborador_id = (int)($_POST["colaborador_id"] ?? 0);
     $data_entrega = $_POST["data_entrega"];
+    // Opção do lançamento: coletar (sim) ou dispensar (nao) a assinatura do responsável
+    $coletarAssinaturaResp = (($_POST["coletar_assinatura_responsavel"] ?? "sim") === "nao") ? "nao" : "sim";
     
     if (empty($data_entrega)) {
         echo json_encode(["status" => "error", "message" => "Data de entrega inválida."]);
@@ -284,6 +286,7 @@ function cadastrarEntregaLoteAjax() {
             "ss_e_tx_estornado"           => $estornar,
             "ss_e_tx_data_devolucao"      => $data_devolucao,
             "ss_e_nb_entrega_anterior_id" => $entrega_anterior_id,
+            "ss_e_tx_coletar_assinatura_resp" => $coletarAssinaturaResp,
             "ss_e_nb_userCadastro"        => $userCadastro,
             "ss_e_tx_dataCadastro"        => $dataCadastro
         ];
@@ -339,7 +342,7 @@ function cadastrarEntregaLoteAjax() {
     if ($sucessos > 0 && !empty($inserted_ids_by_colab)) {
         foreach ($inserted_ids_by_colab as $colab_id => $delivery_ids) {
             try {
-                ss_enviar_ficha_para_assinatura($colab_id, $delivery_ids);
+                ss_enviar_ficha_para_assinatura($colab_id, $delivery_ids, $coletarAssinaturaResp === "sim");
             } catch (Throwable $t) {
                 $erros[] = "Erro ao enviar ficha para assinatura: " . $t->getMessage();
             }
@@ -359,6 +362,8 @@ function cadastrarEntregaLoteAjax() {
 function cadastrarEntrega() {
     $colaborador_id = (int)$_POST["colaborador_id"];
     $data_entrega   = $_POST["data_entrega"];
+    // Opção do lançamento: coletar (sim) ou dispensar (nao) a assinatura do responsável
+    $coletarAssinaturaResp = (($_POST["coletar_assinatura_responsavel"] ?? "sim") === "nao") ? "nao" : "sim";
     
     if ($colaborador_id <= 0) {
         $_POST["errorFields"][] = "colaborador_id";
@@ -483,6 +488,7 @@ function cadastrarEntrega() {
                     "ss_e_tx_status"         => 'ativo',
                     "ss_e_tx_assinatura"     => $assinatura,
                     "ss_e_tx_foto"           => $foto_kit_completo,
+                    "ss_e_tx_coletar_assinatura_resp" => $coletarAssinaturaResp,
                     "ss_e_nb_userCadastro"   => $userCadastro,
                     "ss_e_tx_dataCadastro"   => $dataCadastro
                 ];
@@ -542,7 +548,7 @@ function cadastrarEntrega() {
 
         if ($sucesso > 0 && !empty($inserted_delivery_ids)) {
             try {
-                ss_enviar_ficha_para_assinatura($colaborador_id, $inserted_delivery_ids);
+                ss_enviar_ficha_para_assinatura($colaborador_id, $inserted_delivery_ids, $coletarAssinaturaResp === "sim");
             } catch (Throwable $t) {
                 // Captura erros silenciosamente para não quebrar a inserção da entrega
             }
@@ -692,7 +698,8 @@ function cadastrarEntrega() {
             "ss_e_tx_justificativa"       => $justificativa,
             "ss_e_tx_estornado"           => $estornar,
             "ss_e_tx_data_devolucao"      => $data_devolucao,
-            "ss_e_nb_entrega_anterior_id" => $entrega_anterior_id
+            "ss_e_nb_entrega_anterior_id" => $entrega_anterior_id,
+            "ss_e_tx_coletar_assinatura_resp" => $coletarAssinaturaResp
         ];
 
         if (empty($_POST["id"])) {
@@ -717,7 +724,7 @@ function cadastrarEntrega() {
                 }
                 
                 try {
-                    ss_enviar_ficha_para_assinatura($colaborador_id, [$id]);
+                    ss_enviar_ficha_para_assinatura($colaborador_id, [$id], $coletarAssinaturaResp === "sim");
                 } catch (Throwable $t) {
                     // Captura erros silenciosamente para não quebrar a inserção da entrega
                 }
@@ -954,6 +961,18 @@ function modificarEntrega() {
     $campo_data        = campo_data("Data de Entrega*", "data_entrega", $_POST["data_entrega"] ?? date("Y-m-d"), 2);
     $campo_quant       = campo("Quantidade*", "quantidade", $_POST["quantidade"] ?? "1", 2, "MASCARA_NUMERO");
 
+    $campo_coletar_assinatura_resp = combo(
+        "Coletar assinatura do responsável?",
+        "coletar_assinatura_responsavel",
+        $_POST["coletar_assinatura_responsavel"] ?? $_POST["coletar_assinatura_resp"] ?? "sim",
+        6,
+        [
+            "sim" => "Sim (fluxo normal de assinatura)",
+            "nao" => "Não (apenas registrar o responsável no recibo)"
+        ],
+        "title='Sim: envia o recibo para os responsáveis assinarem (fluxo atual). Não: o recibo apenas identifica quem registrou a entrega, sem exigir assinatura do responsável.'"
+    );
+
     $campo_variacao = '
         <div class="col-sm-2 margin-bottom-5 campo-fit-content" id="container_variacao" style="display: none;">
             <label class="control-label">Variação (Numeração/Tamanho)</label>
@@ -1076,7 +1095,7 @@ function modificarEntrega() {
     echo linha_form([$campo_empresa, $campo_colaborador, $campo_tipo_entrega]);
     echo linha_form([$campo_epi, $campo_kit]);
     echo linha_form([$preview_epi_div]);
-    echo linha_form([$campo_data, $campo_quant, $campo_variacao]);
+    echo linha_form([$campo_data, $campo_quant, $campo_variacao, $campo_coletar_assinatura_resp]);
     echo linha_form([$campo_foto]);
     
     $legenda_html = '
@@ -2345,6 +2364,7 @@ function modificarEntrega() {
             data: {
                 colaborador_id: colabId,
                 data_entrega: dataEntrega,
+                coletar_assinatura_responsavel: $('select[name=\"coletar_assinatura_responsavel\"]').val() || 'sim',
                 lotes: JSON.stringify(itensFunc)
             },
             dataType: 'json',
@@ -2431,6 +2451,7 @@ function modificarEntrega() {
             data: {
                 colaborador_id: 0,
                 data_entrega: dataEntrega,
+                coletar_assinatura_responsavel: $('select[name=\"coletar_assinatura_responsavel\"]').val() || 'sim',
                 lotes: JSON.stringify(itensParaGravar)
             },
             dataType: 'json',
@@ -2575,6 +2596,27 @@ function imprimirFicha() {
         }
     }
 
+    // Assinaturas dos responsáveis na mesma solicitação (exibidas junto à do colaborador)
+    $responsaveisAssinados = [];
+    if ($assinaturaDados && !empty($assinaturaDados["id"])) {
+        $idSolicitacaoSig = (int)$assinaturaDados["id"];
+        $sqlRespSig = "SELECT a.nome, a.cpf, a.funcao, a.status, a.data_assinatura, ae.ip_address, ae.hash_assinatura
+                       FROM assinantes a
+                       JOIN solicitacoes_assinatura s ON s.id = a.id_solicitacao
+                       LEFT JOIN assinatura_eletronica ae ON CONVERT(ae.id_documento USING utf8mb4) COLLATE utf8mb4_general_ci = CONVERT(s.id_documento USING utf8mb4) COLLATE utf8mb4_general_ci AND CONVERT(ae.cpf USING utf8mb4) COLLATE utf8mb4_general_ci = CONVERT(a.cpf USING utf8mb4) COLLATE utf8mb4_general_ci
+                       WHERE a.id_solicitacao = {$idSolicitacaoSig}
+                         AND a.enti_nb_id <> {$colaborador_id}
+                         AND LOWER(a.funcao) LIKE '%respons%'
+                         AND LOWER(a.status) = 'assinado'
+                       ORDER BY a.ordem ASC, a.id ASC";
+        $resRespSig = mysqli_query($conn, $sqlRespSig);
+        if ($resRespSig) {
+            while ($rowRespSig = mysqli_fetch_assoc($resRespSig)) {
+                $responsaveisAssinados[] = $rowRespSig;
+            }
+        }
+    }
+
     $colabRaw = carregar("entidade", $colaborador_id);
     if (empty($colabRaw)) {
         echo "Colaborador não cadastrado.";
@@ -2600,6 +2642,17 @@ function imprimirFicha() {
                    ent.ss_e_nb_quantidade, 
                    ent.ss_e_tx_vencimento, 
                    ent.ss_e_tx_status,
+                   ent.ss_e_tx_data_devolucao,
+                   ent.ss_e_tx_justificativa,
+                   ent.ss_e_nb_userCadastro,
+                   ent.ss_e_tx_dataCadastro,
+                   ent.ss_e_tx_coletar_assinatura_resp,
+                   CASE
+                       WHEN ent.ss_e_nb_assinatura_id IS NULL THEN 'sem_assinatura'
+                       WHEN LOWER(IFNULL(s.status, '')) IN ('assinado', 'concluido') THEN 'assinado'
+                       WHEN LOWER(IFNULL(s.status, '')) = 'expirado' THEN 'expirado'
+                       ELSE 'aguardando'
+                   END AS assinatura_status,
                    IFNULL(s.id_documento, '-') AS ss_e_tx_identificador
             FROM ss_epi_entrega ent 
             JOIN ss_epi epi ON ent.ss_e_nb_epi_id = epi.ss_e_nb_id 
@@ -2608,34 +2661,77 @@ function imprimirFicha() {
             ORDER BY ent.ss_e_tx_data_entrega DESC, ent.ss_e_nb_id DESC";
             
     $res = mysqli_query($conn, $sql);
-    $entregas = [];
+    $entregasTodas = [];
     if ($res) {
         while ($row = mysqli_fetch_assoc($res)) {
-            $entregas[] = $row;
+            $entregasTodas[] = $row;
         }
     }
 
-    $spans = [];
-    $n = count($entregas);
-    $i = 0;
-    while ($i < $n) {
-        $val = $entregas[$i]["ss_e_tx_identificador"];
-        $count = 1;
-        $j = $i + 1;
-        while ($j < $n && $entregas[$j]["ss_e_tx_identificador"] === $val) {
-            $count++;
-            $j++;
+    // Separa as entregas dos eventos de devolução/substituição/perda para exibir em blocos distintos
+    $entregas = [];
+    $devolucoes = [];
+    foreach ($entregasTodas as $linha) {
+        $stLinha = strtolower(trim(strval($linha["ss_e_tx_status"] ?? "")));
+        if (in_array($stLinha, ["devolvido", "substituido", "perdido"])) {
+            $devolucoes[] = $linha;
+        } else {
+            $entregas[] = $linha;
         }
-        $spans[$i] = $count;
-        $i = $j;
     }
+
+    // Responsável pelo registro (usuário logado na entrega mais recente) — sempre exibido,
+    // atualizado conforme as entregas (mesma lógica da assinatura mais recente do colaborador)
+    $responsavelRegistro = null;
+    $responsavelAssinaturaDispensada = false;
+    if (!empty($entregas)) {
+        $primeiraEntrega = $entregas[0];
+        $responsavelAssinaturaDispensada = (strtolower(trim(strval($primeiraEntrega["ss_e_tx_coletar_assinatura_resp"] ?? "sim"))) === "nao");
+        $respUserId = (int)($primeiraEntrega["ss_e_nb_userCadastro"] ?? 0);
+        if ($respUserId > 0) {
+            $sqlResp = mysqli_query($conn, "SELECT user_tx_nome, user_tx_cpf FROM user WHERE user_nb_id = {$respUserId} LIMIT 1");
+            if ($sqlResp && $rowResp = mysqli_fetch_assoc($sqlResp)) {
+                $responsavelRegistro = [
+                    "nome" => trim(strval($rowResp["user_tx_nome"] ?? "")),
+                    "cpf" => trim(strval($rowResp["user_tx_cpf"] ?? "")),
+                    "data" => !empty($primeiraEntrega["ss_e_tx_dataCadastro"]) ? date('d/m/Y H:i', strtotime($primeiraEntrega["ss_e_tx_dataCadastro"])) : ''
+                ];
+            }
+        }
+    }
+
+    // Agrupa o identificador (recibo) por linha, separadamente em cada bloco
+    $calcularSpans = function($linhas) {
+        $spans = [];
+        $n = count($linhas);
+        $i = 0;
+        while ($i < $n) {
+            $val = strval($linhas[$i]["ss_e_tx_identificador"] ?? "");
+            if ($val === "" || $val === "-") {
+                $spans[$i] = 1;
+                $i++;
+                continue;
+            }
+            $count = 1;
+            $j = $i + 1;
+            while ($j < $n && strval($linhas[$j]["ss_e_tx_identificador"] ?? "") === $val) {
+                $count++;
+                $j++;
+            }
+            $spans[$i] = $count;
+            $i = $j;
+        }
+        return $spans;
+    };
+    $spansEntregas = $calcularSpans($entregas);
+    $spansDevolucoes = $calcularSpans($devolucoes);
 
     ?>
     <!DOCTYPE html>
     <html lang="pt-br">
     <head>
         <meta charset="UTF-8">
-        <title>Recibo de EPI - <?=$colaborador["ss_c_tx_nome"]?></title>
+        <title>Ficha de EPI - <?=$colaborador["ss_c_tx_nome"]?></title>
         <style>
             body { font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.4; color: #333; margin: 30px; }
             h1, h2 { text-align: center; margin-bottom: 5px; }
@@ -2657,13 +2753,13 @@ function imprimirFicha() {
     </head>
     <body>
         <div class="no-print" style="margin-bottom: 20px; text-align: right;">
-            <button onclick="window.print()" style="padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Imprimir Recibo</button>
+            <button onclick="window.print()" style="padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Imprimir Ficha</button>
         </div>
         
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-            <img src="../imagens/logo_topo_cliente.png" style="height: 40px; object-fit: contain;">
-            <div style="text-align: right;">
-                <h2 style="margin: 0; font-size: 16pt;">RECIBO DE ENTREGA DE EPI</h2>
+        <div style="position: relative; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; min-height: 48px;">
+            <img src="../imagens/logo_topo_cliente.png" style="height: 40px; object-fit: contain; position: absolute; left: 0; top: 50%; transform: translateY(-50%);">
+            <div style="text-align: center;">
+                <h2 style="margin: 0; font-size: 16pt;">FICHA DE EPI</h2>
                 <p style="margin: 0; font-size: 9pt; font-weight: bold; color: #666;">(Norma Regulamentadora NR-6 - Portaria 3.214/78)</p>
             </div>
         </div>
@@ -2689,38 +2785,88 @@ function imprimirFicha() {
             <strong>Declaração do Empregado:</strong> Declaro que recebi gratuitamente os Equipamentos de Proteção Individual (EPI) abaixo relacionados, adequados ao risco de minhas atividades. Comprometo-me a usá-los obrigatoriamente durante o horário de trabalho, zelar pela sua guarda e conservação, e comunicar imediatamente ao setor de segurança qualquer alteração que os torne impróprios para uso, sob pena de infração disciplinar nos termos da legislação trabalhista brasileira (Art. 158 da CLT).
         </div>
         
+        <h3 style="margin-top: 25px; margin-bottom: 0; font-size: 12pt; color: #333; border-bottom: 2px solid #333; padding-bottom: 4px;">ENTREGAS DE EPI</h3>
         <table class="data-table">
             <thead>
                 <tr>
                     <th style="width: 5%;">Cód.</th>
-                    <th style="width: 52%;">Equipamento (EPI)</th>
-                    <th style="width: 15%;">CA MTE</th>
-                    <th style="width: 15%;">Data Entrega</th>
+                    <th style="width: 36%;">Equipamento (EPI)</th>
+                    <th style="width: 10%;">CA MTE</th>
+                    <th style="width: 11%;">Data Entrega</th>
                     <th style="width: 5%;">Quant.</th>
+                    <th style="width: 10%;">Situação</th>
+                    <th style="width: 15%;">Assinatura</th>
                     <th style="width: 8%;">Identificador</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($entregas)): ?>
                     <tr>
-                        <td colspan="6" style="text-align: center;">Nenhum EPI entregue cadastrado no histórico deste colaborador.</td>
+                        <td colspan="8" style="text-align: center;">Nenhuma entrega registrada no histórico deste colaborador.</td>
                     </tr>
                 <?php else: ?>
                     <?php foreach ($entregas as $index => $e): ?>
+                        <?php
+                            $situacaoEntrega = (strtolower(trim(strval($e["ss_e_tx_status"] ?? ""))) === "nao_entregue") ? "Não entregue" : "Entregue";
+                            $assinaturaEntrega = [
+                                "assinado" => "Assinado",
+                                "aguardando" => "Aguardando assinatura",
+                                "expirado" => "Assinatura expirada",
+                                "sem_assinatura" => "Sem assinatura"
+                            ][strtolower(trim(strval($e["assinatura_status"] ?? "")))] ?? "-";
+                        ?>
                         <tr>
                             <td style="width: 5%;"><?=$e["ss_e_nb_id"]?></td>
-                            <td style="width: 52%;"><?=$e["ss_e_tx_nome"]?></td>
-                            <td style="width: 15%;"><?=$e["ss_e_tx_ca"] ?: '---'?></td>
-                            <td style="width: 15%;"><?=data($e["ss_e_tx_data_entrega"])?></td>
+                            <td style="width: 36%;"><?=$e["ss_e_tx_nome"]?></td>
+                            <td style="width: 10%;"><?=$e["ss_e_tx_ca"] ?: '---'?></td>
+                            <td style="width: 11%;"><?=data($e["ss_e_tx_data_entrega"])?></td>
                             <td style="width: 5%;"><?=$e["ss_e_nb_quantidade"]?></td>
-                            <?php if (isset($spans[$index])): ?>
-                                <td rowspan="<?=$spans[$index]?>" style="width: 8%; font-family: monospace; font-size: 8.5pt; vertical-align: middle; text-align: center;"><?=$e["ss_e_tx_identificador"]?></td>
+                            <td style="width: 10%; text-align: center;"><?=$situacaoEntrega?></td>
+                            <td style="width: 15%; text-align: center;<?=($assinaturaEntrega === 'Aguardando assinatura' ? ' font-weight: bold;' : '')?>"><?=$assinaturaEntrega?></td>
+                            <?php if (isset($spansEntregas[$index])): ?>
+                                <td rowspan="<?=$spansEntregas[$index]?>" style="width: 8%; font-family: monospace; font-size: 8.5pt; vertical-align: middle; text-align: center;"><?=$e["ss_e_tx_identificador"]?></td>
                             <?php endif; ?>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
         </table>
+
+        <?php if (!empty($devolucoes)): ?>
+            <h3 style="margin-top: 30px; margin-bottom: 0; font-size: 12pt; color: #333; border-bottom: 2px solid #333; padding-bottom: 4px;">DEVOLUÇÕES, SUBSTITUIÇÕES E PERDAS</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 5%;">Cód.</th>
+                        <th style="width: 35%;">Equipamento (EPI)</th>
+                        <th style="width: 12%;">CA MTE</th>
+                        <th style="width: 12%;">Data</th>
+                        <th style="width: 5%;">Quant.</th>
+                        <th style="width: 13%;">Tipo</th>
+                        <th style="width: 18%;">Justificativa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($devolucoes as $index => $d): ?>
+                        <?php
+                            $stDev = strtolower(trim(strval($d["ss_e_tx_status"] ?? "")));
+                            $tiposDev = ["devolvido" => "Devolvido", "substituido" => "Substituído", "perdido" => "Perdido/Extraviado"];
+                            $tipoDev = $tiposDev[$stDev] ?? $stDev;
+                            $dataDev = !empty($d["ss_e_tx_data_devolucao"]) ? $d["ss_e_tx_data_devolucao"] : $d["ss_e_tx_data_entrega"];
+                        ?>
+                        <tr>
+                            <td style="width: 5%;"><?=$d["ss_e_nb_id"]?></td>
+                            <td style="width: 35%;"><?=$d["ss_e_tx_nome"]?></td>
+                            <td style="width: 12%;"><?=$d["ss_e_tx_ca"] ?: '---'?></td>
+                            <td style="width: 12%;"><?=data($dataDev)?></td>
+                            <td style="width: 5%;"><?=$d["ss_e_nb_quantidade"]?></td>
+                            <td style="width: 13%; text-align: center;"><?=$tipoDev?></td>
+                            <td style="width: 18%; font-size: 8.5pt;"><?=htmlspecialchars($d["ss_e_tx_justificativa"] ?? "")?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
         
         <?php if ($assinaturaDados && $assinaturaDados['status'] === 'assinado'): ?>
             <?php 
@@ -2757,6 +2903,38 @@ function imprimirFicha() {
                 </tr>
             </table>
         <?php endif; ?>
+
+        <?php foreach ($responsaveisAssinados as $respSig): ?>
+            <?php
+            $cpfRespSigFmt = $respSig["cpf"] ? preg_replace("/(\d{3})(\d{3})(\d{3})(\d{2})/", "$1.$2.$3-$4", preg_replace('/[^0-9]/', '', $respSig["cpf"])) : '---';
+            $dataRespSig = !empty($respSig['data_assinatura']) ? date('d/m/Y H:i', strtotime($respSig['data_assinatura'])) : '';
+            $ipRespSig = $respSig['ip_address'] ?? '---';
+            $hashRespSig = $respSig['hash_assinatura'] ?? '---';
+            ?>
+            <div style="margin-top: 15px; border: 1.5px solid #0056b3; background-color: #f4f8fc; padding: 15px; border-radius: 5px; font-size: 10pt;">
+                <h4 style="color: #0056b3; margin: 0 0 5px 0; font-size: 11pt;">ASSINATURA ELETRÔNICA — RESPONSÁVEL (<?=htmlspecialchars($respSig['funcao'] ?? 'Responsável')?>)</h4>
+                <p style="margin: 0; line-height: 1.5;">
+                    Este documento foi assinado eletronicamente por <strong><?=htmlspecialchars($respSig['nome'])?></strong> (CPF: <?=htmlspecialchars($cpfRespSigFmt)?>) em <strong><?=$dataRespSig?></strong>.<br>
+                    IP de Origem: <strong><?=htmlspecialchars($ipRespSig)?></strong> | Protocolo/Hash: <strong><?=htmlspecialchars($hashRespSig)?></strong>.<br>
+                    <span style="color: #555; font-size: 8pt; display: block; margin-top: 5px;">A concordância expressa do responsável valida legalmente a assinatura nos termos da Medida Provisória nº 2.200-2/2001.</span>
+                </p>
+            </div>
+        <?php endforeach; ?>
+
+        <?php if ($responsavelRegistro && $responsavelAssinaturaDispensada): ?>
+            <?php $cpfRespFmt = $responsavelRegistro["cpf"] ? preg_replace("/(\d{3})(\d{3})(\d{3})(\d{2})/", "$1.$2.$3-$4", preg_replace('/[^0-9]/', '', $responsavelRegistro["cpf"])) : '---'; ?>
+            <div style="margin-top: 30px; border: 1.5px solid #999; background-color: #f7f7f7; padding: 15px; border-radius: 5px; font-size: 10pt;">
+                <h4 style="margin: 0 0 5px 0; font-size: 11pt; color: #333;">RESPONSÁVEL PELO REGISTRO</h4>
+                <p style="margin: 0; line-height: 1.5;">
+                    Registro realizado por <strong><?=htmlspecialchars($responsavelRegistro["nome"])?></strong> (CPF: <?=htmlspecialchars($cpfRespFmt)?>) em <strong><?=htmlspecialchars($responsavelRegistro["data"])?></strong>.<br>
+                    <span style="color: #555; font-size: 8pt; display: block; margin-top: 5px;">Assinatura do responsável dispensada nesta entrega, conforme opção registrada no lançamento.</span>
+                </p>
+            </div>
+        <?php endif; ?>
+
+        <div style="margin-top: 20px; border: 1px solid #ccc; background-color: #fbfbfb; padding: 12px 15px; border-radius: 5px; font-size: 9.5pt; color: #444;">
+            <strong>Observação:</strong> esta ficha exibe a assinatura eletrônica mais recente do colaborador. Ao assinar o recibo mais recente, o colaborador declara ciência e concordância com todo o histórico de entregas de EPI registrado nesta ficha. Cada recibo permanece arquivado e rastreável individualmente pelo seu identificador.
+        </div>
     </body>
     </html>
     <?php
@@ -2930,6 +3108,7 @@ function index() {
         "FOTO DO EPI"         => "ss_e_tx_foto_epi",
         "EPI"                 => "epi_nome",
         "DATA ENTREGA"        => "ss_e_tx_data_entrega_formatado",
+        "ASSINATURA"          => "assinatura_status",
         "QUANTIDADE"          => "ss_e_nb_quantidade",
         "VENCIMENTO ESTIMADO" => "ss_e_tx_vencimento_formatado",
         "IDENTIFICADOR"       => "ss_e_tx_identificador",
@@ -2961,7 +3140,14 @@ function index() {
                                WHEN 'devolvido' THEN 'Devolvido'
                                WHEN 'perdido' THEN 'Perdido/Extraviado'
                                ELSE ent.ss_e_tx_status 
-                           END AS ss_e_tx_status_formatado, ent.ss_e_tx_foto, ent.ss_e_tx_observacao,
+                           END AS ss_e_tx_status_formatado,
+                           CASE
+                               WHEN ent.ss_e_nb_assinatura_id IS NULL THEN 'sem_assinatura'
+                               WHEN LOWER(IFNULL(s.status, '')) IN ('assinado', 'concluido') THEN 'assinado'
+                               WHEN LOWER(IFNULL(s.status, '')) = 'expirado' THEN 'expirado'
+                               ELSE 'aguardando'
+                           END AS assinatura_status,
+                           ent.ss_e_tx_foto, ent.ss_e_tx_observacao,
                            ent.ss_e_nb_colaborador_id, ent.ss_e_nb_epi_id,
                            IFNULL(s.id_documento, '-') AS ss_e_tx_identificador
                     FROM ss_epi_entrega ent 

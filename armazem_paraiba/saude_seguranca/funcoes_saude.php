@@ -582,6 +582,12 @@ function ss_inicializar_tabelas() {
         mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_tx_variacao VARCHAR(100) DEFAULT NULL AFTER ss_e_nb_empresa_id");
     }
 
+    // Garante que a coluna de coleta da assinatura do responsável exista em ss_epi_entrega
+    $check_column_ent_coletar = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_entrega LIKE 'ss_e_tx_coletar_assinatura_resp'");
+    if ($check_column_ent_coletar && mysqli_num_rows($check_column_ent_coletar) == 0) {
+        mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_tx_coletar_assinatura_resp ENUM('sim','nao') NOT NULL DEFAULT 'sim'");
+    }
+
     // 5. Tabela ss_kit
     $sql_kit = "CREATE TABLE IF NOT EXISTS ss_kit (
         ss_k_nb_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -909,8 +915,8 @@ function ss_gerar_pdf_ficha_epi($colaborador_id, $delivery_ids = [], $recibo_uui
                     $this->Image($logoPath, 15, 6, 25, 8); // x, y, width, height
                 }
                 $this->SetFont('helvetica', 'B', 11);
-                $this->SetX(45);
-                $this->Cell(0, 8, $this->custom_header, 0, false, 'L', 0, '', 0, false, 'T', 'M');
+                $this->SetX(15);
+                $this->Cell(0, 8, $this->custom_header, 0, false, 'C', 0, '', 0, false, 'T', 'M');
                 $this->Line(15, 18, 195, 18);
             }
             public function Footer() {
@@ -1010,6 +1016,9 @@ function ss_gerar_pdf_ficha_epi($colaborador_id, $delivery_ids = [], $recibo_uui
                    ent.ss_e_nb_quantidade, 
                    ent.ss_e_tx_vencimento, 
                    ent.ss_e_tx_status,
+                   ent.ss_e_nb_userCadastro,
+                   ent.ss_e_tx_dataCadastro,
+                   ent.ss_e_tx_coletar_assinatura_resp,
                    IFNULL(s.id_documento, '-') AS ss_e_tx_identificador
             FROM ss_epi_entrega ent 
             JOIN ss_epi epi ON ent.ss_e_nb_epi_id = epi.ss_e_nb_id 
@@ -1022,6 +1031,26 @@ function ss_gerar_pdf_ficha_epi($colaborador_id, $delivery_ids = [], $recibo_uui
     if ($res) {
         while ($row = mysqli_fetch_assoc($res)) {
             $rows[] = $row;
+        }
+    }
+
+    // Responsável pelo registro (usuário logado na entrega) — bloco exibido quando
+    // a assinatura do responsável não foi coletada nesta entrega
+    $responsavelRegistro = null;
+    if (!empty($rows)) {
+        $primeiraEntrega = $rows[0];
+        if (strtolower(trim(strval($primeiraEntrega["ss_e_tx_coletar_assinatura_resp"] ?? "sim"))) === "nao") {
+            $respUserId = (int)($primeiraEntrega["ss_e_nb_userCadastro"] ?? 0);
+            if ($respUserId > 0) {
+                $sqlResp = query("SELECT user_tx_nome, user_tx_cpf FROM user WHERE user_nb_id = {$respUserId} LIMIT 1");
+                if ($sqlResp && $rowResp = mysqli_fetch_assoc($sqlResp)) {
+                    $responsavelRegistro = [
+                        "nome" => trim(strval($rowResp["user_tx_nome"] ?? "")),
+                        "cpf" => trim(strval($rowResp["user_tx_cpf"] ?? "")),
+                        "data" => !empty($primeiraEntrega["ss_e_tx_dataCadastro"]) ? date('d/m/Y H:i', strtotime($primeiraEntrega["ss_e_tx_dataCadastro"])) : ''
+                    ];
+                }
+            }
         }
     }
     
@@ -1101,6 +1130,24 @@ function ss_gerar_pdf_ficha_epi($colaborador_id, $delivery_ids = [], $recibo_uui
         </table>';
     }
 
+    // Bloco do responsável pelo registro (quando a assinatura do responsável não foi coletada)
+    if (!empty($responsavelRegistro)) {
+        $cpfRespFmt = $responsavelRegistro["cpf"] ? preg_replace("/(\d{3})(\d{3})(\d{3})(\d{2})/", "$1.$2.$3-$4", preg_replace('/[^0-9]/', '', $responsavelRegistro["cpf"])) : '---';
+        $html .= '
+        <br><br>
+        <table cellpadding="6" style="width:100%; border:1px solid #999; background-color:#f7f7f7;">
+            <tr>
+                <td>
+                    <span style="font-weight:bold; font-size:10pt;">RESPONSÁVEL PELO REGISTRO</span><br>
+                    <span style="font-size:8.5pt; line-height:1.4;">
+                        Registro realizado por <b>' . htmlspecialchars($responsavelRegistro["nome"]) . '</b> (CPF: ' . htmlspecialchars($cpfRespFmt) . ') em <b>' . htmlspecialchars($responsavelRegistro["data"]) . '</b>.<br>
+                        <span style="color:#555; font-size:7.5pt;">Assinatura do responsável dispensada nesta entrega, conforme opção registrada no lançamento.</span>
+                    </span>
+                </td>
+            </tr>
+        </table>';
+    }
+
     $pdf->writeHTML($html, true, false, true, false, '');
     
     // Salva no arquivo
@@ -1109,7 +1156,7 @@ function ss_gerar_pdf_ficha_epi($colaborador_id, $delivery_ids = [], $recibo_uui
     return 'arquivos/entrega_epi/' . $nomeArquivo;
 }
 
-function ss_enviar_ficha_para_assinatura($colaborador_id, $delivery_ids) {
+function ss_enviar_ficha_para_assinatura($colaborador_id, $delivery_ids, $coletarAssinaturaResp = true) {
     global $conn;
     
     $tipoDocId = ss_verificar_assinatura_ativa();
@@ -1126,8 +1173,9 @@ function ss_enviar_ficha_para_assinatura($colaborador_id, $delivery_ids) {
         return false;
     }
     
-    // 2. Busca responsáveis do colaborador (Setor ou Cargo)
-    $managers = ss_obter_responsaveis_colaborador($colaborador_id);
+    // 2. Busca responsáveis do colaborador (Setor ou Cargo) — somente quando a coleta
+    // da assinatura do responsável está ativa (opção "Sim" no lançamento da entrega)
+    $managers = $coletarAssinaturaResp ? ss_obter_responsaveis_colaborador($colaborador_id) : [];
     
     // 3. Chama integração da assinatura para múltiplos assinantes
     require_once dirname(__DIR__) . "/assinatura/integracao/assinatura_integracao.php";
