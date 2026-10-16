@@ -2647,6 +2647,7 @@ function imprimirFicha() {
                    ent.ss_e_nb_userCadastro,
                    ent.ss_e_tx_dataCadastro,
                    ent.ss_e_tx_coletar_assinatura_resp,
+                   ent.ss_e_nb_assinatura_resp_id,
                    CASE
                        WHEN ent.ss_e_nb_assinatura_id IS NULL THEN 'sem_assinatura'
                        WHEN LOWER(IFNULL(s.status, '')) IN ('assinado', 'concluido') THEN 'assinado'
@@ -2684,9 +2685,18 @@ function imprimirFicha() {
     // atualizado conforme as entregas (mesma lógica da assinatura mais recente do colaborador)
     $responsavelRegistro = null;
     $responsavelAssinaturaDispensada = false;
+    $comprovanteResp = null;
     if (!empty($entregas)) {
         $primeiraEntrega = $entregas[0];
         $responsavelAssinaturaDispensada = (strtolower(trim(strval($primeiraEntrega["ss_e_tx_coletar_assinatura_resp"] ?? "sim"))) === "nao");
+        // Comprovante de assinatura eletrônica do responsável (registrado no lançamento)
+        $idCompResp = (int)($primeiraEntrega["ss_e_nb_assinatura_resp_id"] ?? 0);
+        if ($idCompResp > 0) {
+            $sqlComp = mysqli_query($conn, "SELECT nome, cpf, rg, data_assinatura, ip_address, user_agent, hash_assinatura, id_documento FROM assinatura_eletronica WHERE id = {$idCompResp} LIMIT 1");
+            if ($sqlComp && $rowComp = mysqli_fetch_assoc($sqlComp)) {
+                $comprovanteResp = $rowComp;
+            }
+        }
         $respUserId = (int)($primeiraEntrega["ss_e_nb_userCadastro"] ?? 0);
         if ($respUserId > 0) {
             $sqlResp = mysqli_query($conn, "SELECT user_tx_nome, user_tx_cpf FROM user WHERE user_nb_id = {$respUserId} LIMIT 1");
@@ -2921,7 +2931,26 @@ function imprimirFicha() {
             </div>
         <?php endforeach; ?>
 
-        <?php if ($responsavelRegistro && $responsavelAssinaturaDispensada): ?>
+        <?php if ($responsavelAssinaturaDispensada && $comprovanteResp): ?>
+            <?php
+                $dataCompResp = !empty($comprovanteResp["data_assinatura"]) ? date('d/m/Y, H:i:s', strtotime($comprovanteResp["data_assinatura"])) : '';
+            ?>
+            <div style="margin-top: 30px; border: 1.5px solid #999; background-color: #fbfbfb; padding: 15px; border-radius: 5px; font-size: 10pt;">
+                <h4 style="margin: 0 0 10px 0; font-size: 11pt; color: #333; border-bottom: 2px solid #ccc; padding-bottom: 8px;">COMPROVANTE DE ASSINATURA ELETRÔNICA</h4>
+                <p style="margin: 0; line-height: 1.7;">
+                    <strong>Documento Original:</strong> <?=htmlspecialchars($comprovanteResp["id_documento"] ?? "")?><br>
+                    <strong>Assinado por:</strong> <?=htmlspecialchars($comprovanteResp["nome"] ?? "")?> (Responsável)<br>
+                    <strong>CPF:</strong> <?=htmlspecialchars($comprovanteResp["cpf"] ?? "")?><br>
+                    <strong>RG:</strong> <?=htmlspecialchars($comprovanteResp["rg"] ?? "")?><br>
+                    <strong>Data e Hora:</strong> <?=htmlspecialchars($dataCompResp)?><br>
+                    <strong>Endereço IP:</strong> <?=htmlspecialchars($comprovanteResp["ip_address"] ?? "")?><br>
+                    <strong>Navegador/Dispositivo:</strong> <?=htmlspecialchars($comprovanteResp["user_agent"] ?? "")?>
+                </p>
+                <p style="margin: 10px 0 0 0;"><strong>Hash de Integridade (Assinatura Digital):</strong></p>
+                <p style="margin: 4px 0 10px 0; font-family: courier, monospace; font-size: 9pt; background-color: #f0f0f0; border: 1px dashed #999; padding: 8px; border-radius: 4px;"><?=htmlspecialchars($comprovanteResp["hash_assinatura"] ?? "")?></p>
+                <p style="margin: 0; font-size: 8pt; color: #555;">O signatário declarou ter lido e concordado com o teor do documento original referenciado acima. Esta assinatura foi realizada eletronicamente através do sistema TechPS, com validade jurídica assegurada pela Medida Provisória nº 2.200-2/2001.</p>
+            </div>
+        <?php elseif ($responsavelRegistro && $responsavelAssinaturaDispensada): ?>
             <?php $cpfRespFmt = $responsavelRegistro["cpf"] ? preg_replace("/(\d{3})(\d{3})(\d{3})(\d{2})/", "$1.$2.$3-$4", preg_replace('/[^0-9]/', '', $responsavelRegistro["cpf"])) : '---'; ?>
             <div style="margin-top: 30px; border: 1.5px solid #999; background-color: #f7f7f7; padding: 15px; border-radius: 5px; font-size: 10pt;">
                 <h4 style="margin: 0 0 5px 0; font-size: 11pt; color: #333;">RESPONSÁVEL PELO REGISTRO</h4>

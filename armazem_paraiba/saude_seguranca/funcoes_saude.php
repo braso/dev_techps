@@ -588,6 +588,12 @@ function ss_inicializar_tabelas() {
         mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_tx_coletar_assinatura_resp ENUM('sim','nao') NOT NULL DEFAULT 'sim'");
     }
 
+    // Garante que a coluna do comprovante de assinatura eletrônica do responsável exista em ss_epi_entrega
+    $check_column_ent_assin_resp = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_entrega LIKE 'ss_e_nb_assinatura_resp_id'");
+    if ($check_column_ent_assin_resp && mysqli_num_rows($check_column_ent_assin_resp) == 0) {
+        mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_nb_assinatura_resp_id INT NULL");
+    }
+
     // 5. Tabela ss_kit
     $sql_kit = "CREATE TABLE IF NOT EXISTS ss_kit (
         ss_k_nb_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -1019,6 +1025,7 @@ function ss_gerar_pdf_ficha_epi($colaborador_id, $delivery_ids = [], $recibo_uui
                    ent.ss_e_nb_userCadastro,
                    ent.ss_e_tx_dataCadastro,
                    ent.ss_e_tx_coletar_assinatura_resp,
+                   ent.ss_e_nb_assinatura_resp_id,
                    IFNULL(s.id_documento, '-') AS ss_e_tx_identificador
             FROM ss_epi_entrega ent 
             JOIN ss_epi epi ON ent.ss_e_nb_epi_id = epi.ss_e_nb_id 
@@ -1037,9 +1044,18 @@ function ss_gerar_pdf_ficha_epi($colaborador_id, $delivery_ids = [], $recibo_uui
     // Responsável pelo registro (usuário logado na entrega) — bloco exibido quando
     // a assinatura do responsável não foi coletada nesta entrega
     $responsavelRegistro = null;
+    $comprovanteResp = null;
     if (!empty($rows)) {
         $primeiraEntrega = $rows[0];
         if (strtolower(trim(strval($primeiraEntrega["ss_e_tx_coletar_assinatura_resp"] ?? "sim"))) === "nao") {
+            // Comprovante de assinatura eletrônica do responsável (registrado no lançamento)
+            $idCompResp = (int)($primeiraEntrega["ss_e_nb_assinatura_resp_id"] ?? 0);
+            if ($idCompResp > 0) {
+                $sqlComp = query("SELECT nome, cpf, rg, data_assinatura, ip_address, user_agent, hash_assinatura, id_documento FROM assinatura_eletronica WHERE id = {$idCompResp} LIMIT 1");
+                if ($sqlComp && $rowComp = mysqli_fetch_assoc($sqlComp)) {
+                    $comprovanteResp = $rowComp;
+                }
+            }
             $respUserId = (int)($primeiraEntrega["ss_e_nb_userCadastro"] ?? 0);
             if ($respUserId > 0) {
                 $sqlResp = query("SELECT user_tx_nome, user_tx_cpf FROM user WHERE user_nb_id = {$respUserId} LIMIT 1");
@@ -1131,7 +1147,32 @@ function ss_gerar_pdf_ficha_epi($colaborador_id, $delivery_ids = [], $recibo_uui
     }
 
     // Bloco do responsável pelo registro (quando a assinatura do responsável não foi coletada)
-    if (!empty($responsavelRegistro)) {
+    if (!empty($comprovanteResp)) {
+        // Comprovante de assinatura eletrônica do responsável (modelo do sistema, sem rubrica)
+        $dataComp = !empty($comprovanteResp["data_assinatura"]) ? date('d/m/Y, H:i:s', strtotime($comprovanteResp["data_assinatura"])) : '';
+        $html .= '
+        <br><br>
+        <table cellpadding="6" style="width:100%; border:1px solid #999; background-color:#fbfbfb;">
+            <tr>
+                <td>
+                    <span style="font-weight:bold; font-size:11pt; color:#333;">COMPROVANTE DE ASSINATURA ELETRÔNICA</span><br><br>
+                    <span style="font-size:9pt; line-height:1.5;">
+                        <b>Documento Original:</b> ' . htmlspecialchars($comprovanteResp["id_documento"] ?? "") . '<br>
+                        <b>Assinado por:</b> ' . htmlspecialchars($comprovanteResp["nome"] ?? "") . ' (Responsável)<br>
+                        <b>CPF:</b> ' . htmlspecialchars($comprovanteResp["cpf"] ?? "") . '<br>
+                        <b>RG:</b> ' . htmlspecialchars($comprovanteResp["rg"] ?? "") . '<br>
+                        <b>Data e Hora:</b> ' . htmlspecialchars($dataComp) . '<br>
+                        <b>Endereço IP:</b> ' . htmlspecialchars($comprovanteResp["ip_address"] ?? "") . '<br>
+                        <b>Navegador/Dispositivo:</b> ' . htmlspecialchars($comprovanteResp["user_agent"] ?? "") . '<br>
+                    </span>
+                    <br>
+                    <span style="font-weight:bold; font-size:9pt;">Hash de Integridade (Assinatura Digital):</span><br>
+                    <span style="font-family:courier; font-size:8.5pt;">' . htmlspecialchars($comprovanteResp["hash_assinatura"] ?? "") . '</span><br><br>
+                    <span style="font-size:8pt; color:#555;">O signatário declarou ter lido e concordado com o teor do documento original referenciado acima. Esta assinatura foi realizada eletronicamente através do sistema TechPS, com validade jurídica assegurada pela Medida Provisória nº 2.200-2/2001.</span>
+                </td>
+            </tr>
+        </table>';
+    } elseif (!empty($responsavelRegistro)) {
         $cpfRespFmt = $responsavelRegistro["cpf"] ? preg_replace("/(\d{3})(\d{3})(\d{3})(\d{2})/", "$1.$2.$3-$4", preg_replace('/[^0-9]/', '', $responsavelRegistro["cpf"])) : '---';
         $html .= '
         <br><br>
@@ -1156,6 +1197,85 @@ function ss_gerar_pdf_ficha_epi($colaborador_id, $delivery_ids = [], $recibo_uui
     return 'arquivos/entrega_epi/' . $nomeArquivo;
 }
 
+/**
+ * Registra o comprovante de assinatura eletrônica do responsável pelo registro
+ * (usuário logado) na tabela assinatura_eletronica e vincula às entregas.
+ * Usado quando a coleta da assinatura do responsável via link é dispensada ("Não").
+ * Modelo: COMPROVANTE DE ASSINATURA ELETRÔNICA (sem rubrica).
+ */
+function ss_registrar_comprovante_responsavel($delivery_ids, $nomeDocumento) {
+    global $conn;
+    
+    $userId = (int)($_SESSION["user_nb_id"] ?? 0);
+    if ($userId <= 0 || empty($delivery_ids)) {
+        return 0;
+    }
+    
+    // Garante a existência da tabela de assinaturas eletrônicas
+    $resTab = mysqli_query($conn, "SHOW TABLES LIKE 'assinatura_eletronica'");
+    if ($resTab && mysqli_num_rows($resTab) == 0) {
+        mysqli_query($conn, "CREATE TABLE IF NOT EXISTS assinatura_eletronica (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            nome VARCHAR(255),
+            email VARCHAR(255),
+            cpf VARCHAR(20),
+            rg VARCHAR(50),
+            data_assinatura DATETIME NULL,
+            ip_address VARCHAR(45),
+            user_agent TEXT,
+            latitude VARCHAR(50),
+            longitude VARCHAR(50),
+            hash_assinatura VARCHAR(64),
+            id_documento VARCHAR(100),
+            caminho_arquivo VARCHAR(255)
+        )");
+    }
+    
+    $sqlUser = query("SELECT user_tx_nome, user_tx_email, user_tx_cpf, user_tx_rg FROM user WHERE user_nb_id = {$userId} LIMIT 1");
+    if (!$sqlUser || !($rowUser = mysqli_fetch_assoc($sqlUser))) {
+        return 0;
+    }
+    
+    $nome = trim(strval($rowUser["user_tx_nome"] ?? ""));
+    if ($nome === "") {
+        return 0;
+    }
+    $email = trim(strval($rowUser["user_tx_email"] ?? ""));
+    $cpf = preg_replace('/[^0-9]/', '', strval($rowUser["user_tx_cpf"] ?? ""));
+    $rg = trim(strval($rowUser["user_tx_rg"] ?? ""));
+    
+    $ip = trim(strval($_SERVER["REMOTE_ADDR"] ?? ""));
+    $userAgent = trim(strval($_SERVER["HTTP_USER_AGENT"] ?? ""));
+    $dataHora = date("Y-m-d H:i:s");
+    
+    // Hash de integridade no mesmo formato do sistema (16 hexadecimais + 16 zeros)
+    $hash = substr(md5($userId . "|" . $dataHora . "|" . $nomeDocumento), 0, 8)
+          . substr(md5($nomeDocumento . "|salt|" . $dataHora . "|" . $userId), 0, 8)
+          . str_repeat("0", 16);
+    
+    $idAssinatura = 0;
+    try {
+        $stmt = mysqli_prepare($conn, "INSERT INTO assinatura_eletronica (nome, email, cpf, rg, data_assinatura, ip_address, user_agent, latitude, longitude, hash_assinatura, id_documento, caminho_arquivo) VALUES (?, ?, ?, ?, ?, ?, ?, '', '', ?, ?, '')");
+        if ($stmt) {
+            mysqli_stmt_bind_param($stmt, "sssssssss", $nome, $email, $cpf, $rg, $dataHora, $ip, $userAgent, $hash, $nomeDocumento);
+            mysqli_stmt_execute($stmt);
+            $idAssinatura = intval(mysqli_insert_id($conn));
+            mysqli_stmt_close($stmt);
+        }
+    } catch (Throwable $e) {
+        return 0;
+    }
+    
+    if ($idAssinatura > 0) {
+        $idsClean = array_unique(array_map('intval', (array)$delivery_ids));
+        if (!empty($idsClean)) {
+            query("UPDATE ss_epi_entrega SET ss_e_nb_assinatura_resp_id = {$idAssinatura} WHERE ss_e_nb_id IN (" . implode(",", $idsClean) . ")");
+        }
+    }
+    
+    return $idAssinatura;
+}
+
 function ss_enviar_ficha_para_assinatura($colaborador_id, $delivery_ids, $coletarAssinaturaResp = true) {
     global $conn;
     
@@ -1166,6 +1286,17 @@ function ss_enviar_ficha_para_assinatura($colaborador_id, $delivery_ids, $coleta
     
     // Gera um UUID único para o Recibo de EPI
     $recibo_uuid = 'REC-' . date('YmdHis') . '-' . strtoupper(bin2hex(random_bytes(4)));
+    
+    // Quando a assinatura do responsável é dispensada ("Não"), registra o comprovante
+    // de assinatura eletrônica do responsável pelo registro (usuário logado)
+    if (!$coletarAssinaturaResp && !empty($delivery_ids)) {
+        $partsUuid = explode('-', $recibo_uuid);
+        $lastBlockUuid = trim(end($partsUuid));
+        if ($lastBlockUuid === '') {
+            $lastBlockUuid = strtoupper(bin2hex(random_bytes(4)));
+        }
+        ss_registrar_comprovante_responsavel($delivery_ids, 'Recibo_EPI_Colaborador_' . $lastBlockUuid . '.pdf');
+    }
     
     // 1. Gera o PDF atualizado do recibo (contendo apenas os novos itens e o recibo_uuid)
     $caminhoRel = ss_gerar_pdf_ficha_epi($colaborador_id, $delivery_ids, $recibo_uuid);

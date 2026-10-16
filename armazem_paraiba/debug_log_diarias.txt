@@ -1,0 +1,2 @@
+2026-10-16 19:40:59 | Limpeza de registros futuros (>{}) removidos, entidade=0
+2026-10-16 19:57:58 | Limpeza de registros futuros (>{}) removidos, entidade=0
