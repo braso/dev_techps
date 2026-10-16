@@ -309,6 +309,18 @@ function termos_tabela_ativo_existe(): bool {
 	return false;
 }
 
+function termos_coluna_link_termo_existe(): bool {
+	global $conn;
+	static $cache = null;
+	if($cache !== null){
+		return $cache;
+	}
+	if(!($conn instanceof mysqli) || !function_exists("bancoColunaExiste")){
+		return $cache = false;
+	}
+	return $cache = bancoColunaExiste($conn, "celular", "celu_nb_modelo_termo");
+}
+
 function termos_rotulo_ativo(array $a): string {
 	$partes = [];
 	$nome = trim(strval($a["celu_tx_nome"] ?? ""));
@@ -353,17 +365,53 @@ function termos_listar_ativos(): array {
 	if(!termos_tabela_ativo_existe()){
 		return [];
 	}
+	$colLink = termos_coluna_link_termo_existe() ? "c.celu_nb_modelo_termo" : "NULL AS celu_nb_modelo_termo";
 	$out = [];
 	$res = query(
 		"SELECT c.celu_nb_id, c.celu_tx_nome, c.celu_tx_imei, c.celu_tx_numero, c.celu_tx_operadora,
 		        c.celu_tx_cimie, c.celu_tx_sistemaOperacional, c.celu_tx_marcaModelo,
-		        c.celu_nb_entidade, e.enti_tx_nome AS responsavel
+		        c.celu_nb_entidade, {$colLink}, e.enti_tx_nome AS responsavel
 		 FROM celular c
 		 LEFT JOIN entidade e ON e.enti_nb_id = c.celu_nb_entidade
 		 ORDER BY c.celu_tx_nome ASC"
 	);
 	while($res && ($r = mysqli_fetch_assoc($res))){
 		$r["rotulo"] = termos_rotulo_ativo($r);
+		$out[] = $r;
+	}
+	return $out;
+}
+
+function termos_ativo_vinculado_modelo(int $modeloId, int $entiId = 0): int {
+	if($modeloId <= 0 || !termos_tabela_ativo_existe() || !termos_coluna_link_termo_existe()){
+		return 0;
+	}
+	$sql = "SELECT celu_nb_id FROM celular WHERE celu_nb_modelo_termo = ?";
+	$types = "i";
+	$vars = [$modeloId];
+	if($entiId > 0){
+		$sql .= " AND celu_nb_entidade = ?";
+		$types .= "i";
+		$vars[] = $entiId;
+	}
+	$sql .= " ORDER BY celu_nb_id ASC LIMIT 1";
+	$res = query($sql, $types, $vars);
+	if($res instanceof mysqli_result && ($row = mysqli_fetch_assoc($res))){
+		return intval($row["celu_nb_id"]);
+	}
+	return 0;
+}
+
+function termos_modelos_vinculaveis_equipamento(): array {
+	$out = [];
+	$res = query(
+		"SELECT m.mode_nb_id, m.mode_tx_nome, t.tipo_nb_id, t.tipo_tx_nome
+		 FROM modelo_termo m
+		 INNER JOIN tipos_documentos t ON t.tipo_nb_id = m.mode_nb_tipo_doc
+		 WHERE m.mode_tx_status = 'ativo' AND LOWER(TRIM(t.tipo_tx_ativo)) = 'sim'
+		 ORDER BY m.mode_tx_nome ASC"
+	);
+	while($res && ($r = mysqli_fetch_assoc($res))){
 		$out[] = $r;
 	}
 	return $out;
@@ -1465,6 +1513,11 @@ function termos_processar_um(int $entiId, array $params): array {
 
 	$exigeAtivo = termos_tipo_requer_ativo($tipo);
 	$ativoId = intval($params["ativo_id"] ?? 0);
+	if($ativoId <= 0){
+		// Equipamento vinculado a este modelo na tela de Cadastro de Celulares
+		// para o funcionário (responsável) — vínculo feito na coluna TERMO do grid.
+		$ativoId = termos_ativo_vinculado_modelo($modeloId, $entiId);
+	}
 	if($ativoId <= 0){
 		$ativoId = intval($modelo["mode_nb_ativo"] ?? 0);
 	}

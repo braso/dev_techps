@@ -1,0 +1,4 @@
+[2026-10-16 11:03:26] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=modelo_criado detalhe=Modelo #3 criado nome=celuar
+[2026-10-16 11:03:54] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=modelo_criado detalhe=Modelo #4 criado nome=termo_avulso
+[2026-10-16 11:04:23] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=celular_termo_vinculado detalhe=Equipamento #4 vinculado ao modelo #3 modelo=celuar
+[2026-10-16 11:04:52] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=209 termo=3 solicitacao=26

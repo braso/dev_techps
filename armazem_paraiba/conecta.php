@@ -305,6 +305,10 @@
         "celu_tx_observacoes"       => "TEXT NULL",
         "celu_tx_valorEstimado"     => "VARCHAR(30) NULL",
         "celu_dt_dataEntrega"       => "DATE NULL",
+        // Vínculo do equipamento com um modelo de termo (módulo documentos/termos).
+        // O vínculo é feito na tela de Cadastro de Celulares; na geração do termo os
+        // campos do equipamento são preenchidos com os dados deste aparelho.
+        "celu_nb_modelo_termo"      => "INT NULL",
     ] as $__colCelular => $__tipoCelular) {
         bancoGarantirColuna($conn, "celular", $__colCelular, $__tipoCelular);
     }
@@ -379,9 +383,14 @@
     // anterior em aberto (padrão: sim). O bloqueio do MESMO DIA continua valendo sempre.
     bancoGarantirColuna($conn, "parametro", "para_tx_permitirNovaJornadaDiaAnterior", "ENUM('sim','nao') NOT NULL DEFAULT 'sim'");
 
-    // Migração da tabela parametro: flag "Almoço pré assinalado" (reservada; ainda não altera
-    // nenhum comportamento).
+    // Migração da tabela parametro: flag "Almoço pré assinalado". Com ela ligada, o
+    // funcionário registra apenas Entrada e Fim Jornada e o almoço entra automático.
     bancoGarantirColuna($conn, "parametro", "para_tx_almocoPreAssinalado", "ENUM('sim','nao') NOT NULL DEFAULT 'nao'");
+
+    // Migração da tabela parametro: exigência de jornada contínua mínima (6h) para o almoço
+    // pré assinalado. Com a flag ligada (padrão), o almoço automático só é lançado no Fim
+    // Jornada se a jornada contínua (Entrada até a batida) tiver cumprido 6 horas.
+    bancoGarantirColuna($conn, "parametro", "para_tx_almocoPreJornada6h", "ENUM('sim','nao') NOT NULL DEFAULT 'sim'");
 
     // Criação da tabela feriado_funcionario se não existir
     bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS feriado_funcionario (

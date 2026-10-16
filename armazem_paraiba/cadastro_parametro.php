@@ -192,11 +192,17 @@
 				});
 
 				// Campos do totem facial: so ficam editaveis quando o Acordo Sindical esta
-				// marcado como Sim.
+				// marcado como Sim. O Horario do almoco pre assinalado e a flag de jornada
+				// minima de 6h so habilitam quando o select de almoco pre assinalado
+				// tambem esta como Sim.
 				function atualizarCamposAcordo(){
 					var selAcordo = document.getElementsByName('acordo')[0];
-					var habilitar = !!(selAcordo && selAcordo.value === 'sim');
+					var selPre = document.getElementsByName('almocoPreAssinalado')[0];
+					var acordoSim = !!(selAcordo && selAcordo.value === 'sim');
+					var preSim = !!(selPre && selPre.value === 'sim');
 					document.querySelectorAll('.campo-acordo-totem').forEach(function(bloco){
+						var ehHorarioAlmoco = bloco.classList.contains('campo-almoco-pre');
+						var habilitar = acordoSim && (!ehHorarioAlmoco || preSim);
 						bloco.style.opacity = habilitar ? '1' : '0.55';
 						bloco.querySelectorAll('input, select').forEach(function(el){ el.disabled = !habilitar; });
 					});
@@ -204,6 +210,8 @@
 				(function(){
 					var selAcordo = document.getElementsByName('acordo')[0];
 					if(selAcordo){ selAcordo.addEventListener('change', atualizarCamposAcordo); }
+					var selPre = document.getElementsByName('almocoPreAssinalado')[0];
+					if(selPre){ selPre.addEventListener('change', atualizarCamposAcordo); }
 					atualizarCamposAcordo();
 				})();
 	</script>"
@@ -723,6 +731,7 @@
 			"para_tx_almocoFim"					=> (!empty($_POST["almocoFim"])? $_POST["almocoFim"]: null),
 			"para_tx_permitirNovaJornadaDiaAnterior" => (($_POST["permitirNovaJornadaDiaAnterior"] ?? "sim") === "nao")? "nao": "sim",
 			"para_tx_almocoPreAssinalado"		=> (($_POST["almocoPreAssinalado"] ?? "nao") === "sim")? "sim": "nao",
+			"para_tx_almocoPreJornada6h"		=> (!empty($_POST["almocoPreJornada6h"])? "sim": "nao"),
 		];
 
 		if(!empty($_POST["ignorarCampos"]) || $_POST["ignorarCampos"] == null){
@@ -742,6 +751,15 @@
 			unset($novoParametro["para_tx_almocoFim"]);
 			unset($novoParametro["para_tx_permitirNovaJornadaDiaAnterior"]);
 			unset($novoParametro["para_tx_almocoPreAssinalado"]);
+			unset($novoParametro["para_tx_almocoPreJornada6h"]);
+		}
+
+		if(($_POST["almocoPreAssinalado"] ?? "nao") !== "sim"){
+			// Almoço pré assinalado desabilitado: preserva os valores já gravados dos
+			// horários e da flag de jornada mínima de 6h.
+			unset($novoParametro["para_tx_almocoInicio"]);
+			unset($novoParametro["para_tx_almocoFim"]);
+			unset($novoParametro["para_tx_almocoPreJornada6h"]);
 		}
 		
 
@@ -993,7 +1011,7 @@
 				campo_data("Fim do Acordo*", "fimAcordo", ($a_mod["para_tx_fimAcordo"]?? ""), 1),
 				campo("Categoria", "categoria", ($a_mod["para_tx_categoria"]?? ""), 3),
 				campo("Sindicato", "sindicato", ($a_mod["para_tx_sindicato"]?? ""), 3),
-				"<div class='col-sm-4 margin-bottom-5 campo-acordo-totem' style='min-width:0;'>
+				"<div class='col-sm-4 margin-bottom-5 campo-acordo-totem campo-almoco-pre' style='min-width:0;'>
 					<label>Horário do almoço pré assinalado</label>
 					<div style='display:flex; align-items:center; gap:8px;'>
 						<input type='time' name='almocoInicio' value='".substr(strval($a_mod["para_tx_almocoInicio"]?? "11:00:00"), 0, 5)."' class='form-control input-sm' style='width:auto;'>
@@ -1017,6 +1035,13 @@
 						<option value='sim' ".((($a_mod["para_tx_almocoPreAssinalado"]?? "nao") == "sim")? "selected": "").">Sim</option>
 					</select>
 					<small class='text-muted' style='display:block; margin-top:4px; overflow-wrap:break-word; word-break:break-word;'>Quando Sim, o funcionário registra apenas Entrada e Fim Jornada; o almoço é registrado automaticamente nos horários acima. Se o Fim Jornada for antes da janela, a jornada é finalizada com observação.</small>
+				</div>",
+				"<div class='col-sm-4 margin-bottom-5 campo-acordo-totem campo-almoco-pre' style='min-width:0;'>
+					<label style='font-weight:normal; margin-top:22px; display:flex; align-items:center; gap:6px; cursor:pointer;'>
+						<input type='checkbox' name='almocoPreJornada6h' value='sim' ".((($a_mod["para_tx_almocoPreJornada6h"]?? "sim") == "sim")? "checked": "").">
+						Almoço pré assinalado somente após 6h de jornada contínua
+					</label>
+					<small class='text-muted' style='display:block; margin-top:4px; overflow-wrap:break-word; word-break:break-word;'>Quando marcado e 'Almoço pré assinalado?' = Sim, o almoço automático só é lançado no Fim Jornada se a jornada contínua (Entrada até a batida) tiver cumprido 6 horas.</small>
 				</div>"
 			],
 			[

@@ -444,11 +444,21 @@ function index() {
 						sel.append($('<option>').val(a.celu_nb_id).text(a.rotulo));
 					});
 					var padrao = 0;
+					// 1) equipamento vinculado a este modelo (coluna TERMO do Cadastro de Celulares) para o funcionário
 					TERMOS_ATIVOS.forEach(function(a) {
-						if (padrao === 0 && parseInt(a.celu_nb_entidade, 10) === eid) {
+						if (padrao === 0 && parseInt(a.celu_nb_modelo_termo, 10) === TERMOS_MODELO_ID && parseInt(a.celu_nb_entidade, 10) === eid) {
 							padrao = parseInt(a.celu_nb_id, 10);
 						}
 					});
+					// 2) equipamento do próprio funcionário
+					if (padrao === 0) {
+						TERMOS_ATIVOS.forEach(function(a) {
+							if (padrao === 0 && parseInt(a.celu_nb_entidade, 10) === eid) {
+								padrao = parseInt(a.celu_nb_id, 10);
+							}
+						});
+					}
+					// 3) equipamento fixado no modelo (legado)
 					if (padrao === 0) { padrao = TERMOS_MODELO_ATIVO; }
 					if (padrao > 0) { sel.val(String(padrao)); }
 				});

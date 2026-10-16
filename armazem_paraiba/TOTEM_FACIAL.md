@@ -89,11 +89,16 @@ http://localhost/braso/index.php
 
 - Tela: **Cadastros > Parametro**, secao **"Acordo Sindical"** (editavel somente quando
   "Acordo Sindical" = Sim): **"Horario do almoco pre assinalado"**
-  (`para_tx_almocoInicio` / `para_tx_almocoFim`), padrao **11:00 as 14:00**.
+  (`para_tx_almocoInicio` / `para_tx_almocoFim`), padrao **11:00 as 14:00**. Os horarios so ficam
+  habilitados para alteracao quando **"Almoco pre assinalado?" = Sim**.
 - Usado quando **"Almoco pre assinalado?" = Sim**: no Fim Jornada, o sistema registra o Inicio e
   o Fim Almoco nesses horarios (quando a jornada atravessa a janela).
 - A flag **"Almoco pre assinalado?"** (`para_tx_almocoPreAssinalado`, padrao Nao) faz o
   funcionario registrar apenas Entrada e Fim Jornada; o almoco entra automaticamente (secao 4.5).
+- A flag **"Almoco pre assinalado somente apos 6h de jornada continua"**
+  (`para_tx_almocoPreJornada6h`, padrao **Sim**, so editavel com "Almoco pre assinalado?" = Sim)
+  exige o cumprimento de 6 horas continuas de jornada (Entrada ate a batida) para o lancamento
+  automatico do almoco (secao 4.5). Desligado o "Almoco pre assinalado?", o valor e preservado.
 
 ### 3.5 Camera
 
@@ -175,6 +180,11 @@ Jornada:
   horario da propria batida (ex.: janela 10:00-11:00 e fim as 10:30 -> almoco 10:00-10:30);
 - Fim **antes** da janela: nao insere o almoco e finaliza com a observacao "Saida antes do
   almoco pre assinalado." na justificativa.
+
+Com a flag **"Almoco pre assinalado somente apos 6h de jornada continua"**
+(`para_tx_almocoPreJornada6h`, padrao **Sim**) ligada, o almoco automatico so e inserido se a
+jornada continua (Entrada ate a batida do Fim Jornada) tiver cumprido **6 horas**. Abaixo disso o
+Fim Jornada e gravado normalmente, sem o par de almoco.
 
 Os pontos automaticos usam a descricao `Almoco pre assinalado`.
 
@@ -265,6 +275,7 @@ Regra do retorno no logout:
 - `parametro.para_tx_almocoFim TIME NULL DEFAULT '14:00:00'`
 - `parametro.para_tx_permitirNovaJornadaDiaAnterior ENUM('sim','nao') NOT NULL DEFAULT 'sim'`
 - `parametro.para_tx_almocoPreAssinalado ENUM('sim','nao') NOT NULL DEFAULT 'nao'` (almoço automático)
+- `parametro.para_tx_almocoPreJornada6h ENUM('sim','nao') NOT NULL DEFAULT 'sim'` (exige 6h contínuas para o almoço automático)
 - `user.user_tx_face_descriptor LONGTEXT` (ja existia, guarda o vetor facial)
 
 As colunas novas sao criadas automaticamente pelas migracoes de `conecta.php` quando qualquer
@@ -299,7 +310,8 @@ pagina da empresa e carregada (inclusive o proprio totem). Perfis existentes ass
 3. **Regra de jornada e almoco**: Cadastros > Parametro > jornada usada pela empresa, secao
    "Acordo Sindical" (campos so editaveis com Acordo = Sim): "Permitir abrir nova jornada com a
    do dia anterior em aberto?" (padrao Sim), "Horario do almoco pre assinalado" (padrao 11:00 as
-   14:00) e "Almoco pre assinalado?" (padrao Nao) > salvar.
+   14:00, so editavel com "Almoco pre assinalado?" = Sim) e "Almoco pre assinalado?" (padrao Nao).
+   A flag "Almoco pre assinalado somente apos 6h de jornada continua" vem marcada por padrao > salvar.
 4. **Ativar o Modo Totem**: abrir a tela de login (`.../index.php`), clicar em **Modo Totem**,
    selecionar a empresa (fica salva no dispositivo) e usar a tela cheia.
 
@@ -333,7 +345,7 @@ pagina da empresa e carregada (inclusive o proprio totem). Perfis existentes ass
   3. toque na tela: camera abre direto (sem botoes);
   4. sem jornada: reconhecer e registrar Inicio Jornada automaticamente;
   5. regra por quantidade: 2ª batida = Inicio Almoco; 3ª = Fim Almoco; 4ª = Fim Jornada;
-  6. "Almoco pre assinalado" = Sim: 2ª batida registra Fim Jornada e insere o almoço na janela; se o Fim Jornada for antes da janela, finaliza com observacao;
+  6. "Almoco pre assinalado" = Sim: 2ª batida registra Fim Jornada e insere o almoço na janela (somente com a flag de 6h desligada ou jornada continua >= 6h); se o Fim Jornada for antes da janela, finaliza com observacao;
   7. jornada aberta de dia anterior: com parametro Sim registra nova jornada e mostra o aviso; com Nao orienta o gestor; jornada de 2 pontos do dia anterior: 2º ponto vira Fim Jornada e a nova abre normal; intervalo nao-almoco aberto: mensagem, sem gravacao;
   8. conferir no banco `pont_tx_descricao = 'Facial'` e `pont_tx_faceDistancia` preenchida;
   9. pagina avulsa do totem (URL antiga): login pelo fallback e logout voltam ao totem apenas com perfil marcado.

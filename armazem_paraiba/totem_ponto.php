@@ -449,9 +449,10 @@
 			$almocoFim = null;
 			$bloquearJornadaAnterior = false;
 			$almocoPreAssinalado = false;
+			$almocoPreJornada6h = false;
 			$parametroId = intval($melhorUsuario["enti_nb_parametro"] ?? 0);
 			if($parametroId > 0){
-				$colunasParametro = ["para_tx_almocoInicio", "para_tx_almocoFim", "para_tx_permitirNovaJornadaDiaAnterior", "para_tx_almocoPreAssinalado"];
+				$colunasParametro = ["para_tx_almocoInicio", "para_tx_almocoFim", "para_tx_permitirNovaJornadaDiaAnterior", "para_tx_almocoPreAssinalado", "para_tx_almocoPreJornada6h"];
 				$selectParametro = [];
 				foreach($colunasParametro as $colunaParametro){
 					if(bancoColunaExiste($conn, "parametro", $colunaParametro)){
@@ -468,6 +469,7 @@
 					$almocoFim = $parametroJornada["para_tx_almocoFim"] ?? null;
 					$bloquearJornadaAnterior = (($parametroJornada["para_tx_permitirNovaJornadaDiaAnterior"] ?? "sim") === "nao");
 					$almocoPreAssinalado = (($parametroJornada["para_tx_almocoPreAssinalado"] ?? "nao") === "sim");
+					$almocoPreJornada6h = (($parametroJornada["para_tx_almocoPreJornada6h"] ?? "sim") === "sim");
 				}
 			}
 			$dataPonto = new DateTime(date("Y-m-d H:i:s"));
@@ -504,7 +506,9 @@
 
 			// Almoço pré assinalado: no Fim de Jornada, insere o par de almoço nos horários
 			// da janela quando a jornada atravessou a janela inteira. Se a saída foi antes
-			// (ou no meio) da janela, finaliza e marca a observação.
+			// (ou no meio) da janela, finaliza e marca a observação. Com a flag de jornada
+			// mínima ligada (padrão), o almoço automático só entra quando a jornada contínua
+			// (Entrada até a batida) cumpre 6 horas.
 			$justificativaPonto = "Registro pelo totem facial";
 			if($idMacro === 2 && !empty($proximo) && ($proximo["motivo"] ?? "") === "fim_jornada_almoco_pre" && $almocoInicio && $almocoFim){
 				$inicioAlmoco = (strlen($almocoInicio) == 5)? $almocoInicio.":00": $almocoInicio;
@@ -531,7 +535,10 @@
 					$janelaInicio = new DateTime($dataJornada." ".$inicioAlmoco);
 					$janelaFim = new DateTime($dataJornada." ".$fimAlmoco);
 
-					if($janelaInicio >= $inicioJornadaDt && $dataPonto >= $janelaInicio){
+					// Tempo contínuo de jornada exigido pela flag (6 horas) antes do lançamento automático.
+					$jornadaMinimaCumprida = !$almocoPreJornada6h || (($dataPonto->getTimestamp() - $inicioJornadaDt->getTimestamp()) >= 6*60*60);
+
+					if($janelaInicio >= $inicioJornadaDt && $dataPonto >= $janelaInicio && $jornadaMinimaCumprida){
 						// Fim dentro ou depois da janela: registra o par de almoço. Se o fim
 						// foi no meio da janela, o Fim Almoço recebe o horário da batida.
 						$fimAlmocoEfetivo = ($dataPonto < $janelaFim)? clone $dataPonto: $janelaFim;

@@ -237,3 +237,17 @@ TEST_2026-05-20 01:08:23_6a0d098748455
     [id] => 
 )
 
+2026-10-16 10:59:30 POST: Array
+(
+    [HTTP_REFERER] => http://localhost/braso/armazem_paraiba/cadastro_tipo_doc.php
+    [nome] => Procuração
+    [setor] => 1
+    [sub-setor] => 
+    [vencimento] => sim
+    [assinatura] => sim
+    [ativo] => sim
+    [acao] => cadastra_tipo_doc()
+    [returnValues] => {"id":1,"acao":"modificarTipoDoc()","nome":"Procura\u00e7\u00e3o","setor":1,"vencimento":"sim","assinatura":"nao","ativo":"nao","sub-setor":null,"status":"ativo","HTTP_REFERER":"http:\/\/localhost\/braso\/armazem_paraiba\/cadastro_tipo_doc.php","acaoPrevia":"index"}
+    [id] => 1
+)
+
