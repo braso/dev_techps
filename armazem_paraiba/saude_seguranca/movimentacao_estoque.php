@@ -238,11 +238,6 @@ function transferirEstoqueAjax() {
         echo json_encode(["status" => "error", "message" => "Selecione um EPI válido."]);
         exit;
     }
-    if ($quantidade <= 0) {
-        ob_clean();
-        echo json_encode(["status" => "error", "message" => "A quantidade deve ser maior que zero."]);
-        exit;
-    }
     if ($origem === $destino) {
         ob_clean();
         echo json_encode(["status" => "error", "message" => "A empresa de origem e a de destino devem ser diferentes."]);
@@ -255,71 +250,126 @@ function transferirEstoqueAjax() {
         echo json_encode(["status" => "error", "message" => "EPI não encontrado no cadastro."]);
         exit;
     }
-    if (!empty($epi["ss_e_tx_variacoes"] ?? "") && empty($variacao)) {
-        ob_clean();
-        echo json_encode(["status" => "error", "message" => "Este EPI possui variações cadastradas. Selecione a variação."]);
-        exit;
+
+    // Monta a lista de itens a transferir: um item por variação (EPI com variações)
+    // ou um único item usando a quantidade informada (EPI sem variações).
+    $itens = [];
+    if (!empty($epi["ss_e_tx_variacoes"] ?? "")) {
+        $variacoesPost = json_decode($_POST["variacoes"] ?? "", true);
+        if (is_array($variacoesPost)) {
+            foreach ($variacoesPost as $vItem) {
+                $varItem = trim((string)($vItem["variacao"] ?? ""));
+                $qtdItem = (int)($vItem["quantidade"] ?? 0);
+                if ($varItem === "" || $qtdItem <= 0) {
+                    continue; // Variações com quantidade 0 não são transferidas
+                }
+                $itens[] = ["variacao" => $varItem, "quantidade" => $qtdItem];
+            }
+        } elseif ($quantidade > 0 && !empty($variacao)) {
+            // Compatibilidade com o envio antigo (quantidade + variação única)
+            $itens[] = ["variacao" => $variacao, "quantidade" => $quantidade];
+        }
+        if (count($itens) === 0) {
+            ob_clean();
+            echo json_encode(["status" => "error", "message" => "Este EPI possui variações cadastradas. Informe a quantidade de pelo menos uma variação."]);
+            exit;
+        }
+    } else {
+        if ($quantidade <= 0) {
+            ob_clean();
+            echo json_encode(["status" => "error", "message" => "A quantidade deve ser maior que zero."]);
+            exit;
+        }
+        $itens[] = ["variacao" => ($variacao !== null && $variacao !== "") ? $variacao : null, "quantidade" => $quantidade];
     }
 
-    $saldoOrigem = saldoEstoquePorEmpresa($epi_id, $origemClean, $variacao);
-    if ($quantidade > $saldoOrigem) {
-        ob_clean();
-        echo json_encode(["status" => "error", "message" => "Estoque insuficiente na origem. Saldo atual: {$saldoOrigem} unidade(s)."]);
-        exit;
+    // Agrupa itens repetidos por variação para que a validação de saldo considere o total
+    $itensAgrupados = [];
+    foreach ($itens as $it) {
+        $chaveItem = $it["variacao"] === null ? "" : $it["variacao"];
+        if (!isset($itensAgrupados[$chaveItem])) {
+            $itensAgrupados[$chaveItem] = $it;
+        } else {
+            $itensAgrupados[$chaveItem]["quantidade"] += $it["quantidade"];
+        }
+    }
+    $itens = array_values($itensAgrupados);
+
+    // Valida o saldo na origem de cada variação antes de gravar qualquer coisa
+    foreach ($itens as $it) {
+        $saldoItem = saldoEstoquePorEmpresa($epi_id, $origemClean, $it["variacao"]);
+        if ($it["quantidade"] > $saldoItem) {
+            $sufixoItem = ($it["variacao"] !== null) ? " (variação: {$it['variacao']})" : "";
+            ob_clean();
+            echo json_encode(["status" => "error", "message" => "Estoque insuficiente na origem{$sufixoItem}. Saldo atual: {$saldoItem} unidade(s)."]);
+            exit;
+        }
     }
 
     $nomeOrigem = nomeEmpresa($origemClean);
     $nomeDestino = nomeEmpresa($destinoClean);
-    $sufixo = ($variacao !== null && $variacao !== "") ? " (Variação: {$variacao})" : "";
     $motivo_e = mysqli_real_escape_string($conn, $motivo);
-
-    $descSaida = "Transferência de estoque: {$nomeOrigem} → {$nomeDestino}{$sufixo}" . ($motivo_e !== "" ? " - {$motivo_e}" : "");
-    $descEntrada = "Transferência recebida de {$nomeOrigem}{$sufixo}" . ($motivo_e !== "" ? " - {$motivo_e}" : "");
-
-    // Mantém a validade do lote da origem na entrada do destino
-    $validadeOrigem = ss_obter_validade_estoque($epi_id, $origemClean, $variacao);
-
-    mysqli_begin_transaction($conn);
-    $s1 = registrarMovimentacaoEstoque($epi_id, $quantidade, 'saida', $descSaida, null, null, '', null, null, $origemClean, null, null, $variacao);
-    if (!$s1) {
-        mysqli_rollback($conn);
-        ob_clean();
-        echo json_encode(["status" => "error", "message" => "Erro ao registrar a saída na origem."]);
-        exit;
-    }
-    $s2 = registrarMovimentacaoEstoque($epi_id, $quantidade, 'entrada', $descEntrada, null, null, '', null, null, $destinoClean, null, $validadeOrigem, $variacao);
-    if (!$s2) {
-        mysqli_rollback($conn);
-        ob_clean();
-        echo json_encode(["status" => "error", "message" => "Erro ao registrar a entrada no destino. Nenhum registro foi salvo."]);
-        exit;
-    }
 
     $user = (int)($_SESSION["user_nb_id"] ?? 0);
     $origemSql = $origemClean === null ? "NULL" : (int)$origemClean;
     $destinoSql = $destinoClean === null ? "NULL" : (int)$destinoClean;
-    $variacaoSql = ($variacao !== null && $variacao !== "") ? "'" . mysqli_real_escape_string($conn, $variacao) . "'" : "NULL";
     $motivoSql = $motivo_e !== "" ? "'{$motivo_e}'" : "NULL";
 
-    $r = query(
-        "INSERT INTO ss_epi_transferencia (ss_t_nb_epi_id, ss_t_nb_quantidade, ss_t_nb_empresa_origem, ss_t_nb_empresa_destino, ss_t_tx_variacao, ss_t_tx_motivo, ss_t_tx_data, ss_t_nb_userCadastro)
-         VALUES ({$epi_id}, {$quantidade}, {$origemSql}, {$destinoSql}, {$variacaoSql}, {$motivoSql}, NOW(), {$user})"
-    );
-    if (!$r) {
-        mysqli_rollback($conn);
-        ob_clean();
-        echo json_encode(["status" => "error", "message" => "Erro ao registrar o histórico da transferência."]);
-        exit;
+    $totalUnidades = 0;
+
+    mysqli_begin_transaction($conn);
+    foreach ($itens as $it) {
+        $varItem = $it["variacao"];
+        $qtdItem = $it["quantidade"];
+        $totalUnidades += $qtdItem;
+
+        $sufixo = ($varItem !== null) ? " (Variação: {$varItem})" : "";
+        $descSaida = "Transferência de estoque: {$nomeOrigem} → {$nomeDestino}{$sufixo}" . ($motivo_e !== "" ? " - {$motivo_e}" : "");
+        $descEntrada = "Transferência recebida de {$nomeOrigem}{$sufixo}" . ($motivo_e !== "" ? " - {$motivo_e}" : "");
+
+        // Mantém a validade do lote da origem na entrada do destino
+        $validadeOrigem = ss_obter_validade_estoque($epi_id, $origemClean, $varItem);
+
+        $s1 = registrarMovimentacaoEstoque($epi_id, $qtdItem, 'saida', $descSaida, null, null, '', null, null, $origemClean, null, null, $varItem);
+        if (!$s1) {
+            mysqli_rollback($conn);
+            ob_clean();
+            echo json_encode(["status" => "error", "message" => "Erro ao registrar a saída na origem."]);
+            exit;
+        }
+        $s2 = registrarMovimentacaoEstoque($epi_id, $qtdItem, 'entrada', $descEntrada, null, null, '', null, null, $destinoClean, null, $validadeOrigem, $varItem);
+        if (!$s2) {
+            mysqli_rollback($conn);
+            ob_clean();
+            echo json_encode(["status" => "error", "message" => "Erro ao registrar a entrada no destino. Nenhum registro foi salvo."]);
+            exit;
+        }
+
+        $variacaoSql = ($varItem !== null) ? "'" . mysqli_real_escape_string($conn, $varItem) . "'" : "NULL";
+        $r = query(
+            "INSERT INTO ss_epi_transferencia (ss_t_nb_epi_id, ss_t_nb_quantidade, ss_t_nb_empresa_origem, ss_t_nb_empresa_destino, ss_t_tx_variacao, ss_t_tx_motivo, ss_t_tx_data, ss_t_nb_userCadastro)
+             VALUES ({$epi_id}, {$qtdItem}, {$origemSql}, {$destinoSql}, {$variacaoSql}, {$motivoSql}, NOW(), {$user})"
+        );
+        if (!$r) {
+            mysqli_rollback($conn);
+            ob_clean();
+            echo json_encode(["status" => "error", "message" => "Erro ao registrar o histórico da transferência."]);
+            exit;
+        }
     }
 
     mysqli_commit($conn);
 
-    $saldoOrigemNovo = saldoEstoquePorEmpresa($epi_id, $origemClean, $variacao);
-    $saldoDestinoNovo = saldoEstoquePorEmpresa($epi_id, $destinoClean, $variacao);
+    $saldoOrigemNovo = saldoEstoquePorEmpresa($epi_id, $origemClean, null);
+    $saldoDestinoNovo = saldoEstoquePorEmpresa($epi_id, $destinoClean, null);
+    $mensagem = count($itens) === 1
+        ? "Transferência realizada com sucesso: {$totalUnidades} unidade(s) de {$nomeOrigem} para {$nomeDestino}."
+        : "Transferência realizada com sucesso: {$totalUnidades} unidade(s) em " . count($itens) . " variação(ões) de {$nomeOrigem} para {$nomeDestino}.";
+
     ob_clean();
     echo json_encode([
         "status" => "success",
-        "message" => "Transferência realizada com sucesso: {$quantidade} unidade(s) de {$nomeOrigem} para {$nomeDestino}.",
+        "message" => $mensagem,
         "saldo_origem" => $saldoOrigemNovo,
         "saldo_destino" => $saldoDestinoNovo
     ]);
@@ -608,11 +658,11 @@ function index() {
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col-sm-2 margin-bottom-5">
+                    <div class="col-sm-2 margin-bottom-5" id="transf_container_quantidade">
                         <label class="control-label">Qnt a transferir*</label>
                         <input type="number" name="transf_quantidade" id="transf_quantidade" class="form-control input-sm" min="1" step="1" style="height: 30px;">
                     </div>
-                    <div class="col-sm-3 margin-bottom-5">
+                    <div class="col-sm-3 margin-bottom-5" id="transf_container_variacao">
                         <label class="control-label">Variação (se o EPI tiver)</label>
                         <select name="transf_variacao" id="transf_variacao" class="form-control input-sm">
                             <option value="">Selecione a variação</option>
@@ -630,6 +680,30 @@ function index() {
                     </div>
                     <div class="col-sm-1 margin-bottom-5" style="padding-top: 23px;">
                         <button type="button" class="btn btn-warning btn-sm" id="btn_transferir" title="Transferir estoque" style="width: 100%;"><i class="fa fa-exchange"></i> Transferir</button>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-12 margin-bottom-5" id="transf_container_variacoes" style="display: none;">
+                        <div class="portlet light bordered" style="margin-bottom: 10px;">
+                            <div class="portlet-title" style="margin-bottom: 5px;">
+                                <div class="caption font-dark">
+                                    <i class="fa fa-th-list font-dark"></i>
+                                    <span class="caption-subject bold uppercase">Quantidade por Variação (Numeração/Tamanho)</span>
+                                </div>
+                            </div>
+                            <div class="portlet-body">
+                                <table class="table table-bordered" style="max-width: 500px; margin-bottom: 5px;">
+                                    <thead>
+                                        <tr>
+                                            <th>Variação</th>
+                                            <th style="width: 160px; text-align: center;">Quantidade</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="transf_corpo_variacoes"></tbody>
+                                </table>
+                                <span class="help-block" style="font-size: 11px;">Informe a quantidade para cada variação que deseja transferir. Variações com quantidade 0 não serão transferidas.</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </form>
@@ -1105,14 +1179,30 @@ function index() {
             var variacoesStr = epiVariacoes[epiId] || '';
             var lista = variacoesStr.split(',').map(function(v) { return v.trim(); }).filter(Boolean);
             var sel = $('#transf_variacao');
+            var corpo = $('#transf_corpo_variacoes');
             sel.empty();
+            corpo.empty();
+
             if (lista.length === 0) {
                 sel.append('<option value="">Sem variações</option>');
+                $('#transf_container_quantidade').show();
+                $('#transf_container_variacao').show();
+                $('#transf_container_variacoes').hide();
             } else {
                 sel.append('<option value="">Selecione a variação</option>');
                 lista.forEach(function(v) {
                     sel.append('<option value="' + v + '">' + v + '</option>');
+                    corpo.append(
+                        '<tr>' +
+                            '<td style="vertical-align: middle;"><strong>' + v + '</strong></td>' +
+                            '<td style="text-align: center;"><input type="number" min="0" step="1" class="form-control input-sm transf_qtd_variacao" data-variacao="' + v + '" value="0" style="text-align: center;"></td>' +
+                        '</tr>'
+                    );
                 });
+                $('#transf_quantidade').val('');
+                $('#transf_container_quantidade').hide();
+                $('#transf_container_variacao').hide();
+                $('#transf_container_variacoes').show();
             }
             atualizarSaldoOrigem();
         }
@@ -1159,34 +1249,56 @@ function index() {
 
         $('#btn_transferir').on('click', function() {
             var epiId = $('#transf_epi_id').val();
-            var quantidade = parseInt($('#transf_quantidade').val(), 10);
             var origem = $('#transf_empresa_origem').val();
             var destino = $('#transf_empresa_destino').val();
+            var variacoesStr = epiVariacoes[epiId] || '';
+            var listaVariacoes = variacoesStr.split(',').map(function(v) { return v.trim(); }).filter(Boolean);
 
             if (!epiId) { alert('Selecione o EPI.'); return; }
-            if (!quantidade || quantidade <= 0) { alert('Informe uma quantidade válida.'); return; }
             if (origem === undefined || origem === null || origem === '') { alert('Selecione a empresa de origem.'); return; }
             if (destino === undefined || destino === null || destino === '') { alert('Selecione a empresa de destino.'); return; }
             if (origem === destino) { alert('A empresa de origem e a de destino devem ser diferentes.'); return; }
+
+            var dados = {
+                epi_id: epiId,
+                empresa_origem: origem,
+                empresa_destino: destino,
+                motivo: $('#transf_motivo').val()
+            };
+
+            if (listaVariacoes.length > 0) {
+                // EPI com variações: transfere todas as variações com quantidade > 0 de uma só vez
+                var itensVariacao = [];
+                $('.transf_qtd_variacao').each(function() {
+                    var q = parseInt($(this).val(), 10) || 0;
+                    if (q > 0) {
+                        itensVariacao.push({ variacao: $(this).attr('data-variacao'), quantidade: q });
+                    }
+                });
+                if (itensVariacao.length === 0) {
+                    alert('Informe a quantidade de pelo menos uma variação.');
+                    return;
+                }
+                dados.variacoes = JSON.stringify(itensVariacao);
+            } else {
+                var quantidade = parseInt($('#transf_quantidade').val(), 10);
+                if (!quantidade || quantidade <= 0) { alert('Informe uma quantidade válida.'); return; }
+                dados.quantidade = quantidade;
+                dados.variacao = $('#transf_variacao').val() || '';
+            }
 
             var $btn = $(this).prop('disabled', true);
 
             $.ajax({
                 url: 'movimentacao_estoque.php?acao=transferirEstoqueAjax',
                 type: 'POST',
-                data: {
-                    epi_id: epiId,
-                    quantidade: quantidade,
-                    empresa_origem: origem,
-                    empresa_destino: destino,
-                    variacao: $('#transf_variacao').val(),
-                    motivo: $('#transf_motivo').val()
-                },
+                data: dados,
                 dataType: 'json',
                 success: function(resp) {
                     if (resp.status === 'success') {
                         alert(resp.message);
                         $('#transf_quantidade').val('');
+                        $('.transf_qtd_variacao').val('0');
                         $('#transf_motivo').val('');
                         atualizarSaldoOrigem();
                         if (typeof consultarRegistros === 'function') {
