@@ -325,6 +325,12 @@ if ($checkColetarAssinaturaResp && mysqli_num_rows($checkColetarAssinaturaResp) 
     mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_tx_coletar_assinatura_resp ENUM('sim','nao') NOT NULL DEFAULT 'sim' AFTER ss_e_tx_obs_inspecao;");
 }
 
+// Comprovante de assinatura eletrônica do responsável pelo registro (id na tabela assinatura_eletronica)
+$checkAssinaturaRespId = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_entrega LIKE 'ss_e_nb_assinatura_resp_id'");
+if ($checkAssinaturaRespId && mysqli_num_rows($checkAssinaturaRespId) == 0) {
+    mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD COLUMN ss_e_nb_assinatura_resp_id INT NULL AFTER ss_e_tx_coletar_assinatura_resp;");
+}
+
 // 8. Modificações para controle por filial, data recebimento e chave NF
 $checkRecebimento = mysqli_query($conn, "SHOW COLUMNS FROM ss_epi_estoque LIKE 'ss_e_tx_data_recebimento'");
 if ($checkRecebimento && mysqli_num_rows($checkRecebimento) == 0) {

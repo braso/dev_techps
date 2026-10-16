@@ -120,8 +120,8 @@ O módulo cria e gerencia as seguintes tabelas MySQL:
 8. **Coleta da Assinatura do Responsável**:
    * No lançamento da entrega (lote, individual ou kit) existe a opção **"Coletar assinatura do responsável?"**:
      * **Sim** (padrão): mantém o fluxo normal de assinatura — colaborador + responsáveis de setor/cargo.
-     * **Não**: o recibo é enviado apenas para o colaborador assinar e o recibo/ficha ganha o bloco **"Responsável pelo registro"** com nome/CPF do usuário logado que registrou a entrega e data/hora, **sem exigir assinatura** do responsável.
-   * A escolha fica gravada em `ss_epi_entrega.ss_e_tx_coletar_assinatura_resp` (padrão `'sim'`).
+     * **Não**: o recibo é enviado apenas para o colaborador assinar. O sistema registra o **COMPROVANTE DE ASSINATURA ELETRÔNICA** do responsável pelo registro (usuário logado) — com Documento Original, nome, CPF, RG, data/hora, endereço IP, navegador/dispositivo e hash de integridade — e o recibo/ficha o exibem, sem rubrica.
+   * A escolha fica gravada em `ss_epi_entrega.ss_e_tx_coletar_assinatura_resp` (padrão `'sim'`) e o comprovante do responsável em `assinatura_eletronica` (vinculado por `ss_epi_entrega.ss_e_nb_assinatura_resp_id`; também pode ser baixado via `assinatura/gerar_pdf.php?id_assinatura=ID`).
 9. **Ficha x Recibo**:
    * **Recibo de Entrega de EPI**: PDF gerado a cada entrega e enviado para assinatura (título "RECIBO DE ENTREGA DE EPI").
    * **Ficha de EPI**: impressão consolidada do histórico do colaborador (título "FICHA DE EPI"), com **blocos separados**: "Entregas de EPI" (com situação Entregue/Não entregue) e "Devoluções, Substituições e Perdas" (tipo + justificativa), quando houver.
