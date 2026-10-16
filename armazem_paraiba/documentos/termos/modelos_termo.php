@@ -63,15 +63,24 @@ function index() {
 	}
 
 	$temCelular = termos_tabela_ativo_existe();
-	$selAtivo = $temCelular ? "c.celu_tx_nome AS ativo_nome, c.celu_tx_imei AS ativo_imei" : "NULL AS ativo_nome, NULL AS ativo_imei";
-	$joinAtivo = $temCelular ? "LEFT JOIN celular c ON c.celu_nb_id = m.mode_nb_ativo" : "";
+	$vinculosPorModelo = [];
+	if($temCelular && termos_coluna_link_termo_existe()){
+		$resVinc = query(
+			"SELECT c.celu_nb_modelo_termo, c.celu_tx_nome, c.celu_tx_imei, e.enti_tx_nome AS responsavel
+			 FROM celular c
+			 LEFT JOIN entidade e ON e.enti_nb_id = c.celu_nb_entidade
+			 WHERE c.celu_nb_modelo_termo IS NOT NULL AND c.celu_nb_modelo_termo > 0
+			 ORDER BY c.celu_tx_nome ASC"
+		);
+		while($resVinc && ($rv = mysqli_fetch_assoc($resVinc))){
+			$vinculosPorModelo[intval($rv["celu_nb_modelo_termo"])][] = $rv;
+		}
+	}
 
 	$res = query(
-		"SELECT m.*, t.tipo_tx_nome, t.tipo_tx_assinatura, t.tipo_tx_ativo,
-		        {$selAtivo}
+		"SELECT m.*, t.tipo_tx_nome, t.tipo_tx_assinatura, t.tipo_tx_ativo
 		 FROM modelo_termo m
 		 LEFT JOIN tipos_documentos t ON t.tipo_nb_id = m.mode_nb_tipo_doc
-		 {$joinAtivo}
 		 {$whereTipo}
 		 ORDER BY m.mode_tx_dataCadastro DESC",
 		$typesTipo,
@@ -80,7 +89,7 @@ function index() {
 
 	echo "<h3>Modelos Cadastrados</h3>";
 	echo "<div class='table-responsive'><table class='table table-bordered table-striped'>";
-	echo "<thead><tr><th>ID</th><th>Nome</th><th>Tipo de Documento</th><th>Equipamento</th><th>Assinatura</th><th>Notificação</th><th>Status</th><th>Atualizado</th><th>Ações</th></tr></thead>";
+	echo "<thead><tr><th>ID</th><th>Nome</th><th>Tipo de Documento</th><th>Equipamentos</th><th>Assinatura</th><th>Notificação</th><th>Status</th><th>Atualizado</th><th>Ações</th></tr></thead>";
 	echo "<tbody>";
 
 	if(!$res || mysqli_num_rows($res) == 0){
@@ -98,12 +107,19 @@ function index() {
 		$data = date("d/m/Y H:i", strtotime(strval($row["mode_tx_dataAtualiza"] ?? $row["mode_tx_dataCadastro"])));
 
 		$ativoExibe = "<span class='text-muted'>—</span>";
-		if(intval($row["mode_nb_ativo"] ?? 0) > 0){
-			$ativoExibe = termos_h(strval($row["ativo_nome"] ?? ("Equipamento #" . intval($row["mode_nb_ativo"]))));
-			$imeiAtivo = trim(strval($row["ativo_imei"] ?? ""));
-			if($imeiAtivo !== ""){
-				$ativoExibe .= "<br><small class='text-muted'>IMEI: " . termos_h($imeiAtivo) . "</small>";
+		$vinc = $vinculosPorModelo[$id] ?? [];
+		if(!empty($vinc)){
+			$nomesVinc = [];
+			foreach($vinc as $v){
+				$nomeEq = trim(strval($v["celu_tx_nome"] ?? ""));
+				if($nomeEq === ""){
+					$nomeEq = "Equipamento";
+				}
+				$respEq = trim(strval($v["responsavel"] ?? ""));
+				$nomesVinc[] = $nomeEq . ($respEq !== "" ? " (" . $respEq . ")" : "");
 			}
+			$ativoExibe = "<span class='label label-info'>" . count($vinc) . "</span> "
+				. "<span style='display:inline-block; max-width:280px; overflow-wrap:break-word;'>" . termos_h(implode(", ", $nomesVinc)) . "</span>";
 		}
 
 		$btnStatus = $status === "Ativo"
@@ -666,13 +682,11 @@ function form() {
 	termos_hide_loading();
 
 	$tipos = ["" => "Selecione..."];
-	$tiposAtivo = [];
 	$resTipos = query("SELECT tipo_nb_id, tipo_tx_nome, tipo_tx_assinatura, tipo_tx_ativo FROM tipos_documentos WHERE tipo_tx_status = 'ativo' ORDER BY tipo_tx_nome ASC");
 	while($resTipos && ($t = mysqli_fetch_assoc($resTipos))){
 		$suf = strtolower(trim(strval($t["tipo_tx_assinatura"] ?? "nao"))) === "sim" ? " (com assinatura)" : "";
 		if(strtolower(trim(strval($t["tipo_tx_ativo"] ?? "nao"))) === "sim"){
 			$suf .= " (com equipamento)";
-			$tiposAtivo[intval($t["tipo_nb_id"])] = true;
 		}
 		$tipos[$t["tipo_nb_id"]] = $t["tipo_tx_nome"] . $suf;
 	}
@@ -690,12 +704,6 @@ function form() {
 	}
 	$ativoPlaceholdersJson = json_encode($ativoPlaceholders, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-	$ativoSelecionado = intval($a_mod["mode_nb_ativo"] ?? 0);
-	$opcoesAtivo = ["" => "Selecione um equipamento..."];
-	foreach(termos_listar_ativos() as $a){
-		$opcoesAtivo[intval($a["celu_nb_id"])] = termos_h(strval($a["rotulo"] ?? ("Equipamento #" . intval($a["celu_nb_id"]))));
-	}
-
 	$tipoDocPadrao = strval($a_mod["mode_nb_tipo_doc"] ?? "");
 	if($id <= 0 && $tipoDocPadrao === ""){
 		$tipoDocPadrao = strval($_POST["tipo_doc"] ?? $_GET["tipo_doc"] ?? "");
@@ -710,7 +718,6 @@ function form() {
 		"<input type='hidden' name='id' value='{$id}'>",
 		campo("Nome do Modelo*", "nome", strval($a_mod["mode_tx_nome"] ?? ""), 4),
 		combo("Tipo de Documento*", "tipo_doc", $tipoDocPadrao, 3, $tipos),
-		combo("Equipamento", "ativo", $ativoSelecionado, 3, $opcoesAtivo, "id='termos_modelo_ativo'"),
 		combo("Notificação", "notificacao", $notificacaoPadrao, 3, ["sim" => "Sim", "nao" => "Não"]),
 		combo("Status", "status", strval($a_mod["mode_tx_status"] ?? "ativo"), 2, ["ativo" => "Ativo", "inativo" => "Inativo"])
 	];
@@ -743,7 +750,7 @@ function form() {
 		<div class='portlet light'>
 			<div class='portlet-title'><span class='caption-subject font-dark bold uppercase'>Texto Padrão do Documento</span></div>
 			<div class='portlet-body'>
-				<p class='text-muted'>Escreva o texto padrão do documento e insira os campos pelo menu abaixo. <b>O modelo é salvo com os placeholders</b> (ex.: <code>{{funcionario_nome}}</code>) — os dados de cada funcionário são preenchidos automaticamente na hora de gerar. Quando o <b>Tipo de Documento</b> exigir <b>Equipamento</b>, os campos do equipamento (ex.: <code>{{equipamento_imei}}</code>) aparecem no mesmo menu. Para conferir, use a Pré-visualização (escolhe o funcionário de amostra).</p>
+				<p class='text-muted'>Escreva o texto padrão do documento e insira os campos pelo menu abaixo. <b>O modelo é salvo com os placeholders</b> (ex.: <code>{{funcionario_nome}}</code>) — os dados de cada funcionário são preenchidos automaticamente na hora de gerar. Os campos do equipamento (ex.: <code>{{equipamento_imei}}</code>) estão sempre disponíveis no menu e são preenchidos com os dados do aparelho <b>vinculado ao termo no Cadastro de Celulares</b>. Para conferir, use a Pré-visualização (escolhe o funcionário de amostra).</p>
 				<div class='row' style='margin-bottom:6px;'>
 					<div class='col-sm-12' style='display:flex; flex-wrap:wrap; gap:4px; align-items:center;'>
 						<button type='button' class='btn btn-default btn-xs' onclick='termosExec(\"bold\")' title='Negrito'><b>B</b></button>
@@ -780,7 +787,6 @@ function form() {
 	echo "
 	<script>
 		var TERMOS_CONTEUDO = " . json_encode($conteudo, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ";
-		var TERMOS_TIPOS_ATIVO = " . json_encode($tiposAtivo, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ";
 		var TERMOS_PLACEHOLDERS_ATIVO = " . $ativoPlaceholdersJson . ";
 
 		function termosExec(cmd, arg) {
@@ -795,23 +801,10 @@ function form() {
 			sel.value = '';
 		}
 
-		function termosAtualizarCampoAtivo() {
-			var tipoId = String($('select[name=tipo_doc]').val() || '');
-			var exige = !!TERMOS_TIPOS_ATIVO[tipoId];
-			$('#termos_modelo_ativo').closest('.col-sm-3').toggle(exige);
-			if (!exige) {
-				$('#termos_modelo_ativo').val('');
-			}
-			termosAtualizarPlaceholdersAtivo(exige);
-		}
-
-		function termosAtualizarPlaceholdersAtivo(exige) {
+		function termosInicializarPlaceholdersAtivo() {
 			var sel = document.getElementById('termos_placeholders');
+			if (!sel) { return; }
 			var og = document.getElementById('termos_optgroup_ativo');
-			if (!exige) {
-				if (og) { og.parentNode.removeChild(og); }
-				return;
-			}
 			if (!og) {
 				og = document.createElement('optgroup');
 				og.id = 'termos_optgroup_ativo';
@@ -836,8 +829,7 @@ function form() {
 			};
 			termosEditor.addEventListener('input', termosSync);
 			$('form[name=contex_form]').on('submit', termosSync);
-			$('select[name=tipo_doc]').on('change', termosAtualizarCampoAtivo);
-			termosAtualizarCampoAtivo();
+			termosInicializarPlaceholdersAtivo();
 		});
 	</script>
 	";
@@ -879,25 +871,18 @@ function salvar() {
 		exit;
 	}
 
-	$ativoId = intval($_POST["ativo"] ?? 0);
-	if(!termos_tipo_requer_ativo($tipo)){
-		$ativoId = 0;
-	}elseif($ativoId > 0 && empty(termos_dados_ativo($ativoId))){
-		$ativoId = 0;
-	}
-
 	if($id > 0){
 		termos_executar(
-			"UPDATE modelo_termo SET mode_tx_nome = ?, mode_nb_tipo_doc = ?, mode_tx_conteudo = ?, mode_tx_notificacao = ?, mode_tx_status = ?, mode_nb_ativo = ?, mode_nb_userAtualiza = ?, mode_tx_dataAtualiza = NOW() WHERE mode_nb_id = ?",
-			"sisssiii",
-			[$nome, $tipoDoc, $conteudo, $notificacao, $status, $ativoId > 0 ? $ativoId : null, $user, $id]
+			"UPDATE modelo_termo SET mode_tx_nome = ?, mode_nb_tipo_doc = ?, mode_tx_conteudo = ?, mode_tx_notificacao = ?, mode_tx_status = ?, mode_nb_userAtualiza = ?, mode_tx_dataAtualiza = NOW() WHERE mode_nb_id = ?",
+			"sisssii",
+			[$nome, $tipoDoc, $conteudo, $notificacao, $status, $user, $id]
 		);
 		termos_log("modelo_atualizado", "Modelo #{$id} atualizado", ["nome" => $nome, "notificacao" => $notificacao]);
 	}else{
 		$id = termos_inserir_id(
-			"INSERT INTO modelo_termo (mode_tx_nome, mode_nb_tipo_doc, mode_tx_conteudo, mode_tx_notificacao, mode_tx_status, mode_nb_ativo, mode_nb_userCadastro) VALUES (?, ?, ?, ?, ?, ?, ?)",
-			"sisssii",
-			[$nome, $tipoDoc, $conteudo, $notificacao, $status, $ativoId > 0 ? $ativoId : null, $user]
+			"INSERT INTO modelo_termo (mode_tx_nome, mode_nb_tipo_doc, mode_tx_conteudo, mode_tx_notificacao, mode_tx_status, mode_nb_userCadastro) VALUES (?, ?, ?, ?, ?, ?)",
+			"sisssi",
+			[$nome, $tipoDoc, $conteudo, $notificacao, $status, $user]
 		);
 		termos_log("modelo_criado", "Modelo #{$id} criado", ["nome" => $nome]);
 	}
