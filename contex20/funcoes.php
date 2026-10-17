@@ -753,6 +753,12 @@ if(function_exists("index")){
 			case "MASCARA_PLACA":
 				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['AAA-9A99', 'AAA-9999']});";
 			break;
+			case "MASCARA_IMEI":
+				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['999999999999999'], placeholder: ''});";
+			break;
+			case "MASCARA_ICCID":
+				$dataScript .= "$('[name=\"$variavel\"]').inputmask({mask: ['99999999999999999999'], placeholder: ''});";
+			break;
 		}
 		$variavel = str_replace(["[", "]"], ["\\\[", "\\\]"], $variavel);
 		if(!empty($regexValidChar)){
