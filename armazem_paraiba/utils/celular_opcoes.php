@@ -13,6 +13,23 @@ if(!function_exists("opcoesTipoCelular")){
     }
 }
 
+if(!function_exists("opcoesOperadora")){
+    function opcoesOperadora(){
+        return [
+            ""                 => "Selecione",
+            "Vivo"             => "Vivo",
+            "Claro"            => "Claro",
+            "TIM"              => "TIM",
+            "Oi"               => "Oi",
+            "Algar Telecom"    => "Algar Telecom",
+            "Correios Celular" => "Correios Celular",
+            "Nextel"           => "Nextel",
+            "Sercomtel"        => "Sercomtel",
+            "outro"            => "Outro",
+        ];
+    }
+}
+
 if(!function_exists("opcoesAcessorios")){
     function opcoesAcessorios(){
         return [

@@ -215,6 +215,37 @@
         }
     }
 
+    // Campo de Operadora: combo com operadoras pré-cadastradas e a opção
+    // "Outro", que libera um campo de texto para digitar a operadora.
+    function comboOperadora($modificador, $outroValor, $tamanho = 2){
+        $htmlOpcoes = "";
+        foreach(opcoesOperadora() as $key => $value){
+            $selected = ($key == $modificador) ? "selected" : "";
+            $htmlOpcoes .= "<option value='{$key}' {$selected}>{$value}</option>";
+        }
+        $outroValor   = htmlspecialchars(strval($outroValor), ENT_QUOTES);
+        $displayOutro = ($modificador === "outro") ? "" : "display:none;";
+        return
+            "<div class='col-sm-{$tamanho} margin-bottom-5 campo-fit-content'>
+                <label>Operadora</label>
+                <select name='operadora' id='operadora' class='form-control input-sm campo-fit-content'>
+                    {$htmlOpcoes}
+                </select>
+                <input name='operadoraOutro' id='operadoraOutro' value='{$outroValor}' autocomplete='off' type='text' class='form-control input-sm campo-fit-content' style='margin-top:4px; {$displayOutro}' placeholder='Digite a operadora'>
+                <script>
+                    $(function(){
+                        var \$selOperadora = $('[name=\"operadora\"]');
+                        var \$campoOutro = $('#operadoraOutro');
+                        function operadoraToggleOutro(){
+                            \$campoOutro.toggle(\$selOperadora.val() === 'outro');
+                        }
+                        \$selOperadora.off('change.operadoraOutro').on('change.operadoraOutro', operadoraToggleOutro);
+                        operadoraToggleOutro();
+                    });
+                </script>
+            </div>";
+    }
+
     function formCelular() {
         $celular = null;
         if(!empty($_POST["id"])){
@@ -253,6 +284,16 @@
             $aplicativosMarcados = checklistDoPost("aplicativos", opcoesAplicativos());
         }
 
+        // Operadora: opções pré-cadastradas + "Outro" (digita a operadora).
+        // Um valor salvo fora da lista volta como "Outro" já preenchido.
+        $operadoraAtual  = (!empty($_POST["operadora"]) ? $_POST["operadora"] : "");
+        $operadoraOutro  = (!empty($_POST["operadoraOutro"]) ? $_POST["operadoraOutro"] : "");
+        $opcoesOperadora = opcoesOperadora();
+        if($operadoraAtual !== "" && $operadoraAtual !== "outro" && !isset($opcoesOperadora[$operadoraAtual])){
+            $operadoraOutro = $operadoraAtual;
+            $operadoraAtual = "outro";
+        }
+
         echo abre_form();
         echo linha_form([
             // --- CORREÇÃO IMPORTANTE: Campo 'acao' para o Cadastrar/Atualizar funcionar ---
@@ -264,14 +305,14 @@
             campo("Modelo", "modelo_like", (!empty($_POST["modelo_like"])? $_POST["modelo_like"]: ""), 3)
         ]);
         echo linha_form([
-            campo("IMEI 1", "imei", (!empty($_POST["imei"])? $_POST["imei"]: ""), 2, "", "required"),
-            campo("IMEI 2", "imei2", (!empty($_POST["imei2"])? $_POST["imei2"]: ""), 2),
+            campo("IMEI 1", "imei", (!empty($_POST["imei"])? $_POST["imei"]: ""), 2, "MASCARA_IMEI", "required"),
+            campo("IMEI 2", "imei2", (!empty($_POST["imei2"])? $_POST["imei2"]: ""), 2, "MASCARA_IMEI"),
             campo("Número de série", "numeroSerie_like", (!empty($_POST["numeroSerie_like"])? $_POST["numeroSerie_like"]: ""), 3),
-            campo("Número da linha (chip)", "numero", (!empty($_POST["numero"])? $_POST["numero"]: ""), 3, "", "required"),
-            campo("Operadora", "operadora", (!empty($_POST["operadora"])? $_POST["operadora"]: ""), 2)
+            campo("Número da linha (chip)", "numero", (!empty($_POST["numero"])? $_POST["numero"]: ""), 3, "MASCARA_CEL", "required"),
+            comboOperadora($operadoraAtual, $operadoraOutro, 2)
         ]);
         echo linha_form([
-            campo("ICCID do chip", "cimie", (!empty($_POST["cimie"])? $_POST["cimie"]: ""), 2),
+            campo("ICCID do chip", "cimie", (!empty($_POST["cimie"])? $_POST["cimie"]: ""), 2, "MASCARA_ICCID"),
             campo("Sistema Operacional", "sistemaOperacional", (!empty($_POST["sistemaOperacional"])? $_POST["sistemaOperacional"]: ""), 3),
             campo("Valor estimado do bem", "valorEstimado", (!empty($_POST["valorEstimado"])? $_POST["valorEstimado"]: ""), 2, "MASCARA_DINHEIRO"),
             campo_data("Data da entrega", "dataEntrega", (!empty($_POST["dataEntrega"])? $_POST["dataEntrega"]: ""), 2),
@@ -281,11 +322,33 @@
             checkbox("Acessórios entregues", "acessorios", opcoesAcessorios(), 6, "checkbox", "", $acessoriosMarcados),
             checkbox("Aplicativos instalados", "aplicativos", opcoesAplicativos(), 6, "checkbox", "", $aplicativosMarcados)
         ]);
+        // Campos "Outros (especifique)" só ficam liberados quando o respectivo
+        // checkbox "Outros" está marcado nos acessórios/aplicativos.
+        $outrosAcessoriosMarcado  = in_array("outros", explode(",", strval($acessoriosMarcados)));
+        $outrosAplicativosMarcado = in_array("outros_aplicativos", explode(",", strval($aplicativosMarcados)));
+
         echo linha_form([
-            campo("Outros acessórios (especifique)", "acessoriosOutros", (!empty($_POST["acessoriosOutros"])? $_POST["acessoriosOutros"]: ""), 3),
-            campo("Outros aplicativos (especifique)", "aplicativosOutros", (!empty($_POST["aplicativosOutros"])? $_POST["aplicativosOutros"]: ""), 3),
+            campo("Outros acessórios (especifique)", "acessoriosOutros", (!empty($_POST["acessoriosOutros"])? $_POST["acessoriosOutros"]: ""), 3, "", $outrosAcessoriosMarcado ? "" : "disabled"),
+            campo("Outros aplicativos (especifique)", "aplicativosOutros", (!empty($_POST["aplicativosOutros"])? $_POST["aplicativosOutros"]: ""), 3, "", $outrosAplicativosMarcado ? "" : "disabled"),
             combo_radio("Estado de conservação na entrega", "estadoConservacao", (!empty($_POST["estadoConservacao"])? $_POST["estadoConservacao"]: ""), 6, opcoesEstadoConservacao())
         ]);
+        echo "<script>
+            $(function(){
+                function celularLiberarOutros(nomeFlag, idCampo){
+                    var \$flag  = $('[name=\"' + nomeFlag + '\"]');
+                    var \$campo = $('#' + idCampo);
+                    if(\$flag.length === 0 || \$campo.length === 0){
+                        return;
+                    }
+                    \$flag.off('change.celularOutros').on('change.celularOutros', function(){
+                        \$campo.prop('disabled', !\$flag.is(':checked'));
+                    });
+                    \$campo.prop('disabled', !\$flag.is(':checked'));
+                }
+                celularLiberarOutros('acessorios_outros', 'acessoriosOutros');
+                celularLiberarOutros('aplicativos_outros_aplicativos', 'aplicativosOutros');
+            });
+        </script>";
         echo linha_form([
             textarea("Observações", "observacoes", (!empty($_POST["observacoes"])? $_POST["observacoes"]: ""), 12)
         ]);
@@ -388,11 +451,16 @@
     function cadastrarCelular(){
         $fields = [
             "nome_like", "tipo", "marca_like", "modelo_like", "imei", "imei2", "numeroSerie_like", "numero",
-            "operadora", "cimie", "sistemaOperacional", "acessoriosOutros", "aplicativosOutros",
+            "operadora", "operadoraOutro", "cimie", "sistemaOperacional", "acessoriosOutros", "aplicativosOutros",
             "estadoConservacao", "observacoes", "valorEstimado", "dataEntrega"
         ];
         foreach($fields as $field){
             $_POST[$field] = isset($_POST[$field]) ? trim($_POST[$field]) : '';
+        }
+
+        // Operadora "Outro": salva o nome digitado no campo livre.
+        if($_POST["operadora"] === "outro"){
+            $_POST["operadora"] = $_POST["operadoraOutro"];
         }
 
         $errorMsg = conferirCamposObrig([
