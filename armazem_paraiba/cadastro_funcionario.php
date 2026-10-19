@@ -120,6 +120,14 @@
 					});
 				}
 
+				// Oculta/mostra Subsetor conforme o setor selecionado ao carregar a página
+				$(function(){
+					var setorEl = document.getElementsByName('setor')[0];
+					if (setorEl) {
+						filtrarSubSetor(setorEl.value);
+					}
+				});
+
 				function fillSelectAjax(selectName, tabela, condicoes, selected) {
 					var el = document.getElementsByName(selectName)[0];
 					if (!el) return;
@@ -1689,15 +1697,22 @@
 		$campoSalario = funcionarioEsconderSalario() ? "" : campo("Salário*", "salario", $a_mod["enti_nb_salario"], 1, "MASCARA_DINHEIRO", "tabindex=".sprintf("%02d", $tabIndex+2));
 
         $condSubSetor = " ORDER BY sbgr_tx_nome ASC";
-        if (!empty($a_mod["enti_setor_id"]) || !empty($_POST["setor"])) {
-            $idSetorRef = (!empty($_POST["setor"]) ? intval($_POST["setor"]) : intval($a_mod["enti_setor_id"]));
+        $setorDefault = ($a_mod["enti_setor_id"] ?? ($_POST["setor"] ?? ""));
+        if ($setorDefault === "" || $setorDefault === null) {
+            $resSetorDefault = mysqli_fetch_assoc(query("SELECT grup_nb_id FROM grupos_documentos WHERE grup_tx_status = 'ativo' AND grup_tx_nome LIKE '%Administrativo%' LIMIT 1"));
+            if ($resSetorDefault) {
+                $setorDefault = $resSetorDefault['grup_nb_id'];
+            }
+        }
+        $idSetorRef = (!empty($_POST["setor"]) ? intval($_POST["setor"]) : (!empty($a_mod["enti_setor_id"]) ? intval($a_mod["enti_setor_id"]) : intval($setorDefault)));
+        if ($idSetorRef > 0) {
             $condSubSetor = " AND sbgr_nb_idgrup = ".$idSetorRef." ORDER BY sbgr_tx_nome ASC";
         }
 
 		$cContratual = [
 			combo_bd("Empresa*", "empresa", ($a_mod["enti_nb_empresa"]?? $_SESSION["user_nb_empresa"]), 3, "empresa", "onchange='carregarEmpresa(this.value)' tabindex=".sprintf("%02d", $tabIndex++), $extraEmpresa),
-			combo_bd("Setor", "setor", ($a_mod["enti_setor_id"]?? ""), 3, "grupos_documentos", "id='setor' onchange='filtrarSubSetor(this.value)' tabindex=".sprintf("%02d", $tabIndex++)),
-			combo_bd("Subsetor", "subSetor", ($a_mod["enti_subSetor_id"]?? ""), 3, "sbgrupos_documentos", "tabindex=".sprintf("%02d", $tabIndex++), $condSubSetor),
+			combo_bd("Setor", "setor", $setorDefault, 3, "grupos_documentos", "id='setor' onchange='filtrarSubSetor(this.value)' tabindex=".sprintf("%02d", $tabIndex++)),
+			combo_bd("!Subsetor", "subSetor", ($a_mod["enti_subSetor_id"]?? ""), 3, "sbgrupos_documentos", "tabindex=".sprintf("%02d", $tabIndex++), $condSubSetor),
 			combo_bd("!Cargo", "tipoOperacao", (isset($a_mod["enti_tx_tipoOperacao"])? $a_mod["enti_tx_tipoOperacao"]: ""), 3, "operacao", "id='tipoOperacao' tabindex=".sprintf("%02d", $tabIndex++)),
 			$campoSalario
 		];

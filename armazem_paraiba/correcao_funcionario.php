@@ -548,7 +548,7 @@
 		$cContratual = [
 			combo_bd("Empresa*", "empresa", ($a_mod["enti_nb_empresa"]?? ""), 3, "empresa"),
 			combo_bd("Setor", "setor", ($a_mod["enti_setor_id"]?? ""), 3, "grupos_documentos", "onchange='filtrarSubSetor(this.value)'"),
-			combo_bd("Subsetor", "subSetor", ($a_mod["enti_subSetor_id"]?? ""), 3, "sbgrupos_documentos", "", $condSubSetor),
+			combo_bd("!Subsetor", "subSetor", ($a_mod["enti_subSetor_id"]?? ""), 3, "sbgrupos_documentos", "", $condSubSetor),
 			combo_bd("!Cargo", "tipoOperacao", (isset($a_mod["enti_tx_tipoOperacao"])? $a_mod["enti_tx_tipoOperacao"]: ""), 3, "operacao"),
 			$campoSalario,
 			combo("Ocupação*", "ocupacao", ($a_mod["enti_tx_ocupacao"]?? ""), 2, ["" => "Selecione", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário", "Terceirizado" => "Terceirizado"]),

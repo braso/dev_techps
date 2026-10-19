@@ -206,6 +206,7 @@
 				"enti_tx_matricula"
 			),
 			campo("Período*", "periodo_ferias", ($_POST["periodo_ferias"]?? ""),3, "MASCARA_PERIODO_SEM_LIMITE"),
+			campo("Qtd. Dias", "qtd_dias", ($_POST["qtd_dias"]?? ""), 2, "", "readonly"),
 			campo_hidden("id", ($_POST["id"]?? "")),
 		];
 
@@ -220,6 +221,24 @@
 			$b[] = criarBotaoVoltar("espelho_ponto.php");
 		//}
 		echo fecha_form($b);
+		
+		echo "<script>
+			function atualizarQtdDiasFerias() {
+				var inputs = document.querySelectorAll('input[name=\"periodo_ferias[]\"]');
+				if (inputs.length < 2) return;
+				var d1 = inputs[0].value, d2 = inputs[1].value;
+				if (!d1 || !d2) return;
+				var a = new Date(d1), b = new Date(d2);
+				var diff = Math.round((b - a) / (1000*60*60*24)) + 1;
+				var campo = document.querySelector('input[name=\"qtd_dias\"]');
+				if (campo) campo.value = (diff > 0 ? diff : '');
+			}
+			$(function(){
+				atualizarQtdDiasFerias();
+				$('input[name=\"periodo_ferias\"]').on('apply.daterangepicker', function(){ setTimeout(atualizarQtdDiasFerias, 100); });
+				$(document).on('change', 'input[name=\"periodo_ferias[]\"]', atualizarQtdDiasFerias);
+			});
+		</script>";
 		
 		rodape();
 		exit;
@@ -308,7 +327,7 @@
 
 		echo abre_form();
 		echo linha_form($camposBusca);
-		echo fecha_form([], "<hr><form>".implode(" ", $botoesBusca)."</form>");
+		echo fecha_form($botoesBusca);
 
 
 
