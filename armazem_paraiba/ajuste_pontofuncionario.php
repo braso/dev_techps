@@ -1147,14 +1147,31 @@
 		$valData = $_GET['data_p'] ?? ($_POST["data"] ?? "");
 		$valJust = $_GET['just_p'] ?? ($_POST["justificativa"] ?? "");
 
+		// Motivo padrão: "Ajuste de Ponto" (ocultando as demais opções do campo Motivo*)
+		$motivoPadrao = $_POST["motivo"] ?? "";
+		if ($motivoPadrao === "" || $motivoPadrao === null) {
+			$resMotivoPadrao = mysqli_fetch_assoc(query("SELECT moti_nb_id FROM motivo WHERE moti_tx_status = 'ativo' AND moti_tx_tipo = 'Ajuste' AND (moti_tx_nome LIKE '%ajuste%de%ponto%' OR moti_tx_nome LIKE '%ajuste%de%jornada%') LIMIT 1"));
+			if ($resMotivoPadrao) {
+				$motivoPadrao = $resMotivoPadrao['moti_nb_id'];
+			}
+		}
+
+		// Tipo de Registro: para ocupações que não sejam Motorista, listar apenas
+		// Início/Fim de Jornada e Início/Fim de Refeição.
+		$ocupacaoMotorista = strtolower(trim(strval($motorista['enti_tx_ocupacao'] ?? '')));
+		$ehMotorista = ($ocupacaoMotorista === 'motorista');
+		$condTipoRegistro = $ehMotorista
+			? "ORDER BY macr_nb_id"
+			: " AND (macr_tx_nome LIKE '%Jornada%' OR macr_tx_nome LIKE '%Refei%') ORDER BY macr_nb_id";
+
 		$variableFields = [
 
 			campo_data("Data*","data",$valData,2,"id='dataFiltro'"),
 			campo_hora("Hora*","hora",($_POST["hora"] ?? ""),2),
 
-			combo_bd("Tipo de Registro*","idMacro",($_POST["idMacro"] ?? ""),4,"macroponto","", $rotulos['ehTerceirizado'] ? " AND macr_tx_nome IN ('Inicio de Jornada', 'Fim de Jornada') ORDER BY macr_nb_id" : "ORDER BY macr_nb_id"),
+			combo_bd("Tipo de Registro*","idMacro",($_POST["idMacro"] ?? ""),4,"macroponto","", $condTipoRegistro),
 
-			combo_bd("Motivo*","motivo",($_POST["motivo"] ?? ""),4,"motivo","", $rotulos['ehTerceirizado'] ? " AND moti_tx_tipo = 'Ajuste' AND moti_tx_nome = 'Ajuste de Jornada' ORDER BY moti_tx_nome" : " AND moti_tx_tipo = 'Ajuste' ORDER BY moti_tx_nome"),
+			combo_bd("Motivo*","motivo", $motivoPadrao, 4,"motivo","", " AND moti_tx_tipo = 'Ajuste' AND (moti_tx_nome LIKE '%ajuste%de%ponto%' OR moti_tx_nome LIKE '%ajuste%de%jornada%') ORDER BY moti_tx_nome LIMIT 1"),
 
 			"<div class='col-sm-12' style='margin-bottom:10px;'>
 				<div class='alert alert-info' style='margin-bottom:0; padding:10px;'>
