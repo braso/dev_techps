@@ -307,6 +307,7 @@ const consultarRegistros = function(){
                         camposBd[key].substring(camposBd[key].indexOf(' AS ')+4):
                         camposBd[key]
                     ;
+                    camposBd[key] = camposBd[key].replace(/[`'"]/g, '').trim();
                     
                     header[key] =
                         '<th colspan="1" rowspan="1" class="table-col-head" value="'+key+'">'
@@ -350,6 +351,7 @@ const consultarRegistros = function(){
                         if(dbKey.indexOf(' AS ') >= 0){
                             dbKey = dbKey.substring(dbKey.indexOf(' AS ')+4);
                         }
+                        dbKey = dbKey.replace(/[`'"]/g, '').trim();
                         row += '<td>'+(dataArray[dbKey] != null? dataArray[dbKey]: '')+'</td>';
                     });
                     

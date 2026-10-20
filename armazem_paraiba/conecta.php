@@ -297,6 +297,7 @@
         "celu_tx_modelo"            => "VARCHAR(100) NULL",
         "celu_tx_imei2"             => "VARCHAR(50) NULL",
         "celu_tx_numeroSerie"       => "VARCHAR(100) NULL",
+        "celu_tx_numero2"           => "VARCHAR(20) NULL",
         "celu_tx_acessorios"        => "VARCHAR(255) NULL",
         "celu_tx_acessoriosOutros"  => "VARCHAR(255) NULL",
         "celu_tx_aplicativos"       => "VARCHAR(255) NULL",
@@ -312,6 +313,48 @@
     ] as $__colCelular => $__tipoCelular) {
         bancoGarantirColuna($conn, "celular", $__colCelular, $__tipoCelular);
     }
+
+    // Migração da tabela celular: controle gerencial de aparelhos (status, devolução, auditoria).
+    foreach ([
+        "celu_tx_status"          => "ENUM('disponivel','em_uso','devolvido','extraviado','manutencao','descartado') NOT NULL DEFAULT 'disponivel'",
+        "celu_dt_dataDevolucao"   => "DATE NULL",
+        "celu_tx_motivo_status"   => "VARCHAR(255) NULL",
+    ] as $__colCelStatus => $__tipoCelStatus) {
+        bancoGarantirColuna($conn, "celular", $__colCelStatus, $__tipoCelStatus);
+    }
+    if (bancoTabelaExiste($conn, "celular") && bancoColunaExiste($conn, "celular", "celu_tx_status") && bancoColunaExiste($conn, "celular", "celu_nb_entidade")) {
+        @mysqli_query($conn, "UPDATE celular SET celu_tx_status = 'em_uso' WHERE celu_tx_status = 'disponivel' AND celu_nb_entidade IS NOT NULL AND celu_nb_entidade > 0");
+    }
+
+    // Tabela N:N: um aparelho pode ter vários termos vinculados.
+    bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS celular_termo (
+        cetm_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        cetm_nb_celular INT NOT NULL,
+        cetm_nb_modelo INT NOT NULL,
+        cetm_dt_dataCadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_celular_modelo (cetm_nb_celular, cetm_nb_modelo),
+        KEY idx_celular (cetm_nb_celular),
+        KEY idx_modelo (cetm_nb_modelo)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+    // Migração: copia vínculo único existente para a nova tabela.
+    if (bancoTabelaExiste($conn, "celular") && bancoTabelaExiste($conn, "celular_termo") && bancoColunaExiste($conn, "celular", "celu_nb_modelo_termo")) {
+        @mysqli_query($conn, "INSERT IGNORE INTO celular_termo (cetm_nb_celular, cetm_nb_modelo) SELECT celu_nb_id, celu_nb_modelo_termo FROM celular WHERE celu_nb_modelo_termo IS NOT NULL AND celu_nb_modelo_termo > 0");
+    }
+
+    // Tabela de auditoria de movimentações de aparelhos (padrão rfids_log).
+    bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS celular_movimentacao (
+        movi_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        movi_nb_celular INT NOT NULL,
+        movi_nb_entidade_anterior INT NULL,
+        movi_nb_entidade_novo INT NULL,
+        movi_tx_status_anterior VARCHAR(30) NULL,
+        movi_tx_status_novo VARCHAR(30) NULL,
+        movi_tx_motivo TEXT NULL,
+        movi_nb_user INT NOT NULL,
+        movi_dt_data DATETIME DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_celular (movi_nb_celular),
+        KEY idx_data (movi_dt_data)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
     // Migração da tabela endosso: colunas necessárias para o cadastro atual
     if (bancoTabelaExiste($conn, "endosso") && !bancoColunaExiste($conn, "endosso", "endo_tx_nome")) {

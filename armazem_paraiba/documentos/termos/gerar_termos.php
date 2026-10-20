@@ -154,15 +154,23 @@ function termos_mapa_termos_existentes(int $modeloId, array $entidades): array {
 	}
 	$in = implode(",", array_unique($ids));
 	$res = query(
-		"SELECT terg_nb_entidade, terg_tx_status FROM termo_gerado
-		 WHERE terg_nb_modelo = ? AND terg_nb_entidade IN ({$in}) AND terg_tx_status IN ('gerado','notificado','visualizado','aguardando_assinatura','assinado')",
+		"SELECT tg.terg_nb_entidade, tg.terg_tx_status, tg.terg_nb_ativo, c.celu_tx_nome AS ativo_nome, c.celu_tx_imei AS ativo_imei
+		 FROM termo_gerado tg
+		 LEFT JOIN celular c ON c.celu_nb_id = tg.terg_nb_ativo
+		 WHERE tg.terg_nb_modelo = ? AND tg.terg_nb_entidade IN ({$in}) AND tg.terg_tx_status IN ('gerado','notificado','visualizado','aguardando_assinatura','assinado')
+		 ORDER BY tg.terg_nb_id DESC",
 		"i",
 		[$modeloId]
 	);
 	while($res && ($r = mysqli_fetch_assoc($res))){
 		$eid = intval($r["terg_nb_entidade"]);
 		if(!isset($out[$eid])){
-			$out[$eid] = $r["terg_tx_status"];
+			$out[$eid] = [
+				"status" => $r["terg_tx_status"],
+				"ativo_id" => intval($r["terg_nb_ativo"] ?? 0),
+				"ativo_nome" => strval($r["ativo_nome"] ?? ""),
+				"ativo_imei" => strval($r["ativo_imei"] ?? ""),
+			];
 		}
 	}
 	return $out;
@@ -349,7 +357,8 @@ function index() {
 			$setorNome = termos_h($e["setor_nome"] ?? "");
 			$empresaNome = termos_h($e["empresa_nome"] ?? "");
 			$email = termos_h($e["enti_tx_email"]);
-			$statusTermo = $mapaExistentes[$eid] ?? "";
+			$infoTermo = $mapaExistentes[$eid] ?? null;
+			$statusTermo = is_array($infoTermo) ? strval($infoTermo["status"] ?? "") : strval($infoTermo ?? "");
 
 			$badge = "";
 			if($statusTermo !== ""){
@@ -361,6 +370,13 @@ function index() {
 					$cor = "info";
 				}
 				$badge = "<span class='label label-{$cor}'>" . termos_h($statusTermo) . "</span>";
+				if(is_array($infoTermo) && intval($infoTermo["ativo_id"] ?? 0) > 0){
+					$nomeAtivo = trim(strval($infoTermo["ativo_nome"] ?? ""));
+					$imeiAtivo = trim(strval($infoTermo["ativo_imei"] ?? ""));
+					$rotAtivo = $nomeAtivo !== "" ? $nomeAtivo : ("#" . intval($infoTermo["ativo_id"]));
+					if($imeiAtivo !== ""){ $rotAtivo .= " (IMEI: " . $imeiAtivo . ")"; }
+					$badge .= " <small class='text-muted' title='Aparelho que originou o termo existente'>[" . termos_h($rotAtivo) . "]</small>";
+				}
 			}else{
 				$badge = "<span class='label label-default'>sem termo</span>";
 			}
@@ -446,7 +462,9 @@ function index() {
 					var padrao = 0;
 					// 1) equipamento vinculado a este modelo (coluna TERMO do Cadastro de Celulares) para o funcionário
 					TERMOS_ATIVOS.forEach(function(a) {
-						if (padrao === 0 && parseInt(a.celu_nb_modelo_termo, 10) === TERMOS_MODELO_ID && parseInt(a.celu_nb_entidade, 10) === eid) {
+						var modelos = String(a.modelos_termo || a.celu_nb_modelo_termo || '').split(',');
+						var vinculado = modelos.some(function(m){ return parseInt(m, 10) === TERMOS_MODELO_ID; });
+						if (padrao === 0 && vinculado && parseInt(a.celu_nb_entidade, 10) === eid) {
 							padrao = parseInt(a.celu_nb_id, 10);
 						}
 					});

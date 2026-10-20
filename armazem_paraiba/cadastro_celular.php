@@ -45,6 +45,46 @@
     }
     ensureCelularEntidadeOpcional();
 
+    // --- Controle gerencial / auditoria de aparelhos ---
+    function celular_registrar_movimentacao(int $celularId, $entAnt, $entNovo, $statusAnt, $statusNovo, string $motivo = ""): void {
+        global $conn;
+        if($celularId <= 0){ return; }
+        $user = intval($_SESSION["user_nb_id"] ?? 0);
+        $sql = "INSERT INTO celular_movimentacao
+            (movi_nb_celular, movi_nb_entidade_anterior, movi_nb_entidade_novo, movi_tx_status_anterior, movi_tx_status_novo, movi_tx_motivo, movi_nb_user)
+            VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $stmt = @mysqli_prepare($conn, $sql);
+        if(!$stmt){ return; }
+        $ea = ($entAnt !== null && intval($entAnt) > 0) ? intval($entAnt) : null;
+        $en = ($entNovo !== null && intval($entNovo) > 0) ? intval($entNovo) : null;
+        $sa = ($statusAnt !== null && strval($statusAnt) !== "") ? strval($statusAnt) : null;
+        $sn = ($statusNovo !== null && strval($statusNovo) !== "") ? strval($statusNovo) : null;
+        $mot = ($motivo !== "") ? $motivo : null;
+        mysqli_stmt_bind_param($stmt, "iiisssi", $celularId, $ea, $en, $sa, $sn, $mot, $user);
+        @mysqli_stmt_execute($stmt);
+        @mysqli_stmt_close($stmt);
+    }
+
+    function celular_status_opcoes(): array {
+        return [
+            "disponivel"   => "Disponível",
+            "em_uso"       => "Em uso",
+            "devolvido"    => "Devolvido",
+            "extraviado"   => "Extraviado",
+            "manutencao"   => "Manutenção",
+            "descartado"   => "Descartado",
+        ];
+    }
+
+    function opcoesSistemaOperacionalCelular(){
+        return [
+            "Android" => "Android",
+            "iOS" => "iOS",
+            "Windows" => "Windows",
+            "Outro" => "Outro"
+        ];
+    }
+
     function checklistDoPost($prefixo, array $opcoes){
         $marcados = [];
         foreach(array_keys($opcoes) as $key){
@@ -93,10 +133,12 @@
             ];
         }
 
-        $atual = intval($celular["celu_nb_modelo_termo"] ?? 0);
-        if($atual > 0 && !isset($idsValidos[$atual])){
-            $atual = 0;
+        $vinculados = [];
+        foreach(celular_termos_vinculados($id) as $t){
+            $vinculados[] = intval($t["mode_nb_id"]);
         }
+        $principal = intval($celular["celu_nb_modelo_termo"] ?? 0);
+        if($principal > 0 && !in_array($principal, $vinculados, true)){ $vinculados[] = $principal; }
 
         celular_json_resposta(200, [
             "ok" => true,
@@ -105,7 +147,7 @@
                 "nome" => strval($celular["celu_tx_nome"] ?? ""),
                 "imei" => strval($celular["celu_tx_imei"] ?? "")
             ],
-            "atual" => $atual,
+            "vinculados" => $vinculados,
             "modelos" => $modelos
         ]);
     }
@@ -157,7 +199,7 @@
             celular_json_resposta(400, ["ok" => false, "error" => "Equipamento inválido."]);
         }
         $res = query(
-            "SELECT c.celu_nb_id, c.celu_tx_nome, c.celu_tx_imei, c.celu_nb_modelo_termo, c.celu_nb_entidade,
+            "SELECT c.celu_nb_id, c.celu_tx_nome, c.celu_tx_imei, c.celu_nb_modelo_termo, c.celu_nb_entidade, c.celu_tx_status,
                     m.mode_nb_id, m.mode_tx_nome, m.mode_tx_status,
                     t.tipo_tx_nome, t.tipo_tx_ativo,
                     e.enti_nb_id AS resp_id, e.enti_tx_nome AS resp_nome, e.enti_tx_email AS resp_email
@@ -175,6 +217,9 @@
         }
         if(intval($cel["mode_nb_id"] ?? 0) <= 0){
             celular_json_resposta(400, ["ok" => false, "error" => "Este equipamento ainda não possui um termo vinculado. Clique na coluna TERMO para vincular."]);
+        }
+        if(strtolower(trim(strval($cel["celu_tx_status"] ?? ""))) !== "em_uso"){
+            celular_json_resposta(400, ["ok" => false, "error" => "Este equipamento precisa estar com status 'Em uso' para enviar termo."]);
         }
         if(strtolower(trim(strval($cel["mode_tx_status"] ?? "inativo"))) !== "ativo"){
             celular_json_resposta(400, ["ok" => false, "error" => "O modelo de termo vinculado a este equipamento está inativo."]);
@@ -200,6 +245,193 @@
                 "email" => strval($cel["resp_email"] ?? "")
             ]
         ]);
+    }
+
+    function devolverCelular(){
+        garantirEstruturaTermosCelular();
+        $id = intval($_POST["id"] ?? 0);
+        $motivo = trim(strval($_POST["motivo"] ?? ""));
+        if($id <= 0){ celular_json_resposta(400, ["ok" => false, "error" => "Equipamento inválido."]); }
+        $res = query("SELECT celu_nb_entidade, celu_tx_status FROM celular WHERE celu_nb_id = ? LIMIT 1", "i", [$id]);
+        $row = ($res instanceof mysqli_result) ? mysqli_fetch_assoc($res) : null;
+        if(empty($row)){ celular_json_resposta(404, ["ok" => false, "error" => "Equipamento não encontrado."]); }
+        $entAnt = ($row["celu_nb_entidade"] !== null && $row["celu_nb_entidade"] !== "") ? (int)$row["celu_nb_entidade"] : null;
+        $stAnt = $row["celu_tx_status"] ?? null;
+        query("UPDATE celular SET celu_nb_entidade = NULL, celu_tx_status = 'devolvido', celu_dt_dataDevolucao = ?, celu_tx_motivo_status = ? WHERE celu_nb_id = ?", "ssi", [date("Y-m-d"), ($motivo !== "" ? $motivo : null), $id]);
+        celular_registrar_movimentacao($id, $entAnt, null, $stAnt, "devolvido", $motivo !== "" ? $motivo : "Devolução do aparelho");
+        celular_json_resposta(200, ["ok" => true]);
+    }
+
+    function alterarStatusCelular(){
+        $id = intval($_POST["id"] ?? 0);
+        $status = trim(strval($_POST["status"] ?? ""));
+        $motivo = trim(strval($_POST["motivo"] ?? ""));
+        if($id <= 0){ celular_json_resposta(400, ["ok" => false, "error" => "Equipamento inválido."]); }
+        $opcoes = celular_status_opcoes();
+        if(!isset($opcoes[$status])){ celular_json_resposta(400, ["ok" => false, "error" => "Status inválido."]); }
+        $res = query("SELECT celu_nb_entidade, celu_tx_status FROM celular WHERE celu_nb_id = ? LIMIT 1", "i", [$id]);
+        $row = ($res instanceof mysqli_result) ? mysqli_fetch_assoc($res) : null;
+        if(empty($row)){ celular_json_resposta(404, ["ok" => false, "error" => "Equipamento não encontrado."]); }
+        $entAnt = ($row["celu_nb_entidade"] !== null && $row["celu_nb_entidade"] !== "") ? (int)$row["celu_nb_entidade"] : null;
+        $stAnt = $row["celu_tx_status"] ?? null;
+        // Se marcar como disponível, limpa responsável e data de devolução.
+        if($status === "disponivel"){
+            query("UPDATE celular SET celu_nb_entidade = NULL, celu_tx_status = ?, celu_dt_dataDevolucao = NULL, celu_tx_motivo_status = ? WHERE celu_nb_id = ?", "ssi", [$status, ($motivo !== "" ? $motivo : null), $id]);
+        } elseif($status === "devolvido"){
+            query("UPDATE celular SET celu_tx_status = ?, celu_dt_dataDevolucao = ?, celu_tx_motivo_status = ? WHERE celu_nb_id = ?", "sssi", [$status, date("Y-m-d"), ($motivo !== "" ? $motivo : null), $id]);
+        } else {
+            query("UPDATE celular SET celu_tx_status = ?, celu_tx_motivo_status = ? WHERE celu_nb_id = ?", "ssi", [$status, ($motivo !== "" ? $motivo : null), $id]);
+        }
+        celular_registrar_movimentacao($id, $entAnt, $entAnt, $stAnt, $status, $motivo !== "" ? $motivo : "Alteração de status");
+        celular_json_resposta(200, ["ok" => true]);
+    }
+
+    function historicoCelular(){
+        $id = intval($_POST["id"] ?? 0);
+        if($id <= 0){ celular_json_resposta(400, ["ok" => false, "error" => "Equipamento inválido."]); }
+        $res = query("SELECT m.*, e1.enti_tx_nome AS nome_ant, e2.enti_tx_nome AS nome_novo, u.user_tx_login AS usuario
+                      FROM celular_movimentacao m
+                      LEFT JOIN entidade e1 ON e1.enti_nb_id = m.movi_nb_entidade_anterior
+                      LEFT JOIN entidade e2 ON e2.enti_nb_id = m.movi_nb_entidade_novo
+                      LEFT JOIN user u ON u.user_nb_id = m.movi_nb_user
+                      WHERE m.movi_nb_celular = ?
+                      ORDER BY m.movi_dt_data DESC, m.movi_nb_id DESC", "i", [$id]);
+        $out = [];
+        if($res instanceof mysqli_result){
+            while($r = mysqli_fetch_assoc($res)){
+                // Converte data (armazenada em UTC) para horário do Brasil.
+                if(!empty($r["movi_dt_data"])){
+                    try{
+                        $dt = new DateTime($r["movi_dt_data"], new DateTimeZone("UTC"));
+                        $dt->setTimezone(new DateTimeZone("America/Fortaleza"));
+                        $r["movi_dt_data"] = $dt->format("Y-m-d H:i:s");
+                    }catch(Throwable $e){}
+                }
+                $out[] = $r;
+            }
+        }
+        celular_json_resposta(200, ["ok" => true, "itens" => $out]);
+    }
+
+    function dadosLoteTermosCelular(){
+        garantirEstruturaTermosCelular();
+        // Retorna aparelhos com responsável e modelo vinculado.
+        $res = query("SELECT c.celu_nb_id, c.celu_tx_nome, c.celu_tx_imei, c.celu_nb_entidade, c.celu_nb_modelo_termo, c.celu_tx_status,
+                             e.enti_tx_nome AS resp_nome, e.enti_tx_email AS resp_email
+                      FROM celular c
+                      INNER JOIN entidade e ON e.enti_nb_id = c.celu_nb_entidade
+                      WHERE c.celu_nb_entidade IS NOT NULL AND c.celu_nb_entidade > 0
+                      ORDER BY c.celu_tx_nome ASC");
+        $out = [];
+        if($res instanceof mysqli_result){
+            while($r = mysqli_fetch_assoc($res)){
+                $ids = [];
+                $principal = intval($r["celu_nb_modelo_termo"] ?? 0);
+                if($principal > 0){ $ids[] = $principal; }
+                $resM = query("SELECT cetm_nb_modelo FROM celular_termo WHERE cetm_nb_celular = ?", "i", [intval($r["celu_nb_id"])]);
+                while($resM && ($rm = mysqli_fetch_assoc($resM))){
+                    $mid = intval($rm["cetm_nb_modelo"] ?? 0);
+                    if($mid > 0 && !in_array($mid, $ids, true)){ $ids[] = $mid; }
+                }
+                $r["modelos_termo"] = implode(",", $ids);
+                $termosArr = [];
+                foreach($ids as $mid){
+                    $resMod = query("SELECT mode_tx_nome FROM modelo_termo WHERE mode_nb_id = ? LIMIT 1", "i", [$mid]);
+                    if($resMod instanceof mysqli_result && ($rm = mysqli_fetch_assoc($resMod))){
+                        $termosArr[] = ["id" => $mid, "nome" => strval($rm["mode_tx_nome"] ?? "")];
+                    }
+                }
+                $r["termos"] = $termosArr;
+                $r["modelo_nome"] = !empty($termosArr) ? $termosArr[0]["nome"] : "";
+                if(!empty($ids)){
+                    $out[] = $r;
+                }
+            }
+        }
+        celular_json_resposta(200, ["ok" => true, "aparelhos" => $out]);
+    }
+
+    function celular_termos_vinculados(int $celuId): array {
+        global $conn;
+        $out = [];
+        if($celuId <= 0){ return $out; }
+        $res = query("SELECT m.mode_nb_id, m.mode_tx_nome, t.tipo_tx_nome
+                      FROM celular_termo ct
+                      INNER JOIN modelo_termo m ON m.mode_nb_id = ct.cetm_nb_modelo
+                      LEFT JOIN tipos_documentos t ON t.tipo_nb_id = m.mode_nb_tipo_doc
+                      WHERE ct.cetm_nb_celular = ?
+                      ORDER BY m.mode_tx_nome ASC", "i", [$celuId]);
+        if($res instanceof mysqli_result){
+            while($r = mysqli_fetch_assoc($res)){ $out[] = $r; }
+        }
+        return $out;
+    }
+
+    function termosVinculadosCelular(){
+        garantirEstruturaTermosCelular();
+        $id = intval($_POST["id"] ?? 0);
+        if($id <= 0){ celular_json_resposta(400, ["ok" => false, "error" => "Equipamento inválido."]); }
+        $resCel = query("SELECT celu_nb_id, celu_tx_nome, celu_tx_imei FROM celular WHERE celu_nb_id = ? LIMIT 1", "i", [$id]);
+        $cel = ($resCel instanceof mysqli_result) ? mysqli_fetch_assoc($resCel) : null;
+        if(empty($cel)){ celular_json_resposta(404, ["ok" => false, "error" => "Equipamento não encontrado."]); }
+
+        $vinculados = [];
+        foreach(celular_termos_vinculados($id) as $t){
+            $vinculados[] = intval($t["mode_nb_id"]);
+        }
+        // Compatibilidade: inclui o vínculo único antigo se existir.
+        $resAntigo = query("SELECT celu_nb_modelo_termo FROM celular WHERE celu_nb_id = ? LIMIT 1", "i", [$id]);
+        if($resAntigo instanceof mysqli_result && ($rowA = mysqli_fetch_assoc($resAntigo))){
+            $ma = intval($rowA["celu_nb_modelo_termo"] ?? 0);
+            if($ma > 0 && !in_array($ma, $vinculados, true)){ $vinculados[] = $ma; }
+        }
+
+        $modelos = [];
+        foreach(termos_modelos_vinculaveis_equipamento() as $m){
+            $mid = intval($m["mode_nb_id"] ?? 0);
+            if($mid <= 0){ continue; }
+            $modelos[] = [
+                "id" => $mid,
+                "nome" => strval($m["mode_tx_nome"] ?? ""),
+                "tipo" => strval($m["tipo_tx_nome"] ?? ""),
+                "vinculado" => in_array($mid, $vinculados, true)
+            ];
+        }
+
+        celular_json_resposta(200, [
+            "ok" => true,
+            "equipamento" => [
+                "id" => intval($cel["celu_nb_id"]),
+                "nome" => strval($cel["celu_tx_nome"] ?? ""),
+                "imei" => strval($cel["celu_tx_imei"] ?? "")
+            ],
+            "vinculados" => $vinculados,
+            "modelos" => $modelos
+        ]);
+    }
+
+    function salvarTermosVinculadosCelular(){
+        garantirEstruturaTermosCelular();
+        $id = intval($_POST["id"] ?? 0);
+        if($id <= 0){ celular_json_resposta(400, ["ok" => false, "error" => "Equipamento inválido."]); }
+        $modelos = $_POST["modelos"] ?? [];
+        if(!is_array($modelos)){ $modelos = []; }
+        $modelos = array_values(array_unique(array_filter(array_map("intval", $modelos))));
+
+        // Limpa vínculos antigos e insere os novos.
+        query("DELETE FROM celular_termo WHERE cetm_nb_celular = ?", "i", [$id]);
+        foreach($modelos as $mid){
+            query("INSERT IGNORE INTO celular_termo (cetm_nb_celular, cetm_nb_modelo) VALUES (?, ?)", "ii", [$id, $mid]);
+        }
+        // Mantém o primeiro como vínculo principal (compatibilidade).
+        $principal = !empty($modelos) ? $modelos[0] : null;
+        if($principal !== null){
+            query("UPDATE celular SET celu_nb_modelo_termo = ? WHERE celu_nb_id = ?", "ii", [$principal, $id]);
+        } else {
+            query("UPDATE celular SET celu_nb_modelo_termo = NULL WHERE celu_nb_id = ?", "i", [$id]);
+        }
+        termos_log("celular_termos_vinculados", "Equipamento #{$id} teve termos vinculados atualizados", ["qtd" => count($modelos)]);
+        celular_json_resposta(200, ["ok" => true]);
     }
 
     // --- ROTEADOR DE AÇÕES ---
@@ -262,9 +494,16 @@
                 $_POST["imei2"]              = $_POST["imei2"] ?? ($celular["celu_tx_imei2"] ?? "");
                 $_POST["numeroSerie_like"]   = $_POST["numeroSerie_like"] ?? ($celular["celu_tx_numeroSerie"] ?? "");
                 $_POST["numero"]             = $_POST["numero"] ?? $celular["celu_tx_numero"];
+                $_POST["numero2"]            = $_POST["numero2"] ?? ($celular["celu_tx_numero2"] ?? "");
                 $_POST["operadora"]          = $_POST["operadora"] ?? $celular["celu_tx_operadora"];
                 $_POST["cimie"]              = $_POST["cimie"] ?? $celular["celu_tx_cimie"];
                 $_POST["sistemaOperacional"] = $_POST["sistemaOperacional"] ?? $celular["celu_tx_sistemaOperacional"];
+                $__soOpcoes = opcoesSistemaOperacionalCelular();
+                $__soAtual = trim(strval($_POST["sistemaOperacional"]));
+                if($__soAtual !== "" && !isset($__soOpcoes[$__soAtual])){
+                    $_POST["sistemaOperacionalOutro"] = $_POST["sistemaOperacionalOutro"] ?? $__soAtual;
+                    $_POST["sistemaOperacional"] = "Outro";
+                }
                 $_POST["acessoriosOutros"]   = $_POST["acessoriosOutros"] ?? ($celular["celu_tx_acessoriosOutros"] ?? "");
                 $_POST["aplicativosOutros"]  = $_POST["aplicativosOutros"] ?? ($celular["celu_tx_aplicativosOutros"] ?? "");
                 $_POST["estadoConservacao"]  = $_POST["estadoConservacao"] ?? ($celular["celu_tx_estadoConservacao"] ?? "");
@@ -272,6 +511,9 @@
                 $_POST["valorEstimado"]      = $_POST["valorEstimado"] ?? ($celular["celu_tx_valorEstimado"] ?? "");
                 $_POST["dataEntrega"]        = $_POST["dataEntrega"] ?? ($celular["celu_tx_dataEntrega"] ?? "");
                 $_POST["entidade"]           = $_POST["entidade"] ?? $celular["celu_nb_entidade"];
+                $_POST["status"]             = $_POST["status"] ?? ($celular["celu_tx_status"] ?? "");
+                $_POST["dataDevolucao"]      = $_POST["dataDevolucao"] ?? ($celular["celu_dt_dataDevolucao"] ?? "");
+                $_POST["motivo_status"]      = $_POST["motivo_status"] ?? ($celular["celu_tx_motivo_status"] ?? "");
             }
         }
 
@@ -305,18 +547,27 @@
             campo("Modelo", "modelo_like", (!empty($_POST["modelo_like"])? $_POST["modelo_like"]: ""), 3)
         ]);
         echo linha_form([
-            campo("IMEI 1", "imei", (!empty($_POST["imei"])? $_POST["imei"]: ""), 2, "MASCARA_IMEI", "required"),
-            campo("IMEI 2", "imei2", (!empty($_POST["imei2"])? $_POST["imei2"]: ""), 2, "MASCARA_IMEI"),
+            campo("IMEI 1", "imei", (!empty($_POST["imei"])? $_POST["imei"]: ""), 3, "MASCARA_IMEI", "required"),
+            campo("IMEI 2", "imei2", (!empty($_POST["imei2"])? $_POST["imei2"]: ""), 3, "MASCARA_IMEI"),
             campo("Número de série", "numeroSerie_like", (!empty($_POST["numeroSerie_like"])? $_POST["numeroSerie_like"]: ""), 3),
-            campo("Número da linha (chip)", "numero", (!empty($_POST["numero"])? $_POST["numero"]: ""), 3, "MASCARA_CEL", "required"),
-            comboOperadora($operadoraAtual, $operadoraOutro, 2)
+            campo("ICCID do chip", "cimie", (!empty($_POST["cimie"])? $_POST["cimie"]: ""), 3, "MASCARA_ICCID")
         ]);
         echo linha_form([
-            campo("ICCID do chip", "cimie", (!empty($_POST["cimie"])? $_POST["cimie"]: ""), 2, "MASCARA_ICCID"),
-            campo("Sistema Operacional", "sistemaOperacional", (!empty($_POST["sistemaOperacional"])? $_POST["sistemaOperacional"]: ""), 3),
+            campo("Número da linha 1 (chip)", "numero", (!empty($_POST["numero"])? $_POST["numero"]: ""), 3, "MASCARA_CEL", "required"),
+            campo("Número da linha 2 (chip)", "numero2", (!empty($_POST["numero2"])? $_POST["numero2"]: ""), 3, "MASCARA_CEL"),
+            comboOperadora($operadoraAtual, $operadoraOutro, 3),
+            combo("Sistema Operacional", "sistemaOperacional", (!empty($_POST["sistemaOperacional"])? $_POST["sistemaOperacional"]: ""), 2, opcoesSistemaOperacionalCelular()),
+            campo("Outro S.O.", "sistemaOperacionalOutro", (!empty($_POST["sistemaOperacionalOutro"])? $_POST["sistemaOperacionalOutro"]: ""), 2, "", (($_POST["sistemaOperacional"] ?? "") === "Outro" ? "" : "disabled"))
+        ]);
+        echo linha_form([
             campo("Valor estimado do bem", "valorEstimado", (!empty($_POST["valorEstimado"])? $_POST["valorEstimado"]: ""), 2, "MASCARA_DINHEIRO"),
             campo_data("Data da entrega", "dataEntrega", (!empty($_POST["dataEntrega"])? $_POST["dataEntrega"]: ""), 2),
-            combo_net("Responsável", "entidade", (!empty($_POST["entidade"])? $_POST["entidade"]: ""), 3, "entidade")
+            combo_net("Responsável", "entidade", (!empty($_POST["entidade"])? $_POST["entidade"]: ""), 3, "entidade"),
+            combo("Status", "status", (!empty($_POST["status"])? $_POST["status"]: ""), 2, celular_status_opcoes()),
+            campo_data("Devolução", "dataDevolucao", (!empty($_POST["dataDevolucao"])? $_POST["dataDevolucao"]: ""), 2)
+        ]);
+        echo linha_form([
+            campo("Motivo", "motivo_status", (!empty($_POST["motivo_status"])? $_POST["motivo_status"]: ""), 12)
         ]);
         echo linha_form([
             checkbox("Acessórios entregues", "acessorios", opcoesAcessorios(), 6, "checkbox", "", $acessoriosMarcados),
@@ -347,6 +598,13 @@
                 }
                 celularLiberarOutros('acessorios_outros', 'acessoriosOutros');
                 celularLiberarOutros('aplicativos_outros_aplicativos', 'aplicativosOutros');
+                (function(){
+                    var \$sel = $('[name=\"sistemaOperacional\"]');
+                    var \$campo = $('#sistemaOperacionalOutro');
+                    function toggle(){ \$campo.prop('disabled', \$sel.val() !== 'Outro'); }
+                    \$sel.off('change.soOutro').on('change.soOutro', toggle);
+                    toggle();
+                })();
             });
         </script>";
         echo linha_form([
@@ -358,7 +616,11 @@
                 botao("Atualizar", "cadastrarCelular", "id", $_POST["id"], "", "", "btn btn-success"),
                 criarBotaoVoltar("cadastro_celular.php", "voltarCelular")
             ]:
-            [botao("Cadastrar", "cadastrarCelular", "", "", "", "", "btn btn-success")];
+            [
+                botao("Cadastrar", "cadastrarCelular", "", "", "", "", "btn btn-success"),
+                "<button type='button' class='btn btn-default' onclick='if(typeof consultarRegistros===\"function\"){consultarRegistros();}'>Filtrar</button>",
+                "<button type='button' class='btn btn-default' onclick='limparFiltrosCelular()'>Limpar filtros</button>"
+            ];
             
         echo fecha_form($botoes);
     }
@@ -375,6 +637,7 @@
             "IMEI 2"            => "celu_tx_imei2",
             "Nº SÉRIE"          => "celu_tx_numeroSerie",
             "Nº LINHA"          => "celu_tx_numero",
+            "Nº LINHA 2"        => "celu_tx_numero2",
             "OPERADORA"         => "celu_tx_operadora",
             "ICCID"             => "celu_tx_cimie",
             "S.O."              => "celu_tx_sistemaOperacional",
@@ -382,8 +645,15 @@
             "VALOR ESTIMADO"    => "celu_tx_valorEstimado",
             "ENTREGA"           => "DATE_FORMAT(celu_dt_dataEntrega, '%d/%m/%Y')",
             "RESPONSÁVEL"       => "enti_tx_nome",
-            "CADASTRADO EM"     => "DATE_FORMAT(celu_tx_dataCadastro, '%d/%m/%Y %H:%i:%s')",
-            "ATUALIZADO EM"     => "DATE_FORMAT(celu_tx_dataAtualiza, '%d/%m/%Y %H:%i:%s')",
+            "STATUS"            => "CASE celu_tx_status
+                WHEN 'disponivel' THEN '<span class=\"label label-success\">Disponível</span>'
+                WHEN 'em_uso' THEN '<span class=\"label label-primary\">Em uso</span>'
+                WHEN 'devolvido' THEN '<span class=\"label label-info\">Devolvido</span>'
+                WHEN 'extraviado' THEN '<span class=\"label label-danger\">Extraviado</span>'
+                WHEN 'manutencao' THEN '<span class=\"label label-warning\">Manutenção</span>'
+                WHEN 'descartado' THEN '<span class=\"label label-default\">Descartado</span>'
+                ELSE celu_tx_status END AS STATUS",
+
         ];
 
         $camposBusca = [
@@ -402,11 +672,13 @@
 
         // Coluna TERMO: clique abre o modal para vincular/alterar o termo do aparelho.
         // Modelos elegíveis: Tipo de Documento com "Equipamento = Sim".
+
+
         $gridFields["TERMO"] = "CONCAT(
-                '<span class=\"termo-link-celular\" style=\"cursor:pointer;white-space:nowrap;\" data-id=\"', celu_nb_id, '\" data-nome=\"', REPLACE(IFNULL(celu_tx_nome, ''), '\"', '&quot;'), '\" title=\"Clique para vincular/alterar o termo deste equipamento\">',
-                IF(celu_nb_modelo_termo IS NULL OR celu_nb_modelo_termo = 0 OR tm.mode_nb_id IS NULL,
+                '<span class=\"termo-link-celular\" style=\"cursor:pointer;white-space:nowrap;\" data-id=\"', celu_nb_id, '\" data-nome=\"', REPLACE(IFNULL(celu_tx_nome, ''), '\"', '&quot;'), '\" title=\"Clique para vincular/alterar os termos deste equipamento\">',
+                IF((SELECT COUNT(*) FROM celular_termo WHERE cetm_nb_celular = celu_nb_id) = 0 AND (celu_nb_modelo_termo IS NULL OR celu_nb_modelo_termo = 0),
                     '<span class=\"text-muted\"><i class=\"fa fa-link\"></i> Vincular termo</span>',
-                    CONCAT('<i class=\"fa fa-file-text-o\"></i> ', REPLACE(REPLACE(REPLACE(IFNULL(tm.mode_tx_nome, ''), '&', '&amp;'), '<', '&lt;'), '\"', '&quot;'), ' <i class=\"fa fa-pencil\" style=\"font-size:10px;color:#999;\"></i>')
+                    CONCAT('<i class=\"fa fa-file-text-o\"></i> ', REPLACE(REPLACE(REPLACE(IFNULL((SELECT GROUP_CONCAT(m.mode_tx_nome SEPARATOR ', ') FROM celular_termo ct JOIN modelo_termo m ON m.mode_nb_id = ct.cetm_nb_modelo WHERE ct.cetm_nb_celular = celu_nb_id), tm.mode_tx_nome), '&', '&amp;'), '<', '&lt;'), '\"', '&quot;'), ' <i class=\"fa fa-pencil\" style=\"font-size:10px;color:#999;\"></i>')
                 ),
                 '</span>'
             ) AS termo_html";
@@ -432,26 +704,55 @@
             $msgAviso 
         );
         $configuracao["tags"][] = "<span class='glyphicon glyphicon-send termo-celular-enviar' title='Enviar Termo' style='color:#5cb85c; cursor:pointer;'></span>";
+        $configuracao["tags"][] = "<span class='glyphicon glyphicon-time celular-historico' title='Histórico' style='color:#337ab7; cursor:pointer;'></span>";
+        $configuracao["tags"][] = "<span class='glyphicon glyphicon-log-out celular-devolver' title='Devolver / Alterar status' style='color:#d9534f; cursor:pointer;'></span>";
         $gridFields["actions"] = $configuracao["tags"];
         $jsFunctions = $configuracao["js"] . "
             $(document).off('click.termoCelularVincular', '.termo-link-celular').on('click.termoCelularVincular', '.termo-link-celular', function(event){
                 event.preventDefault();
                 termoCelularAbrirVinculo(parseInt($(this).attr('data-id'), 10) || 0);
             });
+            // Tooltip dinâmico: mostra o responsável no ícone de enviar termo.
+            $(document).ajaxComplete(function(event, xhr, settings){
+                if(!settings || !settings.url || settings.url.indexOf('getTableInfo.php') < 0){ return; }
+                try {
+                    var idx = -1;
+                    $('#result thead th').each(function(i){ if($(this).text().trim().toUpperCase().indexOf('RESPONS') >= 0){ idx = i; } });
+                    if(idx < 0){ return; }
+                    $('#result tbody tr').each(function(){
+                        var resp = $(this).find('td').eq(idx).text().trim();
+                        if(resp){ $(this).find('.termo-celular-enviar').attr('title', 'Enviar termo para: ' + resp); }
+                    });
+                } catch(e) {}
+            });
+
             $(document).off('click.termoCelularEnviar', '.termo-celular-enviar').on('click.termoCelularEnviar', '.termo-celular-enviar', function(event){
                 event.preventDefault();
                 var id = parseInt($(event.target).closest('tr').attr('data-row-id'), 10) || 0;
-                termoCelularAbrirEnvio(id);
+                termoCelularAbrirEnvioDireto(id);
+            });
+            $(document).off('click.celularHistorico', '.celular-historico').on('click.celularHistorico', '.celular-historico', function(event){
+                event.preventDefault();
+                var id = parseInt($(event.target).closest('tr').attr('data-row-id'), 10) || 0;
+                celularAbrirHistorico(id);
+            });
+            $(document).off('click.celularDevolver', '.celular-devolver').on('click.celularDevolver', '.celular-devolver', function(event){
+                event.preventDefault();
+                var id = parseInt($(event.target).closest('tr').attr('data-row-id'), 10) || 0;
+                if (!id) { return; }
+                celularAbrirStatus(id);
             });
         ";
 
+        echo "<div style='margin:8px 0;'><button type='button' class='btn btn-primary' onclick='termoCelularAbrirLote()'><i class='fa fa-send'></i> Enviar Termos (lote por aparelhos)</button></div>";
+        echo "<div style='margin:4px 0 8px 0; font-size:11px; color:#666;'>Legenda status: <span class='label label-success'>Disponível</span> <span class='label label-primary'>Em uso</span> <span class='label label-info'>Devolvido</span> <span class='label label-danger'>Extraviado</span> <span class='label label-warning'>Manutenção</span> <span class='label label-default'>Descartado</span></div>";
         echo gridDinamico("celular", $gridFields, $camposBusca, $queryBase, $jsFunctions);
     };
 
     function cadastrarCelular(){
         $fields = [
-            "nome_like", "tipo", "marca_like", "modelo_like", "imei", "imei2", "numeroSerie_like", "numero",
-            "operadora", "operadoraOutro", "cimie", "sistemaOperacional", "acessoriosOutros", "aplicativosOutros",
+            "nome_like", "tipo", "marca_like", "modelo_like", "imei", "imei2", "numeroSerie_like", "numero", "numero2",
+            "operadora", "operadoraOutro", "cimie", "sistemaOperacional", "sistemaOperacionalOutro", "acessoriosOutros", "aplicativosOutros",
             "estadoConservacao", "observacoes", "valorEstimado", "dataEntrega"
         ];
         foreach($fields as $field){
@@ -461,6 +762,11 @@
         // Operadora "Outro": salva o nome digitado no campo livre.
         if($_POST["operadora"] === "outro"){
             $_POST["operadora"] = $_POST["operadoraOutro"];
+        }
+        // Sistema Operacional "Outro": salva o nome digitado no campo livre.
+        if(($_POST["sistemaOperacional"] ?? "") === "Outro"){
+            $_POST["sistemaOperacional"] = trim(strval($_POST["sistemaOperacionalOutro"] ?? ""));
+            if($_POST["sistemaOperacional"] === ""){ $_POST["sistemaOperacional"] = "Outro"; }
         }
 
         $errorMsg = conferirCamposObrig([
@@ -489,6 +795,24 @@
 
         $entidadeSelecionada = (!empty($_POST["entidade"]) ? (int)$_POST["entidade"] : null);
 
+        // Status gerencial do aparelho (novo controle).
+        $statusSelecionado = trim(strval($_POST["status"] ?? ""));
+        if($statusSelecionado === "" || !isset(celular_status_opcoes()[$statusSelecionado])){
+            $statusSelecionado = ($entidadeSelecionada !== null) ? "em_uso" : "disponivel";
+        }
+        $motivoStatus = trim(strval($_POST["motivo_status"] ?? ""));
+
+        // Estado anterior (para auditoria) quando for edição.
+        $entidadeAnterior = null;
+        $statusAnterior = null;
+        if(!empty($_POST["id"])){
+            $resAnt = query("SELECT celu_nb_entidade, celu_tx_status FROM celular WHERE celu_nb_id = ? LIMIT 1", "i", [(int)$_POST["id"]]);
+            if($resAnt instanceof mysqli_result && ($rowAnt = mysqli_fetch_assoc($resAnt))){
+                $entidadeAnterior = ($rowAnt["celu_nb_entidade"] !== null && $rowAnt["celu_nb_entidade"] !== "") ? (int)$rowAnt["celu_nb_entidade"] : null;
+                $statusAnterior = $rowAnt["celu_tx_status"] ?? null;
+            }
+        }
+
         // Se o ativo ficará sem responsável, garante que a coluna aceite NULL no banco.
         // Em produção o usuário do banco pode não ter privilégio de ALTER; nesse caso
         // orienta a selecionar um responsável em vez de exibir o erro cru de SQL.
@@ -507,6 +831,7 @@
             "celu_tx_imei2" => $_POST["imei2"],
             "celu_tx_numeroSerie" => $_POST["numeroSerie_like"],
             "celu_tx_numero" => $_POST["numero"],
+            "celu_tx_numero2" => ($_POST["numero2"] ?? ""),
             "celu_tx_operadora" => $_POST["operadora"],
             "celu_tx_cimie" => $_POST["cimie"],
             "celu_tx_sistemaOperacional" => $_POST["sistemaOperacional"],
@@ -520,11 +845,20 @@
             "celu_tx_valorEstimado" => $_POST["valorEstimado"],
             "celu_dt_dataEntrega" => (!empty($_POST["dataEntrega"]) ? $_POST["dataEntrega"] : null),
             "celu_nb_entidade" => $entidadeSelecionada,
+            "celu_tx_status" => $statusSelecionado,
+            "celu_dt_dataDevolucao" => ($statusSelecionado === "devolvido" ? date("Y-m-d") : null),
+            "celu_tx_motivo_status" => ($motivoStatus !== "" ? $motivoStatus : null),
             "celu_tx_dataAtualiza" => date("Y-m-d H:i:s")
         ];
 
         if(!empty($_POST["id"])){
             atualizar("celular", array_keys($novoCelular), array_values($novoCelular), $_POST["id"]);
+            // Auditoria: registra se houve mudança de responsável e/ou status.
+            $mudouEnt = ($entidadeAnterior !== $entidadeSelecionada);
+            $mudouSt = ($statusAnterior !== $statusSelecionado);
+            if($mudouEnt || $mudouSt){
+                celular_registrar_movimentacao((int)$_POST["id"], $entidadeAnterior, $entidadeSelecionada, $statusAnterior, $statusSelecionado, $motivoStatus);
+            }
             set_status("<script>Swal.fire('Sucesso!', 'Celular atualizado com sucesso.', 'success');</script>");
         } else {
             $novoCelular["celu_tx_dataCadastro"] = date("Y-m-d H:i:s");
@@ -533,6 +867,13 @@
                 set_status("<script>Swal.fire('Erro!', 'Não foi possível cadastrar o celular: " . addslashes($retorno[0]->getMessage()) . "', 'error');</script>");
                 index();
                 exit;
+            }
+            $novoId = 0;
+            if(is_array($retorno)){
+                foreach($retorno as $r){ if(is_int($r) && $r > 0){ $novoId = $r; break; } }
+            } elseif(is_numeric($retorno)){ $novoId = (int)$retorno; }
+            if($novoId > 0){
+                celular_registrar_movimentacao($novoId, null, $entidadeSelecionada, null, $statusSelecionado, $motivoStatus !== "" ? $motivoStatus : "Cadastro inicial");
             }
             set_status("<script>Swal.fire('Sucesso!', 'Celular inserido com sucesso.', 'success');</script>");
         }
@@ -572,11 +913,11 @@
                 <div class='modal-content'>
                     <div class='modal-header'>
                         <button type='button' class='close' data-dismiss='modal'>&times;</button>
-                        <h4 class='modal-title'>Vincular Termo ao Equipamento</h4>
+                        <h4 class='modal-title'>Vincular Termos ao Equipamento</h4>
                     </div>
                     <div class='modal-body'>
                         <div class='alert alert-info' style='padding:8px 12px; font-size:12px;'>
-                            <i class='fa fa-link'></i> Selecione o termo usado por este equipamento. Na geração do documento, os campos do equipamento (ex.: <code>{{equipamento_imei}}</code>) são preenchidos com os dados deste aparelho.
+                            <i class='fa fa-link'></i> Selecione um ou mais termos usados por este equipamento. Na geração do documento, os campos do equipamento (ex.: <code>{{equipamento_imei}}</code>) são preenchidos com os dados deste aparelho.
                         </div>
                         <div id='termocel_vinc_equip' class='text-muted' style='margin-bottom:8px;'></div>
                         <div id='termocel_vinc_lista' style='max-height:320px; overflow-y:auto; border:1px solid #eee; padding:6px; background:#fcfcfc;'>
@@ -588,9 +929,9 @@
                         </div>
                     </div>
                     <div class='modal-footer'>
-                        <button type='button' class='btn btn-danger pull-left' id='termocel_vinc_btn_remover' onclick='termoCelularRemoverVinculo()' style='display:none;'>Remover vínculo</button>
+                        <button type='button' class='btn btn-danger pull-left' id='termocel_vinc_btn_remover' onclick='termoCelularRemoverVinculo()' style='display:none;'>Remover todos</button>
                         <button type='button' class='btn btn-default' data-dismiss='modal'>Fechar</button>
-                        <button type='button' class='btn btn-success' onclick='termoCelularSalvarVinculo()'>Salvar vínculo</button>
+                        <button type='button' class='btn btn-success' onclick='termoCelularSalvarVinculo()'>Salvar vínculos</button>
                     </div>
                 </div>
             </div>
@@ -636,10 +977,11 @@
                         html = '<div class=\"text-muted\">Nenhum modelo de termo disponível para equipamentos. Cadastre um modelo cujo Tipo de Documento esteja marcado com Equipamento = Sim.</div>';
                     } else {
                         html += '<div style=\"margin-bottom:6px;\"><a href=\"javascript:void(0);\" onclick=\"$(\'input[name=termocel_modelo]\').prop(\'checked\', false); termoCelularUniform();\" style=\"font-size:11px;\">Limpar seleção</a></div>';
+                        var vinculados = (res.vinculados || []);
                         $.each(res.modelos, function(i, m) {
-                            var checked = (parseInt(m.id, 10) === parseInt(res.atual, 10)) ? 'checked' : '';
+                            var checked = (vinculados.indexOf(parseInt(m.id, 10)) >= 0) ? 'checked' : '';
                             html += '<label style=\"font-weight:normal; display:block; margin:2px 0; overflow-wrap:break-word;\">'
-                                + '<input type=\"radio\" name=\"termocel_modelo\" value=\"' + m.id + '\" ' + checked + '> '
+                                + '<input type=\"checkbox\" name=\"termocel_modelo\" value=\"' + m.id + '\" ' + checked + '> '
                                 + '<b>' + termoCelularEscape(m.nome) + '</b>'
                                 + (m.tipo ? ' <span class=\"text-muted\">— ' + termoCelularEscape(m.tipo) + '</span>' : '')
                                 + '</label>';
@@ -655,16 +997,12 @@
 
             function termoCelularSalvarVinculo() {
                 if (!TERMOCEL_VINC_ID) { return; }
-                var modelo = parseInt($('input[name=termocel_modelo]:checked').val(), 10) || 0;
-                if (modelo <= 0) {
-                    if (window.Swal) { Swal.fire('Atenção!', 'Selecione o termo que será vinculado ao equipamento.', 'warning'); }
-                    else { alert('Selecione o termo que será vinculado ao equipamento.'); }
-                    return;
-                }
+                var modelos = [];
+                $('input[name=termocel_modelo]:checked').each(function() { modelos.push(parseInt($(this).val(), 10)); });
                 $.ajax({
                     url: 'cadastro_celular.php',
                     method: 'POST',
-                    data: { acao: 'salvarVinculoTermo', id: TERMOCEL_VINC_ID, modelo: modelo },
+                    data: { acao: 'salvarTermosVinculadosCelular', id: TERMOCEL_VINC_ID, modelos: modelos },
                     dataType: 'json'
                 }).done(function(res) {
                     if (!res || !res.ok) {
@@ -686,7 +1024,7 @@
                     $.ajax({
                         url: 'cadastro_celular.php',
                         method: 'POST',
-                        data: { acao: 'removerVinculoTermo', id: TERMOCEL_VINC_ID },
+                        data: { acao: 'salvarTermosVinculadosCelular', id: TERMOCEL_VINC_ID, modelos: [] },
                         dataType: 'json'
                     }).done(function(res) {
                         if (!res || !res.ok) {
@@ -1147,6 +1485,535 @@
         ";
     }
 
+    function modalLoteTermosCelular(){
+        echo "
+        <div class='modal fade' id='modal_lote_termos_celular' tabindex='-1' role='dialog'>
+            <div class='modal-dialog modal-lg' role='document'>
+                <div class='modal-content'>
+                    <div class='modal-header'>
+                        <button type='button' class='close' data-dismiss='modal'>&times;</button>
+                        <h4 class='modal-title'>Enviar Termos (lote por aparelhos)</h4>
+                    </div>
+                    <div class='modal-body'>
+                        <div class='alert alert-info' style='padding:8px 12px; font-size:12px;'>
+                            <i class='fa fa-mobile'></i> Envia o termo vinculado a cada aparelho para o <b>responsável</b> daquele aparelho, com os dados daquele aparelho. Somente aparelhos com responsável e termo vinculado aparecem.
+                        </div>
+                        <div class='row' style='margin-bottom:8px;'>
+                            <div class='col-sm-8'>
+                                <label class='control-label'>Termo a enviar</label>
+                                <select id='termoCelularLoteModelo' class='form-control input-sm'></select>
+                            </div>
+                            <div class='col-sm-4 text-right' style='padding-top:22px;'>
+                                <b id='termoCelularLoteSel'>0 selecionado(s)</b>
+                            </div>
+                        </div>
+                        <div class='row' style='margin-bottom:8px;'>
+                            <div class='col-sm-8'>
+                                <button type='button' class='btn btn-default btn-xs' onclick='termoCelularLoteMarcar(true)'>Marcar todos</button>
+                                <button type='button' class='btn btn-default btn-xs' onclick='termoCelularLoteMarcar(false)'>Desmarcar todos</button>
+                                <button type='button' class='btn btn-default btn-xs' onclick='termoCelularLoteMarcarEmUso()'>Somente em uso</button>
+                            </div>
+                            <div class='col-sm-4'>
+                                <input id='termoCelularLoteBusca' class='form-control input-sm' placeholder='Buscar aparelho/responsável'>
+                            </div>
+                        </div>
+                        <div id='termoCelularLoteLista' style='max-height:320px; overflow:auto; border:1px solid #eee; padding:4px; background:#fcfcfc;'>
+                            <div class='text-muted'>Carregando aparelhos...</div>
+                        </div>
+                        <div class='row' style='margin-top:10px;'>
+                            <div class='col-sm-3'>
+                                <label class='control-label'>Validar ICP</label>
+                                <select id='termoCelularLoteIcp' class='form-control input-sm'>
+                                    <option value='nao'>Não</option>
+                                    <option value='sim'>Sim</option>
+                                </select>
+                            </div>
+                            <div class='col-sm-3'>
+                                <label class='control-label'>Enviar e-mail</label>
+                                <select id='termoCelularLoteEmail' class='form-control input-sm'>
+                                    <option value='sim'>Sim</option>
+                                    <option value='nao'>Não</option>
+                                </select>
+                            </div>
+                            <div class='col-sm-3'>
+                                <label class='control-label'>Forçar regeração</label>
+                                <select id='termoCelularLoteForcar' class='form-control input-sm'>
+                                    <option value='nao'>Não</option>
+                                    <option value='sim'>Sim</option>
+                                </select>
+                            </div>
+                            <div class='col-sm-3'>
+                                <label class='control-label'>Prazo (dias)</label>
+                                <input type='number' id='termoCelularLotePrazo' class='form-control input-sm' min='0' max='30' value='1'>
+                            </div>
+                        </div>
+                        <div class='row' style='margin-top:6px;'>
+                            <div class='col-sm-3'>
+                                <label class='control-label'>Assinatura por hierarquia</label>
+                                <select id='termoCelularLoteHier' class='form-control input-sm'>
+                                    <option value='nao'>Não</option>
+                                    <option value='sim'>Sim</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id='termoCelularLoteProgresso' style='display:none; margin-top:12px;'>
+                            <div class='progress' style='margin-bottom:4px;'>
+                                <div id='termoCelularLoteBarra' class='progress-bar progress-bar-success' style='width:0%'></div>
+                            </div>
+                            <div id='termoCelularLoteTexto' class='text-muted'></div>
+                            <div id='termoCelularLoteResultado' style='margin-top:8px; max-height:200px; overflow:auto; font-size:12px;'></div>
+                        </div>
+                    </div>
+                    <div class='modal-footer'>
+                        <button type='button' class='btn btn-default' data-dismiss='modal'>Fechar</button>
+                        <button type='button' id='termoCelularLoteBtn' class='btn btn-success' onclick='termoCelularLoteEnviar()'>Enviar selecionados</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            var TERMOCEL_LOTE_APARELHOS = [];
+            function termoCelularAbrirLote() {
+                TERMOCEL_LOTE_APARELHOS = [];
+                $('#termoCelularLoteLista').html('<div class=\"text-muted\">Carregando aparelhos...</div>');
+                $('#termoCelularLoteProgresso').hide();
+                $('#termoCelularLoteResultado').html('').hide();
+                $('#modal_lote_termos_celular').modal('show');
+                $.ajax({
+                    url: 'cadastro_celular.php',
+                    method: 'POST',
+                    data: { acao: 'dadosLoteTermosCelular' },
+                    dataType: 'json'
+                }).done(function(res) {
+                    if (!res || !res.ok) {
+                        $('#termoCelularLoteLista').html('<div class=\"alert alert-danger\">Falha ao carregar aparelhos.</div>');
+                        return;
+                    }
+                    TERMOCEL_LOTE_APARELHOS = res.aparelhos || [];
+                    // Popula seletor de termos únicos a partir dos termos retornados.
+                    var modelosUnicos = {};
+                    var nomes = {};
+                    $.each(TERMOCEL_LOTE_APARELHOS, function(i, a) {
+                        $.each(a.termos || [], function(j, t) {
+                            var mid = parseInt(t.id, 10);
+                            if (mid > 0) {
+                                modelosUnicos[mid] = true;
+                                if (!nomes[mid]) { nomes[mid] = t.nome || ('Modelo #' + mid); }
+                            }
+                        });
+                    });
+                    var opts = '<option value=\"\">Todos os termos</option>';
+                    $.each(Object.keys(modelosUnicos), function(i, mid) {
+                        opts += '<option value=\"' + mid + '\">' + termoCelularEscape(nomes[mid]) + '</option>';
+                    });
+                    $('#termoCelularLoteModelo').html(opts);
+                    termoCelularLoteRender();
+                }).fail(function() {
+                    $('#termoCelularLoteLista').html('<div class=\"alert alert-danger\">Falha de comunicação.</div>');
+                });
+            }
+            function termoCelularLoteRender() {
+                var busca = ($('#termoCelularLoteBusca').val() || '').toLowerCase();
+                var modeloFiltro = parseInt($('#termoCelularLoteModelo').val() || '0', 10) || 0;
+                var html = '<table class=\"table table-bordered table-striped table-condensed\"><thead><tr><th style=\"width:30px\"></th><th>Aparelho</th><th>IMEI</th><th>Responsável</th><th>Status</th><th>Termo vinculado</th></tr></thead><tbody>';
+                $.each(TERMOCEL_LOTE_APARELHOS, function(i, a) {
+                    var txt = ((a.celu_tx_nome||'') + ' ' + (a.celu_tx_imei||'') + ' ' + (a.resp_nome||'') + ' ' + (a.modelo_nome||'')).toLowerCase();
+                    if (busca && txt.indexOf(busca) === -1) { return; }
+                    var emUso = (a.celu_tx_status === 'em_uso');
+                    html += '<tr>'
+                        + '<td><input type=\"checkbox\" class=\"termoCelularLoteChk\" value=\"' + a.celu_nb_id + '\" data-status=\"' + (a.celu_tx_status||'') + '\" ' + (emUso ? '' : 'disabled') + '></td>'
+                        + '<td>' + termoCelularEscape(a.celu_tx_nome) + '</td>'
+                        + '<td>' + termoCelularEscape(a.celu_tx_imei) + '</td>'
+                        + '<td>' + termoCelularEscape(a.resp_nome) + '</td>'
+                        + '<td>' + termoCelularEscape(a.celu_tx_status) + '</td>'
+                        + '<td>' + termoCelularEscape(a.modelo_nome) + '</td>'
+                        + '</tr>';
+                });
+                html += '</tbody></table>';
+                $('#termoCelularLoteLista').html(html);
+                termoCelularLoteAtualizar();
+            }
+            function termoCelularLoteMarcar(marcar) {
+                $('#termoCelularLoteLista .termoCelularLoteChk').prop('checked', marcar);
+                termoCelularLoteAtualizar();
+            }
+            function termoCelularLoteMarcarEmUso() {
+                $('#termoCelularLoteLista .termoCelularLoteChk').each(function() {
+                    $(this).prop('checked', $(this).attr('data-status') === 'em_uso');
+                });
+                termoCelularLoteAtualizar();
+            }
+            function termoCelularLoteAtualizar() {
+                $('#termoCelularLoteSel').text($('#termoCelularLoteLista .termoCelularLoteChk:checked').length + ' selecionado(s)');
+            }
+            $(function() {
+                $('#termoCelularLoteBusca').on('input', termoCelularLoteRender);
+                $('#termoCelularLoteLista').on('change', '.termoCelularLoteChk', termoCelularLoteAtualizar);
+            });
+            function termoCelularLoteEnviar() {
+                var ids = [];
+                $('#termoCelularLoteLista .termoCelularLoteChk:checked').each(function() { ids.push(parseInt($(this).val(), 10)); });
+                if (ids.length === 0) { alert('Selecione ao menos um aparelho.'); return; }
+                $('#termoCelularLoteBtn').prop('disabled', true);
+                $('#termoCelularLoteProgresso').show();
+                $('#termoCelularLoteResultado').html('').hide();
+                var params = {
+                    modelo_id: parseInt($('#termoCelularLoteModelo').val() || '0', 10) || 0,
+                    validar_icp: $('#termoCelularLoteIcp').val(),
+                    enviar_email: $('#termoCelularLoteEmail').val(),
+                    forcar: $('#termoCelularLoteForcar').val(),
+                    prazo_expiracao_dias: parseInt($('#termoCelularLotePrazo').val(), 10) || 0,
+                    hierarquia: $('#termoCelularLoteHier').val()
+                };
+                var total = ids.length, feitos = 0, okC = 0, errC = 0, resumo = [], resumoOk = [], resumoErr = [];
+                function proximo(inicio) {
+                    if (inicio >= total) {
+                        $('#termoCelularLoteBarra').css('width', '100%');
+                        $('#termoCelularLoteTexto').text('Concluído: ' + total + ' processado(s).');
+                        var htmlRes = '<b>Resumo: ' + okC + ' OK | ' + errC + ' erro(s)</b>';
+                        if (resumoOk.length) {
+                            htmlRes += '<br><br><b class=\"text-success\">Enviados com sucesso:</b><br>' + resumoOk.map(function(m){ return 'OK - ' + m; }).join('<br>');
+                        }
+                        if (resumoErr.length) {
+                            htmlRes += '<br><br><b class=\"text-danger\">Erros:</b><br>' + resumoErr.map(function(m){ return 'ERRO - ' + m; }).join('<br>');
+                        }
+                        $('#termoCelularLoteResultado').html(htmlRes).show();
+                        $('#termoCelularLoteBtn').prop('disabled', false);
+                        return;
+                    }
+                    var fim = Math.min(inicio + 5, total);
+                    var chunk = ids.slice(inicio, fim);
+                    $.ajax({
+                        url: 'documentos/termos/processar_termos_aparelhos.php',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify($.extend({ aparelhos: chunk }, params)),
+                        dataType: 'json'
+                    }).done(function(res) {
+                        if (res && Array.isArray(res.resultados)) {
+                            $.each(res.resultados, function(i, r) {
+                                feitos++;
+                                if (r.ok) { okC++; resumoOk.push(r.msg || ''); } else { errC++; resumoErr.push(r.msg || ''); }
+                            });
+                        } else {
+                            feitos += chunk.length; errC += chunk.length;
+                            resumo.push('ERRO - ' + ((res && res.error) ? res.error : 'resposta inválida.'));
+                        }
+                        $('#termoCelularLoteBarra').css('width', Math.round(feitos * 100 / total) + '%');
+                        $('#termoCelularLoteTexto').text('Processando ' + feitos + ' de ' + total + '...');
+                        proximo(fim);
+                    }).fail(function(xhr) {
+                        feitos += chunk.length; errC += chunk.length;
+                        var detalhe = 'falha de comunicação.';
+                        if (xhr) {
+                            if (xhr.responseJSON && xhr.responseJSON.error) { detalhe = xhr.responseJSON.error; }
+                            else if (xhr.responseText) { detalhe = xhr.responseText.replace(/<[^>]*>/g, '').trim().substring(0, 200); }
+                            else if (xhr.status) { detalhe = 'HTTP ' + xhr.status + ' ' + (xhr.statusText || ''); }
+                        }
+                        resumo.push('ERRO - ' + detalhe);
+                        $('#termoCelularLoteBarra').css('width', Math.round(feitos * 100 / total) + '%');
+                        proximo(fim);
+                    });
+                }
+                proximo(0);
+            }
+        </script>
+        ";
+    }
+
+    function modalHistoricoCelular(){
+        echo "
+        <div class='modal fade' id='modal_historico_celular' tabindex='-1' role='dialog'>
+            <div class='modal-dialog modal-lg' role='document'>
+                <div class='modal-content'>
+                    <div class='modal-header'>
+                        <button type='button' class='close' data-dismiss='modal'>&times;</button>
+                        <h4 class='modal-title'>Histórico do Aparelho</h4>
+                    </div>
+                    <div class='modal-body'>
+                        <div id='celularHistoricoInfo' class='text-muted' style='margin-bottom:8px;'></div>
+                        <div id='celularHistoricoLista' style='max-height:360px; overflow:auto;'>
+                            <div class='text-muted'>Carregando...</div>
+                        </div>
+                    </div>
+                    <div class='modal-footer'>
+                        <button type='button' class='btn btn-default' data-dismiss='modal'>Fechar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            function celularAbrirHistorico(id) {
+                if (!id) { return; }
+                $('#celularHistoricoInfo').html('Aparelho #' + id);
+                $('#celularHistoricoLista').html('<div class=\"text-muted\">Carregando...</div>');
+                $('#modal_historico_celular').modal('show');
+                $.ajax({
+                    url: 'cadastro_celular.php',
+                    method: 'POST',
+                    data: { acao: 'historicoCelular', id: id },
+                    dataType: 'json'
+                }).done(function(res) {
+                    if (!res || !res.ok) {
+                        $('#celularHistoricoLista').html('<div class=\"alert alert-danger\">Falha ao carregar histórico.</div>');
+                        return;
+                    }
+                    var html = '<table class=\"table table-bordered table-striped table-condensed\"><thead><tr><th>Data</th><th>Usuário</th><th>Status (ant → novo)</th><th>Responsável (ant → novo)</th><th>Motivo</th></tr></thead><tbody>';
+                    $.each(res.itens, function(i, m) {
+                        html += '<tr>'
+                            + '<td>' + termoCelularEscape(m.movi_dt_data) + '</td>'
+                            + '<td>' + termoCelularEscape(m.usuario) + '</td>'
+                            + '<td>' + termoCelularEscape(m.movi_tx_status_anterior || '-') + ' → ' + termoCelularEscape(m.movi_tx_status_novo || '-') + '</td>'
+                            + '<td>' + termoCelularEscape(m.nome_ant || '-') + ' → ' + termoCelularEscape(m.nome_novo || '-') + '</td>'
+                            + '<td>' + termoCelularEscape(m.movi_tx_motivo || '-') + '</td>'
+                            + '</tr>';
+                    });
+                    if (!res.itens || !res.itens.length) {
+                        html += '<tr><td colspan=\"5\" class=\"text-muted\">Sem movimentações registradas.</td></tr>';
+                    }
+                    html += '</tbody></table>';
+                    $('#celularHistoricoLista').html(html);
+                }).fail(function() {
+                    $('#celularHistoricoLista').html('<div class=\"alert alert-danger\">Falha de comunicação.</div>');
+                });
+            }
+        </script>
+        ";
+    }
+
+    function modalStatusCelular(){
+        $opcoes = celular_status_opcoes();
+        $optsHtml = "";
+        foreach($opcoes as $k => $v){
+            $optsHtml .= "<option value='" . htmlspecialchars($k, ENT_QUOTES) . "'>" . htmlspecialchars($v, ENT_QUOTES) . "</option>";
+        }
+        echo "
+        <div class='modal fade' id='modal_status_celular' tabindex='-1' role='dialog'>
+            <div class='modal-dialog' role='document'>
+                <div class='modal-content'>
+                    <div class='modal-header'>
+                        <button type='button' class='close' data-dismiss='modal'>&times;</button>
+                        <h4 class='modal-title'>Alterar Status do Aparelho</h4>
+                    </div>
+                    <div class='modal-body'>
+                        <input type='hidden' id='statusCelularId' value=''>
+                        <div class='form-group'>
+                            <label>Status</label>
+                            <select id='statusCelularNovo' class='form-control input-sm'>{$optsHtml}</select>
+                        </div>
+                        <div class='form-group'>
+                            <label>Motivo (opcional)</label>
+                            <textarea id='statusCelularMotivo' class='form-control input-sm' rows='2'></textarea>
+                        </div>
+                    </div>
+                    <div class='modal-footer'>
+                        <button type='button' class='btn btn-default' data-dismiss='modal'>Cancelar</button>
+                        <button type='button' class='btn btn-success' onclick='celularSalvarStatus()'>Salvar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            function celularAbrirStatus(id) {
+                if (!id) { return; }
+                $('#statusCelularId').val(id);
+                $('#statusCelularMotivo').val('');
+                $('#modal_status_celular').modal('show');
+            }
+            function celularSalvarStatus() {
+                var id = parseInt($('#statusCelularId').val(), 10) || 0;
+                if (!id) { return; }
+                $.ajax({
+                    url: 'cadastro_celular.php',
+                    method: 'POST',
+                    data: { acao: 'alterarStatusCelular', id: id, status: $('#statusCelularNovo').val(), motivo: $('#statusCelularMotivo').val() },
+                    dataType: 'json'
+                }).done(function(res) {
+                    if (!res || !res.ok) {
+                        if (window.Swal) { Swal.fire('Erro!', (res && res.error) ? res.error : 'Não foi possível alterar.', 'error'); }
+                        else { alert((res && res.error) ? res.error : 'Não foi possível alterar.'); }
+                        return;
+                    }
+                    $('#modal_status_celular').modal('hide');
+                    if (window.Swal) { Swal.fire('Sucesso!', 'Status atualizado.', 'success'); }
+                    if (typeof consultarRegistros === 'function') { consultarRegistros(); }
+                }).fail(function() {
+                    alert('Falha de comunicação ao alterar status.');
+                });
+            }
+        </script>
+        ";
+    }
+
+    function modalEnviarTermoDiretoCelular(){
+        echo "
+        <div class='modal fade' id='modal_enviar_termo_direto_celular' tabindex='-1' role='dialog'>
+            <div class='modal-dialog' role='document'>
+                <div class='modal-content'>
+                    <div class='modal-header'>
+                        <button type='button' class='close' data-dismiss='modal'>&times;</button>
+                        <h4 class='modal-title' id='termoCelularDiretoTitulo'>Enviar Termo</h4>
+                    </div>
+                    <div class='modal-body'>
+                        <div id='termoCelularDiretoInfo' class='alert alert-info' style='padding:8px 12px; font-size:12px;'></div>
+                        <div class='row' style='margin-bottom:8px;'>
+                            <div class='col-sm-12'>
+                                <label class='control-label'>Termo a enviar</label>
+                                <select id='termoCelularDiretoModelo' class='form-control input-sm'></select>
+                            </div>
+                        </div>
+                        <div class='row'>
+                            <div class='col-sm-4'>
+                                <label class='control-label'>Validar ICP</label>
+                                <select id='termoCelularDiretoIcp' class='form-control input-sm'>
+                                    <option value='nao'>Não</option>
+                                    <option value='sim'>Sim</option>
+                                </select>
+                            </div>
+                            <div class='col-sm-4'>
+                                <label class='control-label'>Enviar e-mail</label>
+                                <select id='termoCelularDiretoEmail' class='form-control input-sm'>
+                                    <option value='sim'>Sim</option>
+                                    <option value='nao'>Não</option>
+                                </select>
+                            </div>
+                            <div class='col-sm-4'>
+                                <label class='control-label'>Forçar regeração</label>
+                                <select id='termoCelularDiretoForcar' class='form-control input-sm'>
+                                    <option value='nao'>Não</option>
+                                    <option value='sim'>Sim</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class='row' style='margin-top:6px;'>
+                            <div class='col-sm-4'>
+                                <label class='control-label'>Prazo (dias)</label>
+                                <input type='number' id='termoCelularDiretoPrazo' class='form-control input-sm' min='0' max='30' value='1'>
+                            </div>
+                            <div class='col-sm-4'>
+                                <label class='control-label'>Assinatura por hierarquia</label>
+                                <select id='termoCelularDiretoHier' class='form-control input-sm'>
+                                    <option value='nao'>Não</option>
+                                    <option value='sim'>Sim</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id='termoCelularDiretoProgresso' style='display:none; margin-top:12px;'>
+                            <div class='progress' style='margin-bottom:4px;'>
+                                <div id='termoCelularDiretoBarra' class='progress-bar progress-bar-success' style='width:0%'></div>
+                            </div>
+                            <div id='termoCelularDiretoTexto' class='text-muted'></div>
+                            <div id='termoCelularDiretoResultado' style='margin-top:8px; max-height:200px; overflow:auto; font-size:12px;'></div>
+                        </div>
+                    </div>
+                    <div class='modal-footer'>
+                        <button type='button' class='btn btn-default' data-dismiss='modal'>Fechar</button>
+                        <button type='button' id='termoCelularDiretoBtn' class='btn btn-success' onclick='termoCelularEnviarDiretoConfirmar()'>Enviar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            var TERMOCEL_DIRETO_ID = 0;
+            function termoCelularAbrirEnvioDireto(id) {
+                if (!id) { return; }
+                TERMOCEL_DIRETO_ID = id;
+                $('#termoCelularDiretoBtn').prop('disabled', false);
+                $('#termoCelularDiretoInfo').html('<i class=\"fa fa-mobile\"></i> Aparelho #' + id + ' — carregando...');
+                $('#termoCelularDiretoProgresso').hide();
+                $('#termoCelularDiretoResultado').html('').hide();
+                $('#termoCelularDiretoBarra').css('width', '0%');
+                $('#modal_enviar_termo_direto_celular').modal('show');
+                $.ajax({
+                    url: 'cadastro_celular.php',
+                    method: 'POST',
+                    data: { acao: 'termosVinculadosCelular', id: id },
+                    dataType: 'json'
+                }).done(function(resTermos) {
+                    var opts = '';
+                    if (resTermos && resTermos.ok && resTermos.modelos && resTermos.modelos.length) {
+                        $.each(resTermos.modelos, function(i, m) {
+                            if (m.vinculado) {
+                                opts += '<option value=\"' + m.id + '\">' + termoCelularEscape(m.nome) + '</option>';
+                            }
+                        });
+                    }
+                    if (opts === '') {
+                        opts = '<option value=\"\">Nenhum termo vinculado</option>';
+                    }
+                    $('#termoCelularDiretoModelo').html(opts);
+                });
+                $.ajax({
+                    url: 'cadastro_celular.php',
+                    method: 'POST',
+                    data: { acao: 'dadosEnvioTermo', id: id },
+                    dataType: 'json'
+                }).done(function(res) {
+                    if (!res || !res.ok) {
+                        $('#termoCelularDiretoInfo').html('<i class=\"fa fa-mobile\"></i> Aparelho #' + id + ' <br><span class=\"text-danger\">' + termoCelularEscape((res && res.error) ? res.error : 'Não foi possível carregar os dados.') + '</span>');
+                        $('#termoCelularDiretoBtn').prop('disabled', true);
+                        return;
+                    }
+                    var respNome = (res.responsavel && res.responsavel.nome) ? res.responsavel.nome : '';
+                    var html = '<i class=\"fa fa-mobile\"></i> Aparelho #' + id + ' — enviando para <b>' + termoCelularEscape(respNome ? respNome : 'o responsável cadastrado') + '</b>, com os dados deste aparelho.';
+                    $('#termoCelularDiretoInfo').html(html);
+                    $('#termoCelularDiretoBtn').prop('disabled', false);
+                }).fail(function(xhr) {
+                    var msg = 'Não foi possível carregar os dados.';
+                    if (xhr && xhr.responseJSON && xhr.responseJSON.error) { msg = xhr.responseJSON.error; }
+                    $('#termoCelularDiretoInfo').html('<i class=\"fa fa-mobile\"></i> Aparelho #' + id + ' <br><span class=\"text-danger\">' + termoCelularEscape(msg) + '</span>');
+                    $('#termoCelularDiretoBtn').prop('disabled', true);
+                });
+            }
+            function termoCelularEnviarDiretoConfirmar() {
+                if (TERMOCEL_DIRETO_ID <= 0) { alert('Aparelho inválido.'); return; }
+                $('#termoCelularDiretoBtn').prop('disabled', true);
+                $('#termoCelularDiretoProgresso').show();
+                $('#termoCelularDiretoResultado').html('').hide();
+                var params = {
+                    aparelhos: [TERMOCEL_DIRETO_ID],
+                    modelo_id: parseInt($('#termoCelularDiretoModelo').val(), 10) || 0,
+                    validar_icp: $('#termoCelularDiretoIcp').val(),
+                    enviar_email: $('#termoCelularDiretoEmail').val(),
+                    forcar: $('#termoCelularDiretoForcar').val(),
+                    prazo_expiracao_dias: parseInt($('#termoCelularDiretoPrazo').val(), 10) || 0,
+                    hierarquia: $('#termoCelularDiretoHier').val()
+                };
+                $.ajax({
+                    url: 'documentos/termos/processar_termos_aparelhos.php',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(params),
+                    dataType: 'json'
+                }).done(function(res) {
+                    var okC = 0, errC = 0, resumo = [];
+                    if (res && Array.isArray(res.resultados)) {
+                        $.each(res.resultados, function(i, r) {
+                            if (r.ok) { okC++; } else { errC++; }
+                            resumo.push((r.ok ? 'OK' : 'ERRO') + ' - ' + (r.msg || ''));
+                        });
+                    } else {
+                        errC++; resumo.push('ERRO - ' + ((res && res.error) ? res.error : 'resposta inválida.'));
+                    }
+                    $('#termoCelularDiretoBarra').css('width', '100%');
+                    $('#termoCelularDiretoTexto').text('Concluído.');
+                    $('#termoCelularDiretoResultado').html('<b>Resumo: ' + okC + ' OK | ' + errC + ' erro(s)</b><br>' + resumo.join('<br>')).show();
+                    $('#termoCelularDiretoBtn').prop('disabled', false);
+                }).fail(function(xhr) {
+                    var detalhe = 'falha de comunicação.';
+                    if (xhr) {
+                        if (xhr.responseJSON && xhr.responseJSON.error) { detalhe = xhr.responseJSON.error; }
+                        else if (xhr.responseText) { detalhe = xhr.responseText.replace(/<[^>]*>/g, '').trim().substring(0, 200); }
+                        else if (xhr.status) { detalhe = 'HTTP ' + xhr.status + ' ' + (xhr.statusText || ''); }
+                    }
+                    $('#termoCelularDiretoResultado').html('ERRO - ' + detalhe).show();
+                    $('#termoCelularDiretoBtn').prop('disabled', false);
+                });
+            }
+        </script>
+        ";
+    }
+
     function index(){
         garantirEstruturaTermosCelular();
         echo "<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css'>";
@@ -1157,9 +2024,23 @@
         cabecalho("Cadastro de Celulares");
         formCelular();
         if(empty($_POST["id"])){
+            // Sincroniza status de assinatura dos termos dos aparelhos listados.
+            if(function_exists("termos_sincronizar_registro")){
+                $resSync = query("SELECT * FROM termo_gerado WHERE terg_nb_ativo IS NOT NULL AND terg_tx_status IN ('aguardando_assinatura','notificado','visualizado','gerado')");
+                if($resSync instanceof mysqli_result){
+                    while($rs = mysqli_fetch_assoc($resSync)){
+                        termos_sincronizar_registro($rs);
+                    }
+                }
+            }
             listarCelulares();
             modalVincularTermoCelular();
             modalEnviarTermoCelular();
+            modalLoteTermosCelular();
+            modalHistoricoCelular();
+            modalStatusCelular();
+            modalEnviarTermoDiretoCelular();
+            echo "<script>function limparFiltrosCelular(){ if(!window.\$) return; $('form[name=\"contex_form\"] :input').each(function(){ if(this.type!=='hidden' && this.name!=='acao' && this.name!=='id'){ $(this).val(''); } }); if(typeof consultarRegistros==='function'){ consultarRegistros(); } }</script>";
         }
         rodape();
     }

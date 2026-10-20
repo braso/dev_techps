@@ -376,6 +376,15 @@ function termos_listar_ativos(): array {
 		 ORDER BY c.celu_tx_nome ASC"
 	);
 	while($res && ($r = mysqli_fetch_assoc($res))){
+		$ids = [];
+		$principal = intval($r["celu_nb_modelo_termo"] ?? 0);
+		if($principal > 0){ $ids[] = $principal; }
+		$resM = query("SELECT cetm_nb_modelo FROM celular_termo WHERE cetm_nb_celular = ?", "i", [intval($r["celu_nb_id"])]);
+		while($resM && ($rm = mysqli_fetch_assoc($resM))){
+			$mid = intval($rm["cetm_nb_modelo"] ?? 0);
+			if($mid > 0 && !in_array($mid, $ids, true)){ $ids[] = $mid; }
+		}
+		$r["modelos_termo"] = implode(",", $ids);
 		$r["rotulo"] = termos_rotulo_ativo($r);
 		$out[] = $r;
 	}
@@ -383,18 +392,18 @@ function termos_listar_ativos(): array {
 }
 
 function termos_ativo_vinculado_modelo(int $modeloId, int $entiId = 0): int {
-	if($modeloId <= 0 || !termos_tabela_ativo_existe() || !termos_coluna_link_termo_existe()){
+	if($modeloId <= 0 || !termos_tabela_ativo_existe()){
 		return 0;
 	}
-	$sql = "SELECT celu_nb_id FROM celular WHERE celu_nb_modelo_termo = ?";
-	$types = "i";
-	$vars = [$modeloId];
+	$sql = "SELECT c.celu_nb_id FROM celular c LEFT JOIN celular_termo ct ON ct.cetm_nb_celular = c.celu_nb_id WHERE (c.celu_nb_modelo_termo = ? OR ct.cetm_nb_modelo = ?)";
+	$types = "ii";
+	$vars = [$modeloId, $modeloId];
 	if($entiId > 0){
-		$sql .= " AND celu_nb_entidade = ?";
+		$sql .= " AND c.celu_nb_entidade = ?";
 		$types .= "i";
 		$vars[] = $entiId;
 	}
-	$sql .= " ORDER BY celu_nb_id ASC LIMIT 1";
+	$sql .= " ORDER BY c.celu_nb_id ASC LIMIT 1";
 	$res = query($sql, $types, $vars);
 	if($res instanceof mysqli_result && ($row = mysqli_fetch_assoc($res))){
 		return intval($row["celu_nb_id"]);

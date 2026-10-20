@@ -35,5 +35,6 @@ package.json
 # Provisionador: dados gerados no servidor
 /empresas.json
 
-# credenciais de SMTP compartilhadas (nunca versionar)
-smtp_credenciais.php
+# Historico local de alteracoes (nao versionar)
+HISTORICO_ALTERACOES.md
+HISTORICO_ALTERACOES.txt
