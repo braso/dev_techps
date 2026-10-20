@@ -1,0 +1,79 @@
+[2026-10-19 17:49:27] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=celular_termo_vinculado detalhe=Equipamento #5 vinculado ao modelo #3 modelo=celuar
+[2026-10-19 19:18:21] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=modelo_criado detalhe=Modelo #5 criado nome=Devoliç~cao
+[2026-10-19 19:18:33] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=celular_termos_vinculados detalhe=Equipamento #6 teve termos vinculados atualizados qtd=2
+[2026-10-19 19:18:37] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=celular_termos_vinculados detalhe=Equipamento #7 teve termos vinculados atualizados qtd=2
+[2026-10-19 19:18:41] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=celular_termos_vinculados detalhe=Equipamento #8 teve termos vinculados atualizados qtd=2
+[2026-10-19 19:18:46] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=celular_termos_vinculados detalhe=Equipamento #10 teve termos vinculados atualizados qtd=2
+[2026-10-19 19:18:50] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=celular_termos_vinculados detalhe=Equipamento #11 teve termos vinculados atualizados qtd=1
+[2026-10-19 19:18:53] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=celular_termos_vinculados detalhe=Equipamento #11 teve termos vinculados atualizados qtd=2
+[2026-10-19 19:18:56] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=celular_termos_vinculados detalhe=Equipamento #12 teve termos vinculados atualizados qtd=2
+[2026-10-19 19:18:59] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=celular_termos_vinculados detalhe=Equipamento #14 teve termos vinculados atualizados qtd=2
+[2026-10-19 19:19:02] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=celular_termos_vinculados detalhe=Equipamento #15 teve termos vinculados atualizados qtd=2
+[2026-10-19 19:25:28] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=203 termo=4 solicitacao=31
+[2026-10-19 19:25:29] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=204 termo=5 solicitacao=32
+[2026-10-19 19:25:29] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=206 termo=6 solicitacao=33
+[2026-10-19 19:25:30] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=207 termo=7 solicitacao=34
+[2026-10-19 19:25:30] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=208 termo=8 solicitacao=35
+[2026-10-19 19:25:31] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=201 termo=9 solicitacao=36
+[2026-10-19 19:25:31] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=204 termo=10 solicitacao=37
+[2026-10-19 19:25:32] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=206 termo=11 solicitacao=38
+[2026-10-19 19:26:14] user=adm(0) ip=::ffff:172.18.0.1 evento=acesso_negado detalhe=Tentativa de processamento de aparelhos sem permissão
+[2026-10-19 19:26:23] user=adm(0) ip=::ffff:172.18.0.1 evento=acesso_negado detalhe=Tentativa de processamento sem permissão
+[2026-10-19 19:27:36] user=adm(1) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=201 termo=12 solicitacao=39
+[2026-10-19 19:33:14] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=201 termo=13 solicitacao=40
+[2026-10-19 19:33:14] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=203 termo=14 solicitacao=41
+[2026-10-19 19:33:15] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=204 termo=15 solicitacao=42
+[2026-10-19 19:33:15] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=206 termo=16 solicitacao=43
+[2026-10-19 19:33:16] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=207 termo=17 solicitacao=44
+[2026-10-19 19:33:16] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=208 termo=18 solicitacao=45
+[2026-10-19 19:33:17] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=201 termo=19 solicitacao=46
+[2026-10-19 19:33:17] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=204 termo=20 solicitacao=47
+[2026-10-19 19:33:17] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=206 termo=21 solicitacao=48
+[2026-10-19 19:33:29] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=201 termo=22 solicitacao=49
+[2026-10-19 19:33:29] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=203 termo=23 solicitacao=50
+[2026-10-19 19:33:30] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=204 termo=24 solicitacao=51
+[2026-10-19 19:33:30] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=206 termo=25 solicitacao=52
+[2026-10-19 19:33:31] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=207 termo=26 solicitacao=53
+[2026-10-19 19:33:31] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=208 termo=27 solicitacao=54
+[2026-10-19 19:33:31] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=201 termo=28 solicitacao=55
+[2026-10-19 19:33:32] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=204 termo=29 solicitacao=56
+[2026-10-19 19:33:32] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=206 termo=30 solicitacao=57
+[2026-10-19 19:44:58] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=201 termo=31 solicitacao=58
+[2026-10-19 19:44:58] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=203 termo=32 solicitacao=59
+[2026-10-19 19:44:59] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=204 termo=33 solicitacao=60
+[2026-10-19 19:44:59] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=206 termo=34 solicitacao=61
+[2026-10-19 19:45:00] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=207 termo=35 solicitacao=62
+[2026-10-19 19:45:00] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=208 termo=36 solicitacao=63
+[2026-10-19 19:45:01] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=201 termo=37 solicitacao=64
+[2026-10-19 19:45:01] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=204 termo=38 solicitacao=65
+[2026-10-19 19:45:01] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=206 termo=39 solicitacao=66
+[2026-10-19 19:49:44] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=sincronizar detalhe=Termo #7 marcado como assinado solicitacao=34
+[2026-10-19 19:49:44] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=sincronizar detalhe=Termo #17 marcado como assinado solicitacao=44
+[2026-10-19 19:49:44] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=sincronizar detalhe=Termo #26 marcado como assinado solicitacao=53
+[2026-10-19 19:49:44] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=sincronizar detalhe=Termo #35 marcado como assinado solicitacao=62
+[2026-10-19 19:53:53] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=5 entidade=201 termo=40 solicitacao=67
+[2026-10-19 19:53:54] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=5 entidade=203 termo=41 solicitacao=68
+[2026-10-19 19:53:54] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=5 entidade=207 termo=42 solicitacao=69
+[2026-10-19 20:02:32] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=201 termo=43 solicitacao=70
+[2026-10-19 20:02:32] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=203 termo=44 solicitacao=71
+[2026-10-19 20:02:33] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=204 termo=45 solicitacao=72
+[2026-10-19 20:02:33] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=207 termo=46 solicitacao=73
+[2026-10-19 20:02:34] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=201 termo=47 solicitacao=74
+[2026-10-19 20:03:30] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=sincronizar detalhe=Termo #42 marcado como assinado solicitacao=69
+[2026-10-19 20:03:30] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=sincronizar detalhe=Termo #46 marcado como assinado solicitacao=73
+[2026-10-19 20:03:52] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=201 termo=48 solicitacao=75
+[2026-10-19 20:03:53] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=203 termo=49 solicitacao=76
+[2026-10-19 20:03:53] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=204 termo=50 solicitacao=77
+[2026-10-19 20:03:53] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=207 termo=51 solicitacao=78
+[2026-10-19 20:03:54] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=201 termo=52 solicitacao=79
+[2026-10-19 20:05:47] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=sincronizar detalhe=Termo #51 marcado como assinado solicitacao=78
+[2026-10-19 20:05:58] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=201 termo=53 solicitacao=80
+[2026-10-19 20:05:58] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=5 entidade=201 termo=54 solicitacao=81
+[2026-10-19 20:05:58] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=203 termo=55 solicitacao=82
+[2026-10-19 20:05:58] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=5 entidade=203 termo=56 solicitacao=83
+[2026-10-19 20:05:59] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=204 termo=57 solicitacao=84
+[2026-10-19 20:05:59] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=207 termo=58 solicitacao=85
+[2026-10-19 20:05:59] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=5 entidade=207 termo=59 solicitacao=86
+[2026-10-19 20:06:00] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=201 termo=60 solicitacao=87
+[2026-10-19 20:09:16] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=3 entidade=209 termo=61 solicitacao=88
+[2026-10-19 20:09:16] user=Techps.admin(141) ip=::ffff:172.18.0.1 evento=gerado detalhe=Termo gerado e enviado para assinatura modelo=5 entidade=209 termo=62 solicitacao=89
