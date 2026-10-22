@@ -136,6 +136,11 @@
 					"/treinamento/treinamento_chat_gestao.php" => "Conversas de Treinamentos",
 				],
 			];
+			// Logs do Sistema: atalho apenas para Super Administrador, na aba de Relatórios.
+			if(stripos(strval($_SESSION["user_tx_nivel"] ?? ""), "Super Administrador") !== false){
+				if(!isset($paginas["relatórios"])) $paginas["relatórios"] = [];
+				$paginas["relatórios"]["/logs_sistema.php"] = "Logs do Sistema";
+			}
 			$path = strtolower($_SERVER['REQUEST_URI']);
 			$showComunicado = (strpos($path, "/techps") !== false);
 
