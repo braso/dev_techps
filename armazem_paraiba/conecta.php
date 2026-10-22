@@ -435,6 +435,10 @@
     // Jornada se a jornada contínua (Entrada até a batida) tiver cumprido 6 horas.
     bancoGarantirColuna($conn, "parametro", "para_tx_almocoPreJornada6h", "ENUM('sim','nao') NOT NULL DEFAULT 'sim'");
 
+    // Migração da tabela parametro: flag para registrar o horário do almoço sem gerar
+    // alerta de não conformidade (independente do tempo de almoço). Quando ligada, o
+    // sistema apenas registra o almoço no espelho, sem alerta. Padrão: nao (fluxo normal).
+    bancoGarantirColuna($conn, "parametro", "para_tx_almocoSemAlerta", "ENUM('sim','nao') NOT NULL DEFAULT 'nao'");
     // Criação da tabela feriado_funcionario se não existir
     bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS feriado_funcionario (
         fefi_nb_id INT AUTO_INCREMENT PRIMARY KEY,

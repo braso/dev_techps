@@ -1583,10 +1583,15 @@
 					}
 
 					$avisoRefeicao = "";
-					if($maiorRefeicao > "02:00"){
-						$avisoRefeicao = "<a><i style='color:orange;' title='Refeição com tempo máximo de 02:00h não respeitado.' class='color_orange fa fa-info-circle'></i></a>";
-					}elseif($dtJornada > $dtJornadaMinima && $maiorRefeicao < '01:00'){
-						$avisoRefeicao = "<a><i style='color:red;' title='Refeição ininterrupta maior do que 01:00h não respeitado.' class='color_red fa fa-warning'></i></a>";
+					// Flag "Registrar horário do almoço sem gerar alerta": quando ligada, apenas
+					// registra o almoço, sem alerta de não conformidade, independente do tempo.
+					$almocoSemAlerta = (($motorista["para_tx_almocoSemAlerta"] ?? "nao") === "sim");
+					if(!$almocoSemAlerta){
+						if($maiorRefeicao > "02:00"){
+							$avisoRefeicao = "<a><i style='color:orange;' title='Refeição com tempo máximo de 02:00h não respeitado.' class='color_orange fa fa-info-circle'></i></a>";
+						}elseif($dtJornada > $dtJornadaMinima && $maiorRefeicao < '01:00'){
+							$avisoRefeicao = "<a><i style='color:red;' title='Refeição ininterrupta maior do que 01:00h não respeitado.' class='color_red fa fa-warning'></i></a>";
+						}
 					}
 				//}
 

@@ -732,6 +732,7 @@
 			"para_tx_permitirNovaJornadaDiaAnterior" => (($_POST["permitirNovaJornadaDiaAnterior"] ?? "sim") === "nao")? "nao": "sim",
 			"para_tx_almocoPreAssinalado"		=> (($_POST["almocoPreAssinalado"] ?? "nao") === "sim")? "sim": "nao",
 			"para_tx_almocoPreJornada6h"		=> (!empty($_POST["almocoPreJornada6h"])? "sim": "nao"),
+			"para_tx_almocoSemAlerta"			=> (($_POST["almocoSemAlerta"] ?? "nao") === "sim")? "sim": "nao",
 		];
 
 		if(!empty($_POST["ignorarCampos"]) || $_POST["ignorarCampos"] == null){
@@ -752,6 +753,7 @@
 			unset($novoParametro["para_tx_permitirNovaJornadaDiaAnterior"]);
 			unset($novoParametro["para_tx_almocoPreAssinalado"]);
 			unset($novoParametro["para_tx_almocoPreJornada6h"]);
+			unset($novoParametro["para_tx_almocoSemAlerta"]);
 		}
 
 		if(($_POST["almocoPreAssinalado"] ?? "nao") !== "sim"){
@@ -1042,6 +1044,13 @@
 						Almoço pré assinalado somente após 6h de jornada contínua
 					</label>
 					<small class='text-muted' style='display:block; margin-top:4px; overflow-wrap:break-word; word-break:break-word;'>Quando marcado e 'Almoço pré assinalado?' = Sim, o almoço automático só é lançado no Fim Jornada se a jornada contínua (Entrada até a batida) tiver cumprido 6 horas.</small>
+				</div>",
+				"<div class='col-sm-4 margin-bottom-5 campo-acordo-totem' style='min-width:0;'>
+					<label style='font-weight:normal; margin-top:22px; display:flex; align-items:center; gap:6px; cursor:pointer;'>
+						<input type='checkbox' name='almocoSemAlerta' value='sim' ".((($a_mod["para_tx_almocoSemAlerta"]?? "nao") == "sim")? "checked": "").">
+						Registrar horário do almoço sem gerar alerta
+					</label>
+					<small class='text-muted' style='display:block; margin-top:4px; overflow-wrap:break-word; word-break:break-word;'>Quando marcado, o sistema apenas registra o horário do almoço no espelho de ponto, sem gerar alerta de não conformidade, independente do tempo de almoço. Quando desmarcado, segue o fluxo normal.</small>
 				</div>"
 			],
 			[
