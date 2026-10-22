@@ -1,5 +1,7 @@
 <?php
 
+@include_once dirname(__DIR__)."/funcoes_log.php";
+
 // Wrapper seguro para query; evita quebrar o fluxo em erro de banco.
 function diar_query($sql, $types = '', $vars = array()) {
     try {
@@ -35,67 +37,54 @@ function diar_sessao($k, $d = null) {
 
 // Escreve trilha tecnica no arquivo de debug do modulo de diarias.
 function diar_log_runtime($mensagem) {
-    $linha = date('Y-m-d H:i:s')." | ".$mensagem.PHP_EOL;
-    @file_put_contents(dirname(__DIR__)."/debug_log_diarias.txt", $linha, FILE_APPEND);
+    if(function_exists("registrar_log")){
+        registrar_log("diarias", "runtime", strval($mensagem), [], "debug");
+    }
 }
 
 /* ==========================================================================
-   LOGS DE NEGOCIO — arquivo texto diario (mesmo padrao do modulo de documentos)
+   LOGS DE NEGOCIO — persistidos em banco (tabela log_sistema), mesmo padrao
+   do modulo de documentos/termos.
    ========================================================================== */
 
-// Diretorio dos logs do modulo.
-function diar_logsDir() {
-    return __DIR__."/logs";
-}
-
-// Arquivo de log do dia atual.
-function diar_logArquivoAtual() {
-    return diar_logsDir()."/diarias_".date("Y-m-d").".txt";
-}
-
-// Registra um evento de negocio no log diario do modulo.
+// Registra um evento de negocio no log do modulo (banco).
 function diar_logEvento($evento, $detalhe = '', $extra = array()) {
-    $dir = diar_logsDir();
-    if (!is_dir($dir)) { @mkdir($dir, 0777, true); }
-    if (!is_dir($dir)) { return; }
+    if(!function_exists("registrar_log")){
+        return;
+    }
     $usuario = intval(diar_sessao('user_nb_id', 0));
     $login = trim(strval(diar_sessao('user_tx_login', '')));
     $ip = trim(strval(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : ''));
-    $detalhe = preg_replace('/[\r\n]+/', ' ', trim(strval($detalhe)));
-    $extraStr = '';
-    if (is_array($extra)) {
-        foreach ($extra as $k => $v) {
-            $extraStr .= ' '.$k.'='.preg_replace('/[\r\n\s]+/', '_', strval($v));
-        }
-    }
-    $linha = sprintf(
-        "[%s] user=%s(%d) ip=%s evento=%s detalhe=%s%s\n",
-        date("Y-m-d H:i:s"),
-        $login,
-        $usuario,
-        $ip,
+    registrar_log(
+        "diarias",
         strval($evento),
-        $detalhe,
-        $extraStr
+        preg_replace('/[\r\n]+/', ' ', trim(strval($detalhe))),
+        is_array($extra) ? $extra : array(),
+        "info",
+        [
+            "usuario" => $usuario,
+            "login" => $login,
+            "ip" => $ip,
+        ]
     );
-    @file_put_contents(diar_logArquivoAtual(), $linha, FILE_APPEND | LOCK_EX);
-    diar_logLimpar(30);
+    if(function_exists("log_limpar")){
+        log_limpar("diarias", 30);
+    }
 }
 
-// Remove arquivos de log mais antigos que $dias (retencao padrao: 30 dias).
+// Mantido por compatibilidade; agora limpa no banco.
 function diar_logLimpar($dias = 30) {
-    $dias = intval($dias);
-    if ($dias <= 0) { return; }
-    $dir = diar_logsDir();
-    if (!is_dir($dir)) { return; }
-    $corte = strtotime('-'.$dias.' days');
-    $arquivos = glob($dir."/diarias_*.txt");
-    if (!is_array($arquivos)) { return; }
-    foreach ($arquivos as $arquivo) {
-        if (!preg_match('/diarias_(\d{4}-\d{2}-\d{2})\.txt$/', basename($arquivo), $m)) { continue; }
-        $ts = strtotime($m[1]);
-        if ($ts !== false && $ts < $corte) { @unlink($arquivo); }
+    if(function_exists("log_limpar")){
+        log_limpar("diarias", intval($dias));
     }
+}
+
+// Mantidos por compatibilidade (nao usados mais).
+function diar_logsDir() {
+    return __DIR__."/logs";
+}
+function diar_logArquivoAtual() {
+    return diar_logsDir()."/diarias_".date("Y-m-d").".txt";
 }
 
 // Verifica se uma coluna existe em uma tabela.
