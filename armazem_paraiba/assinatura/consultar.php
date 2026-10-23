@@ -102,6 +102,17 @@ if ($checkModo && mysqli_num_rows($checkModo) == 0) {
     @mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN modo_envio VARCHAR(30) NULL");
 }
 
+/* Token do formulário de renovação. O renovar_link.php o exige e
+   recusa a requisição sem ele; é o que impede um site de fora de
+   renovar prazos em nome de quem está logado aqui. */
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+if (empty($_SESSION["renovar_token"])) {
+    $_SESSION["renovar_token"] = bin2hex(random_bytes(32));
+}
+$renovarToken = $_SESSION["renovar_token"];
+
 $checkGrupo = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'grupo_envio'");
 if ($checkGrupo && mysqli_num_rows($checkGrupo) == 0) {
     @mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN grupo_envio VARCHAR(64) NULL");
@@ -386,6 +397,9 @@ if (!empty($solicitacoes)) {
         }
         $base["_grupo_envio"] = $gid;
         $base["_grupo_qtd"] = count($grupos[$gid]["ids"]);
+        /* Os ids de todas as solicitações do grupo: renovar o grupo
+           precisa renovar o lote inteiro, não só a linha que o representa. */
+        $base["_grupo_ids"] = $grupos[$gid]["ids"];
         $novas[] = $base;
     }
     $solicitacoes = $novas;
@@ -512,6 +526,11 @@ if (!empty($solicitacoes)) {
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-gray-50 border-b border-gray-200 text-xs uppercase text-gray-500 font-semibold tracking-wider">
+                        <th class="pl-6 pr-2 py-4 w-10">
+                            <input type="checkbox" id="rnvTodos"
+                                   class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                   title="Selecionar todos que podem receber mais prazo">
+                        </th>
                         <th class="px-6 py-4">Documento</th>
                         <th class="px-6 py-4">Data Envio</th>
                         <th class="px-6 py-4">Status</th>
@@ -532,6 +551,9 @@ if (!empty($solicitacoes)) {
                             $modoEnvio = strtolower(trim(strval($row["modo_envio"] ?? "")));
                             $isGovernanca = ($modoEnvio === "governanca");
                             $expiresRaw = trim(strval($row["expires_at"] ?? ""));
+                            /* Pode receber mais prazo quem ainda não fechou: expirado ou
+                               pendente. Concluído não tem o que renovar. */
+                            $podeRenovar = !$completo;
                             $isExpired = false;
                             if (!$completo && $expiresRaw !== "" && $expiresRaw !== "0000-00-00 00:00:00") {
                                 try {
@@ -559,6 +581,24 @@ if (!empty($solicitacoes)) {
                             }
                             $totalSig = is_array($assinantes) ? count($assinantes) : 0;
                             $modalId = $isGrupoEnvio ? ("modal-signatarios-grupo-" . md5($grupoEnvioId)) : ("modal-signatarios-" . $solId);
+
+                            /* Quais solicitações esta linha renova. Linha de grupo de envio
+                               representa várias: renovar só a que aparece deixaria o resto
+                               do lote expirado, e o operador não teria como saber. */
+                            $idsRenovaveis = [];
+                            if ($isGrupoEnvio && !empty($row["_grupo_ids"]) && is_array($row["_grupo_ids"])) {
+                                foreach ($row["_grupo_ids"] as $gidItem) {
+                                    $gidInt = intval($gidItem);
+                                    if ($gidInt > 0) { $idsRenovaveis[] = $gidInt; }
+                                }
+                            } elseif ($solId > 0) {
+                                $idsRenovaveis[] = $solId;
+                            }
+
+                            $rotuloRenovar = trim(strval($row["nome_arquivo_original"] ?? ($row["nome"] ?? "Documento")));
+                            if ($isGrupoEnvio) {
+                                $rotuloRenovar .= " (" . count($idsRenovaveis) . " envios)";
+                            }
 
                             $hasSetorRole = false;
                             if (!$isGovernanca && $modoEnvio === "" && $totalSig > 0) {
@@ -600,6 +640,14 @@ if (!empty($solicitacoes)) {
                             $envioTitle = $modoEnvio !== "" ? ("Modo: " . $modoEnvio) : "";
                         ?>
                         <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="pl-6 pr-2 py-4 align-top">
+                                <?php if ($podeRenovar): ?>
+                                    <input type="checkbox"
+                                           class="rnv-item w-4 h-4 mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                           value="<?php echo htmlspecialchars(implode(",", $idsRenovaveis), ENT_QUOTES, "UTF-8"); ?>"
+                                           data-rotulo="<?php echo htmlspecialchars($rotuloRenovar, ENT_QUOTES, "UTF-8"); ?>">
+                                <?php endif; ?>
+                            </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-3">
                                     <div class="bg-blue-50 text-blue-600 h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -646,6 +694,11 @@ if (!empty($solicitacoes)) {
                                     $raw = trim(strval($row["data_envio"] ?? ($row["created_at"] ?? ($row["data_solicitacao"] ?? ""))));
                                     echo tpFormatDtSp($raw);
                                 ?>
+                                <?php if ($isExpired): ?>
+                                    <div class="text-[11px] text-red-600 font-medium mt-1">
+                                        <i class="far fa-clock"></i> prazo vencido
+                                    </div>
+                                <?php endif; ?>
                             </td>
                             <td class="px-6 py-4">
                                 <?php if ($isExpired): ?>
@@ -791,6 +844,15 @@ if (!empty($solicitacoes)) {
                                     <a href="<?php echo $row['caminho_arquivo']; ?>" target="_blank" class="text-gray-400 hover:text-blue-600 transition-colors" title="Visualizar Documento">
                                         <i class="fas fa-eye"></i>
                                     </a>
+                                    <?php if ($podeRenovar): ?>
+                                        <button type="button"
+                                                class="rnv-um text-gray-400 hover:text-amber-600 transition-colors"
+                                                data-ids="<?php echo htmlspecialchars(implode(",", $idsRenovaveis), ENT_QUOTES, "UTF-8"); ?>"
+                                                data-rotulo="<?php echo htmlspecialchars($rotuloRenovar, ENT_QUOTES, "UTF-8"); ?>"
+                                                title="<?php echo $isExpired ? "Dar mais prazo e reabrir para assinatura" : "Estender o prazo deste envio"; ?>">
+                                            <i class="fas fa-clock-rotate-left"></i>
+                                        </button>
+                                    <?php endif; ?>
                                     <?php if ($completo): ?>
                                         <a href="finalizar.php" class="text-gray-400 hover:text-purple-600 transition-colors" title="Ir para Finalização">
                                             <i class="fas fa-certificate"></i>
@@ -801,7 +863,7 @@ if (!empty($solicitacoes)) {
                         </tr>
                         <?php if ($tipoDocNome !== ""): ?>
                         <tr class="bg-gray-50/60">
-                            <td colspan="6" class="px-6 pt-0 pb-4">
+                            <td colspan="7" class="px-6 pt-0 pb-4">
                                 <div class="flex items-center gap-2">
                                     <span class="text-xs uppercase tracking-wide text-gray-500 font-semibold">Tipo de Documento</span>
                                     <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 font-semibold text-sm">
@@ -815,7 +877,7 @@ if (!empty($solicitacoes)) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                            <td colspan="7" class="px-6 py-12 text-center text-gray-500">
                                 <div class="flex flex-col items-center justify-center">
                                     <i class="far fa-folder-open text-4xl mb-3 text-gray-300"></i>
                                     <p>Nenhum documento encontrado com os filtros selecionados.</p>
@@ -859,10 +921,482 @@ if (isset($hasEnvPaths) && $hasEnvPaths) {
     .select2-container--default .select2-selection--single .select2-selection__rendered{line-height:42px;padding-left:.75rem;padding-right:2.5rem;color:#111827}
     .select2-container--default .select2-selection--single .select2-selection__arrow{height:42px;right:.5rem}
 </style>
+<!-- ─── Dar mais prazo ──────────────────────────────────────────────
+     Aparece ao marcar pelo menos uma linha. Fica fixa no rodapé para o
+     operador não ter de rolar de volta ao topo depois de escolher numa
+     lista longa. -->
+<div id="rnvBarra"
+     class="hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,.08)]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center gap-3">
+        <div class="flex items-center gap-2 text-sm text-gray-700">
+            <i class="fas fa-clock-rotate-left text-amber-500"></i>
+            <strong id="rnvConta">0</strong> selecionado(s)
+        </div>
+        <button type="button" id="rnvLimpar" class="text-xs text-gray-500 hover:text-gray-700 underline">limpar</button>
+        <div class="ml-auto">
+            <button type="button" id="rnvEnviar"
+                    class="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-lg transition-colors">
+                <i class="fas fa-clock-rotate-left mr-1"></i> Dar mais prazo
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ─── Escolher o novo prazo ───────────────────────────────────────
+     A escolha e a confirmação no mesmo lugar, com a data de vencimento
+     calculada à medida que o operador mexe. É a informação que ele quer
+     ver antes de decidir — "mais 7 dias" não diz nada; "vence em 30/10"
+     diz. -->
+<div id="rnvEscolha" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/40" onclick="rnvFecharEscolha()"></div>
+
+    <div class="relative bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                <i class="fas fa-clock-rotate-left text-amber-500"></i> Dar mais prazo
+            </h3>
+            <button type="button" onclick="rnvFecharEscolha()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="px-6 py-5 overflow-y-auto">
+            <p class="text-sm text-gray-600 mb-4">
+                <strong id="rnvEscolhaQtd" class="text-gray-900">0</strong> solicitação(ões) vão receber um novo
+                prazo, contado a partir de hoje.
+            </p>
+
+            <div id="rnvEscolhaLista" class="hidden mb-4 max-h-28 overflow-y-auto rounded-lg bg-gray-50 border border-gray-200 p-3">
+                <ul id="rnvEscolhaItens" class="text-xs text-gray-600 space-y-1"></ul>
+            </div>
+
+            <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+                Quanto tempo a mais
+            </label>
+
+            <!-- Atalhos para os prazos que se usa quase sempre -->
+            <div class="flex flex-wrap gap-2 mb-3" id="rnvAtalhos">
+                <button type="button" data-dias="3"  class="rnv-atalho px-3 py-1.5 text-sm rounded-lg border border-gray-300 hover:border-amber-400 hover:bg-amber-50 transition-colors">3 dias</button>
+                <button type="button" data-dias="7"  class="rnv-atalho px-3 py-1.5 text-sm rounded-lg border border-gray-300 hover:border-amber-400 hover:bg-amber-50 transition-colors">7 dias</button>
+                <button type="button" data-dias="15" class="rnv-atalho px-3 py-1.5 text-sm rounded-lg border border-gray-300 hover:border-amber-400 hover:bg-amber-50 transition-colors">15 dias</button>
+                <button type="button" data-dias="30" class="rnv-atalho px-3 py-1.5 text-sm rounded-lg border border-gray-300 hover:border-amber-400 hover:bg-amber-50 transition-colors">30 dias</button>
+            </div>
+
+            <div class="flex items-center gap-2 mb-1">
+                <input type="number" id="rnvDias" value="7" min="1" max="30"
+                       class="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                <span class="text-sm text-gray-600">dias (de 1 a 30)</span>
+            </div>
+            <p id="rnvErroDias" class="hidden text-xs text-red-600 mb-2"></p>
+
+            <p class="text-sm text-gray-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 mt-3">
+                <i class="far fa-calendar-check text-blue-500 mr-1"></i>
+                Novo vencimento: <strong id="rnvVencimento">—</strong>
+            </p>
+
+            <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mt-5 mb-2">
+                O link de assinatura
+            </label>
+
+            <div class="space-y-2">
+                <label class="rnv-opcao flex items-start gap-3 p-3 rounded-lg border border-amber-400 bg-amber-50 cursor-pointer">
+                    <input type="radio" name="rnvLink" value="manter" checked class="mt-1 text-amber-600 focus:ring-amber-500">
+                    <span>
+                        <span class="block text-sm font-semibold text-gray-800">Manter o mesmo link</span>
+                        <span class="block text-xs text-gray-500 mt-0.5">
+                            O link que o signatário já recebeu volta a funcionar. Quem guardou
+                            a mensagem antiga consegue assinar sem precisar de e-mail novo.
+                        </span>
+                    </span>
+                </label>
+
+                <label class="rnv-opcao flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:border-amber-300 cursor-pointer">
+                    <input type="radio" name="rnvLink" value="novo" class="mt-1 text-amber-600 focus:ring-amber-500">
+                    <span>
+                        <span class="block text-sm font-semibold text-gray-800">Gerar link novo</span>
+                        <span class="block text-xs text-gray-500 mt-0.5">
+                            Invalida o link anterior. Use quando o link pode ter sido
+                            repassado para outra pessoa.
+                        </span>
+                    </span>
+                </label>
+            </div>
+
+            <label class="flex items-center gap-2 mt-3 text-sm text-gray-700 cursor-pointer">
+                <input type="checkbox" id="rnvReenviar" checked
+                       class="w-4 h-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500">
+                Avisar os signatários por e-mail
+            </label>
+
+            <p id="rnvAvisoLink" class="hidden text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-3">
+                <i class="fas fa-triangle-exclamation mr-1"></i>
+                O link enviado antes <strong>deixa de funcionar</strong>. Sem o aviso por
+                e-mail, o signatário fica sem como assinar.
+            </p>
+        </div>
+
+        <div class="px-6 py-4 border-t border-gray-200 flex justify-end gap-2">
+            <button type="button" onclick="rnvFecharEscolha()"
+                    class="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50">
+                Cancelar
+            </button>
+            <button type="button" id="rnvConfirmar"
+                    class="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fas fa-paper-plane mr-1"></i> Confirmar e reenviar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Resultado da renovação -->
+<div id="rnvModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/40" onclick="rnvFecharModal()"></div>
+    <div class="relative bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 id="rnvModalTitulo" class="font-bold text-gray-800">Renovação</h3>
+            <button type="button" onclick="rnvFecharModal()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="rnvModalCorpo" class="px-6 py-5 overflow-y-auto text-sm text-gray-700"></div>
+        <div class="px-6 py-4 border-t border-gray-200 flex justify-end">
+            <button type="button" onclick="rnvFecharModal()" class="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50">
+                Fechar
+            </button>
+        </div>
+    </div>
+</div>
+
 <script src="<?php echo $baseAssets; ?>/contex20/assets/global/plugins/jquery.min.js"></script>
 <script src="<?php echo $baseAssets; ?>/contex20/assets/global/plugins/select2/js/select2.min.js"></script>
 <script src="<?php echo $baseAssets; ?>/contex20/assets/global/plugins/select2/js/i18n/pt-BR.js"></script>
 <script>
+/* ─── Dar mais prazo ────────────────────────────────────────────────────
+   Conversa com o renovar_link.php, que já existia pronto: ele renova o
+   expires_at, reabre a solicitação expirada como 'pendente' (ou
+   'em_progresso' se alguém já assinou), gera um token NOVO para cada
+   signatário pendente — o link antigo morre, e é assim que tem de ser —
+   e reenvia o e-mail.
+
+   O token de sessão é obrigatório do outro lado: sem ele a renovação é
+   recusada, e é o que impede uma página de fora de renovar prazos em
+   nome de quem está logado aqui. */
+(function () {
+    "use strict";
+
+    var TOKEN = <?php echo json_encode($renovarToken); ?>;
+    var ENDPOINT = "renovar_link.php";
+
+    var barra     = document.getElementById("rnvBarra");
+    var escolha   = document.getElementById("rnvEscolha");
+    var escQtd    = document.getElementById("rnvEscolhaQtd");
+    var escLista  = document.getElementById("rnvEscolhaLista");
+    var escItens  = document.getElementById("rnvEscolhaItens");
+    var confirmar = document.getElementById("rnvConfirmar");
+    var vencEl    = document.getElementById("rnvVencimento");
+    var erroDias  = document.getElementById("rnvErroDias");
+
+    /* O que o modal vai renovar quando o operador confirmar. */
+    var pendente = { ids: [], rotulos: [] };
+    var conta   = document.getElementById("rnvConta");
+    var dias    = document.getElementById("rnvDias");
+    var enviar  = document.getElementById("rnvEnviar");
+    var limpar  = document.getElementById("rnvLimpar");
+    var todos   = document.getElementById("rnvTodos");
+    var modal   = document.getElementById("rnvModal");
+    var titulo  = document.getElementById("rnvModalTitulo");
+    var corpo   = document.getElementById("rnvModalCorpo");
+
+    /* A tela existe sem a barra quando não há nada renovável na página. */
+    if (!barra || !enviar) { return; }
+
+    function marcados() {
+        return Array.prototype.slice.call(document.querySelectorAll(".rnv-item:checked"));
+    }
+
+    function atualizarBarra() {
+        var n = marcados().length;
+        conta.textContent = n;
+        barra.classList.toggle("hidden", n === 0);
+        /* Espaço no fim da página para a barra fixa não cobrir a última
+           linha da tabela. */
+        document.body.style.paddingBottom = n > 0 ? "80px" : "";
+
+        if (todos) {
+            var itens = document.querySelectorAll(".rnv-item");
+            todos.checked = itens.length > 0 && n === itens.length;
+            todos.indeterminate = n > 0 && n < itens.length;
+        }
+    }
+
+    document.addEventListener("change", function (e) {
+        if (e.target.classList && e.target.classList.contains("rnv-item")) {
+            atualizarBarra();
+        }
+    });
+
+    if (todos) {
+        todos.addEventListener("change", function () {
+            document.querySelectorAll(".rnv-item").forEach(function (c) {
+                c.checked = todos.checked;
+            });
+            atualizarBarra();
+        });
+    }
+
+    if (limpar) {
+        limpar.addEventListener("click", function () {
+            document.querySelectorAll(".rnv-item").forEach(function (c) { c.checked = false; });
+            atualizarBarra();
+        });
+    }
+
+    function abrirModal(tit, html) {
+        titulo.textContent = tit;
+        corpo.innerHTML = html;
+        modal.classList.remove("hidden");
+    }
+
+    window.rnvFecharModal = function () {
+        modal.classList.add("hidden");
+        /* Depois de renovar, a lista na tela está velha: os status e as
+           datas mudaram no banco. Recarrega para o operador não agir sobre
+           informação vencida. */
+        if (modal.dataset.recarregar === "sim") { window.location.reload(); }
+    };
+
+    function escapar(texto) {
+        var d = document.createElement("div");
+        d.textContent = String(texto == null ? "" : texto);
+        return d.innerHTML;
+    }
+
+    /* ── O modal de escolha ──────────────────────────────────────────
+       `ids` é a lista achatada de todas as solicitações escolhidas: cada
+       caixa pode carregar mais de um id, porque uma linha de grupo de
+       envio representa o lote inteiro. */
+    function abrirEscolha(ids, rotulos) {
+        if (!ids.length) { return; }
+
+        pendente.ids = ids;
+        pendente.rotulos = rotulos || [];
+
+        escQtd.textContent = ids.length;
+
+        escItens.innerHTML = "";
+        var nomes = pendente.rotulos.filter(Boolean);
+        if (nomes.length) {
+            nomes.slice(0, 12).forEach(function (r) {
+                var li = document.createElement("li");
+                li.textContent = "• " + r;
+                escItens.appendChild(li);
+            });
+            if (nomes.length > 12) {
+                var resto = document.createElement("li");
+                resto.className = "text-gray-400";
+                resto.textContent = "e mais " + (nomes.length - 12) + "…";
+                escItens.appendChild(resto);
+            }
+            escLista.classList.remove("hidden");
+        } else {
+            escLista.classList.add("hidden");
+        }
+
+        erroDias.classList.add("hidden");
+        /* Sempre reabre no padrão — manter o link e avisar. Guardar a
+           escolha anterior faria o operador renovar o lote seguinte com
+           uma opção que ele não conferiu. */
+        var padrao = document.querySelector('input[name="rnvLink"][value="manter"]');
+        if (padrao) { padrao.checked = true; }
+        if (campoReenviar) { campoReenviar.checked = true; }
+        revisarAviso();
+        atualizarVencimento();
+        escolha.classList.remove("hidden");
+        dias.focus();
+        dias.select();
+    }
+
+    window.rnvFecharEscolha = function () {
+        escolha.classList.add("hidden");
+        pendente = { ids: [], rotulos: [] };
+    };
+
+    /* Mostra a data em que o novo prazo vence. "Mais 7 dias" não diz
+       nada para quem precisa avisar o signatário; "vence em 30/10" diz. */
+    function atualizarVencimento() {
+        var n = parseInt(dias.value, 10);
+        if (!n || n < 1 || n > 30) {
+            vencEl.textContent = "—";
+            return false;
+        }
+        var d = new Date();
+        d.setDate(d.getDate() + n);
+        vencEl.textContent = d.toLocaleDateString("pt-BR", {
+            day: "2-digit", month: "2-digit", year: "numeric"
+        });
+        return true;
+    }
+
+    dias.addEventListener("input", function () {
+        erroDias.classList.add("hidden");
+        atualizarVencimento();
+    });
+
+    document.querySelectorAll(".rnv-atalho").forEach(function (b) {
+        b.addEventListener("click", function () {
+            dias.value = b.dataset.dias;
+            erroDias.classList.add("hidden");
+            atualizarVencimento();
+            /* Marca visualmente qual atalho está valendo */
+            document.querySelectorAll(".rnv-atalho").forEach(function (o) {
+                o.classList.remove("border-amber-500", "bg-amber-50", "text-amber-700", "font-semibold");
+            });
+            b.classList.add("border-amber-500", "bg-amber-50", "text-amber-700", "font-semibold");
+        });
+    });
+
+    /* Enter no campo confirma; Esc fecha. */
+    dias.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); confirmar.click(); }
+    });
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && !escolha.classList.contains("hidden")) { window.rnvFecharEscolha(); }
+    });
+
+    confirmar.addEventListener("click", function () {
+        var qtdDias = parseInt(dias.value, 10);
+
+        if (!qtdDias || qtdDias < 1 || qtdDias > 30) {
+            erroDias.textContent = "Informe um número de 1 a 30.";
+            erroDias.classList.remove("hidden");
+            dias.focus();
+            return;
+        }
+
+        executar(pendente.ids, qtdDias);
+    });
+
+    var campoReenviar = document.getElementById("rnvReenviar");
+
+    function linkEscolhido() {
+        var m = document.querySelector('input[name="rnvLink"]:checked');
+        return m ? m.value : "manter";
+    }
+
+    /* Gerar link novo SEM avisar ninguém deixa o signatário sem saída: o
+       link que ele tem morreu e o novo não chegou. O botão fica vermelho
+       só nessa combinação — é o único jeito de a ação dar errado em
+       silêncio. */
+    function revisarAviso() {
+        var novo = linkEscolhido() === "novo";
+        var semAviso = campoReenviar && !campoReenviar.checked;
+        var caixa = document.getElementById("rnvAvisoLink");
+
+        if (caixa) { caixa.classList.toggle("hidden", !novo); }
+
+        document.querySelectorAll(".rnv-opcao").forEach(function (op) {
+            var marcado = op.querySelector("input").checked;
+            op.classList.toggle("border-amber-400", marcado);
+            op.classList.toggle("bg-amber-50", marcado);
+            op.classList.toggle("border-gray-200", !marcado);
+        });
+
+        if (confirmar) {
+            var perigo = novo && semAviso;
+            confirmar.classList.toggle("bg-red-600", perigo);
+            confirmar.classList.toggle("hover:bg-red-700", perigo);
+            confirmar.classList.toggle("bg-amber-500", !perigo);
+            confirmar.classList.toggle("hover:bg-amber-600", !perigo);
+        }
+    }
+
+    document.querySelectorAll('input[name="rnvLink"]').forEach(function (r) {
+        r.addEventListener("change", revisarAviso);
+    });
+    if (campoReenviar) { campoReenviar.addEventListener("change", revisarAviso); }
+
+    function executar(ids, qtdDias) {
+        var dadosForm = new FormData();
+        ids.forEach(function (id) { dadosForm.append("ids[]", id); });
+        dadosForm.append("extra_dias", qtdDias);
+        dadosForm.append("renovar_token", TOKEN);
+        dadosForm.append("manter_link", linkEscolhido() === "manter" ? "sim" : "nao");
+        dadosForm.append("reenviar_email", campoReenviar && campoReenviar.checked ? "sim" : "nao");
+
+        confirmar.disabled = true;
+        var textoOriginal = confirmar.innerHTML;
+        confirmar.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Renovando…';
+
+        fetch(ENDPOINT, { method: "POST", body: dadosForm, credentials: "same-origin" })
+            .then(function (r) { return r.json(); })
+            .then(function (dados) {
+                var detalhes = "";
+                if (dados.details && dados.details.length) {
+                    detalhes = "<ul class=\"mt-3 text-xs text-gray-600 list-disc pl-5 space-y-1\">"
+                        + dados.details.map(function (d) { return "<li>" + escapar(d) + "</li>"; }).join("")
+                        + "</ul>";
+                }
+                var resumo = "";
+                if (dados.success) {
+                    resumo = '<p class="mt-2 text-xs text-gray-600">'
+                        + (dados.link === "mantido"
+                            ? "O link que os signatários já tinham voltou a funcionar."
+                            : "Foi gerado um link novo; o anterior não vale mais.")
+                        + " "
+                        + (dados.email === "reenviado"
+                            ? "O aviso por e-mail foi disparado."
+                            : "Nenhum e-mail foi enviado.")
+                        + "</p>";
+                }
+                window.rnvFecharEscolha();
+                modal.dataset.recarregar = dados.success ? "sim" : "nao";
+                abrirModal(
+                    dados.success ? "Prazo renovado" : "Não foi possível renovar",
+                    "<p>" + escapar(dados.message || "") + "</p>" + resumo + detalhes
+                );
+            })
+            .catch(function (erro) {
+                /* Falha de rede não é falha de regra: o prazo pode até ter
+                   sido gravado. Por isso a mensagem manda conferir em vez
+                   de afirmar que não funcionou. */
+                window.rnvFecharEscolha();
+                modal.dataset.recarregar = "sim";
+                abrirModal(
+                    "Erro de comunicação",
+                    "<p>Não deu para confirmar o resultado: <strong>" + escapar(erro.message) + "</strong></p>"
+                    + "<p class=\"mt-2 text-gray-600\">Recarregue a lista e confira se o prazo foi renovado antes de tentar de novo.</p>"
+                );
+            })
+            .finally(function () {
+                confirmar.disabled = false;
+                confirmar.innerHTML = textoOriginal;
+            });
+    }
+
+    enviar.addEventListener("click", function () {
+        var ids = [];
+        var rotulos = [];
+        marcados().forEach(function (c) {
+            String(c.value).split(",").forEach(function (id) {
+                id = id.trim();
+                if (id) { ids.push(id); }
+            });
+            rotulos.push(c.dataset.rotulo || "");
+        });
+        abrirEscolha(ids, rotulos);
+    });
+
+    /* O botão do relógio na linha renova só aquele envio, sem marcar nada. */
+    document.addEventListener("click", function (e) {
+        var botao = e.target.closest ? e.target.closest(".rnv-um") : null;
+        if (!botao) { return; }
+        var ids = String(botao.dataset.ids || "").split(",").filter(Boolean);
+        abrirEscolha(ids, [botao.dataset.rotulo || ""]);
+    });
+
+    atualizarBarra();
+})();
+
     function tpOpenModal(id){
         const el = document.getElementById(id);
         if(!el) return;

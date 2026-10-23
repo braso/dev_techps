@@ -3,16 +3,34 @@ $interno = true;
 include __DIR__ . "/../conecta.php";
 include __DIR__ . "/email_config.php";
 include __DIR__ . "/email_helper.php";
+/* A função de envio mora aqui desde que foi tirada do processar_envio.php
+   (incluir aquele arquivo dispararia um envio de verdade). Sem este
+   require, a chamada abaixo abortava com erro fatal DEPOIS de o prazo já
+   ter sido gravado: o prazo valia, o e-mail não saía e a tela não recebia
+   resposta nenhuma. */
+require_once __DIR__ . "/email_assinatura.php";
 
-require __DIR__ . '/../../PHPMailer/src/Exception.php';
-require __DIR__ . '/../../PHPMailer/src/PHPMailer.php';
-require __DIR__ . '/../../PHPMailer/src/SMTP.php';
+require_once __DIR__ . '/../../PHPMailer/src/Exception.php';
+require_once __DIR__ . '/../../PHPMailer/src/PHPMailer.php';
+require_once __DIR__ . '/../../PHPMailer/src/SMTP.php';
 
 header('Content-Type: application/json');
 
 $ids = $_POST['ids'] ?? [];
 $extraDias = intval($_POST['extra_dias'] ?? 0);
 $renovarToken = $_POST['renovar_token'] ?? '';
+
+/* O prazo mora na solicitação (expires_at), não no token: o
+   assinar_via_link.php acha o signatário pelo token e só então consulta o
+   prazo. Estender o prazo, por si só, já faz o link que a pessoa recebeu
+   voltar a funcionar.
+
+   Trocar o token é uma decisão de segurança, não uma necessidade técnica:
+   serve para o caso de o link ter vazado enquanto estava expirado. Por
+   isso virou escolha de quem renova, com o padrão em MANTER — é o que
+   menos atrapalha quem já tem o link no e-mail ou no WhatsApp. */
+$manterLink = (($_POST['manter_link'] ?? 'sim') !== 'nao');
+$reenviarEmail = (($_POST['reenviar_email'] ?? 'sim') !== 'nao');
 
 if (empty($ids) || !is_array($ids)) {
     echo json_encode(['success' => false, 'message' => 'Nenhum documento selecionado.']);
@@ -52,34 +70,19 @@ foreach ($ids as $idSol) {
         continue;
     }
 
-    $dataEnvioRaw = trim(strval($sol['created_at'] ?? $sol['data_solicitacao'] ?? ''));
-    if ($dataEnvioRaw === '' || $dataEnvioRaw === '0000-00-00 00:00:00') {
-        $erros++;
-        $mensagens[] = "Solicitação #$idSol sem data de envio.";
-        continue;
-    }
+    /* O novo prazo conta a partir de HOJE — é o que o UPDATE abaixo faz,
+       com DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY).
 
-    $tsEnvio = strtotime($dataEnvioRaw);
-    if (!$tsEnvio) {
-        $erros++;
-        $mensagens[] = "Solicitação #$idSol com data de envio inválida.";
-        continue;
-    }
+       Havia aqui um teto de "30 menos os dias desde o envio" que
+       contradizia isso e invertia a intenção: um documento enviado há 27
+       dias só podia receber 3 dias de prazo, enquanto um de 31 dias podia
+       receber 30 inteiros. Na prática travava justamente o caso de uso —
+       dar prazo novo a um documento que já expirou faz tempo.
 
-    $diasDecorridos = (int)floor((time() - $tsEnvio) / 86400);
-    if ($diasDecorridos < 0) $diasDecorridos = 0;
-
-    if ($diasDecorridos >= 30) {
-        $maxExtra = 30;
-    } else {
-        $maxExtra = 30 - $diasDecorridos;
-    }
-
-    if ($extraDias > $maxExtra) {
-        $erros++;
-        $mensagens[] = "Solicitação #$idSol: prazo máximo de extensão é $maxExtra dias (enviada há $diasDecorridos dias).";
-        continue;
-    }
+       A validação que vale é a de cima: entre 1 e 30 dias, contados de
+       agora. Se um dia for preciso um teto de vida útil total da
+       solicitação, ele tem de ser explícito e dito ao operador, não
+       derivado da data de envio. */
 
     // Se estava expirada, reabre: 'em_progresso' se alguém já assinou, senão 'pendente'
     @mysqli_query($conn, "UPDATE solicitacoes_assinatura s
@@ -111,13 +114,21 @@ foreach ($ids as $idSol) {
     while ($ass = mysqli_fetch_assoc($resAss)) {
         $temPendentes = true;
         $idAss = intval($ass['id']);
-        $novoToken = bin2hex(random_bytes(32));
+        $tokenAtual = trim(strval($ass['token'] ?? ''));
 
-        $stmtTok = mysqli_prepare($conn, "UPDATE assinantes SET token = ? WHERE id = ?");
-        if ($stmtTok) {
-            mysqli_stmt_bind_param($stmtTok, "si", $novoToken, $idAss);
-            mysqli_stmt_execute($stmtTok);
-            mysqli_stmt_close($stmtTok);
+        if ($manterLink && $tokenAtual !== '') {
+            /* Mesmo link de antes. Nada a gravar: o prazo novo já foi
+               aplicado na solicitação, e é ele que libera o acesso. */
+            $novoToken = $tokenAtual;
+        } else {
+            $novoToken = bin2hex(random_bytes(32));
+
+            $stmtTok = mysqli_prepare($conn, "UPDATE assinantes SET token = ? WHERE id = ?");
+            if ($stmtTok) {
+                mysqli_stmt_bind_param($stmtTok, "si", $novoToken, $idAss);
+                mysqli_stmt_execute($stmtTok);
+                mysqli_stmt_close($stmtTok);
+            }
         }
 
         $email = trim(strval($ass['email']));
@@ -127,7 +138,7 @@ foreach ($ids as $idSol) {
         $idDoc = trim(strval($sol['id_documento'] ?? ''));
         $entiNbId = intval($ass['enti_nb_id'] ?? 0);
 
-        if ($email !== '') {
+        if ($email !== '' && $reenviarEmail) {
             if ($entiNbId > 0) {
                 $baseUrl = assinatura_getBaseUrl();
                 $baseUrl = rtrim($baseUrl !== "" ? $baseUrl : (defined("BASE_URL_ASSINATURA") ? (string)BASE_URL_ASSINATURA : ""), "/");
@@ -137,14 +148,27 @@ foreach ($ids as $idSol) {
                 $stmtNotif = mysqli_prepare($conn, "INSERT INTO notificacoes (notf_nb_entidade, notf_tx_titulo, notf_tx_mensagem, notf_tx_link, notf_tx_tipo) VALUES (?, ?, ?, ?, 'sucesso')");
                 if ($stmtNotif) {
                     $titulo = "Novo prazo para assinatura";
-                    $msg = "O prazo para assinar o documento \"$nomeArquivo\" foi renovado por mais $extraDias dias. Acesse seu link de assinatura.";
+                    $msg = "O prazo para assinar o documento \"$nomeArquivo\" foi renovado por mais $extraDias dias. "
+                        . ($manterLink
+                            ? "O link que você já recebeu voltou a funcionar."
+                            : "Use o link novo desta mensagem: o anterior não vale mais.");
                     mysqli_stmt_bind_param($stmtNotif, "isss", $entiNbId, $titulo, $msg, $linkAssinatura);
                     mysqli_stmt_execute($stmtNotif);
                     mysqli_stmt_close($stmtNotif);
                 }
             }
 
-            enviarEmailAssinatura($email, $nome, $novoToken, $nomeArquivo, $idDoc, $funcao);
+            /* O prazo já está gravado neste ponto. Se o e-mail falhar — SMTP
+               fora do ar, endereço inválido — isso é um aviso, não um motivo
+               para derrubar a requisição e deixar o operador sem resposta
+               achando que nada foi feito. */
+            try {
+                enviarEmailAssinatura($email, $nome, $novoToken, $nomeArquivo, $idDoc, $funcao);
+            } catch (\Throwable $erroEmail) {
+                $mensagens[] = "Solicitação #$idSol: prazo renovado, mas o e-mail para $email não saiu ("
+                    . $erroEmail->getMessage() . "). O link novo está válido; reenvie por outro meio se precisar.";
+                error_log("[renovar_link] falha ao enviar e-mail para $email: " . $erroEmail->getMessage());
+            }
         }
     }
 
@@ -158,5 +182,7 @@ foreach ($ids as $idSol) {
 echo json_encode([
     'success' => $sucesso > 0,
     'message' => "$sucesso documento(s) renovado(s) com sucesso. $erros erro(s).",
+    'link'    => $manterLink ? 'mantido' : 'novo',
+    'email'   => $reenviarEmail ? 'reenviado' : 'nao_enviado',
     'details' => $mensagens
 ]);
