@@ -435,6 +435,37 @@
     // Jornada se a jornada contínua (Entrada até a batida) tiver cumprido 6 horas.
     bancoGarantirColuna($conn, "parametro", "para_tx_almocoPreJornada6h", "ENUM('sim','nao') NOT NULL DEFAULT 'sim'");
 
+    // Tabela unica de logs do sistema (multi-modulo). Substitui os arquivos de log
+    // (ex.: documentos/termos/logs/*.txt) por persistencia em banco.
+    bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS log_sistema (
+        log_nb_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        log_tx_modulo VARCHAR(50) NOT NULL,
+        log_tx_evento VARCHAR(100) NOT NULL,
+        log_tx_nivel ENUM('debug','info','warning','error','critical') NOT NULL DEFAULT 'info',
+        log_tx_detalhe LONGTEXT NULL,
+        log_tx_extra LONGTEXT NULL,
+        log_nb_usuario INT NULL,
+        log_tx_login VARCHAR(150) NULL,
+        log_tx_ip VARCHAR(64) NULL,
+        log_tx_origem VARCHAR(255) NULL,
+        log_tx_recurso_tipo VARCHAR(50) NULL,
+        log_nb_recurso INT NULL,
+        log_tx_metodo VARCHAR(10) NULL,
+        log_tx_uri VARCHAR(500) NULL,
+        log_tx_user_agent VARCHAR(255) NULL,
+        log_tx_session VARCHAR(128) NULL,
+        log_tx_dataCadastro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_modulo (log_tx_modulo),
+        KEY idx_evento (log_tx_evento),
+        KEY idx_nivel (log_tx_nivel),
+        KEY idx_usuario (log_nb_usuario),
+        KEY idx_data (log_tx_dataCadastro),
+        KEY idx_modulo_data (log_tx_modulo, log_tx_dataCadastro)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+    // Migração da tabela parametro: flag para registrar o horário do almoço sem gerar
+    // alerta de não conformidade (independente do tempo de almoço). Quando ligada, o
+    // sistema apenas registra o almoço no espelho, sem alerta. Padrão: nao (fluxo normal).
+    bancoGarantirColuna($conn, "parametro", "para_tx_almocoSemAlerta", "ENUM('sim','nao') NOT NULL DEFAULT 'nao'");
     // Criação da tabela feriado_funcionario se não existir
     bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS feriado_funcionario (
         fefi_nb_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -800,4 +831,4 @@
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_grid.php";
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes_form.php";
 	include_once $_SERVER["DOCUMENT_ROOT"].$_ENV["APP_PATH"]."/contex20/funcoes.php";
-
+	include_once __DIR__."/funcoes_log.php";

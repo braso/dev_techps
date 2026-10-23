@@ -158,65 +158,23 @@ function termos_garantir_tabela_notificacoes($conn = null): void {
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 }
 
-function termos_log_dir(): string {
-	return rtrim(str_replace("\\", "/", TERMOS_DIR), "/") . "/logs";
-}
-
-function termos_log_file_atual(): string {
-	return termos_log_dir() . "/termos_" . date("Y-m-d") . ".txt";
-}
+// Inclusao do helper generico de logs (multi-modulo).
+@include_once TERMOS_MODULO_DIR . "/funcoes_log.php";
 
 function termos_log(string $evento, string $detalhe = "", array $extra = []): void {
-	$dir = termos_log_dir();
-	if(!is_dir($dir)){
-		@mkdir($dir, 0777, true);
-	}
-	if(!is_dir($dir)){
+	if(!function_exists("registrar_log")){
 		return;
 	}
-	$usuario = intval($_SESSION["user_nb_id"] ?? 0);
-	$login = trim(strval($_SESSION["user_tx_login"] ?? ""));
-	$ip = trim(strval($_SERVER["REMOTE_ADDR"] ?? ""));
-	$detalhe = preg_replace('/[\r\n]+/', " ", trim(strval($detalhe)));
-	$extraStr = "";
-	foreach($extra as $k => $v){
-		$extraStr .= " " . $k . "=" . preg_replace('/[\r\n\s]+/', "_", strval($v));
+	registrar_log("termos", $evento, $detalhe, $extra, "info");
+	// Retencao: 30 dias.
+	if(function_exists("log_limpar")){
+		log_limpar("termos", 30);
 	}
-	$linha = sprintf(
-		"[%s] user=%s(%d) ip=%s evento=%s detalhe=%s%s\n",
-		date("Y-m-d H:i:s"),
-		$login,
-		$usuario,
-		$ip,
-		$evento,
-		$detalhe,
-		$extraStr
-	);
-	@file_put_contents(termos_log_file_atual(), $linha, FILE_APPEND | LOCK_EX);
-	termos_log_limpar(30);
 }
 
 function termos_log_limpar(int $dias = 30): void {
-	if($dias <= 0){
-		return;
-	}
-	$dir = termos_log_dir();
-	if(!is_dir($dir)){
-		return;
-	}
-	$corte = strtotime("-" . intval($dias) . " days");
-	$arquivos = glob($dir . "/termos_*.txt");
-	if(!is_array($arquivos)){
-		return;
-	}
-	foreach($arquivos as $arquivo){
-		if(!preg_match('/termos_(\d{4}-\d{2}-\d{2})\.txt$/', basename($arquivo), $m)){
-			continue;
-		}
-		$ts = strtotime($m[1]);
-		if($ts !== false && $ts < $corte){
-			@unlink($arquivo);
-		}
+	if(function_exists("log_limpar")){
+		log_limpar("termos", $dias);
 	}
 }
 
