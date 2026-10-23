@@ -126,7 +126,7 @@ ini_set('display_startup_errors', 1);
 		<img src="<?=$_ENV["URL_BASE"].$_ENV["APP_PATH"]?>/contex20/img/logo.png" style="height:48px;opacity:.8;margin-bottom:32px;" alt="Logo">
 
 		<!-- Relógio -->
-		<div id="totem-hora" style="font-size:96px;font-weight:700;color:#fff;letter-spacing:-2px;line-height:1;font-family:'Open Sans',sans-serif;">00:00</div>
+		<div id="totem-hora" style="font-size:96px;font-weight:700;color:#fff;letter-spacing:-2px;line-height:1;font-family:'Open Sans',sans-serif;">00:00:00</div>
 		<div id="totem-data" style="font-size:22px;color:rgba(255,255,255,.7);margin-top:8px;margin-bottom:48px;font-family:'Open Sans',sans-serif;"></div>
 
 		<!-- Empresa -->
@@ -498,9 +498,10 @@ ini_set('display_startup_errors', 1);
 			const now  = new Date();
 			const h    = String(now.getHours()).padStart(2,'0');
 			const m    = String(now.getMinutes()).padStart(2,'0');
+			const s    = String(now.getSeconds()).padStart(2,'0');
 			const dias = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
 			const meses= ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-			totemHora.textContent = h + ':' + m;
+			totemHora.textContent = h + ':' + m + ':' + s;
 			totemData.textContent = dias[now.getDay()] + ', ' + now.getDate() + ' de ' + meses[now.getMonth()] + ' de ' + now.getFullYear();
 		}
 
@@ -530,7 +531,7 @@ ini_set('display_startup_errors', 1);
 			telaTotem.style.display = 'flex';
 			if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
 			atualizarRelogio();
-			setInterval(atualizarRelogio, 10000);
+			setInterval(atualizarRelogio, 1000);
 			telaTotem.addEventListener('click', abrirCamTotem);
 			// Pré-carrega modelos e câmera em background
 			preCarregarTotem();
