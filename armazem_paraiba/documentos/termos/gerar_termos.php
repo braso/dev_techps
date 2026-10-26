@@ -27,20 +27,13 @@ function termos_hide_loading(): void {
 function termos_opcoes_modelos(): array {
 	$out = ["" => "Selecione..."];
 	$res = query(
-		"SELECT m.mode_nb_id, m.mode_tx_nome, m.mode_tx_notificacao, t.tipo_tx_assinatura
+		"SELECT m.mode_nb_id, m.mode_tx_nome
 		 FROM modelo_termo m
-		 LEFT JOIN tipos_documentos t ON t.tipo_nb_id = m.mode_nb_tipo_doc
 		 WHERE m.mode_tx_status = 'ativo'
 		 ORDER BY m.mode_tx_nome ASC"
 	);
 	while($res && ($r = mysqli_fetch_assoc($res))){
-		$requerAssinatura = strtolower(trim(strval($r["tipo_tx_assinatura"] ?? "nao"))) === "sim";
-		if($requerAssinatura){
-			$suf = " [assinatura]";
-		}else{
-			$suf = strtolower(trim(strval($r["mode_tx_notificacao"] ?? "sim"))) === "nao" ? " [sem notificação]" : " [notificação de visualização]";
-		}
-		$out[intval($r["mode_nb_id"])] = $r["mode_tx_nome"] . $suf;
+		$out[intval($r["mode_nb_id"])] = $r["mode_tx_nome"];
 	}
 	return $out;
 }
@@ -255,7 +248,9 @@ function index() {
 	echo linha_form($fieldsExtras);
 	echo fecha_form($buttons);
 
+	$termosIcpJsVer = @filemtime(__DIR__ . "/js/validar_assinatura_icp.js") ?: 1;
 	echo "
+	<script src='js/validar_assinatura_icp.js?v={$termosIcpJsVer}'></script>
 	<style>
 		.termos-opcoes-linha > div,
 		.termos-opcoes-linha .campo-fit-content {
@@ -297,9 +292,9 @@ function index() {
 		$mapaExistentes = termos_mapa_termos_existentes($filtroModelo, $entidades);
 	}
 
-	$validarIcp = strtolower(trim(strval($_POST["validar_icp"] ?? "nao")));
-	if($validarIcp !== "sim"){
-		$validarIcp = "nao";
+	$modoEnvio = termos_normalizar_modo_envio($_POST["modo_envio"] ?? "");
+	if(!array_key_exists($modoEnvio, termos_opcoes_assinatura_notificacao())){
+		$modoEnvio = "assinatura_eletronica";
 	}
 	$enviarEmail = strtolower(trim(strval($_POST["enviar_email"] ?? "sim")));
 	if($enviarEmail !== "nao"){
@@ -405,25 +400,23 @@ function index() {
 
 		echo "<div class='col-md-12'><div class='portlet light'><div class='portlet-body'>
 			<div class='row termos-opcoes-linha'>
-				<div class='col-sm-2'>" . combo("Validar ICP", "validar_icp", $validarIcp, 12, ["nao" => "Não", "sim" => "Sim"]) . "</div>
+				<div class='col-sm-3'>" . combo("Assinatura/Notificação", "modo_envio", $modoEnvio, 12, termos_opcoes_assinatura_notificacao()) . "</div>
 				<div class='col-sm-2'>" . combo("Enviar e-mail", "enviar_email", $enviarEmail, 12, ["sim" => "Sim", "nao" => "Não"]) . "</div>
 				<div class='col-sm-2'>" . combo("Forçar regeração", "forcar", $forcar, 12, ["nao" => "Não", "sim" => "Sim"]) . "</div>
 				<div class='col-sm-2'>" . campo("Prazo p/ assinatura (dias)", "prazo_expiracao_dias", $prazoDias, 12, "MASCARA_NUMERO", "min='0' max='30'") . "</div>
 				<div class='col-sm-2'>" . campo("Func. por lote", "tamanho_lote", $lote, 12, "MASCARA_NUMERO") . "</div>
-				<div class='col-sm-2' style='padding-top:22px;'>
+				<div class='col-sm-1' style='padding-top:22px;'>
 					<button type='button' id='btn_processar' class='btn btn-success btn-block' onclick='termosProcessar()'>
-						Gerar Selecionados
+						Gerar
 					</button>
 				</div>
 			</div>
 			<div class='row'>
 				<div class='col-sm-12 text-muted' style='font-size:11px; margin-top:4px; overflow-wrap:break-word; word-wrap:break-word;'>
-					<i class='fa fa-info-circle'></i> <b>Assinatura:</b> segue a configuração do <b>Tipo de Documento</b> (Cadastros &gt; Tipo de Documento &gt; Assinatura = Sim/Não). &nbsp;
-					<b>Notificação:</b> quando o tipo não exige assinatura, vale a configuração do modelo (Notificação = Sim/Não): com <b>Sim</b> o funcionário é avisado de que existe um documento para visualizar e o acesso é auditado (data, hora, IP etc.). &nbsp;
-					<b>Validar ICP:</b> assina o PDF final com certificado digital ICP-Brasil ao concluir as assinaturas. &nbsp;
+					<i class='fa fa-info-circle'></i> " . termos_h(termos_ajuda_assinatura_notificacao()) . " &nbsp;
 					<b>Enviar e-mail:</b> envia para cada funcionário o e-mail com o link do documento dele. &nbsp;
-					<b>Forçar regeração:</b> Não pula quem já tem termo gerado/assinado; Sim gera de novo (novo PDF e nova assinatura) mesmo para quem já tem. &nbsp;
-					<b>Prazo p/ assinatura:</b> quantos dias o link de assinatura fica válido (0 = sem prazo de expiração). &nbsp;
+					<b>Forçar regeração:</b> Não pula quem já tem termo gerado/assinado; Sim gera de novo (novo PDF e novo envio) mesmo para quem já tem. &nbsp;
+					<b>Prazo p/ assinatura:</b> quantos dias o link do documento fica válido (0 = sem prazo de expiração). &nbsp;
 					<b>Func. por lote:</b> quantos funcionários são processados por requisição.{$infoAtivo}
 				</div>
 			</div>
@@ -442,6 +435,25 @@ function index() {
 			var TERMOS_EXIGE_ATIVO = " . ($exigeAtivo ? "true" : "false") . ";
 			var TERMOS_MODELO_ATIVO = " . $modeloAtivoJs . ";
 			var TERMOS_ATIVOS = " . $ativosJson . ";
+			var TERMOS_ICP_ENDPOINT = 'verificar_assinatura_icp.php';
+			var TERMOS_TIPO_DOC_EDIT_BASE = '../../cadastro_tipo_doc.php';
+
+			function termosValidarAssinaturaIcp(onOk) {
+				if ($('select[name=modo_envio]').val() !== 'assinatura_icp') {
+					if (typeof onOk === 'function') { onOk(); }
+					return;
+				}
+				if (TERMOS_MODELO_ID <= 0) {
+					alert('Selecione um modelo de termo.');
+					return;
+				}
+				TermosIcp.verificar({
+					modelos: [TERMOS_MODELO_ID],
+					endpoint: TERMOS_ICP_ENDPOINT,
+					tipoEditBase: TERMOS_TIPO_DOC_EDIT_BASE,
+					onSuccess: onOk
+				});
+			}
 
 			function termosAtualizarUniform() {
 				try {
@@ -481,7 +493,18 @@ function index() {
 					if (padrao > 0) { sel.val(String(padrao)); }
 				});
 			}
-			$(function() { termosPopularAtivos(); });
+			$(function() {
+				termosPopularAtivos();
+				$('select[name=modo_envio]').on('change', function() {
+					if (this.value === 'assinatura_icp' && TERMOS_MODELO_ID > 0) {
+						TermosIcp.verificar({
+							modelos: [TERMOS_MODELO_ID],
+							endpoint: TERMOS_ICP_ENDPOINT,
+							tipoEditBase: TERMOS_TIPO_DOC_EDIT_BASE
+						});
+					}
+				});
+			});
 
 			function termosMarcar(marcar) {
 				$('.termo-entidade').prop('checked', marcar);
@@ -530,57 +553,60 @@ function index() {
 				if (isNaN(lote) || lote < 1) { lote = 5; }
 				var params = {
 					modelo_id: TERMOS_MODELO_ID,
-					validar_icp: $('select[name=validar_icp]').val(),
+					modo_envio: $('select[name=modo_envio]').val(),
 					enviar_email: $('select[name=enviar_email]').val(),
 					forcar: $('select[name=forcar]').val(),
 					prazo_expiracao_dias: parseInt($('input[name=prazo_expiracao_dias]').val(), 10) || 0,
 					ativos: ativos
 				};
-				$('#btn_processar').prop('disabled', true);
-				$('#termos_progresso').show();
-				$('#termos_resumo').html('').hide();
-				var total = ids.length, feitos = 0, okC = 0, errC = 0;
-				var resumo = [];
+				function iniciar() {
+					$('#btn_processar').prop('disabled', true);
+					$('#termos_progresso').show();
+					$('#termos_resumo').html('').hide();
+					var total = ids.length, feitos = 0, okC = 0, errC = 0;
+					var resumo = [];
 
-				function proximo(inicio) {
-					if (inicio >= total) {
-						$('#termos_barra').css('width', '100%');
-						$('#termos_progresso_texto').text('Concluído: ' + total + ' processado(s).');
-						var html = resumo.map(function(r) { return r; }).join('<br>');
-						$('#termos_resumo').html('<b>Resumo: ' + okC + ' OK | ' + errC + ' erro(s)</b><br>' + html).show();
-						$('#btn_processar').prop('disabled', false);
-						return;
-					}
-					var fim = Math.min(inicio + lote, total);
-					var chunk = ids.slice(inicio, fim);
-					$.ajax({
-						url: 'processar_termos.php',
-						method: 'POST',
-						contentType: 'application/json',
-						data: JSON.stringify($.extend({ entidades: chunk }, params)),
-						dataType: 'json'
-					}).done(function(res) {
-						if (res && Array.isArray(res.resultados)) {
-							$.each(res.resultados, function(i, r) {
-								feitos++;
-								if (r.ok) { okC++; } else { errC++; }
-								resumo.push((r.ok ? '<span class=\"text-success\">OK</span>' : '<span class=\"text-danger\">ERRO</span>') + ' - ' + (r.msg || ''));
-							});
+					function proximo(inicio) {
+						if (inicio >= total) {
+							$('#termos_barra').css('width', '100%');
+							$('#termos_progresso_texto').text('Concluído: ' + total + ' processado(s).');
+							var html = resumo.map(function(r) { return r; }).join('<br>');
+							$('#termos_resumo').html('<b>Resumo: ' + okC + ' OK | ' + errC + ' erro(s)</b><br>' + html).show();
+							$('#btn_processar').prop('disabled', false);
+							return;
 						}
-						var pct = Math.round(feitos * 100 / total);
-						$('#termos_barra').css('width', pct + '%');
-						$('#termos_progresso_texto').text('Processando ' + feitos + ' de ' + total + '...');
-						proximo(fim);
-					}).fail(function(xhr) {
-						feitos += chunk.length;
-						errC += chunk.length;
-						resumo.push('<span class=\"text-danger\">ERRO</span> - Falha de comunicação no lote ' + fim + ' de ' + total + ' (verifique os logs).');
-						var pct = Math.round(feitos * 100 / total);
-						$('#termos_barra').css('width', pct + '%');
-						proximo(fim);
-					});
+						var fim = Math.min(inicio + lote, total);
+						var chunk = ids.slice(inicio, fim);
+						$.ajax({
+							url: 'processar_termos.php',
+							method: 'POST',
+							contentType: 'application/json',
+							data: JSON.stringify($.extend({ entidades: chunk }, params)),
+							dataType: 'json'
+						}).done(function(res) {
+							if (res && Array.isArray(res.resultados)) {
+								$.each(res.resultados, function(i, r) {
+									feitos++;
+									if (r.ok) { okC++; } else { errC++; }
+									resumo.push((r.ok ? '<span class=\"text-success\">OK</span>' : '<span class=\"text-danger\">ERRO</span>') + ' - ' + (r.msg || ''));
+								});
+							}
+							var pct = Math.round(feitos * 100 / total);
+							$('#termos_barra').css('width', pct + '%');
+							$('#termos_progresso_texto').text('Processando ' + feitos + ' de ' + total + '...');
+							proximo(fim);
+						}).fail(function(xhr) {
+							feitos += chunk.length;
+							errC += chunk.length;
+							resumo.push('<span class=\"text-danger\">ERRO</span> - Falha de comunicação no lote ' + fim + ' de ' + total + ' (verifique os logs).');
+							var pct = Math.round(feitos * 100 / total);
+							$('#termos_barra').css('width', pct + '%');
+							proximo(fim);
+						});
+					}
+					proximo(0);
 				}
-				proximo(0);
+				termosValidarAssinaturaIcp(iniciar);
 			}
 		</script>
 		";

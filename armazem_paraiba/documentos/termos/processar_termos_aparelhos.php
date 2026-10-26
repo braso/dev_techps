@@ -38,6 +38,7 @@ if(empty($aparelhos)){
 $params = [
     "modelo_id" => $modeloIdParam,
     "enviar_assinatura" => strval($dados["enviar_assinatura"] ?? "sim"),
+    "modo_envio" => strval($dados["modo_envio"] ?? ""),
     "validar_icp" => strval($dados["validar_icp"] ?? "nao"),
     "enviar_email" => strval($dados["enviar_email"] ?? "sim"),
     "forcar" => strval($dados["forcar"] ?? "nao"),

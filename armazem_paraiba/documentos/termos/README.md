@@ -9,17 +9,18 @@ Localização: `armazem_paraiba/documentos/termos/`
 ## 1. Visão geral do fluxo
 
 ```
-Gestor cria o TIPO DE DOCUMENTO (Assinatura = Sim/Não define o fluxo)
+Gestor cria o TIPO DE DOCUMENTO (o campo Assinatura será validado no envio com Assinatura/ICP)
         ↓
 Gestor cria MODELO (texto padrão com placeholders {{...}})
         ↓
-Grid de Modelos → botão Enviar para Assinatura → MODAL
-        (empresas, cargos e setores com multi-seleção)
+Grid de Modelos → botão Enviar Termo → MODAL
+        (empresas, cargos e setores com multi-seleção + Assinatura/Notificação)
         ↓
 Sistema resolve os placeholders com os dados de cada funcionário e gera o PDF (TCPDF)
         ↓
-Assinatura = Sim → envia para o módulo de assinatura (e-mail com link, prazo de assinatura configurável em dias; 0 = sem prazo)
-Assinatura = Não → salva o PDF direto no prontuário do funcionário
+Assinatura Eletrônica → envia para o módulo de assinatura (sem ICP-Brasil)
+Assinatura/ICP → envia para assinatura com validação ICP-Brasil (exige Tipo de Documento com Assinatura = Sim)
+Notificação → não coleta assinatura; gera notificação para o funcionário visualizar e confirmar a ciência
         ↓
 PDF assinado retorna para arquivos/Funcionarios/{id}/ e aparece na aba Documentos
         ↓
@@ -32,13 +33,15 @@ Status acompanhado em "Termos Gerados" e em Assinatura > Documentos
 
 | Arquivo | Função |
 |---|---|
-| `modelos_termo.php` | CRUD de modelos (nome, tipo de documento, status e texto padrão com placeholders). No grid: **Enviar para Assinatura** (modal de seleção em lote) e **Clonar** (duplica um ou mais modelos existentes) |
+| `modelos_termo.php` | CRUD de modelos (nome, tipo de documento, status e texto padrão com placeholders). No grid: **Enviar Termo** (modal de seleção em lote + Assinatura/Notificação) e **Clonar** (duplica um ou mais modelos existentes) |
 | `buscar_funcionarios.php` | Endpoint AJAX do modal: lista funcionários conforme empresas, cargos, setores e busca (inclui indicador de termo já existente) |
-| `gerar_termos.php` | Tela alternativa de geração em lote com filtros multi-seleção (empresa/cargo/setor), opções (ICP, e-mail, forçar, prazo de assinatura, lote) e barra de progresso |
-| `processar_termos.php` | Endpoint AJAX: processa cada funcionário, gera PDF e envia para assinatura |
+| `gerar_termos.php` | Tela alternativa de geração em lote com filtros multi-seleção (empresa/cargo/setor), opções (Assinatura/Notificação, e-mail, forçar, prazo de assinatura, lote) e barra de progresso |
+| `verificar_assinatura_icp.php` | Endpoint AJAX: retorna o tipo de documento de cada modelo e indica se ele permite Assinatura/ICP (Assinatura = Sim) |
+| `js/validar_assinatura_icp.js` | Validação compartilhada dos modais: alerta quando o tipo não permite ICP e oferece atalho para editar o tipo de documento |
+| `processar_termos.php` | Endpoint AJAX: processa cada funcionário, gera PDF e executa o modo escolhido |
 | `preview_termo.php` | Pré-visualização do texto do modelo: mostra o documento com as tags (`{{...}}`) **destacadas em amarelo** e a lista dos campos que serão preenchidos |
 | `listar_termos.php` | Lista dos termos gerados com status, sincronização manual/em massa, cancelamento (bloqueado para assinados) e botão Voltar |
-| `funcoes_termos.php` | Funções compartilhadas: tabelas, placeholders, PDF (logos e cabeçalho), logs, sincronização |
+| `funcoes_termos.php` | Funções compartilhadas: tabelas, placeholders, PDF (logos e cabeçalho), logs, sincronização e resolução do modo de envio |
 | `logs/` | Logs diários em TXT com retenção automática de 30 dias (pasta bloqueada via `.htaccess`) |
 | `README.md` | Este documento |
 
@@ -56,6 +59,7 @@ As tabelas são criadas automaticamente na primeira utilização (não altera na
 | `mode_nb_tipo_doc` | FK `tipos_documentos.tipo_nb_id` (define se exige assinatura e o visual do PDF) |
 | `mode_tx_conteudo` | Texto padrão em HTML com placeholders |
 | `mode_tx_status` | `ativo` / `inativo` |
+| `mode_tx_notificacao` | Campo legado (`sim`/`nao`), mantido apenas para compatibilidade de chamadas antigas. O modo atual é escolhido no envio (Assinatura/Notificação) |
 | Auditoria | `mode_nb_userCadastro`, `mode_tx_dataCadastro`, `mode_nb_userAtualiza`, `mode_tx_dataAtualiza` |
 
 ### `modelo_termo_assinante` — assinantes (reservado)
@@ -67,7 +71,7 @@ Tabela reservada para futura configuração de assinantes por modelo. Hoje a tel
 | `terg_nb_id` | PK |
 | `terg_nb_modelo` / `terg_nb_entidade` | Modelo e funcionário |
 | `terg_nb_tipo_doc` | Tipo de documento usado |
-| `terg_tx_status` | `gerado` · `aguardando_assinatura` · `assinado` · `erro` · `cancelado` |
+| `terg_tx_status` | `gerado` · `notificado` · `visualizado` · `aguardando_assinatura` · `assinado` · `erro` · `cancelado` |
 | `terg_tx_caminho` | Caminho do PDF (local quando sem assinatura; assinado quando concluído) |
 | `terg_nb_solicitacao_assinatura` / `terg_tx_id_documento` | Vínculo com o módulo de assinatura |
 | `terg_nb_documento_funcionario` | Vínculo com a aba Documentos do funcionário |
@@ -110,7 +114,7 @@ Tudo entre `{{ }}` que não for reconhecido permanece no texto e é registrado n
 
 ### Passo 1 — Criar o Tipo de Documento
 1. Menu **Cadastros > Tipo de Documento** (`cadastro_tipo_doc.php`).
-2. Crie o tipo (ex.: "Termo Ponto Eletrônico"), grupo/subgrupo e marque **Assinatura = Sim** quando o documento for assinado. **Essa configuração é a única que define se o documento vai para assinatura ou é só PDF.**
+2. Crie o tipo (ex.: "Termo Ponto Eletrônico"), grupo/subgrupo e marque **Assinatura = Sim** quando o documento for assinado. **O modo de envio final (Assinatura Eletrônica, Assinatura/ICP ou Notificação) é escolhido na hora de gerar/enviar o termo.**
 3. No grid do tipo de documento:
    - Coluna **MODELOS**: mostra quantos modelos ativos existem (badge verde "N modelo(s)" e linha destacada quando há modelos).
    - Botão **Termos** (verde quando há modelos): abre a página de Modelos já filtrada pelo tipo.
@@ -124,18 +128,19 @@ Tudo entre `{{ }}` que não for reconhecido permanece no texto e é registrado n
    - Exemplo: `Entre a empresa {{empresa_razao}} inscrita no CNPJ {{empresa_cnpj}}... o empregado {{funcionario_nome}}, CPF {{funcionario_cpf}}, portador da CTPS nº {{ctps_numero}} série {{ctps_serie}}...`
 4. Grave (botões centralizados no rodapé). Use **Pré-visualizar** para conferir o texto com as tags destacadas — o modelo é salvo **sempre com os placeholders**, nunca com dados de funcionário.
 
-### Passo 3 — Enviar para assinatura (modal)
+### Passo 3 — Enviar o termo (modal)
 1. Menu **Cadastros > Modelos de Termos**.
-2. No grid, clique no ícone **Enviar para Assinatura** do modelo desejado.
+2. No grid, clique no ícone **Enviar Termo** do modelo desejado.
 3. No modal:
    - **Empresas**: checkboxes com multi-seleção (a empresa do usuário logado já vem marcada). Botões **Marcar todas / Desmarcar todas** e **Selecionar as N primeiras** (quantidade livre).
    - **Cargo / Setor**: checkboxes com multi-seleção (marcar quantos quiser) + **Marcar todos / Desmarcar todos**.
    - **Buscar funcionário**: nome, matrícula ou CPF (vazio = todos).
    - Lista de funcionários com badges de status do termo (sem termo / gerado / aguardando assinatura / assinado) e botões **Marcar todos / Desmarcar todos / Somente sem termo**.
-   - Opções: **Validar ICP**, **Enviar e-mail**, **Forçar regeração**, **Prazo para assinatura (dias)** (0 = sem prazo de expiração; máximo 30).
-4. Clique **Enviar para Assinatura**: um documento é gerado **para cada funcionário** com os dados dele e da empresa vinculada.
-   - Tipo com **Assinatura = Sim**: cada funcionário recebe o e-mail com o link para assinar o próprio documento; ao assinar, o PDF retorna para `arquivos/Funcionarios/{id}/` e aparece na **aba Documentos** e em **Assinatura > Documentos**.
-   - Tipo com **Assinatura = Não**: o PDF é gerado e salvo direto no prontuário (sem e-mail, sem solicitação).
+   - **Assinatura/Notificação** (padrão **Assinatura Eletrônica**), **Enviar e-mail**, **Forçar regeração**, **Prazo para assinatura (dias)** (0 = sem prazo de expiração; máximo 30).
+4. Clique **Enviar Termo**: um documento é gerado **para cada funcionário** com os dados dele e da empresa vinculada.
+   - **Assinatura Eletrônica**: cada funcionário recebe o link para assinar digitalmente o próprio documento, sem validação ICP-Brasil no PDF final.
+   - **Assinatura/ICP**: mesmo fluxo de assinatura, com validação ICP-Brasil no PDF final. Só é permitido quando o **tipo de documento** vinculado ao termo está com **Assinatura = Sim**. Caso contrário, o sistema exibe um alerta com opção de abrir diretamente o tipo de documento para corrigir o campo.
+   - **Notificação**: nenhuma assinatura é coletada; o funcionário recebe a notificação (app/e-mail) para visualizar o documento e confirmar a ciência, com auditoria de data, hora, IP etc.
 
 ### Passo 3.1 — Clonar modelos
 1. No grid de **Modelos de Termos**, clique em **Clonar** (qualquer linha).
@@ -152,10 +157,11 @@ Tudo entre `{{ }}` que não for reconhecido permanece no texto e é registrado n
 
 ## 6. Regras de comportamento
 
-- **Assinatura**: determinada **somente** pelo tipo de documento (`tipo_tx_assinatura`). Não existe mais opção "enviar p/ assinatura" na tela de geração — quem decide é `cadastro_tipo_doc.php`.
-  - **Sim**: o PDF é gerado temporariamente e enviado pela integração `assinatura/integracao/assinatura_integracao.php` (e-mail com link). O prazo de expiração é informado no envio (`prazo_expiracao_dias`, 1 a 30 dias; **0 = sem prazo**) e segue as regras do módulo de assinatura (expiração, status `expirado`, renovação). Sem assinantes configurados, o **funcionário é o único assinante**. O PDF assinado retorna a `arquivos/Funcionarios/{id}/` e é registrado em `documento_funcionario` (`docu_tx_assinado = 'sim'`).
-  - **Não**: o PDF é salvo direto em `arquivos/Funcionarios/{id}/` e registrado em `documento_funcionario` (`docu_tx_assinado = 'nao'`), status `gerado`; **Validar ICP e Enviar e-mail são ignorados** nesse caminho.
-- **Validar ICP**: aplica assinatura digital com certificado ICP-Brasil no PDF final ao concluir as assinaturas (aplica-se quando há assinatura).
+- **Assinatura/Notificação**: o modo é escolhido no envio (campo único em todos os modais de geração de termo) e é o mesmo para todos os funcionários selecionados.
+  - **Assinatura Eletrônica** (padrão): o PDF é gerado temporariamente e enviado pela integração `assinatura/integracao/assinatura_integracao.php` (e-mail com link) para coleta da assinatura digital, sem ICP-Brasil. O prazo de expiração é informado no envio (`prazo_expiracao_dias`, 1 a 30 dias; **0 = sem prazo**) e segue as regras do módulo de assinatura (expiração, status `expirado`, renovação). Sem assinantes configurados, o **funcionário é o único assinante**. O PDF assinado retorna a `arquivos/Funcionarios/{id}/` e é registrado em `documento_funcionario` (`docu_tx_assinado = 'sim'`). O `auto_sign` do `config_pfx.php` não força ICP nesse modo; ele só é usado quando o modo ICP é solicitado.
+  - **Assinatura/ICP**: mesmo fluxo da assinatura eletrônica, com `validar_icp = sim`, aplicando certificado e carimbo ICP-Brasil ao PDF final. Exige que o tipo de documento esteja com `tipo_tx_assinatura = 'sim'`; se estiver como `'nao'`, o envio é bloqueado no front-end (com link para editar o tipo) e também no backend.
+  - **Notificação**: não coleta assinatura. O PDF é salvo em `arquivos/Funcionarios/{id}/`, registrado em `documento_funcionario` (`docu_tx_assinado = 'nao'`) e o funcionário recebe uma notificação (app/e-mail) para visualizar e confirmar a ciência; a confirmação registra data, hora, IP e demais dados de auditoria.
+- **Configuração legada do modelo (`mode_tx_notificacao`)**: permanece apenas para compatibilidade de chamadas antigas sem o campo `modo_envio`. As telas atuais sempre enviam o modo escolhido no modal.
 - **Enviar e-mail = Não**: o e-mail cadastrado é **desconsiderado** — a solicitação é criada com um e-mail interno (ex.: `sememail.<id>@techps.com.br`) e o funcionário assina pelo sistema (sino/pendências). Com **Sim**, exige e-mail válido.
 - **Duplicidade**: o sistema avisa quem já possui termo (badges) e pula quem já tem (`gerado`/`aguardando_assinatura`/`assinado`); só regera com **Forçar regeração = Sim** (status `erro`/`cancelado` não bloqueiam).
 - **Pré-visualização**: mostra o texto do modelo com as tags destacadas + painel "Campos usados neste documento"; não gera PDF e nunca salva nada.
@@ -173,7 +179,7 @@ Tudo entre `{{ }}` que não for reconhecido permanece no texto e é registrado n
 - Entrada de dados tratada com `htmlspecialchars` e consultas preparadas.
 - HTML do editor é **sanitizado** no servidor (allowlist de tags, remoção de `on*`, `javascript:`, `<script>` etc.).
 - A pasta de logs é bloqueada via `.htaccess` (negada para acesso web).
-- Páginas do módulo não alteram nenhum fluxo existente: apenas adicionam telas, tabelas próprias e itens de menu.
+- Páginas do módulo reaproveitam os fluxos existentes de assinatura e notificação, adicionando apenas as telas, tabelas próprias e itens de menu do módulo de termos.
 
 ---
 

@@ -1093,6 +1093,9 @@
             $setoresHtml .= "<label style='font-weight:normal; margin:0 12px 2px 0; display:inline-block;'><input type='checkbox' class='termocel-setor' value='" . intval($k) . "'> " . termos_h($v) . "</label>";
         }
 
+        $opcoesModoEnvioHtml = termos_html_opcoes_assinatura_notificacao("assinatura_eletronica");
+        $ajudaModoEnvio = termos_h(termos_ajuda_assinatura_notificacao());
+
         echo "
         <style>
             .termocel-ajuda { overflow-wrap: break-word; word-wrap: break-word; }
@@ -1159,12 +1162,11 @@
                         </div>
                         <div class='row' style='margin-top:10px;'>
                             <div class='col-sm-3'>
-                                <label class='control-label'>Validar ICP</label>
-                                <select id='termocel_envio_icp' class='form-control input-sm'>
-                                    <option value='nao'>Não</option>
-                                    <option value='sim'>Sim</option>
+                                <label class='control-label'>Assinatura/Notificação</label>
+                                <select id='termocel_envio_modo' class='form-control input-sm'>
+                                    {$opcoesModoEnvioHtml}
                                 </select>
-                                <span class='help-block termocel-ajuda' style='font-size:11px; margin-bottom:0;'>Aplica assinatura digital ICP-Brasil no PDF final ao concluir as assinaturas.</span>
+                                <span class='help-block termocel-ajuda' style='font-size:11px; margin-bottom:0;'>{$ajudaModoEnvio}</span>
                             </div>
                             <div class='col-sm-3'>
                                 <label class='control-label'>Enviar e-mail</label>
@@ -1172,7 +1174,7 @@
                                     <option value='sim'>Sim</option>
                                     <option value='nao'>Não</option>
                                 </select>
-                                <span class='help-block termocel-ajuda' style='font-size:11px; margin-bottom:0;'>Envia o e-mail com o link de assinatura para cada funcionário.</span>
+                                <span class='help-block termocel-ajuda' style='font-size:11px; margin-bottom:0;'>Envia o e-mail com o link do documento para cada funcionário.</span>
                             </div>
                             <div class='col-sm-3'>
                                 <label class='control-label'>Forçar regeração</label>
@@ -1180,7 +1182,7 @@
                                     <option value='nao'>Não</option>
                                     <option value='sim'>Sim</option>
                                 </select>
-                                <span class='help-block termocel-ajuda' style='font-size:11px; margin-bottom:0;'>Não: pula quem já tem termo. Sim: gera de novo (novo PDF e nova assinatura).</span>
+                                <span class='help-block termocel-ajuda' style='font-size:11px; margin-bottom:0;'>Não: pula quem já tem termo. Sim: gera de novo (novo PDF e novo envio).</span>
                             </div>
                             <div class='col-sm-3' style='padding-top:28px;'>
                                 <b id='termocel_envio_selecionados'>0 selecionado(s)</b>
@@ -1191,7 +1193,7 @@
                             <div class='col-sm-3'>
                                 <label class='control-label'>Prazo para assinatura (dias)</label>
                                 <input type='number' id='termocel_envio_prazo' class='form-control input-sm' min='0' max='30' step='1' value='1'>
-                                <span class='help-block termocel-ajuda' style='font-size:11px; margin-bottom:0;'>Quantos dias o link de assinatura fica válido. 0 = sem prazo de expiração.</span>
+                                <span class='help-block termocel-ajuda' style='font-size:11px; margin-bottom:0;'>Quantos dias o link do documento fica válido. 0 = sem prazo de expiração.</span>
                             </div>
                             <div class='col-sm-3'>
                                 <label class='control-label'>Assinatura por hierarquia</label>
@@ -1224,6 +1226,23 @@
             var TERMOCEL_ENVIO_MODELO = 0;
             var TERMOCEL_ENVIO_RESP = 0;
             var TERMOCEL_ENVIO_RESP_MARCADO = false;
+
+            function termocelEnvioValidarAssinaturaIcp(onOk) {
+                if ($('#termocel_envio_modo').val() !== 'assinatura_icp') {
+                    if (typeof onOk === 'function') { onOk(); }
+                    return;
+                }
+                if (TERMOCEL_ENVIO_MODELO <= 0) {
+                    alert('Nenhum termo vinculado a este equipamento.');
+                    return;
+                }
+                TermosIcp.verificar({
+                    modelos: [TERMOCEL_ENVIO_MODELO],
+                    endpoint: window.TERMOS_ICP_ENDPOINT,
+                    tipoEditBase: window.TERMOS_TIPO_DOC_EDIT_BASE,
+                    onSuccess: onOk
+                });
+            }
 
             function termoCelularAbrirEnvio(id) {
                 if (!id) { return; }
@@ -1411,63 +1430,66 @@
                     alert('Selecione ao menos um funcionário.');
                     return;
                 }
-                $('#termocel_envio_btn').prop('disabled', true);
-                $('#termocel_envio_progresso').show();
-                $('#termocel_envio_resultado').html('').hide();
                 var params = {
                     modelo_id: TERMOCEL_ENVIO_MODELO,
                     enviar_assinatura: 'sim',
-                    validar_icp: $('#termocel_envio_icp').val(),
+                    modo_envio: $('#termocel_envio_modo').val(),
                     enviar_email: $('#termocel_envio_email').val(),
                     forcar: $('#termocel_envio_forcar').val(),
                     prazo_expiracao_dias: parseInt($('#termocel_envio_prazo').val(), 10) || 0,
                     hierarquia: $('#termocel_envio_hierarquia').val()
                 };
-                var total = ids.length, feitos = 0, okC = 0, errC = 0, resumo = [];
-                function proximo(inicio) {
-                    if (inicio >= total) {
-                        $('#termocel_envio_barra').css('width', '100%');
-                        $('#termocel_envio_texto').text('Concluído: ' + total + ' processado(s).');
-                        $('#termocel_envio_resultado').html('<b>Resumo: ' + okC + ' OK | ' + errC + ' erro(s)</b><br>' + resumo.join('<br>')).show();
-                        $('#termocel_envio_btn').prop('disabled', false);
-                        termoCelularCarregarFuncionarios();
-                        return;
-                    }
-                    var fim = Math.min(inicio + 5, total);
-                    var chunk = ids.slice(inicio, fim);
-                    var ativos = {};
-                    chunk.forEach(function(eid) { ativos[eid] = TERMOCEL_ENVIO_ATIVO; });
-                    $.ajax({
-                        url: 'documentos/termos/processar_termos.php',
-                        method: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify($.extend({ entidades: chunk, ativos: ativos }, params)),
-                        dataType: 'json'
-                    }).done(function(res) {
-                        if (res && Array.isArray(res.resultados)) {
-                            $.each(res.resultados, function(i, r) {
-                                feitos++;
-                                if (r.ok) { okC++; } else { errC++; }
-                                resumo.push((r.ok ? 'OK' : 'ERRO') + ' - ' + (r.msg || ''));
-                            });
-                        } else {
+                function iniciar() {
+                    $('#termocel_envio_btn').prop('disabled', true);
+                    $('#termocel_envio_progresso').show();
+                    $('#termocel_envio_resultado').html('').hide();
+                    var total = ids.length, feitos = 0, okC = 0, errC = 0, resumo = [];
+                    function proximo(inicio) {
+                        if (inicio >= total) {
+                            $('#termocel_envio_barra').css('width', '100%');
+                            $('#termocel_envio_texto').text('Concluído: ' + total + ' processado(s).');
+                            $('#termocel_envio_resultado').html('<b>Resumo: ' + okC + ' OK | ' + errC + ' erro(s)</b><br>' + resumo.join('<br>')).show();
+                            $('#termocel_envio_btn').prop('disabled', false);
+                            termoCelularCarregarFuncionarios();
+                            return;
+                        }
+                        var fim = Math.min(inicio + 5, total);
+                        var chunk = ids.slice(inicio, fim);
+                        var ativos = {};
+                        chunk.forEach(function(eid) { ativos[eid] = TERMOCEL_ENVIO_ATIVO; });
+                        $.ajax({
+                            url: 'documentos/termos/processar_termos.php',
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify($.extend({ entidades: chunk, ativos: ativos }, params)),
+                            dataType: 'json'
+                        }).done(function(res) {
+                            if (res && Array.isArray(res.resultados)) {
+                                $.each(res.resultados, function(i, r) {
+                                    feitos++;
+                                    if (r.ok) { okC++; } else { errC++; }
+                                    resumo.push((r.ok ? 'OK' : 'ERRO') + ' - ' + (r.msg || ''));
+                                });
+                            } else {
+                                feitos += chunk.length;
+                                errC += chunk.length;
+                                resumo.push('ERRO - ' + ((res && res.error) ? res.error : 'resposta inválida do servidor.'));
+                            }
+                            $('#termocel_envio_barra').css('width', Math.round(feitos * 100 / total) + '%');
+                            $('#termocel_envio_texto').text('Processando ' + feitos + ' de ' + total + '...');
+                            proximo(fim);
+                        }).fail(function(xhr) {
                             feitos += chunk.length;
                             errC += chunk.length;
-                            resumo.push('ERRO - ' + ((res && res.error) ? res.error : 'resposta inválida do servidor.'));
-                        }
-                        $('#termocel_envio_barra').css('width', Math.round(feitos * 100 / total) + '%');
-                        $('#termocel_envio_texto').text('Processando ' + feitos + ' de ' + total + '...');
-                        proximo(fim);
-                    }).fail(function(xhr) {
-                        feitos += chunk.length;
-                        errC += chunk.length;
-                        var detalhe = (xhr && xhr.responseJSON && xhr.responseJSON.error) ? xhr.responseJSON.error : 'falha de comunicação (verifique as permissões de acesso aos termos).';
-                        resumo.push('ERRO - ' + detalhe);
-                        $('#termocel_envio_barra').css('width', Math.round(feitos * 100 / total) + '%');
-                        proximo(fim);
-                    });
+                            var detalhe = (xhr && xhr.responseJSON && xhr.responseJSON.error) ? xhr.responseJSON.error : 'falha de comunicação (verifique as permissões de acesso aos termos).';
+                            resumo.push('ERRO - ' + detalhe);
+                            $('#termocel_envio_barra').css('width', Math.round(feitos * 100 / total) + '%');
+                            proximo(fim);
+                        });
+                    }
+                    proximo(0);
                 }
-                proximo(0);
+                termocelEnvioValidarAssinaturaIcp(iniciar);
             }
 
             $(function() {
@@ -1475,6 +1497,15 @@
                 $('#termocel_envio_cargos').on('change', '.termocel-cargo', termoCelularCarregarFuncionarios);
                 $('#termocel_envio_setores').on('change', '.termocel-setor', termoCelularCarregarFuncionarios);
                 $('#termocel_envio_lista').on('change', '.termocel-func', termocelEnvioAtualizarContagem);
+                $('#termocel_envio_modo').on('change', function() {
+                    if (this.value === 'assinatura_icp' && TERMOCEL_ENVIO_MODELO > 0) {
+                        TermosIcp.verificar({
+                            modelos: [TERMOCEL_ENVIO_MODELO],
+                            endpoint: window.TERMOS_ICP_ENDPOINT,
+                            tipoEditBase: window.TERMOS_TIPO_DOC_EDIT_BASE
+                        });
+                    }
+                });
                 var termocelTimerBusca = null;
                 $('#termocel_envio_busca').on('input', function() {
                     clearTimeout(termocelTimerBusca);
@@ -1486,6 +1517,8 @@
     }
 
     function modalLoteTermosCelular(){
+        $opcoesModoEnvioHtml = termos_html_opcoes_assinatura_notificacao("assinatura_eletronica");
+        $ajudaModoEnvio = termos_h(termos_ajuda_assinatura_notificacao());
         echo "
         <div class='modal fade' id='modal_lote_termos_celular' tabindex='-1' role='dialog'>
             <div class='modal-dialog modal-lg' role='document'>
@@ -1522,11 +1555,11 @@
                         </div>
                         <div class='row' style='margin-top:10px;'>
                             <div class='col-sm-3'>
-                                <label class='control-label'>Validar ICP</label>
-                                <select id='termoCelularLoteIcp' class='form-control input-sm'>
-                                    <option value='nao'>Não</option>
-                                    <option value='sim'>Sim</option>
+                                <label class='control-label'>Assinatura/Notificação</label>
+                                <select id='termoCelularLoteModoEnvio' class='form-control input-sm'>
+                                    {$opcoesModoEnvioHtml}
                                 </select>
+                                <span class='help-block' style='font-size:11px; margin-bottom:0;'>{$ajudaModoEnvio}</span>
                             </div>
                             <div class='col-sm-3'>
                                 <label class='control-label'>Enviar e-mail</label>
@@ -1573,6 +1606,46 @@
         </div>
         <script>
             var TERMOCEL_LOTE_APARELHOS = [];
+            function termoCelularLoteModelosParaValidar() {
+                var modeloFiltro = parseInt($('#termoCelularLoteModelo').val() || '0', 10) || 0;
+                var selecionados = {};
+                var temSelecionado = false;
+                $('#termoCelularLoteLista .termoCelularLoteChk:checked').each(function() {
+                    selecionados[parseInt($(this).val(), 10)] = true;
+                    temSelecionado = true;
+                });
+                if (!temSelecionado) { return []; }
+
+                var modelos = {};
+                $.each(TERMOCEL_LOTE_APARELHOS, function(i, a) {
+                    var aparelhoId = parseInt(a.celu_nb_id, 10) || 0;
+                    if (!selecionados[aparelhoId]) { return; }
+                    $.each(a.termos || [], function(j, t) {
+                        var modeloId = parseInt(t.id, 10) || 0;
+                        if (!modeloId) { return; }
+                        if (modeloFiltro > 0 && modeloId !== modeloFiltro) { return; }
+                        modelos[modeloId] = true;
+                    });
+                });
+                return Object.keys(modelos).map(function(id) { return parseInt(id, 10); });
+            }
+            function termoCelularLoteValidarAssinaturaIcp(onOk) {
+                if ($('#termoCelularLoteModoEnvio').val() !== 'assinatura_icp') {
+                    if (typeof onOk === 'function') { onOk(); }
+                    return;
+                }
+                var modelos = termoCelularLoteModelosParaValidar();
+                if (!modelos.length) {
+                    if (typeof onOk === 'function') { onOk(); }
+                    return;
+                }
+                TermosIcp.verificar({
+                    modelos: modelos,
+                    endpoint: window.TERMOS_ICP_ENDPOINT,
+                    tipoEditBase: window.TERMOS_TIPO_DOC_EDIT_BASE,
+                    onSuccess: onOk
+                });
+            }
             function termoCelularAbrirLote() {
                 TERMOCEL_LOTE_APARELHOS = [];
                 $('#termoCelularLoteLista').html('<div class=\"text-muted\">Carregando aparelhos...</div>');
@@ -1649,73 +1722,81 @@
             $(function() {
                 $('#termoCelularLoteBusca').on('input', termoCelularLoteRender);
                 $('#termoCelularLoteLista').on('change', '.termoCelularLoteChk', termoCelularLoteAtualizar);
+                $('#termoCelularLoteModoEnvio').on('change', function() {
+                    if (this.value === 'assinatura_icp') {
+                        termoCelularLoteValidarAssinaturaIcp();
+                    }
+                });
             });
             function termoCelularLoteEnviar() {
                 var ids = [];
                 $('#termoCelularLoteLista .termoCelularLoteChk:checked').each(function() { ids.push(parseInt($(this).val(), 10)); });
                 if (ids.length === 0) { alert('Selecione ao menos um aparelho.'); return; }
-                $('#termoCelularLoteBtn').prop('disabled', true);
-                $('#termoCelularLoteProgresso').show();
-                $('#termoCelularLoteResultado').html('').hide();
                 var params = {
                     modelo_id: parseInt($('#termoCelularLoteModelo').val() || '0', 10) || 0,
-                    validar_icp: $('#termoCelularLoteIcp').val(),
+                    modo_envio: $('#termoCelularLoteModoEnvio').val(),
                     enviar_email: $('#termoCelularLoteEmail').val(),
                     forcar: $('#termoCelularLoteForcar').val(),
                     prazo_expiracao_dias: parseInt($('#termoCelularLotePrazo').val(), 10) || 0,
                     hierarquia: $('#termoCelularLoteHier').val()
                 };
-                var total = ids.length, feitos = 0, okC = 0, errC = 0, resumo = [], resumoOk = [], resumoErr = [];
-                function proximo(inicio) {
-                    if (inicio >= total) {
-                        $('#termoCelularLoteBarra').css('width', '100%');
-                        $('#termoCelularLoteTexto').text('Concluído: ' + total + ' processado(s).');
-                        var htmlRes = '<b>Resumo: ' + okC + ' OK | ' + errC + ' erro(s)</b>';
-                        if (resumoOk.length) {
-                            htmlRes += '<br><br><b class=\"text-success\">Enviados com sucesso:</b><br>' + resumoOk.map(function(m){ return 'OK - ' + m; }).join('<br>');
+                function iniciar() {
+                    $('#termoCelularLoteBtn').prop('disabled', true);
+                    $('#termoCelularLoteProgresso').show();
+                    $('#termoCelularLoteResultado').html('').hide();
+                    var total = ids.length, feitos = 0, okC = 0, errC = 0, resumo = [], resumoOk = [], resumoErr = [];
+                    function proximo(inicio) {
+                        if (inicio >= total) {
+                            $('#termoCelularLoteBarra').css('width', '100%');
+                            $('#termoCelularLoteTexto').text('Concluído: ' + total + ' processado(s).');
+                            var htmlRes = '<b>Resumo: ' + okC + ' OK | ' + errC + ' erro(s)</b>';
+                            if (resumoOk.length) {
+                                htmlRes += '<br><br><b class=\"text-success\">Enviados com sucesso:</b><br>' + resumoOk.map(function(m){ return 'OK - ' + m; }).join('<br>');
+                            }
+                            if (resumoErr.length) {
+                                htmlRes += '<br><br><b class=\"text-danger\">Erros:</b><br>' + resumoErr.map(function(m){ return 'ERRO - ' + m; }).join('<br>');
+                            }
+                            $('#termoCelularLoteResultado').html(htmlRes).show();
+                            $('#termoCelularLoteBtn').prop('disabled', false);
+                            return;
                         }
-                        if (resumoErr.length) {
-                            htmlRes += '<br><br><b class=\"text-danger\">Erros:</b><br>' + resumoErr.map(function(m){ return 'ERRO - ' + m; }).join('<br>');
-                        }
-                        $('#termoCelularLoteResultado').html(htmlRes).show();
-                        $('#termoCelularLoteBtn').prop('disabled', false);
-                        return;
-                    }
-                    var fim = Math.min(inicio + 5, total);
-                    var chunk = ids.slice(inicio, fim);
-                    $.ajax({
-                        url: 'documentos/termos/processar_termos_aparelhos.php',
-                        method: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify($.extend({ aparelhos: chunk }, params)),
-                        dataType: 'json'
-                    }).done(function(res) {
-                        if (res && Array.isArray(res.resultados)) {
-                            $.each(res.resultados, function(i, r) {
-                                feitos++;
-                                if (r.ok) { okC++; resumoOk.push(r.msg || ''); } else { errC++; resumoErr.push(r.msg || ''); }
-                            });
-                        } else {
+                        var fim = Math.min(inicio + 5, total);
+                        var chunk = ids.slice(inicio, fim);
+                        $.ajax({
+                            url: 'documentos/termos/processar_termos_aparelhos.php',
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify($.extend({ aparelhos: chunk }, params)),
+                            dataType: 'json'
+                        }).done(function(res) {
+                            if (res && Array.isArray(res.resultados)) {
+                                $.each(res.resultados, function(i, r) {
+                                    feitos++;
+                                    if (r.ok) { okC++; resumoOk.push(r.msg || ''); } else { errC++; resumoErr.push(r.msg || ''); }
+                                });
+                            } else {
+                                feitos += chunk.length; errC += chunk.length;
+                                resumo.push('ERRO - ' + ((res && res.error) ? res.error : 'resposta inválida.'));
+                            }
+                            $('#termoCelularLoteBarra').css('width', Math.round(feitos * 100 / total) + '%');
+                            $('#termoCelularLoteTexto').text('Processando ' + feitos + ' de ' + total + '...');
+                            proximo(fim);
+                        }).fail(function(xhr) {
                             feitos += chunk.length; errC += chunk.length;
-                            resumo.push('ERRO - ' + ((res && res.error) ? res.error : 'resposta inválida.'));
-                        }
-                        $('#termoCelularLoteBarra').css('width', Math.round(feitos * 100 / total) + '%');
-                        $('#termoCelularLoteTexto').text('Processando ' + feitos + ' de ' + total + '...');
-                        proximo(fim);
-                    }).fail(function(xhr) {
-                        feitos += chunk.length; errC += chunk.length;
-                        var detalhe = 'falha de comunicação.';
-                        if (xhr) {
-                            if (xhr.responseJSON && xhr.responseJSON.error) { detalhe = xhr.responseJSON.error; }
-                            else if (xhr.responseText) { detalhe = xhr.responseText.replace(/<[^>]*>/g, '').trim().substring(0, 200); }
-                            else if (xhr.status) { detalhe = 'HTTP ' + xhr.status + ' ' + (xhr.statusText || ''); }
-                        }
-                        resumo.push('ERRO - ' + detalhe);
-                        $('#termoCelularLoteBarra').css('width', Math.round(feitos * 100 / total) + '%');
-                        proximo(fim);
-                    });
+                            var detalhe = 'falha de comunicação.';
+                            if (xhr) {
+                                if (xhr.responseJSON && xhr.responseJSON.error) { detalhe = xhr.responseJSON.error; }
+                                else if (xhr.responseText) { detalhe = xhr.responseText.replace(/<[^>]*>/g, '').trim().substring(0, 200); }
+                                else if (xhr.status) { detalhe = 'HTTP ' + xhr.status + ' ' + (xhr.statusText || ''); }
+                            }
+                            resumo.push('ERRO - ' + detalhe);
+                            $('#termoCelularLoteBarra').css('width', Math.round(feitos * 100 / total) + '%');
+                            proximo(fim);
+                        });
+                    }
+                    proximo(0);
                 }
-                proximo(0);
+                termoCelularLoteValidarAssinaturaIcp(iniciar);
             }
         </script>
         ";
@@ -1846,6 +1927,8 @@
     }
 
     function modalEnviarTermoDiretoCelular(){
+        $opcoesModoEnvioHtml = termos_html_opcoes_assinatura_notificacao("assinatura_eletronica");
+        $ajudaModoEnvio = termos_h(termos_ajuda_assinatura_notificacao());
         echo "
         <div class='modal fade' id='modal_enviar_termo_direto_celular' tabindex='-1' role='dialog'>
             <div class='modal-dialog' role='document'>
@@ -1864,11 +1947,11 @@
                         </div>
                         <div class='row'>
                             <div class='col-sm-4'>
-                                <label class='control-label'>Validar ICP</label>
-                                <select id='termoCelularDiretoIcp' class='form-control input-sm'>
-                                    <option value='nao'>Não</option>
-                                    <option value='sim'>Sim</option>
+                                <label class='control-label'>Assinatura/Notificação</label>
+                                <select id='termoCelularDiretoModoEnvio' class='form-control input-sm'>
+                                    {$opcoesModoEnvioHtml}
                                 </select>
+                                <span class='help-block' style='font-size:11px; margin-bottom:0;'>{$ajudaModoEnvio}</span>
                             </div>
                             <div class='col-sm-4'>
                                 <label class='control-label'>Enviar e-mail</label>
@@ -1915,6 +1998,23 @@
         </div>
         <script>
             var TERMOCEL_DIRETO_ID = 0;
+            function termoCelularDiretoValidarAssinaturaIcp(onOk) {
+                if ($('#termoCelularDiretoModoEnvio').val() !== 'assinatura_icp') {
+                    if (typeof onOk === 'function') { onOk(); }
+                    return;
+                }
+                var modeloId = parseInt($('#termoCelularDiretoModelo').val(), 10) || 0;
+                if (modeloId <= 0) {
+                    alert('Selecione um termo para enviar.');
+                    return;
+                }
+                TermosIcp.verificar({
+                    modelos: [modeloId],
+                    endpoint: window.TERMOS_ICP_ENDPOINT,
+                    tipoEditBase: window.TERMOS_TIPO_DOC_EDIT_BASE,
+                    onSuccess: onOk
+                });
+            }
             function termoCelularAbrirEnvioDireto(id) {
                 if (!id) { return; }
                 TERMOCEL_DIRETO_ID = id;
@@ -1967,49 +2067,66 @@
             }
             function termoCelularEnviarDiretoConfirmar() {
                 if (TERMOCEL_DIRETO_ID <= 0) { alert('Aparelho inválido.'); return; }
-                $('#termoCelularDiretoBtn').prop('disabled', true);
-                $('#termoCelularDiretoProgresso').show();
-                $('#termoCelularDiretoResultado').html('').hide();
                 var params = {
                     aparelhos: [TERMOCEL_DIRETO_ID],
                     modelo_id: parseInt($('#termoCelularDiretoModelo').val(), 10) || 0,
-                    validar_icp: $('#termoCelularDiretoIcp').val(),
+                    modo_envio: $('#termoCelularDiretoModoEnvio').val(),
                     enviar_email: $('#termoCelularDiretoEmail').val(),
                     forcar: $('#termoCelularDiretoForcar').val(),
                     prazo_expiracao_dias: parseInt($('#termoCelularDiretoPrazo').val(), 10) || 0,
                     hierarquia: $('#termoCelularDiretoHier').val()
                 };
-                $.ajax({
-                    url: 'documentos/termos/processar_termos_aparelhos.php',
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify(params),
-                    dataType: 'json'
-                }).done(function(res) {
-                    var okC = 0, errC = 0, resumo = [];
-                    if (res && Array.isArray(res.resultados)) {
-                        $.each(res.resultados, function(i, r) {
-                            if (r.ok) { okC++; } else { errC++; }
-                            resumo.push((r.ok ? 'OK' : 'ERRO') + ' - ' + (r.msg || ''));
-                        });
-                    } else {
-                        errC++; resumo.push('ERRO - ' + ((res && res.error) ? res.error : 'resposta inválida.'));
-                    }
-                    $('#termoCelularDiretoBarra').css('width', '100%');
-                    $('#termoCelularDiretoTexto').text('Concluído.');
-                    $('#termoCelularDiretoResultado').html('<b>Resumo: ' + okC + ' OK | ' + errC + ' erro(s)</b><br>' + resumo.join('<br>')).show();
-                    $('#termoCelularDiretoBtn').prop('disabled', false);
-                }).fail(function(xhr) {
-                    var detalhe = 'falha de comunicação.';
-                    if (xhr) {
-                        if (xhr.responseJSON && xhr.responseJSON.error) { detalhe = xhr.responseJSON.error; }
-                        else if (xhr.responseText) { detalhe = xhr.responseText.replace(/<[^>]*>/g, '').trim().substring(0, 200); }
-                        else if (xhr.status) { detalhe = 'HTTP ' + xhr.status + ' ' + (xhr.statusText || ''); }
-                    }
-                    $('#termoCelularDiretoResultado').html('ERRO - ' + detalhe).show();
-                    $('#termoCelularDiretoBtn').prop('disabled', false);
-                });
+                function iniciar() {
+                    $('#termoCelularDiretoBtn').prop('disabled', true);
+                    $('#termoCelularDiretoProgresso').show();
+                    $('#termoCelularDiretoResultado').html('').hide();
+                    $.ajax({
+                        url: 'documentos/termos/processar_termos_aparelhos.php',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(params),
+                        dataType: 'json'
+                    }).done(function(res) {
+                        var okC = 0, errC = 0, resumo = [];
+                        if (res && Array.isArray(res.resultados)) {
+                            $.each(res.resultados, function(i, r) {
+                                if (r.ok) { okC++; } else { errC++; }
+                                resumo.push((r.ok ? 'OK' : 'ERRO') + ' - ' + (r.msg || ''));
+                            });
+                        } else {
+                            errC++; resumo.push('ERRO - ' + ((res && res.error) ? res.error : 'resposta inválida.'));
+                        }
+                        $('#termoCelularDiretoBarra').css('width', '100%');
+                        $('#termoCelularDiretoTexto').text('Concluído.');
+                        $('#termoCelularDiretoResultado').html('<b>Resumo: ' + okC + ' OK | ' + errC + ' erro(s)</b><br>' + resumo.join('<br>')).show();
+                        $('#termoCelularDiretoBtn').prop('disabled', false);
+                    }).fail(function(xhr) {
+                        var detalhe = 'falha de comunicação.';
+                        if (xhr) {
+                            if (xhr.responseJSON && xhr.responseJSON.error) { detalhe = xhr.responseJSON.error; }
+                            else if (xhr.responseText) { detalhe = xhr.responseText.replace(/<[^>]*>/g, '').trim().substring(0, 200); }
+                            else if (xhr.status) { detalhe = 'HTTP ' + xhr.status + ' ' + (xhr.statusText || ''); }
+                        }
+                        $('#termoCelularDiretoResultado').html('ERRO - ' + detalhe).show();
+                        $('#termoCelularDiretoBtn').prop('disabled', false);
+                    });
+                }
+                termoCelularDiretoValidarAssinaturaIcp(iniciar);
             }
+            $(function() {
+                $('#termoCelularDiretoModoEnvio').on('change', function() {
+                    if (this.value === 'assinatura_icp') {
+                        var modeloId = parseInt($('#termoCelularDiretoModelo').val(), 10) || 0;
+                        if (modeloId > 0) {
+                            TermosIcp.verificar({
+                                modelos: [modeloId],
+                                endpoint: window.TERMOS_ICP_ENDPOINT,
+                                tipoEditBase: window.TERMOS_TIPO_DOC_EDIT_BASE
+                            });
+                        }
+                    }
+                });
+            });
         </script>
         ";
     }
@@ -2022,6 +2139,9 @@
             #acessorios > div:first-child, #aplicativos > div:first-child { font-weight: 600; margin-bottom: 6px; }
         </style>";
         cabecalho("Cadastro de Celulares");
+        $termosIcpJsVer = @filemtime(__DIR__ . "/documentos/termos/js/validar_assinatura_icp.js") ?: 1;
+        echo "<script>window.TERMOS_ICP_ENDPOINT = 'documentos/termos/verificar_assinatura_icp.php'; window.TERMOS_TIPO_DOC_EDIT_BASE = 'cadastro_tipo_doc.php';</script>";
+        echo "<script src='documentos/termos/js/validar_assinatura_icp.js?v={$termosIcpJsVer}'></script>";
         formCelular();
         if(empty($_POST["id"])){
             // Sincroniza status de assinatura dos termos dos aparelhos listados.

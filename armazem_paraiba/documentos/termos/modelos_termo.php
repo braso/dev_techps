@@ -89,11 +89,11 @@ function index() {
 
 	echo "<h3>Modelos Cadastrados</h3>";
 	echo "<div class='table-responsive'><table class='table table-bordered table-striped'>";
-	echo "<thead><tr><th>ID</th><th>Nome</th><th>Tipo de Documento</th><th>Equipamentos</th><th>Assinatura</th><th>Notificação</th><th>Status</th><th>Atualizado</th><th>Ações</th></tr></thead>";
+	echo "<thead><tr><th>ID</th><th>Nome</th><th>Tipo de Documento</th><th>Equipamentos</th><th>Tipo exige assinatura</th><th>Status</th><th>Atualizado</th><th>Ações</th></tr></thead>";
 	echo "<tbody>";
 
 	if(!$res || mysqli_num_rows($res) == 0){
-		echo "<tr><td colspan='9' class='text-center'>Nenhum modelo cadastrado ainda.</td></tr>";
+		echo "<tr><td colspan='8' class='text-center'>Nenhum modelo cadastrado ainda.</td></tr>";
 	}
 
 	while($res && ($row = mysqli_fetch_assoc($res))){
@@ -101,8 +101,6 @@ function index() {
 		$nome = termos_h($row["mode_tx_nome"] ?? "");
 		$tipoNome = termos_h($row["tipo_tx_nome"] ?? "—");
 		$ass = strtolower(trim(strval($row["tipo_tx_assinatura"] ?? "nao"))) === "sim" ? "Sim" : "Não";
-		$notif = strtolower(trim(strval($row["mode_tx_notificacao"] ?? "sim"))) === "nao" ? "Não" : "Sim";
-		$notifExibe = $ass === "Sim" ? "<span class='text-muted' title='Ignorada para documentos com coleta de assinatura'>—</span>" : ($notif === "Sim" ? "<span class='label label-info'>Sim</span>" : "<span class='label label-default'>Não</span>");
 		$status = strtolower(trim(strval($row["mode_tx_status"] ?? "inativo"))) === "ativo" ? "Ativo" : "Inativo";
 		$data = date("d/m/Y H:i", strtotime(strval($row["mode_tx_dataAtualiza"] ?? $row["mode_tx_dataCadastro"])));
 
@@ -135,13 +133,12 @@ function index() {
 		echo "<td>{$tipoNome}</td>";
 		echo "<td>{$ativoExibe}</td>";
 		echo "<td>{$ass}</td>";
-		echo "<td>{$notifExibe}</td>";
 		echo "<td>{$status}</td>";
 		echo "<td>{$data}</td>";
 		echo "<td>
 				<form method='post' style='display:inline;'><input type='hidden' name='id' value='{$id}'><input type='hidden' name='acao' value='form'><button type='submit' class='btn btn-xs btn-default' title='Editar'><span class='glyphicon glyphicon-pencil'></span></button></form>
 				<a href='{$previewUrl}' target='_blank' class='btn btn-xs btn-info' title='Pré-visualizar'><span class='glyphicon glyphicon-eye-open'></span></a>
-				<button type='button' class='btn btn-xs btn-success' onclick='termosModalEnviar({$id}, {$nomeJs})' title='Enviar para Assinatura'><span class='glyphicon glyphicon-send'></span></button>
+				<button type='button' class='btn btn-xs btn-success' onclick='termosModalEnviar({$id}, {$nomeJs})' title='Enviar Termo'><span class='glyphicon glyphicon-send'></span></button>
 				<button type='button' class='btn btn-xs btn-default' onclick='termosModalClonar()' title='Clonar modelos de termo'>Clonar</button>
 				{$btnStatus}
 				<form method='post' style='display:inline;' onsubmit='return confirm(\"Deseja excluir este modelo?\");'><input type='hidden' name='id' value='{$id}'><input type='hidden' name='acao' value='excluir'><button type='submit' class='btn btn-xs btn-danger' title='Excluir'><span class='glyphicon glyphicon-trash'></span></button></form>
@@ -217,7 +214,12 @@ function index() {
 		$setoresHtml .= "<label style='font-weight:normal; margin:0 12px 2px 0; display:inline-block;'><input type='checkbox' class='termos-setor' value='" . intval($k) . "'> " . termos_h($v) . "</label>";
 	}
 
+	$opcoesModoEnvioHtml = termos_html_opcoes_assinatura_notificacao("assinatura_eletronica");
+	$ajudaModoEnvio = termos_h(termos_ajuda_assinatura_notificacao());
+
+	$termosIcpJsVer = @filemtime(__DIR__ . "/js/validar_assinatura_icp.js") ?: 1;
 	echo "
+	<script src='js/validar_assinatura_icp.js?v={$termosIcpJsVer}'></script>
 	<style>
 		.termos-ajuda { overflow-wrap: break-word; word-wrap: break-word; }
 		#termos_modal_titulo { overflow-wrap: break-word; word-wrap: break-word; }
@@ -230,7 +232,7 @@ function index() {
 			<div class='modal-content'>
 				<div class='modal-header'>
 					<button type='button' class='close' data-dismiss='modal'>&times;</button>
-					<h4 class='modal-title' id='termos_modal_titulo'>Enviar para Assinatura</h4>
+					<h4 class='modal-title' id='termos_modal_titulo'>Enviar Termo</h4>
 				</div>
 				<div class='modal-body'>
 					<div class='row'>
@@ -284,12 +286,11 @@ function index() {
 					</div>
 					<div class='row' style='margin-top:10px;'>
 						<div class='col-sm-3'>
-							<label class='control-label'>Validar ICP</label>
-							<select id='termos_modal_icp' class='form-control input-sm'>
-								<option value='nao'>Não</option>
-								<option value='sim'>Sim</option>
+							<label class='control-label'>Assinatura/Notificação</label>
+							<select id='termos_modal_modo_envio' class='form-control input-sm'>
+								{$opcoesModoEnvioHtml}
 							</select>
-							<span class='help-block termos-ajuda' style='font-size:11px; margin-bottom:0;'>Aplica assinatura digital ICP-Brasil no PDF final ao concluir as assinaturas.</span>
+							<span class='help-block termos-ajuda' style='font-size:11px; margin-bottom:0;'>{$ajudaModoEnvio}</span>
 						</div>
 						<div class='col-sm-3'>
 							<label class='control-label'>Enviar e-mail</label>
@@ -297,7 +298,7 @@ function index() {
 								<option value='sim'>Sim</option>
 								<option value='nao'>Não</option>
 							</select>
-							<span class='help-block termos-ajuda' style='font-size:11px; margin-bottom:0;'>Envia o e-mail com o link de assinatura para cada funcionário.</span>
+							<span class='help-block termos-ajuda' style='font-size:11px; margin-bottom:0;'>Envia o e-mail com o link do documento para cada funcionário.</span>
 						</div>
 						<div class='col-sm-3'>
 							<label class='control-label'>Forçar regeração</label>
@@ -305,7 +306,7 @@ function index() {
 								<option value='nao'>Não</option>
 								<option value='sim'>Sim</option>
 							</select>
-							<span class='help-block termos-ajuda' style='font-size:11px; margin-bottom:0;'>Não: pula quem já tem termo. Sim: gera de novo (novo PDF e nova assinatura).</span>
+							<span class='help-block termos-ajuda' style='font-size:11px; margin-bottom:0;'>Não: pula quem já tem termo. Sim: gera de novo (novo PDF e novo envio).</span>
 						</div>
 						<div class='col-sm-3' style='padding-top:28px;'>
 							<b id='termos_modal_selecionados'>0 selecionado(s)</b>
@@ -316,7 +317,7 @@ function index() {
 						<div class='col-sm-3'>
 							<label class='control-label'>Prazo para assinatura (dias)</label>
 							<input type='number' id='termos_modal_prazo' class='form-control input-sm' min='0' max='30' step='1' value='1'>
-							<span class='help-block termos-ajuda' style='font-size:11px; margin-bottom:0;'>Quantos dias o link de assinatura fica válido. 0 = sem prazo de expiração.</span>
+							<span class='help-block termos-ajuda' style='font-size:11px; margin-bottom:0;'>Quantos dias o link do documento fica válido. 0 = sem prazo de expiração.</span>
 						</div>
 						<div class='col-sm-3'>
 							<label class='control-label'>Assinatura por hierarquia</label>
@@ -338,7 +339,7 @@ function index() {
 				<div class='modal-footer'>
 					<button type='button' class='btn btn-default' data-dismiss='modal'>Fechar</button>
 					<button type='button' id='termos_modal_btn_enviar' class='btn btn-success' onclick='termosModalEnviarAssinatura()'>
-						Enviar para Assinatura
+						Enviar Termo
 					</button>
 				</div>
 			</div>
@@ -374,6 +375,25 @@ function index() {
 
 	<script>
 		var TERMOS_MODAL_MODELO = 0;
+		var TERMOS_ICP_ENDPOINT = 'verificar_assinatura_icp.php';
+		var TERMOS_TIPO_DOC_EDIT_BASE = '../../cadastro_tipo_doc.php';
+
+		function termosModalValidarAssinaturaIcp(onOk) {
+			if ($('#termos_modal_modo_envio').val() !== 'assinatura_icp') {
+				if (typeof onOk === 'function') { onOk(); }
+				return;
+			}
+			if (TERMOS_MODAL_MODELO <= 0) {
+				alert('Modelo inválido.');
+				return;
+			}
+			TermosIcp.verificar({
+				modelos: [TERMOS_MODAL_MODELO],
+				endpoint: TERMOS_ICP_ENDPOINT,
+				tipoEditBase: TERMOS_TIPO_DOC_EDIT_BASE,
+				onSuccess: onOk
+			});
+		}
 
 		function termosEscapeHtml(s) {
 			return $('<div>').text(s || '').html();
@@ -381,7 +401,7 @@ function index() {
 
 		function termosModalEnviar(id, nome) {
 			TERMOS_MODAL_MODELO = id;
-			$('#termos_modal_titulo').text('Enviar para Assinatura — ' + nome);
+			$('#termos_modal_titulo').text('Enviar Termo — ' + nome);
 			$('#termos_modal_progresso').hide();
 			$('#termos_modal_resultado').html('').hide();
 			$('#termos_modal_lista').html('<div class=\"text-muted\">Selecione uma ou mais empresas para carregar os funcionários.</div>');
@@ -544,54 +564,57 @@ function termosModalCargosSelecionados() {
 				alert('Selecione ao menos um funcionário.');
 				return;
 			}
-			$('#termos_modal_btn_enviar').prop('disabled', true);
-			$('#termos_modal_progresso').show();
 			var params = {
 				modelo_id: TERMOS_MODAL_MODELO,
 				enviar_assinatura: 'sim',
-				validar_icp: $('#termos_modal_icp').val(),
+				modo_envio: $('#termos_modal_modo_envio').val(),
 				enviar_email: $('#termos_modal_email').val(),
 				forcar: $('#termos_modal_forcar').val(),
 				prazo_expiracao_dias: parseInt($('#termos_modal_prazo').val(), 10) || 0,
 				hierarquia: $('#termos_modal_hierarquia').val()
 			};
-			var total = ids.length, feitos = 0, okC = 0, errC = 0, resumo = [];
-			function proximo(inicio) {
-				if (inicio >= total) {
-					$('#termos_modal_barra').css('width', '100%');
-					$('#termos_modal_texto').text('Concluído: ' + total + ' processado(s).');
-					$('#termos_modal_resultado').html('<b>Resumo: ' + okC + ' OK | ' + errC + ' erro(s)</b><br>' + resumo.join('<br>')).show();
-					$('#termos_modal_btn_enviar').prop('disabled', false);
-					termosCarregarFuncionarios();
-					return;
-				}
-				var fim = Math.min(inicio + 5, total);
-				var chunk = ids.slice(inicio, fim);
-				$.ajax({
-					url: 'processar_termos.php',
-					method: 'POST',
-					contentType: 'application/json',
-					data: JSON.stringify($.extend({ entidades: chunk }, params)),
-					dataType: 'json'
-				}).done(function(res) {
-					if (res && Array.isArray(res.resultados)) {
-						$.each(res.resultados, function(i, r) {
-							feitos++;
-							if (r.ok) { okC++; } else { errC++; }
-							resumo.push((r.ok ? 'OK' : 'ERRO') + ' - ' + (r.msg || ''));
-						});
+			function iniciar() {
+				$('#termos_modal_btn_enviar').prop('disabled', true);
+				$('#termos_modal_progresso').show();
+				var total = ids.length, feitos = 0, okC = 0, errC = 0, resumo = [];
+				function proximo(inicio) {
+					if (inicio >= total) {
+						$('#termos_modal_barra').css('width', '100%');
+						$('#termos_modal_texto').text('Concluído: ' + total + ' processado(s).');
+						$('#termos_modal_resultado').html('<b>Resumo: ' + okC + ' OK | ' + errC + ' erro(s)</b><br>' + resumo.join('<br>')).show();
+						$('#termos_modal_btn_enviar').prop('disabled', false);
+						termosCarregarFuncionarios();
+						return;
 					}
-					$('#termos_modal_barra').css('width', Math.round(feitos * 100 / total) + '%');
-					$('#termos_modal_texto').text('Processando ' + feitos + ' de ' + total + '...');
-					proximo(fim);
-				}).fail(function() {
-					feitos += chunk.length;
-					errC += chunk.length;
-					resumo.push('ERRO - falha de comunicação no lote ' + fim + ' de ' + total);
-					proximo(fim);
-				});
+					var fim = Math.min(inicio + 5, total);
+					var chunk = ids.slice(inicio, fim);
+					$.ajax({
+						url: 'processar_termos.php',
+						method: 'POST',
+						contentType: 'application/json',
+						data: JSON.stringify($.extend({ entidades: chunk }, params)),
+						dataType: 'json'
+					}).done(function(res) {
+						if (res && Array.isArray(res.resultados)) {
+							$.each(res.resultados, function(i, r) {
+								feitos++;
+								if (r.ok) { okC++; } else { errC++; }
+								resumo.push((r.ok ? 'OK' : 'ERRO') + ' - ' + (r.msg || ''));
+							});
+						}
+						$('#termos_modal_barra').css('width', Math.round(feitos * 100 / total) + '%');
+						$('#termos_modal_texto').text('Processando ' + feitos + ' de ' + total + '...');
+						proximo(fim);
+					}).fail(function() {
+						feitos += chunk.length;
+						errC += chunk.length;
+						resumo.push('ERRO - falha de comunicação no lote ' + fim + ' de ' + total);
+						proximo(fim);
+					});
+				}
+				proximo(0);
 			}
-			proximo(0);
+			termosModalValidarAssinaturaIcp(iniciar);
 		}
 
 		function termosModalClonar() {
@@ -639,6 +662,15 @@ function termosModalCargosSelecionados() {
 			$('#termos_modal_cargos').on('change', '.termos-cargo', termosCarregarFuncionarios);
 			$('#termos_modal_setores').on('change', '.termos-setor', termosCarregarFuncionarios);
 			$('#termos_modal_lista').on('change', '.termos-func', termosModalAtualizarContagem);
+			$('#termos_modal_modo_envio').on('change', function() {
+				if (this.value === 'assinatura_icp' && TERMOS_MODAL_MODELO > 0) {
+					TermosIcp.verificar({
+						modelos: [TERMOS_MODAL_MODELO],
+						endpoint: TERMOS_ICP_ENDPOINT,
+						tipoEditBase: TERMOS_TIPO_DOC_EDIT_BASE
+					});
+				}
+			});
 			var termosTimerBusca = null;
 			$('#termos_modal_busca').on('input', function() {
 				clearTimeout(termosTimerBusca);
@@ -709,17 +741,11 @@ function form() {
 		$tipoDocPadrao = strval($_POST["tipo_doc"] ?? $_GET["tipo_doc"] ?? "");
 	}
 
-	$notificacaoPadrao = strtolower(trim(strval($a_mod["mode_tx_notificacao"] ?? "sim")));
-	if($notificacaoPadrao !== "nao"){
-		$notificacaoPadrao = "sim";
-	}
-
 	$fields = [
 		"<input type='hidden' name='id' value='{$id}'>",
-		campo("Nome do Modelo*", "nome", strval($a_mod["mode_tx_nome"] ?? ""), 4),
-		combo("Tipo de Documento*", "tipo_doc", $tipoDocPadrao, 3, $tipos),
-		combo("Notificação", "notificacao", $notificacaoPadrao, 3, ["sim" => "Sim", "nao" => "Não"]),
-		combo("Status", "status", strval($a_mod["mode_tx_status"] ?? "ativo"), 2, ["ativo" => "Ativo", "inativo" => "Inativo"])
+		campo("Nome do Modelo*", "nome", strval($a_mod["mode_tx_nome"] ?? ""), 5),
+		combo("Tipo de Documento*", "tipo_doc", $tipoDocPadrao, 4, $tipos),
+		combo("Status", "status", strval($a_mod["mode_tx_status"] ?? "ativo"), 3, ["ativo" => "Ativo", "inativo" => "Inativo"])
 	];
 
 	$buttons = [
@@ -739,7 +765,7 @@ function form() {
 	echo linha_form($fields);
 
 	echo "<div class='alert alert-info' style='font-size:12px; margin-top:8px;'>
-		<i class='fa fa-bell'></i> <b>Notificação:</b> quando marcado como <b>Sim</b>, se o <b>Tipo de Documento</b> não exigir coleta de assinatura, o funcionário recebe uma notificação (app/e-mail) de que existe um documento para visualizar. Ao abrir, o sistema registra data, hora, IP e demais dados do acesso para auditoria da visualização. Para documentos <b>com assinatura</b>, este campo é desconsiderado e vale o fluxo normal de assinatura.
+		<i class='fa fa-info-circle'></i> <b>Assinatura/Notificação:</b> o modo de envio é escolhido na hora de gerar/enviar o termo: <b>Assinatura Eletrônica</b> (coleta assinatura digital), <b>Assinatura/ICP</b> (assinatura com ICP-Brasil) ou <b>Notificação</b> (sem assinatura, apenas aviso para o funcionário visualizar e confirmar a ciência). Para usar <b>Assinatura/ICP</b>, o tipo de documento precisa estar com <b>Assinatura = Sim</b>; caso contrário, o sistema alerta e oferece um atalho para corrigir o tipo.
 	</div>";
 
 	echo "<br>";
@@ -846,7 +872,6 @@ function salvar() {
 	$nome = trim(strval($_POST["nome"] ?? ""));
 	$tipoDoc = intval($_POST["tipo_doc"] ?? 0);
 	$status = in_array(strval($_POST["status"] ?? "ativo"), ["ativo", "inativo"], true) ? strval($_POST["status"]) : "ativo";
-	$notificacao = strtolower(trim(strval($_POST["notificacao"] ?? "sim"))) === "nao" ? "nao" : "sim";
 	$conteudo = termos_sanitizar_html(strval($_POST["conteudo"] ?? ""));
 	$user = intval($_SESSION["user_nb_id"] ?? 0);
 
@@ -873,16 +898,16 @@ function salvar() {
 
 	if($id > 0){
 		termos_executar(
-			"UPDATE modelo_termo SET mode_tx_nome = ?, mode_nb_tipo_doc = ?, mode_tx_conteudo = ?, mode_tx_notificacao = ?, mode_tx_status = ?, mode_nb_userAtualiza = ?, mode_tx_dataAtualiza = NOW() WHERE mode_nb_id = ?",
-			"sisssii",
-			[$nome, $tipoDoc, $conteudo, $notificacao, $status, $user, $id]
+			"UPDATE modelo_termo SET mode_tx_nome = ?, mode_nb_tipo_doc = ?, mode_tx_conteudo = ?, mode_tx_status = ?, mode_nb_userAtualiza = ?, mode_tx_dataAtualiza = NOW() WHERE mode_nb_id = ?",
+			"sissii",
+			[$nome, $tipoDoc, $conteudo, $status, $user, $id]
 		);
-		termos_log("modelo_atualizado", "Modelo #{$id} atualizado", ["nome" => $nome, "notificacao" => $notificacao]);
+		termos_log("modelo_atualizado", "Modelo #{$id} atualizado", ["nome" => $nome]);
 	}else{
 		$id = termos_inserir_id(
-			"INSERT INTO modelo_termo (mode_tx_nome, mode_nb_tipo_doc, mode_tx_conteudo, mode_tx_notificacao, mode_tx_status, mode_nb_userCadastro) VALUES (?, ?, ?, ?, ?, ?)",
-			"sisssi",
-			[$nome, $tipoDoc, $conteudo, $notificacao, $status, $user]
+			"INSERT INTO modelo_termo (mode_tx_nome, mode_nb_tipo_doc, mode_tx_conteudo, mode_tx_status, mode_nb_userCadastro) VALUES (?, ?, ?, ?, ?)",
+			"sissi",
+			[$nome, $tipoDoc, $conteudo, $status, $user]
 		);
 		termos_log("modelo_criado", "Modelo #{$id} criado", ["nome" => $nome]);
 	}
