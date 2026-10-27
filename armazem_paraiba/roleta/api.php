@@ -267,14 +267,17 @@ case 'create_lead':
     $email = trim($data['email'] ?? '') ?: null;
     $telefone = trim($data['telefone'] ?? '') ?: null;
     $empresa = trim($data['empresa'] ?? '') ?: null;
+    $segmento = trim($data['segmento'] ?? '') ?: null;
+    $funcao = trim($data['funcao'] ?? '') ?: null;
+    $observacoes = trim($data['observacoes'] ?? '') ?: null;
     $giros = max(1, (int)($data['giros'] ?? 1));
     $expira = trim($data['expira_em'] ?? '') ?: null;
     $bonusPremios = roleta_parse_bonus_premios($data['bonus_premios'] ?? []);
     if ($nome === '') roleta_json(['error'=>'nome_obrigatorio'], 400);
     if ($email && !filter_var($email, FILTER_VALIDATE_EMAIL)) roleta_json(['error'=>'email_invalido'], 400);
     mysqli_begin_transaction($conn);
-    $stmt = mysqli_prepare($conn, "INSERT INTO roleta_leads (nome,email,telefone,empresa) VALUES (?,?,?,?)");
-    mysqli_stmt_bind_param($stmt, 'ssss', $nome, $email, $telefone, $empresa);
+    $stmt = mysqli_prepare($conn, "INSERT INTO roleta_leads (nome,email,telefone,empresa,segmento,funcao,observacoes) VALUES (?,?,?,?,?,?,?)");
+    mysqli_stmt_bind_param($stmt, 'sssssss', $nome, $email, $telefone, $empresa, $segmento, $funcao, $observacoes);
     mysqli_stmt_execute($stmt);
     $leadId = mysqli_insert_id($conn); mysqli_stmt_close($stmt);
     roleta_sync_bonus_lead($conn, $leadId, $bonusPremios);
@@ -300,9 +303,12 @@ case 'edit_lead':
     if ($email && !filter_var($email, FILTER_VALIDATE_EMAIL)) roleta_json(['error'=>'email_invalido'], 400);
     $telefone = array_key_exists('telefone', $data) ? (trim((string)$data['telefone']) ?: null) : $row['telefone'];
     $empresa = array_key_exists('empresa', $data) ? (trim((string)$data['empresa']) ?: null) : $row['empresa'];
+    $segmento = array_key_exists('segmento', $data) ? (trim((string)$data['segmento']) ?: null) : $row['segmento'];
+    $funcao = array_key_exists('funcao', $data) ? (trim((string)$data['funcao']) ?: null) : $row['funcao'];
+    $observacoes = array_key_exists('observacoes', $data) ? (trim((string)$data['observacoes']) ?: null) : $row['observacoes'];
     mysqli_begin_transaction($conn);
-    $stmt = mysqli_prepare($conn, "UPDATE roleta_leads SET nome=?,email=?,telefone=?,empresa=? WHERE id=?");
-    mysqli_stmt_bind_param($stmt, 'ssssi', $nome, $email, $telefone, $empresa, $id);
+    $stmt = mysqli_prepare($conn, "UPDATE roleta_leads SET nome=?,email=?,telefone=?,empresa=?,segmento=?,funcao=?,observacoes=? WHERE id=?");
+    mysqli_stmt_bind_param($stmt, 'sssssssi', $nome, $email, $telefone, $empresa, $segmento, $funcao, $observacoes, $id);
     mysqli_stmt_execute($stmt); mysqli_stmt_close($stmt);
     if (array_key_exists('bonus_premios', $data)) {
         roleta_sync_bonus_lead($conn, $id, roleta_parse_bonus_premios($data['bonus_premios']));
@@ -455,9 +461,10 @@ case 'import':
             mysqli_stmt_execute($stmt); mysqli_stmt_close($stmt);
         }
         foreach (($data['leads'] ?? []) as $l) {
-            $stmt = mysqli_prepare($conn, "INSERT INTO roleta_leads (id,nome,email,telefone,empresa,created_at) VALUES (?,?,?,?,?,?)");
-            $id=(int)($l['id']??0); $nome=$l['nome']; $email=$l['email']??null; $tel=$l['telefone']??null; $emp=$l['empresa']??null; $ca=$l['created_at']??date('Y-m-d H:i:s');
-            mysqli_stmt_bind_param($stmt, 'isssss', $id,$nome,$email,$tel,$emp,$ca);
+            $stmt = mysqli_prepare($conn, "INSERT INTO roleta_leads (id,nome,email,telefone,empresa,segmento,funcao,observacoes,created_at) VALUES (?,?,?,?,?,?,?,?,?)");
+            $id=(int)($l['id']??0); $nome=$l['nome']; $email=$l['email']??null; $tel=$l['telefone']??null; $emp=$l['empresa']??null;
+            $seg=$l['segmento']??null; $fun=$l['funcao']??null; $obs=$l['observacoes']??null; $ca=$l['created_at']??date('Y-m-d H:i:s');
+            mysqli_stmt_bind_param($stmt, 'issssssss', $id,$nome,$email,$tel,$emp,$seg,$fun,$obs,$ca);
             mysqli_stmt_execute($stmt); mysqli_stmt_close($stmt);
         }
         foreach (($data['lead_premios'] ?? []) as $lp) {
