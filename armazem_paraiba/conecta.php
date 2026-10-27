@@ -753,6 +753,40 @@
         KEY idx_solicitacao (trece_nb_solicitacao_assinatura)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
+    // Ficha funcional pública: código único por funcionário usado no QR Code.
+    bancoCriarTabela($conn, "CREATE TABLE IF NOT EXISTS funcionario_ficha_publica (
+        ffp_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+        ffp_nb_entidade INT NOT NULL,
+        ffp_tx_codigo CHAR(10) NOT NULL,
+        ffp_tx_status ENUM('ativo','inativo') NOT NULL DEFAULT 'ativo',
+        ffp_dt_dataCadastro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        ffp_nb_userCadastro INT NULL,
+        ffp_dt_dataAtualiza DATETIME NULL,
+        ffp_nb_userAtualiza INT NULL,
+        UNIQUE KEY uk_codigo (ffp_tx_codigo),
+        KEY idx_entidade_status (ffp_nb_entidade, ffp_tx_status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+    // Índices de apoio para as consultas da ficha pública (EPIs e treinamentos).
+    if (bancoTabelaExiste($conn, "ss_epi_entrega")) {
+        $idxFichaEpi = @mysqli_query($conn, "SHOW INDEX FROM ss_epi_entrega WHERE Key_name = 'idx_ficha_colaborador_status'");
+        if ($idxFichaEpi && mysqli_num_rows($idxFichaEpi) === 0) {
+            @mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD INDEX idx_ficha_colaborador_status (ss_e_nb_colaborador_id, ss_e_tx_status)");
+        }
+
+        $idxFichaEpiItem = @mysqli_query($conn, "SHOW INDEX FROM ss_epi_entrega WHERE Key_name = 'idx_ficha_colaborador_epi'");
+        if ($idxFichaEpiItem && mysqli_num_rows($idxFichaEpiItem) === 0) {
+            @mysqli_query($conn, "ALTER TABLE ss_epi_entrega ADD INDEX idx_ficha_colaborador_epi (ss_e_nb_colaborador_id, ss_e_nb_epi_id, ss_e_tx_variacao)");
+        }
+    }
+
+    if (bancoTabelaExiste($conn, "user")) {
+        $idxFichaUser = @mysqli_query($conn, "SHOW INDEX FROM user WHERE Key_name = 'idx_ficha_entidade'");
+        if ($idxFichaUser && mysqli_num_rows($idxFichaUser) === 0) {
+            @mysqli_query($conn, "ALTER TABLE user ADD INDEX idx_ficha_entidade (user_nb_entidade)");
+        }
+    }
+
     // Fim da estrutura: o restante do sistema volta a reportar erros de SQL.
     mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 

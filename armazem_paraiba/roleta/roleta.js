@@ -8,9 +8,11 @@ const codeMsg = document.getElementById('codeMsg');
 const codeBox = document.getElementById('codeBox');
 const girosRestantesEl = document.getElementById('girosRestantes');
 const resultado = document.getElementById('resultado');
+const resTitulo = document.getElementById('resTitulo');
 const resFoto = document.getElementById('resFoto');
 const resNome = document.getElementById('resNome');
 const btnFecharResultado = document.getElementById('btnFecharResultado');
+const btnFecharResultadoX = document.getElementById('btnFecharResultadoX');
 const btnTrocarCodigo = document.getElementById('btnTrocarCodigo');
 
 let itens = [];
@@ -18,6 +20,50 @@ let codigoAtual = '';
 let modoLivre = window.ROLETA_MODO_LIVRE || false;
 let girando = false;
 let angulo = 0;
+let resultadoGirarNovamente = false;
+
+function itemDisponivel(it) {
+  if (!it) return false;
+  if (typeof it.disponivel !== 'undefined') return !!it.disponivel;
+  return Number(it.quantidade) > 0;
+}
+
+// Quebra o nome em linhas que caibam na largura da fatia
+function wrapCanvasText(text, maxWidth, maxLines) {
+  const words = String(text || '').trim().split(/\s+/).filter(Boolean);
+  const lines = [];
+  let current = '';
+  for (const word of words) {
+    const test = current ? current + ' ' + word : word;
+    if (ctx.measureText(test).width <= maxWidth) {
+      current = test;
+      continue;
+    }
+    if (current) {
+      lines.push(current);
+      current = '';
+    }
+    // palavra maior que a largura: divide por caracteres
+    let rest = word;
+    while (ctx.measureText(rest).width > maxWidth && rest.length > 1) {
+      let cut = rest.length - 1;
+      while (cut > 1 && ctx.measureText(rest.slice(0, cut)).width > maxWidth) cut--;
+      lines.push(rest.slice(0, cut));
+      rest = rest.slice(cut);
+    }
+    current = rest;
+  }
+  if (current) lines.push(current);
+  if (lines.length === 0) return [''];
+  if (lines.length > maxLines) {
+    const kept = lines.slice(0, maxLines);
+    let last = kept[kept.length - 1];
+    while (last.length > 1 && ctx.measureText(last + '…').width > maxWidth) last = last.slice(0, -1);
+    kept[kept.length - 1] = last.replace(/…$/, '') + '…';
+    return kept;
+  }
+  return lines;
+}
 
 function drawWheel() {
   const cx = canvas.width/2, cy = canvas.height/2, r = Math.min(cx,cy)-10;
@@ -28,16 +74,33 @@ function drawWheel() {
     return;
   }
   const n = itens.length, slice = (Math.PI*2)/n;
-  const fontSize = n > 8 ? 14 : 18;
+  const fontSize = n <= 6 ? 17 : n <= 9 ? 15 : n <= 12 ? 13 : n <= 16 ? 12 : 11;
+  const lineHeight = fontSize + 3;
+  const maxLines = n <= 10 ? 3 : 2;
+  const maxTextWidth = Math.max(60, r - 64);
   for (let i=0;i<n;i++){
+    const item = itens[i];
+    const disponivel = itemDisponivel(item);
     const start = angulo + i*slice, end = start+slice;
     ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,end); ctx.closePath();
-    ctx.fillStyle = itens[i].cor || '#888'; ctx.fill();
+    ctx.fillStyle = item.cor || '#888'; ctx.fill();
+    // brindes esgotados ficam acinzentados, mas continuam visíveis
+    if (!disponivel) { ctx.fillStyle='rgba(105,105,105,0.7)'; ctx.fill(); }
     ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=2; ctx.stroke();
-    ctx.save(); ctx.translate(cx,cy); ctx.rotate(start+slice/2); ctx.textAlign='right';
-    ctx.fillStyle='#fff'; ctx.font='bold '+fontSize+'px sans-serif'; ctx.shadowColor='rgba(0,0,0,0.5)'; ctx.shadowBlur=4;
-    const label = itens[i].nome.length>20 ? itens[i].nome.slice(0,19)+'…' : itens[i].nome;
-    ctx.fillText(label, r-12, 6); ctx.restore();
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(start+slice/2);
+    ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillStyle = disponivel ? '#fff' : '#f0f0f0';
+    ctx.font='bold '+fontSize+'px sans-serif'; ctx.shadowColor='rgba(0,0,0,0.5)'; ctx.shadowBlur=4;
+    const lines = wrapCanvasText(item.nome, maxTextWidth, maxLines);
+    const blockHeight = (lines.length - 1) * lineHeight;
+    lines.forEach((line, idx) => {
+      ctx.fillText(line, r-12, idx*lineHeight - blockHeight/2);
+    });
+    if (!disponivel) {
+      ctx.font='bold '+Math.max(9, fontSize-3)+'px sans-serif';
+      ctx.fillText('ESGOTADO', r-12, blockHeight/2 + Math.max(13, fontSize));
+    }
+    ctx.restore();
   }
   ctx.beginPath(); ctx.arc(cx,cy,46,0,Math.PI*2); ctx.fillStyle='#ffffff'; ctx.fill();
   ctx.strokeStyle='#32c5d2'; ctx.lineWidth=4; ctx.stroke();
@@ -85,7 +148,8 @@ function easeOutCubic(t){ return 1 - Math.pow(1-t,3); }
 
 async function girar() {
   if (girando) return;
-  if (itens.length===0){ alert('Sem prêmios disponíveis'); return; }
+  if (itens.length===0){ alert('Sem prêmios cadastrados'); return; }
+  if (!itens.some(itemDisponivel)){ alert('Todos os brindes estão esgotados no momento.'); return; }
   if (!modoLivre && !codigoAtual){ msg('Digite e valide seu código abaixo.','error'); codeInput.focus(); return; }
   girando=true; spinBtn.disabled=true;
   let resultadoData;
@@ -116,19 +180,30 @@ async function girar() {
       angulo = finalAngulo; drawWheel(); girando=false; spinBtn.disabled=false;
       if (resultadoData.giros_restantes !== null && resultadoData.giros_restantes !== undefined) girosRestantesEl.textContent = resultadoData.giros_restantes;
       else girosRestantesEl.textContent = '∞';
-      mostrarResultado(resultadoData.premio); carregarItens();
+      mostrarResultado(resultadoData); carregarItens();
     }
   }
   requestAnimationFrame(frame);
 }
 
-function mostrarResultado(premio){
+function mostrarResultado(data){
+  const premio = data.premio;
+  resultadoGirarNovamente = !!data.girar_novamente;
+  resTitulo.textContent = resultadoGirarNovamente ? '🎡 Gire Novamente!' : '🎉 Você ganhou!';
   resNome.textContent = premio.nome;
+  btnFecharResultado.textContent = resultadoGirarNovamente ? 'Girar Novamente' : 'Continuar';
   if (premio.foto){ resFoto.src = premio.foto; resFoto.style.display=''; } else resFoto.style.display='none';
   resultado.classList.remove('hidden');
   document.body.animate([{filter:'brightness(1)'},{filter:'brightness(1.15)'},{filter:'brightness(1)'}],{duration:600});
 }
-btnFecharResultado.addEventListener('click', ()=> resultado.classList.add('hidden'));
+btnFecharResultado.addEventListener('click', ()=>{
+  resultado.classList.add('hidden');
+  if (resultadoGirarNovamente){ resultadoGirarNovamente=false; girar(); }
+});
+btnFecharResultadoX.addEventListener('click', ()=>{
+  resultado.classList.add('hidden');
+  resultadoGirarNovamente=false;
+});
 spinBtn.addEventListener('click', girar);
 
 // init

@@ -62,6 +62,7 @@ if (stripos($nivel, 'Super Administrador') === false) {
           <div><label>Quantidade (estoque)</label><input type="number" id="pQtd" min="0" value="0"></div>
           <div><label>Foto</label><input type="file" id="pFoto" accept="image/*"></div>
           <div><label>Ativo</label><select id="pAtivo"><option value="1">Sim</option><option value="0">Não</option></select></div>
+          <div><label>Tipo</label><label class="checkbox"><input type="checkbox" id="pGirarNovamente"> Gire Novamente (não consome giro)</label></div>
         </div>
         <div class="form-actions"><button type="submit" class="btn btn-primary">Salvar</button><button type="button" class="btn btn-secondary" onclick="fecharFormPremio()">Cancelar</button></div>
       </form>
@@ -71,7 +72,8 @@ if (stripos($nivel, 'Super Administrador') === false) {
     <section id="tab-leads" class="tabpane">
       <div class="section-head"><h2>Cadastros (Leads)</h2><button class="btn btn-primary" onclick="abrirFormLead()">+ Novo Cadastro</button></div>
       <form id="formLead" class="form-card hidden">
-        <h3>Novo Cadastro (gera código)</h3>
+        <h3 id="formLeadTitulo">Novo Cadastro (gera código)</h3>
+        <input type="hidden" id="lId">
         <div class="grid2">
           <div><label>Nome completo *</label><input type="text" id="lNome" required></div>
           <div><label>E-mail</label><input type="email" id="lEmail"></div>
@@ -80,10 +82,15 @@ if (stripos($nivel, 'Super Administrador') === false) {
           <div><label>Giros</label><input type="number" id="lGiros" min="1" value="1"></div>
           <div><label>Expira em</label><input type="datetime-local" id="lExpira"></div>
         </div>
-        <div class="form-actions"><button type="submit" class="btn btn-primary">Cadastrar e Gerar Código</button><button type="button" class="btn btn-secondary" onclick="fecharFormLead()">Cancelar</button></div>
+        <div class="bonus-section">
+          <label>Brindes com chance extra</label>
+          <p class="muted small bonus-hint">Selecione os brindes e o bônus de chance que este cadastro terá no sorteio. O bônus aumenta o peso do brinde apenas para este usuário.</p>
+          <div id="bonusPremiosList" class="bonus-list"><p class="muted small">Carregando brindes...</p></div>
+        </div>
+        <div class="form-actions"><button type="submit" class="btn btn-primary" id="btnSalvarLead">Cadastrar e Gerar Código</button><button type="button" class="btn btn-secondary" onclick="fecharFormLead()">Cancelar</button></div>
         <p id="leadMsg" class="msg"></p>
       </form>
-      <div class="table-wrap"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Telefone</th><th>Empresa</th><th>Código</th><th>Prêmio(s)</th><th>Data</th><th>Ações</th></tr></thead><tbody id="tbodyLeads"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Telefone</th><th>Empresa</th><th>Código</th><th>Bônus</th><th>Prêmio(s)</th><th>Data</th><th>Ações</th></tr></thead><tbody id="tbodyLeads"></tbody></table></div>
     </section>
     <!-- codigos -->
     <section id="tab-codigos" class="tabpane">

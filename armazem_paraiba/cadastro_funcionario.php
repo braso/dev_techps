@@ -2037,6 +2037,10 @@
 
 		if (!empty($_POST["id"])) {
 			$botoesCadastro[] = '<button class="btn default" type="button" onclick="imprimir()">Imprimir</button>';
+			$idFuncionarioQr = (int)($_POST["id"] ?? ($a_mod["enti_nb_id"] ?? 0));
+			if ($idFuncionarioQr > 0) {
+				$botoesCadastro[] = '<a class="btn btn-info" target="_blank" rel="noopener" href="ficha_qrcode.php?ffp_id='.$idFuncionarioQr.'">QR Code</a>';
+			}
 		}
 
 		echo abre_form();
@@ -3005,6 +3009,7 @@ function index(){
 		$botoesBusca = [
 			botao("Inserir", "visualizarCadastro","","","","","btn btn-success"),
 			'<button class="btn default" type="button" onclick="imprimirTabelaCompleta()">Imprimir</button>',
+			'<a class="btn btn-info" href="ficha_qrcode.php">QR Codes</a>',
 			'<a class="btn btn-info" href="cadastro_funcionario.php?acao=baixarModeloCsvFuncionarios">Download Modelo CSV</a>',
 			botao("Limpar Filtros", "limparFiltros")
 		];
