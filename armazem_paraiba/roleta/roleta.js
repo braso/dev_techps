@@ -96,10 +96,6 @@ function drawWheel() {
     lines.forEach((line, idx) => {
       ctx.fillText(line, r-12, idx*lineHeight - blockHeight/2);
     });
-    if (!disponivel) {
-      ctx.font='bold '+Math.max(9, fontSize-3)+'px sans-serif';
-      ctx.fillText('ESGOTADO', r-12, blockHeight/2 + Math.max(13, fontSize));
-    }
     ctx.restore();
   }
   ctx.beginPath(); ctx.arc(cx,cy,46,0,Math.PI*2); ctx.fillStyle='#ffffff'; ctx.fill();

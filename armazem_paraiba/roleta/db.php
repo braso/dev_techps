@@ -48,6 +48,9 @@ $queries = [
     email VARCHAR(255) NULL,
     telefone VARCHAR(64) NULL,
     empresa VARCHAR(255) NULL,
+    segmento VARCHAR(255) NULL,
+    funcao VARCHAR(255) NULL,
+    observacoes TEXT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 "CREATE TABLE IF NOT EXISTS roleta_lead_premios (
@@ -183,6 +186,20 @@ function roleta_bonus_lead($conn, $leadId) {
     }
     mysqli_stmt_close($stmt);
     return $out;
+}
+
+// Migração: novos campos do cadastro de leads (segmento, função e observações)
+foreach ([
+    'segmento' => 'VARCHAR(255) NULL',
+    'funcao' => 'VARCHAR(255) NULL',
+    'observacoes' => 'TEXT NULL',
+] as $colunaLead => $definicaoLead) {
+    $checkLead = mysqli_query($conn, "SHOW COLUMNS FROM roleta_leads LIKE '$colunaLead'");
+    if ($checkLead && mysqli_num_rows($checkLead) === 0) {
+        try {
+            mysqli_query($conn, "ALTER TABLE roleta_leads ADD COLUMN $colunaLead $definicaoLead");
+        } catch (Throwable $e) {}
+    }
 }
 
 // Migração: coluna do prêmio especial "Gire Novamente" em bancos já existentes

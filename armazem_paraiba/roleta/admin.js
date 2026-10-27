@@ -67,8 +67,11 @@ async function carregarLeads(){
   const {d}=await api('list_leads'); const tbody=$('#tbodyLeads'); tbody.innerHTML='';
   d.forEach(l=>{
     const bonusTxt=(l.bonus&&l.bonus.length)?l.bonus.map(b=>`${escapeHtml(b.nome)} <span class="bonus-tag">+${b.bonus}%</span>`).join('<br>'):'—';
+    const temGiros=l.giros_permitidos!==null&&l.giros_permitidos!==undefined&&l.giros_permitidos!=='';
+    const permitidos=Number(l.giros_permitidos)||0, usados=Number(l.giros_usados)||0;
+    const girosTxt=temGiros?`<strong>${permitidos}</strong><br><small class="muted">${usados} usados · ${Math.max(0,permitidos-usados)} restantes</small>`:'—';
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${escapeHtml(l.nome)}</td><td>${escapeHtml(l.email||'—')}</td><td>${escapeHtml(l.telefone||'—')}</td><td>${escapeHtml(l.empresa||'—')}</td><td>${l.codigo?`<code>${l.codigo}</code>`:'—'}</td><td>${bonusTxt}</td><td>${escapeHtml(l.premios_ganhos||'—')}</td><td>${new Date(l.created_at).toLocaleString('pt-BR')}</td><td><button class="btn btn-secondary btn-small" onclick="editarLead(${l.id})">Editar</button> <button class="btn btn-danger btn-small" onclick="removerLead(${l.id})">Excluir</button></td>`;
+    tr.innerHTML=`<td>${escapeHtml(l.nome)}</td><td>${escapeHtml(l.email||'—')}</td><td>${escapeHtml(l.telefone||'—')}</td><td>${escapeHtml(l.empresa||'—')}</td><td>${escapeHtml(l.segmento||'—')}</td><td>${escapeHtml(l.funcao||'—')}</td><td><span class="obs-text" title="${escapeHtml(l.observacoes||'')}">${escapeHtml(l.observacoes||'—')}</span></td><td>${l.codigo?`<code>${l.codigo}</code>`:'—'}</td><td>${bonusTxt}</td><td>${escapeHtml(l.premios_ganhos||'—')}</td><td>${new Date(l.created_at).toLocaleString('pt-BR')}</td><td>${girosTxt}</td><td><button class="btn btn-secondary btn-small" onclick="editarLead(${l.id})">Editar</button> <button class="btn btn-danger btn-small" onclick="removerLead(${l.id})">Excluir</button></td>`;
     tbody.appendChild(tr);
   });
 }
@@ -77,7 +80,7 @@ async function abrirFormLead(){
   $('#formLeadTitulo').textContent='Novo Cadastro (gera código)';
   $('#btnSalvarLead').textContent='Cadastrar e Gerar Código';
   $('#lId').value='';
-  ['lNome','lEmail','lTelefone','lEmpresa'].forEach(i=>$('#'+i).value='');
+  ['lNome','lEmail','lTelefone','lEmpresa','lSegmento','lFuncao','lObservacoes'].forEach(i=>$('#'+i).value='');
   $('#lGiros').value=1; $('#lExpira').value='';
   $('#leadMsg').textContent=''; $('#leadMsg').className='msg';
   $('#bonusPremiosList').innerHTML='<p class="muted small">Carregando brindes...</p>';
@@ -97,6 +100,9 @@ async function editarLead(id){
   $('#lEmail').value=l.email||'';
   $('#lTelefone').value=l.telefone||'';
   $('#lEmpresa').value=l.empresa||'';
+  $('#lSegmento').value=l.segmento||'';
+  $('#lFuncao').value=l.funcao||'';
+  $('#lObservacoes').value=l.observacoes||'';
   $('#lGiros').value=l.giros_permitidos||1;
   $('#lExpira').value=l.expira_em?(String(l.expira_em).replace(' ','T').slice(0,16)):'';
   $('#leadMsg').textContent=''; $('#leadMsg').className='msg';
@@ -107,7 +113,7 @@ async function editarLead(id){
 $('#formLead').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const id=$('#lId').value;
-  const body={nome:$('#lNome').value.trim(),email:$('#lEmail').value.trim()||null,telefone:$('#lTelefone').value.trim()||null,empresa:$('#lEmpresa').value.trim()||null,giros:parseInt($('#lGiros').value)||1,expira_em:$('#lExpira').value||null,bonus_premios:coletarBonusPremios()};
+  const body={nome:$('#lNome').value.trim(),email:$('#lEmail').value.trim()||null,telefone:$('#lTelefone').value.trim()||null,empresa:$('#lEmpresa').value.trim()||null,segmento:$('#lSegmento').value.trim()||null,funcao:$('#lFuncao').value.trim()||null,observacoes:$('#lObservacoes').value.trim()||null,giros:parseInt($('#lGiros').value)||1,expira_em:$('#lExpira').value||null,bonus_premios:coletarBonusPremios()};
   const {r,d}=await api(id?'edit_lead':'create_lead',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   if(r.ok){ fecharFormLead(); carregarLeads(); carregarCodigos(); carregarStats(); if(!id) alert('Código: '+d.codigo); }
   else { $('#leadMsg').textContent=d.error||'Erro'; $('#leadMsg').className='msg error'; }

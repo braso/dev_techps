@@ -79,6 +79,9 @@ if (stripos($nivel, 'Super Administrador') === false) {
           <div><label>E-mail</label><input type="email" id="lEmail"></div>
           <div><label>Telefone</label><input type="text" id="lTelefone"></div>
           <div><label>Empresa</label><input type="text" id="lEmpresa"></div>
+          <div><label>Segmento</label><input type="text" id="lSegmento" placeholder="Ex.: Alimentação, Varejo..."></div>
+          <div><label>Função</label><input type="text" id="lFuncao" placeholder="Ex.: Gerente, Comprador..."></div>
+          <div class="grid-full"><label>Observações</label><textarea id="lObservacoes" rows="3" placeholder="Informações adicionais sobre o lead"></textarea></div>
           <div><label>Giros</label><input type="number" id="lGiros" min="1" value="1"></div>
           <div><label>Expira em</label><input type="datetime-local" id="lExpira"></div>
         </div>
@@ -90,7 +93,7 @@ if (stripos($nivel, 'Super Administrador') === false) {
         <div class="form-actions"><button type="submit" class="btn btn-primary" id="btnSalvarLead">Cadastrar e Gerar Código</button><button type="button" class="btn btn-secondary" onclick="fecharFormLead()">Cancelar</button></div>
         <p id="leadMsg" class="msg"></p>
       </form>
-      <div class="table-wrap"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Telefone</th><th>Empresa</th><th>Código</th><th>Bônus</th><th>Prêmio(s)</th><th>Data</th><th>Ações</th></tr></thead><tbody id="tbodyLeads"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Telefone</th><th>Empresa</th><th>Segmento</th><th>Função</th><th>Observações</th><th>Código</th><th>Bônus</th><th>Prêmio(s)</th><th>Data</th><th>Giros liberados</th><th>Ações</th></tr></thead><tbody id="tbodyLeads"></tbody></table></div>
     </section>
     <!-- codigos -->
     <section id="tab-codigos" class="tabpane">
