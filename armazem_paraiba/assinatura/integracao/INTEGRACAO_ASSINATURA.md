@@ -72,6 +72,8 @@ Campos aceitos:
 - `retorno` (opcional: URL para redirecionar após sucesso/erro)
 - `format` (opcional: `json` para resposta JSON)
 
+> **ICP x assinatura eletrônica:** somente `validar_icp = sim` aplica o carimbo/certificado ICP-Brasil ao PDF final. Com `validar_icp = nao`, o documento mantém apenas a assinatura eletrônica. O `auto_sign` do `config_pfx.php` serve apenas para usar o certificado configurado automaticamente quando o ICP foi solicitado; ele não força ICP em documentos eletrônicos.
+
 ### Exemplo (com caminho do arquivo já gerado)
 
 ```html

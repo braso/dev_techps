@@ -56,6 +56,7 @@
 					"/cadastro_feriado.php" 	=> "Feriado",
 					"/cadastro_ferias.php" 		=> "Férias",
 					"/cadastro_funcionario.php"	=> "Funcionário",
+					"/ficha_qrcode.php"          => "Ficha Funcional (QR)",
 					"/correcao_funcionario.php" => "Corrigir Funcionário",
 					"/cadastro_facial.php"      => "Facial",
 					"/cadastro_abono.php"		=> "Abono",

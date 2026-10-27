@@ -259,6 +259,73 @@ function termos_tipo_requer_ativo(array $tipo): bool {
 	return strtolower(trim(strval($tipo["tipo_tx_ativo"] ?? "nao"))) === "sim";
 }
 
+function termos_opcoes_assinatura_notificacao(): array {
+	return [
+		"assinatura_eletronica" => "Assinatura Eletrônica",
+		"assinatura_icp" => "Assinatura/ICP",
+		"notificacao" => "Notificação"
+	];
+}
+
+function termos_normalizar_modo_envio($modo): string {
+	$valor = strtolower(trim(strval($modo)));
+	$valor = str_replace(
+		["á", "à", "â", "ã", "é", "ê", "í", "ó", "ô", "õ", "ú", "ç"],
+		["a", "a", "a", "a", "e", "e", "i", "o", "o", "o", "u", "c"],
+		$valor
+	);
+	$mapa = [
+		"assinatura_eletronica" => "assinatura_eletronica",
+		"assinatura eletronica" => "assinatura_eletronica",
+		"assinatura-eletronica" => "assinatura_eletronica",
+		"eletronica" => "assinatura_eletronica",
+		"assinatura" => "assinatura_eletronica",
+		"assinatura_icp" => "assinatura_icp",
+		"assinatura icp" => "assinatura_icp",
+		"assinatura/icp" => "assinatura_icp",
+		"icp" => "assinatura_icp",
+		"assinatura/icp-brasil" => "assinatura_icp",
+		"notificacao" => "notificacao",
+		"notificar" => "notificacao",
+		"documento" => "documento"
+	];
+	return $mapa[$valor] ?? "";
+}
+
+function termos_html_opcoes_assinatura_notificacao(string $selecionado = "assinatura_eletronica"): string {
+	$selecionado = termos_normalizar_modo_envio($selecionado);
+	if($selecionado === "" || $selecionado === "documento"){
+		$selecionado = "assinatura_eletronica";
+	}
+	$html = "";
+	foreach(termos_opcoes_assinatura_notificacao() as $valor => $rotulo){
+		$sel = $valor === $selecionado ? " selected" : "";
+		$html .= "<option value='" . termos_h($valor) . "'{$sel}>" . termos_h($rotulo) . "</option>";
+	}
+	return $html;
+}
+
+function termos_ajuda_assinatura_notificacao(): string {
+	return "Assinatura Eletrônica: coleta a assinatura digital do funcionário. Assinatura/ICP: coleta a assinatura e valida o PDF final com certificado ICP-Brasil; exige que o tipo de documento esteja com Assinatura = Sim. Notificação: não coleta assinatura; o funcionário recebe o aviso para visualizar e confirmar a ciência.";
+}
+
+function termos_resolver_modo_envio(array $params, array $tipo, array $modelo): string {
+	$modo = termos_normalizar_modo_envio($params["modo_envio"] ?? "");
+	if($modo !== ""){
+		return $modo;
+	}
+
+	// Compatibilidade com telas/chamadas antigas que enviavam apenas "validar_icp".
+	$validarIcp = strtolower(trim(strval($params["validar_icp"] ?? "nao"))) === "sim";
+	if(termos_tipo_requer_assinatura($tipo)){
+		return $validarIcp ? "assinatura_icp" : "assinatura_eletronica";
+	}
+	if(strtolower(trim(strval($modelo["mode_tx_notificacao"] ?? "sim"))) === "sim"){
+		return "notificacao";
+	}
+	return "documento";
+}
+
 function termos_tabela_ativo_existe(): bool {
 	global $conn;
 	if($conn instanceof mysqli && function_exists("bancoTabelaExiste")){
@@ -1523,7 +1590,28 @@ function termos_processar_um(int $entiId, array $params): array {
 
 	$tipoId = intval($tipo["tipo_nb_id"] ?? 0);
 	$sbgrupo = intval($tipo["tipo_nb_sbgrupo"] ?? 0);
-	$requerAssinatura = termos_tipo_requer_assinatura($tipo);
+	$modoEnvio = termos_resolver_modo_envio($params, $tipo, $modelo);
+	$requerAssinatura = in_array($modoEnvio, ["assinatura_eletronica", "assinatura_icp"], true);
+
+	if($modoEnvio === "assinatura_icp" && !termos_tipo_requer_assinatura($tipo)){
+		$tipoNome = trim(strval($tipo["tipo_tx_nome"] ?? ""));
+		$msg = $nomeFunc . " — o tipo de documento" . ($tipoNome !== "" ? " \"" . $tipoNome . "\"" : "") . " está com Assinatura = Não. Altere o tipo de documento para Assinatura = Sim antes de enviar com Assinatura/ICP.";
+		termos_log("assinatura_icp_bloqueada", $msg, [
+			"modelo" => $modeloId,
+			"entidade" => $entiId,
+			"tipo_documento" => $tipoId,
+			"modo_envio" => $modoEnvio
+		]);
+		return [
+			"ok" => false,
+			"entidade" => $entiId,
+			"nome" => $nomeFunc,
+			"msg" => $msg,
+			"tipo_documento_id" => $tipoId,
+			"tipo_documento_nome" => $tipoNome
+		];
+	}
+
 	$descricao = "Termo: " . $nome;
 
 	if($requerAssinatura){
@@ -1537,15 +1625,18 @@ function termos_processar_um(int $entiId, array $params): array {
 			return ["ok" => false, "entidade" => $entiId, "nome" => $nomeFunc, "msg" => $nomeFunc . " — falha ao gerar o PDF do termo."];
 		}
 
-		$envio = termos_enviar_assinatura($entiId, $dados, $modelo, $tipo, $tmpPdf, $params);
+		$paramsEnvio = $params;
+		$paramsEnvio["validar_icp"] = $modoEnvio === "assinatura_icp" ? "sim" : "nao";
+		$envio = termos_enviar_assinatura($entiId, $dados, $modelo, $tipo, $tmpPdf, $paramsEnvio);
 		if(empty($envio["ok"])){
 			@unlink($tmpPdf);
 			$msgErro = strval($envio["error"] ?? "Falha ao enviar para assinatura.");
 			termos_inserir_gerado($modeloId, $entiId, $tipoId, "erro", null, 0, "", 0, "Assinatura: " . $msgErro, $user, $ativoId);
-			termos_log("assinatura_erro", $msgErro, ["modelo" => $modeloId, "entidade" => $entiId]);
+			termos_log("assinatura_erro", $msgErro, ["modelo" => $modeloId, "entidade" => $entiId, "modo_envio" => $modoEnvio]);
 			return ["ok" => false, "entidade" => $entiId, "nome" => $nomeFunc, "msg" => $nomeFunc . " — erro ao enviar assinatura: " . $msgErro];
 		}
 
+		$rotuloModo = $modoEnvio === "assinatura_icp" ? "Assinatura/ICP" : "Assinatura Eletrônica";
 		$regId = termos_inserir_gerado(
 			$modeloId,
 			$entiId,
@@ -1555,7 +1646,7 @@ function termos_processar_um(int $entiId, array $params): array {
 			intval($envio["id_solicitacao"] ?? 0),
 			strval($envio["id_documento"] ?? ""),
 			0,
-			"Enviado para assinatura eletrônica.",
+			"Enviado para " . $rotuloModo . ".",
 			$user,
 			$ativoId
 		);
@@ -1563,9 +1654,10 @@ function termos_processar_um(int $entiId, array $params): array {
 			"modelo" => $modeloId,
 			"entidade" => $entiId,
 			"termo" => $regId,
-			"solicitacao" => intval($envio["id_solicitacao"] ?? 0)
+			"solicitacao" => intval($envio["id_solicitacao"] ?? 0),
+			"modo_envio" => $modoEnvio
 		]);
-		return ["ok" => true, "entidade" => $entiId, "nome" => $nomeFunc, "msg" => $nomeFunc . " — enviado para assinatura eletrônica."];
+		return ["ok" => true, "entidade" => $entiId, "nome" => $nomeFunc, "msg" => $nomeFunc . " — enviado para " . $rotuloModo . "."];
 	}
 
 	[$dest, $rel] = termos_caminho_final($entiId, $modelo, $dados);
@@ -1575,13 +1667,13 @@ function termos_processar_um(int $entiId, array $params): array {
 
 	$docuId = termos_registrar_documento_funcionario($entiId, $tipoId, $sbgrupo, $nome, $descricao, $rel, "nao");
 
-	$notificar = strtolower(trim(strval($modelo["mode_tx_notificacao"] ?? "sim"))) === "sim";
+	$notificar = $modoEnvio === "notificacao";
 	if($notificar){
 		$notif = termos_criar_notificacao_visualizacao($entiId, $dados, $modelo, $tipo, $rel, $params);
 		if(empty($notif["ok"])){
 			$msgErroNotif = strval($notif["error"] ?? "Falha ao notificar o funcionário.");
 			$regId = termos_inserir_gerado($modeloId, $entiId, $tipoId, "gerado", $rel, 0, "", $docuId, "Documento gerado sem assinatura. Notificação não enviada: " . $msgErroNotif, $user, $ativoId);
-			termos_log("notificacao_erro", $msgErroNotif, ["modelo" => $modeloId, "entidade" => $entiId, "termo" => $regId]);
+			termos_log("notificacao_erro", $msgErroNotif, ["modelo" => $modeloId, "entidade" => $entiId, "termo" => $regId, "modo_envio" => $modoEnvio]);
 			return ["ok" => true, "entidade" => $entiId, "nome" => $nomeFunc, "msg" => $nomeFunc . " — documento gerado e salvo no funcionário, mas houve falha na notificação: " . $msgErroNotif];
 		}
 
@@ -1608,7 +1700,8 @@ function termos_processar_um(int $entiId, array $params): array {
 			"termo" => $regId,
 			"caminho" => $rel,
 			"solicitacao" => intval($notif["id_solicitacao"] ?? 0),
-			"email" => !empty($notif["email_enviado"]) ? "enviado" : "nao_enviado"
+			"email" => !empty($notif["email_enviado"]) ? "enviado" : "nao_enviado",
+			"modo_envio" => $modoEnvio
 		]);
 		$msgEmail = !empty($notif["email_enviado"]) ? " e-mail de notificação enviado" : " notificação registrada (e-mail não pôde ser enviado — confira o cadastro/SMTP)";
 		return ["ok" => true, "entidade" => $entiId, "nome" => $nomeFunc, "msg" => $nomeFunc . " — documento salvo no funcionário," . $msgEmail . "."];
@@ -1619,7 +1712,8 @@ function termos_processar_um(int $entiId, array $params): array {
 		"modelo" => $modeloId,
 		"entidade" => $entiId,
 		"termo" => $regId,
-		"caminho" => $rel
+		"caminho" => $rel,
+		"modo_envio" => $modoEnvio
 	]);
 	return ["ok" => true, "entidade" => $entiId, "nome" => $nomeFunc, "msg" => $nomeFunc . " — documento gerado e salvo no funcionário."];
 }
