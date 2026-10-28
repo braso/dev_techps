@@ -139,7 +139,8 @@ async function carregarItens() {
 }
 
 function qrCardHtml(q) {
-  return `<div class="qr-card"><h3>${escapeHtml(q.titulo)}</h3><div class="qr-image-frame"><img src="${escapeHtml(q.imagem)}" alt="QR Code - ${escapeHtml(q.titulo)}" loading="lazy"></div></div>`;
+  const logo = q.logo ? `<img class="qr-card-logo" src="${escapeHtml(q.logo)}" alt="Logo ${escapeHtml(q.titulo)}" loading="lazy">` : '';
+  return `<div class="qr-card"><div class="qr-card-head">${logo}<h3>${escapeHtml(q.titulo)}</h3></div><div class="qr-image-frame"><img src="${escapeHtml(q.imagem)}" alt="QR Code - ${escapeHtml(q.titulo)}" loading="lazy"></div></div>`;
 }
 async function carregarQrcodes() {
   const section = document.getElementById('qrSection');
