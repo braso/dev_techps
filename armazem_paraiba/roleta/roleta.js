@@ -80,16 +80,13 @@ function drawWheel() {
   const maxTextWidth = Math.max(60, r - 64);
   for (let i=0;i<n;i++){
     const item = itens[i];
-    const disponivel = itemDisponivel(item);
     const start = angulo + i*slice, end = start+slice;
     ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,end); ctx.closePath();
     ctx.fillStyle = item.cor || '#888'; ctx.fill();
-    // brindes esgotados ficam acinzentados, mas continuam visíveis
-    if (!disponivel) { ctx.fillStyle='rgba(105,105,105,0.7)'; ctx.fill(); }
     ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=2; ctx.stroke();
     ctx.save(); ctx.translate(cx,cy); ctx.rotate(start+slice/2);
     ctx.textAlign='right'; ctx.textBaseline='middle';
-    ctx.fillStyle = disponivel ? '#fff' : '#f0f0f0';
+    ctx.fillStyle = '#fff';
     ctx.font='bold '+fontSize+'px sans-serif'; ctx.shadowColor='rgba(0,0,0,0.5)'; ctx.shadowBlur=4;
     const lines = wrapCanvasText(item.nome, maxTextWidth, maxLines);
     const blockHeight = (lines.length - 1) * lineHeight;

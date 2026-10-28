@@ -48,10 +48,12 @@ $queries = [
     email VARCHAR(255) NULL,
     telefone VARCHAR(64) NULL,
     empresa VARCHAR(255) NULL,
+    documento VARCHAR(20) NULL,
     segmento VARCHAR(255) NULL,
     funcao VARCHAR(255) NULL,
     observacoes TEXT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_lead_documento (documento)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 "CREATE TABLE IF NOT EXISTS roleta_lead_premios (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -123,6 +125,46 @@ function roleta_gen_codigo($prefix = 'PRM') {
 function roleta_gen_liberacao() {
     return strtoupper(substr(bin2hex(random_bytes(4)), 0, 8));
 }
+function roleta_somente_digitos($valor) {
+    return preg_replace('/\D+/', '', (string)$valor);
+}
+function roleta_valida_cpf($cpf) {
+    $cpf = roleta_somente_digitos($cpf);
+    if (strlen($cpf) !== 11 || preg_match('/^(\d)\1{10}$/', $cpf)) return false;
+    for ($t = 9; $t < 11; $t++) {
+        $soma = 0;
+        for ($i = 0; $i < $t; $i++) {
+            $soma += (int)$cpf[$i] * (($t + 1) - $i);
+        }
+        $digito = ($soma * 10) % 11;
+        if ($digito === 10) $digito = 0;
+        if ((int)$cpf[$t] !== $digito) return false;
+    }
+    return true;
+}
+function roleta_valida_cnpj($cnpj) {
+    $cnpj = roleta_somente_digitos($cnpj);
+    if (strlen($cnpj) !== 14 || preg_match('/^(\d)\1{13}$/', $cnpj)) return false;
+    $calcular = function ($base, array $pesos) {
+        $soma = 0;
+        foreach (str_split($base) as $i => $digito) {
+            $soma += (int)$digito * $pesos[$i];
+        }
+        $resto = $soma % 11;
+        return $resto < 2 ? 0 : 11 - $resto;
+    };
+    $d1 = $calcular(substr($cnpj, 0, 12), [5,4,3,2,9,8,7,6,5,4,3,2]);
+    if ((int)$cnpj[12] !== $d1) return false;
+    $d2 = $calcular(substr($cnpj, 0, 13), [6,5,4,3,2,9,8,7,6,5,4,3,2]);
+    return (int)$cnpj[13] === $d2;
+}
+// Retorna 'cpf', 'cnpj' ou false
+function roleta_valida_documento($documento) {
+    $doc = roleta_somente_digitos($documento);
+    if (strlen($doc) === 11) return roleta_valida_cpf($doc) ? 'cpf' : false;
+    if (strlen($doc) === 14) return roleta_valida_cnpj($doc) ? 'cnpj' : false;
+    return false;
+}
 function roleta_primeiro_nome($nome) {
     if (!$nome) return null;
     $parts = preg_split('/\s+/', trim($nome));
@@ -190,6 +232,7 @@ function roleta_bonus_lead($conn, $leadId) {
 
 // Migração: novos campos do cadastro de leads (segmento, função e observações)
 foreach ([
+    'documento' => 'VARCHAR(20) NULL',
     'segmento' => 'VARCHAR(255) NULL',
     'funcao' => 'VARCHAR(255) NULL',
     'observacoes' => 'TEXT NULL',
@@ -200,6 +243,13 @@ foreach ([
             mysqli_query($conn, "ALTER TABLE roleta_leads ADD COLUMN $colunaLead $definicaoLead");
         } catch (Throwable $e) {}
     }
+}
+// Garante a unicidade do CPF/CNPJ (NULLs continuam permitidos)
+$idxDocumento = mysqli_query($conn, "SHOW INDEX FROM roleta_leads WHERE Key_name='uq_lead_documento'");
+if ($idxDocumento && mysqli_num_rows($idxDocumento) === 0) {
+    try {
+        mysqli_query($conn, "ALTER TABLE roleta_leads ADD UNIQUE KEY uq_lead_documento (documento)");
+    } catch (Throwable $e) {}
 }
 
 // Migração: coluna do prêmio especial "Gire Novamente" em bancos já existentes

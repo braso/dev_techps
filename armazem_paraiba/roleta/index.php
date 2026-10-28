@@ -30,7 +30,6 @@ $modoLivre = roleta_cfg($conn, 'modo_livre', '0') === '1';
         <canvas id="wheel" width="520" height="520"></canvas>
         <button class="spin-btn" id="spinBtn" disabled>GIRAR</button>
       </div>
-      <p class="wheel-note muted small">Brindes esgotados aparecem em cinza e não participam do sorteio.</p>
       <div id="resultado" class="resultado hidden">
         <div class="resultado-inner">
           <button type="button" class="resultado-close" id="btnFecharResultadoX" aria-label="Fechar">×</button>
