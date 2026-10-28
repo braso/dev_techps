@@ -24,21 +24,27 @@ $modoLivre = roleta_cfg($conn, 'modo_livre', '0') === '1';
       <p>Gire e concorra a brindes exclusivos! Valide seu código abaixo e tente a sorte.</p>
     </section>
 
-    <div class="wheel-section">
-      <div class="wheel-wrap">
-        <div class="pointer">▼</div>
-        <canvas id="wheel" width="520" height="520"></canvas>
-        <button class="spin-btn" id="spinBtn" disabled>GIRAR</button>
-      </div>
-      <div id="resultado" class="resultado hidden">
-        <div class="resultado-inner">
-          <button type="button" class="resultado-close" id="btnFecharResultadoX" aria-label="Fechar">×</button>
-          <h2 id="resTitulo">🎉 Você ganhou!</h2>
-          <img id="resFoto" src="" alt="" class="res-foto">
-          <div id="resNome" class="res-nome"></div>
-          <button class="btn btn-primary" id="btnFecharResultado">Continuar</button>
+    <div class="wheel-layout">
+      <aside class="qr-side" id="qrSideLeft"></aside>
+      <div class="wheel-center">
+        <div class="wheel-section">
+          <div class="wheel-wrap">
+            <div class="pointer">▼</div>
+            <canvas id="wheel" width="520" height="520"></canvas>
+            <button class="spin-btn" id="spinBtn" disabled>GIRAR</button>
+          </div>
+          <div id="resultado" class="resultado hidden">
+            <div class="resultado-inner">
+              <button type="button" class="resultado-close" id="btnFecharResultadoX" aria-label="Fechar">×</button>
+              <h2 id="resTitulo">🎉 Você ganhou!</h2>
+              <img id="resFoto" src="" alt="" class="res-foto">
+              <div id="resNome" class="res-nome"></div>
+              <button class="btn btn-primary" id="btnFecharResultado">Continuar</button>
+            </div>
+          </div>
         </div>
       </div>
+      <aside class="qr-side" id="qrSideRight"></aside>
     </div>
 
     <div class="code-panel" id="codeBox">
@@ -55,6 +61,11 @@ $modoLivre = roleta_cfg($conn, 'modo_livre', '0') === '1';
         <button class="btn btn-secondary btn-small" id="btnTrocarCodigo">Trocar código</button>
       </div>
     </div>
+
+    <section class="qr-section qr-mobile hidden" id="qrSection">
+      <h2>Acesse pelo QR Code</h2>
+      <div class="qr-grid" id="qrGrid"></div>
+    </section>
   </main>
   <script>window.ROLETA_API = 'api.php'; window.ROLETA_MODO_LIVRE = <?php echo $modoLivre?'true':'false'; ?>;</script>
   <script src="roleta.js"></script>

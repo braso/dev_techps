@@ -1,4 +1,5 @@
 const API = window.ROLETA_API || 'api.php';
+function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 const canvas = document.getElementById('wheel');
 const ctx = canvas.getContext('2d');
 const spinBtn = document.getElementById('spinBtn');
@@ -137,6 +138,35 @@ async function carregarItens() {
   drawWheel();
 }
 
+function qrCardHtml(q) {
+  return `<div class="qr-card"><h3>${escapeHtml(q.titulo)}</h3><div class="qr-image-frame"><img src="${escapeHtml(q.imagem)}" alt="QR Code - ${escapeHtml(q.titulo)}" loading="lazy"></div></div>`;
+}
+async function carregarQrcodes() {
+  const section = document.getElementById('qrSection');
+  const grid = document.getElementById('qrGrid');
+  const sideLeft = document.getElementById('qrSideLeft');
+  const sideRight = document.getElementById('qrSideRight');
+  if(!section || !grid) return;
+  try {
+    const r = await fetch(API+'?action=listar_qrcodes');
+    const data = await r.json();
+    const ativos = Array.isArray(data) ? data.filter(q => q && q.imagem) : [];
+    if(sideLeft) sideLeft.innerHTML='';
+    if(sideRight) sideRight.innerHTML='';
+    if(ativos.length === 0){ section.classList.add('hidden'); grid.innerHTML=''; return; }
+    const cards = ativos.map(qrCardHtml);
+    const meio = Math.ceil(cards.length / 2);
+    if(sideLeft) sideLeft.innerHTML = cards.slice(0, meio).join('');
+    if(sideRight) sideRight.innerHTML = cards.slice(meio).join('');
+    grid.innerHTML = cards.join('');
+    section.classList.remove('hidden');
+  } catch(e){
+    section.classList.add('hidden');
+    if(sideLeft) sideLeft.innerHTML='';
+    if(sideRight) sideRight.innerHTML='';
+  }
+}
+
 function easeOutCubic(t){ return 1 - Math.pow(1-t,3); }
 
 async function girar() {
@@ -202,4 +232,5 @@ spinBtn.addEventListener('click', girar);
 // init
 if (modoLivre){ setSpinEnabled(true); girosRestantesEl.textContent='∞'; }
 carregarItens();
+carregarQrcodes();
 drawWheel();

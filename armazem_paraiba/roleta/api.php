@@ -6,13 +6,14 @@ $action = $_REQUEST['action'] ?? '';
 // Admin actions require super admin session
 $adminActions = ['stats','list_premios_all','create_premio','edit_premio','delete_premio','ajustar_estoque',
     'list_leads','create_lead','edit_lead','check_documento','delete_lead','list_codigos','create_codigo','edit_codigo','delete_codigo',
+    'list_qrcodes_all','create_qrcode','edit_qrcode','delete_qrcode',
     'get_config','set_config','historico','export','import','backup'];
 $isAdminAction = in_array($action, $adminActions, true);
 
 if ($isAdminAction) {
     include_once dirname(__DIR__) . '/conecta.php';
-    $nivel = $_SESSION['user_tx_nivel'] ?? '';
-    if (stripos($nivel, 'Super Administrador') === false) {
+    include_once dirname(__DIR__) . '/check_permission.php';
+    if (!usuarioPodeAcessar('/roleta/admin.php')) {
         roleta_json(['error' => 'nao_autorizado'], 401);
     }
 }
@@ -39,6 +40,16 @@ case 'listar_premios':
         $r['girar_novamente'] = ((int)$r['girar_novamente'] === 1);
         $r['disponivel'] = ($r['girar_novamente'] || (int)$r['quantidade'] > 0);
         unset($r['quantidade']);
+        $rows[] = $r;
+    }
+    roleta_json($rows);
+    break;
+
+case 'listar_qrcodes':
+    $rows = [];
+    $q = mysqli_query($conn, "SELECT id,titulo,imagem FROM roleta_qrcodes WHERE ativo=1 ORDER BY id");
+    while ($r = mysqli_fetch_assoc($q)) {
+        $r['id'] = (int)$r['id'];
         $rows[] = $r;
     }
     roleta_json($rows);
@@ -443,6 +454,67 @@ case 'delete_codigo':
     roleta_json(['ok'=>true]);
     break;
 
+case 'list_qrcodes_all':
+    $rows = [];
+    $q = mysqli_query($conn, "SELECT * FROM roleta_qrcodes ORDER BY id DESC");
+    while ($r = mysqli_fetch_assoc($q)) {
+        $r['id'] = (int)$r['id'];
+        $r['ativo'] = (int)$r['ativo'];
+        $rows[] = $r;
+    }
+    roleta_json($rows);
+    break;
+
+case 'create_qrcode':
+    $titulo = trim($_POST['titulo'] ?? '');
+    $ativo = (($_POST['ativo'] ?? '1') === '1') ? 1 : 0;
+    if ($titulo === '') roleta_json(['error'=>'titulo_obrigatorio'], 400);
+    $imagem = roleta_salvar_upload_qr($_FILES['imagem'] ?? null);
+    if ($imagem === null) roleta_json(['error'=>'imagem_obrigatoria'], 400);
+    if ($imagem === false) roleta_json(['error'=>'upload_falhou'], 400);
+    $stmt = mysqli_prepare($conn, "INSERT INTO roleta_qrcodes (titulo,imagem,ativo) VALUES (?,?,?)");
+    mysqli_stmt_bind_param($stmt, 'ssi', $titulo, $imagem, $ativo);
+    mysqli_stmt_execute($stmt); mysqli_stmt_close($stmt);
+    $id = mysqli_insert_id($conn);
+    $q = mysqli_query($conn, "SELECT * FROM roleta_qrcodes WHERE id=$id");
+    roleta_json(mysqli_fetch_assoc($q), 201);
+    break;
+
+case 'edit_qrcode':
+    $id = (int)($_POST['id'] ?? 0);
+    $stmt = mysqli_prepare($conn, "SELECT * FROM roleta_qrcodes WHERE id=?");
+    mysqli_stmt_bind_param($stmt, 'i', $id); mysqli_stmt_execute($stmt);
+    $row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt)); mysqli_stmt_close($stmt);
+    if (!$row) roleta_json(['error'=>'nao_encontrado'], 404);
+    $titulo = isset($_POST['titulo']) ? trim($_POST['titulo']) : $row['titulo'];
+    if ($titulo === '') roleta_json(['error'=>'titulo_obrigatorio'], 400);
+    $ativo = isset($_POST['ativo']) ? (($_POST['ativo'] === '1') ? 1 : 0) : (int)$row['ativo'];
+    $imagem = $row['imagem'];
+    $novaImagem = roleta_salvar_upload_qr($_FILES['imagem'] ?? null);
+    if ($novaImagem === false) roleta_json(['error'=>'upload_falhou'], 400);
+    if ($novaImagem !== null) {
+        if ($row['imagem'] && file_exists(__DIR__ . '/' . $row['imagem'])) @unlink(__DIR__ . '/' . $row['imagem']);
+        $imagem = $novaImagem;
+    }
+    $stmt = mysqli_prepare($conn, "UPDATE roleta_qrcodes SET titulo=?,imagem=?,ativo=? WHERE id=?");
+    mysqli_stmt_bind_param($stmt, 'ssii', $titulo, $imagem, $ativo, $id);
+    mysqli_stmt_execute($stmt); mysqli_stmt_close($stmt);
+    $q = mysqli_query($conn, "SELECT * FROM roleta_qrcodes WHERE id=$id");
+    roleta_json(mysqli_fetch_assoc($q));
+    break;
+
+case 'delete_qrcode':
+    $data = roleta_body();
+    $id = (int)($data['id'] ?? 0);
+    $stmt = mysqli_prepare($conn, "SELECT imagem FROM roleta_qrcodes WHERE id=?");
+    mysqli_stmt_bind_param($stmt, 'i', $id); mysqli_stmt_execute($stmt);
+    $row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt)); mysqli_stmt_close($stmt);
+    if ($row && $row['imagem'] && file_exists(__DIR__ . '/' . $row['imagem'])) @unlink(__DIR__ . '/' . $row['imagem']);
+    $stmt = mysqli_prepare($conn, "DELETE FROM roleta_qrcodes WHERE id=?");
+    mysqli_stmt_bind_param($stmt, 'i', $id); mysqli_stmt_execute($stmt); mysqli_stmt_close($stmt);
+    roleta_json(['ok'=>true]);
+    break;
+
 case 'get_config':
     roleta_json(['modo_livre' => roleta_cfg($conn,'modo_livre','0')==='1']);
     break;
@@ -473,6 +545,7 @@ case 'export':
         'lead_premios' => [],
         'codigos' => [],
         'giros' => [],
+        'qrcodes' => [],
         'config' => [],
     ];
     $q = mysqli_query($conn, "SELECT * FROM roleta_premios"); while ($r = mysqli_fetch_assoc($q)) $data['premios'][] = $r;
@@ -480,6 +553,7 @@ case 'export':
     $q = mysqli_query($conn, "SELECT * FROM roleta_lead_premios"); while ($r = mysqli_fetch_assoc($q)) $data['lead_premios'][] = $r;
     $q = mysqli_query($conn, "SELECT * FROM roleta_codigos"); while ($r = mysqli_fetch_assoc($q)) $data['codigos'][] = $r;
     $q = mysqli_query($conn, "SELECT * FROM roleta_giros"); while ($r = mysqli_fetch_assoc($q)) $data['giros'][] = $r;
+    $q = mysqli_query($conn, "SELECT * FROM roleta_qrcodes"); while ($r = mysqli_fetch_assoc($q)) $data['qrcodes'][] = $r;
     $q = mysqli_query($conn, "SELECT * FROM roleta_config"); while ($r = mysqli_fetch_assoc($q)) $data['config'][] = $r;
     roleta_json($data);
     break;
@@ -493,6 +567,7 @@ case 'import':
         mysqli_query($conn, "DELETE FROM roleta_lead_premios");
         mysqli_query($conn, "DELETE FROM roleta_leads");
         mysqli_query($conn, "DELETE FROM roleta_premios");
+        mysqli_query($conn, "DELETE FROM roleta_qrcodes");
         mysqli_query($conn, "DELETE FROM roleta_config");
         foreach (($data['premios'] ?? []) as $p) {
             $stmt = mysqli_prepare($conn, "INSERT INTO roleta_premios (id,codigo,nome,foto,cor,peso,quantidade,ativo,girar_novamente,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)");
@@ -530,6 +605,13 @@ case 'import':
             $id=(int)($g['id']??0); $cl=$g['codigo_liberacao']??null; $lid=$g['lead_id']??null; $pid=$g['premio_id']??null;
             $pn=$g['premio_nome']??null; $pf=$g['premio_foto']??null; $pc=$g['premio_cor']??null; $ca=$g['created_at']??date('Y-m-d H:i:s');
             mysqli_stmt_bind_param($stmt, 'isiissss', $id,$cl,$lid,$pid,$pn,$pf,$pc,$ca);
+            mysqli_stmt_execute($stmt); mysqli_stmt_close($stmt);
+        }
+        foreach (($data['qrcodes'] ?? []) as $qr) {
+            $stmt = mysqli_prepare($conn, "INSERT INTO roleta_qrcodes (id,titulo,imagem,ativo,created_at) VALUES (?,?,?,?,?)");
+            $id=(int)($qr['id']??0); $titulo=$qr['titulo']??''; $imagem=$qr['imagem']??'';
+            $ativo=(int)($qr['ativo']??1); $ca=$qr['created_at']??date('Y-m-d H:i:s');
+            mysqli_stmt_bind_param($stmt, 'issis', $id,$titulo,$imagem,$ativo,$ca);
             mysqli_stmt_execute($stmt); mysqli_stmt_close($stmt);
         }
         foreach (($data['config'] ?? []) as $cfg) {

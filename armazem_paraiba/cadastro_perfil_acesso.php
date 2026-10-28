@@ -136,7 +136,7 @@ function formPerfil(){
     $menuPath = __DIR__."/menu_estrutura.php";
     if(file_exists($menuPath)){
         $txt = file_get_contents($menuPath);
-        $secs = ["cadastros","ponto","diárias","painel","logística","epi","relatórios","assinatura","suporte","treinamento"];
+        $secs = ["cadastros","ponto","diárias","painel","logística","epi","relatórios","assinatura","suporte","treinamento","roleta"];
         foreach($secs as $sec){
             if(preg_match('/"'.preg_quote($sec,'/').'"\s*=>\s*\[(.*?)\]/s', $txt, $m)){
                 if(preg_match_all('/"([^"]+)"\s*=>\s*"([^"]+)"/', $m[1], $mm, PREG_SET_ORDER)){
