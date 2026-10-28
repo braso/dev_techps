@@ -5,7 +5,7 @@ $action = $_REQUEST['action'] ?? '';
 
 // Admin actions require super admin session
 $adminActions = ['stats','list_premios_all','create_premio','edit_premio','delete_premio','ajustar_estoque',
-    'list_leads','create_lead','edit_lead','delete_lead','list_codigos','create_codigo','edit_codigo','delete_codigo',
+    'list_leads','create_lead','edit_lead','check_documento','delete_lead','list_codigos','create_codigo','edit_codigo','delete_codigo',
     'get_config','set_config','historico','export','import','backup'];
 $isAdminAction = in_array($action, $adminActions, true);
 
@@ -261,12 +261,33 @@ case 'list_leads':
     roleta_json($rows);
     break;
 
+case 'check_documento':
+    $data = roleta_body();
+    $documento = roleta_somente_digitos($data['documento'] ?? '');
+    $leadId = (int)($data['id'] ?? 0);
+    if ($documento === '') roleta_json(['error'=>'documento_obrigatorio'], 400);
+    if (!roleta_valida_documento($documento)) roleta_json(['error'=>'documento_invalido'], 400);
+    if ($leadId > 0) {
+        $stmt = mysqli_prepare($conn, "SELECT id, nome FROM roleta_leads WHERE documento=? AND id<>? LIMIT 1");
+        mysqli_stmt_bind_param($stmt, 'si', $documento, $leadId);
+    } else {
+        $stmt = mysqli_prepare($conn, "SELECT id, nome FROM roleta_leads WHERE documento=? LIMIT 1");
+        mysqli_stmt_bind_param($stmt, 's', $documento);
+    }
+    mysqli_stmt_execute($stmt);
+    $row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+    mysqli_stmt_close($stmt);
+    if ($row) roleta_json(['existe'=>true,'lead_id'=>(int)$row['id'],'nome'=>$row['nome']]);
+    roleta_json(['existe'=>false]);
+    break;
+
 case 'create_lead':
     $data = roleta_body();
     $nome = trim($data['nome'] ?? '');
-    $email = trim($data['email'] ?? '') ?: null;
-    $telefone = trim($data['telefone'] ?? '') ?: null;
+    $email = strtolower(trim($data['email'] ?? '')) ?: null;
+    $telefone = roleta_somente_digitos($data['telefone'] ?? '') ?: null;
     $empresa = trim($data['empresa'] ?? '') ?: null;
+    $documento = roleta_somente_digitos($data['documento'] ?? '') ?: null;
     $segmento = trim($data['segmento'] ?? '') ?: null;
     $funcao = trim($data['funcao'] ?? '') ?: null;
     $observacoes = trim($data['observacoes'] ?? '') ?: null;
@@ -275,9 +296,19 @@ case 'create_lead':
     $bonusPremios = roleta_parse_bonus_premios($data['bonus_premios'] ?? []);
     if ($nome === '') roleta_json(['error'=>'nome_obrigatorio'], 400);
     if ($email && !filter_var($email, FILTER_VALIDATE_EMAIL)) roleta_json(['error'=>'email_invalido'], 400);
+    if ($telefone !== null && !in_array(strlen($telefone), [10, 11], true)) roleta_json(['error'=>'telefone_invalido'], 400);
+    if ($documento !== null) {
+        if (!roleta_valida_documento($documento)) roleta_json(['error'=>'documento_invalido'], 400);
+        $stmt = mysqli_prepare($conn, "SELECT id FROM roleta_leads WHERE documento=? LIMIT 1");
+        mysqli_stmt_bind_param($stmt, 's', $documento);
+        mysqli_stmt_execute($stmt);
+        $docExiste = mysqli_fetch_row(mysqli_stmt_get_result($stmt));
+        mysqli_stmt_close($stmt);
+        if ($docExiste) roleta_json(['error'=>'documento_duplicado'], 409);
+    }
     mysqli_begin_transaction($conn);
-    $stmt = mysqli_prepare($conn, "INSERT INTO roleta_leads (nome,email,telefone,empresa,segmento,funcao,observacoes) VALUES (?,?,?,?,?,?,?)");
-    mysqli_stmt_bind_param($stmt, 'sssssss', $nome, $email, $telefone, $empresa, $segmento, $funcao, $observacoes);
+    $stmt = mysqli_prepare($conn, "INSERT INTO roleta_leads (nome,email,telefone,empresa,documento,segmento,funcao,observacoes) VALUES (?,?,?,?,?,?,?,?)");
+    mysqli_stmt_bind_param($stmt, 'ssssssss', $nome, $email, $telefone, $empresa, $documento, $segmento, $funcao, $observacoes);
     mysqli_stmt_execute($stmt);
     $leadId = mysqli_insert_id($conn); mysqli_stmt_close($stmt);
     roleta_sync_bonus_lead($conn, $leadId, $bonusPremios);
@@ -299,16 +330,27 @@ case 'edit_lead':
     if (!$row) roleta_json(['error'=>'nao_encontrado'], 404);
     $nome = isset($data['nome']) ? trim((string)$data['nome']) : $row['nome'];
     if ($nome === '') roleta_json(['error'=>'nome_obrigatorio'], 400);
-    $email = array_key_exists('email', $data) ? (trim((string)$data['email']) ?: null) : $row['email'];
+    $email = array_key_exists('email', $data) ? (strtolower(trim((string)$data['email'])) ?: null) : $row['email'];
     if ($email && !filter_var($email, FILTER_VALIDATE_EMAIL)) roleta_json(['error'=>'email_invalido'], 400);
-    $telefone = array_key_exists('telefone', $data) ? (trim((string)$data['telefone']) ?: null) : $row['telefone'];
+    $telefone = array_key_exists('telefone', $data) ? (roleta_somente_digitos($data['telefone']) ?: null) : (roleta_somente_digitos($row['telefone']) ?: null);
+    if ($telefone !== null && !in_array(strlen($telefone), [10, 11], true)) roleta_json(['error'=>'telefone_invalido'], 400);
     $empresa = array_key_exists('empresa', $data) ? (trim((string)$data['empresa']) ?: null) : $row['empresa'];
+    $documento = array_key_exists('documento', $data) ? (roleta_somente_digitos($data['documento']) ?: null) : (roleta_somente_digitos($row['documento']) ?: null);
+    if ($documento !== null) {
+        if (!roleta_valida_documento($documento)) roleta_json(['error'=>'documento_invalido'], 400);
+        $stmt = mysqli_prepare($conn, "SELECT id FROM roleta_leads WHERE documento=? AND id<>? LIMIT 1");
+        mysqli_stmt_bind_param($stmt, 'si', $documento, $id);
+        mysqli_stmt_execute($stmt);
+        $docExiste = mysqli_fetch_row(mysqli_stmt_get_result($stmt));
+        mysqli_stmt_close($stmt);
+        if ($docExiste) roleta_json(['error'=>'documento_duplicado'], 409);
+    }
     $segmento = array_key_exists('segmento', $data) ? (trim((string)$data['segmento']) ?: null) : $row['segmento'];
     $funcao = array_key_exists('funcao', $data) ? (trim((string)$data['funcao']) ?: null) : $row['funcao'];
     $observacoes = array_key_exists('observacoes', $data) ? (trim((string)$data['observacoes']) ?: null) : $row['observacoes'];
     mysqli_begin_transaction($conn);
-    $stmt = mysqli_prepare($conn, "UPDATE roleta_leads SET nome=?,email=?,telefone=?,empresa=?,segmento=?,funcao=?,observacoes=? WHERE id=?");
-    mysqli_stmt_bind_param($stmt, 'sssssssi', $nome, $email, $telefone, $empresa, $segmento, $funcao, $observacoes, $id);
+    $stmt = mysqli_prepare($conn, "UPDATE roleta_leads SET nome=?,email=?,telefone=?,empresa=?,documento=?,segmento=?,funcao=?,observacoes=? WHERE id=?");
+    mysqli_stmt_bind_param($stmt, 'ssssssssi', $nome, $email, $telefone, $empresa, $documento, $segmento, $funcao, $observacoes, $id);
     mysqli_stmt_execute($stmt); mysqli_stmt_close($stmt);
     if (array_key_exists('bonus_premios', $data)) {
         roleta_sync_bonus_lead($conn, $id, roleta_parse_bonus_premios($data['bonus_premios']));
@@ -461,10 +503,12 @@ case 'import':
             mysqli_stmt_execute($stmt); mysqli_stmt_close($stmt);
         }
         foreach (($data['leads'] ?? []) as $l) {
-            $stmt = mysqli_prepare($conn, "INSERT INTO roleta_leads (id,nome,email,telefone,empresa,segmento,funcao,observacoes,created_at) VALUES (?,?,?,?,?,?,?,?,?)");
-            $id=(int)($l['id']??0); $nome=$l['nome']; $email=$l['email']??null; $tel=$l['telefone']??null; $emp=$l['empresa']??null;
+            $stmt = mysqli_prepare($conn, "INSERT INTO roleta_leads (id,nome,email,telefone,empresa,documento,segmento,funcao,observacoes,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)");
+            $id=(int)($l['id']??0); $nome=$l['nome']; $email=$l['email']??null;
+            $tel=!empty($l['telefone'])?roleta_somente_digitos($l['telefone']):null;
+            $emp=$l['empresa']??null; $doc=!empty($l['documento'])?roleta_somente_digitos($l['documento']):null;
             $seg=$l['segmento']??null; $fun=$l['funcao']??null; $obs=$l['observacoes']??null; $ca=$l['created_at']??date('Y-m-d H:i:s');
-            mysqli_stmt_bind_param($stmt, 'issssssss', $id,$nome,$email,$tel,$emp,$seg,$fun,$obs,$ca);
+            mysqli_stmt_bind_param($stmt, 'isssssssss', $id,$nome,$email,$tel,$emp,$doc,$seg,$fun,$obs,$ca);
             mysqli_stmt_execute($stmt); mysqli_stmt_close($stmt);
         }
         foreach (($data['lead_premios'] ?? []) as $lp) {

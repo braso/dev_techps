@@ -75,9 +75,10 @@ if (stripos($nivel, 'Super Administrador') === false) {
         <h3 id="formLeadTitulo">Novo Cadastro (gera código)</h3>
         <input type="hidden" id="lId">
         <div class="grid2">
-          <div><label>Nome completo *</label><input type="text" id="lNome" required></div>
-          <div><label>E-mail</label><input type="email" id="lEmail"></div>
-          <div><label>Telefone</label><input type="text" id="lTelefone"></div>
+          <div><label>Nome / Razão Social *</label><input type="text" id="lNome" autocomplete="name" required></div>
+          <div><label>CPF/CNPJ</label><input type="text" id="lDocumento" inputmode="numeric" maxlength="18" placeholder="000.000.000-00 ou 00.000.000/0000-00"><small id="docMsg" class="field-msg"></small></div>
+          <div><label>E-mail</label><input type="email" id="lEmail" autocomplete="email"></div>
+          <div><label>Telefone</label><input type="tel" id="lTelefone" inputmode="tel" maxlength="15" placeholder="(11) 99999-9999"></div>
           <div><label>Empresa</label><input type="text" id="lEmpresa"></div>
           <div><label>Segmento</label><input type="text" id="lSegmento" placeholder="Ex.: Alimentação, Varejo..."></div>
           <div><label>Função</label><input type="text" id="lFuncao" placeholder="Ex.: Gerente, Comprador..."></div>
@@ -93,7 +94,10 @@ if (stripos($nivel, 'Super Administrador') === false) {
         <div class="form-actions"><button type="submit" class="btn btn-primary" id="btnSalvarLead">Cadastrar e Gerar Código</button><button type="button" class="btn btn-secondary" onclick="fecharFormLead()">Cancelar</button></div>
         <p id="leadMsg" class="msg"></p>
       </form>
-      <div class="table-wrap"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Telefone</th><th>Empresa</th><th>Segmento</th><th>Função</th><th>Observações</th><th>Código</th><th>Bônus</th><th>Prêmio(s)</th><th>Data</th><th>Giros liberados</th><th>Ações</th></tr></thead><tbody id="tbodyLeads"></tbody></table></div>
+      <div class="table-filter">
+        <input type="search" id="filtroLeads" placeholder="Filtrar por nome, CPF ou CNPJ..." aria-label="Filtrar por nome, CPF ou CNPJ">
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Nome / Razão Social</th><th>CPF/CNPJ</th><th>E-mail</th><th>Telefone</th><th>Empresa</th><th>Segmento</th><th>Função</th><th>Observações</th><th>Código</th><th>Bônus</th><th>Prêmio(s)</th><th>Data</th><th>Giros liberados</th><th>Ações</th></tr></thead><tbody id="tbodyLeads"></tbody></table></div>
     </section>
     <!-- codigos -->
     <section id="tab-codigos" class="tabpane">
