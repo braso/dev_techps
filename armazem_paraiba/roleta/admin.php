@@ -130,13 +130,15 @@ verificaPermissao('/roleta/admin.php');
         <div class="grid2">
           <div><label>Título *</label><input type="text" id="qrTitulo" required placeholder="Ex.: Instagram"></div>
           <div><label id="qrImagemLabel">QR Code (imagem) *</label><input type="file" id="qrImagem" accept="image/*" required></div>
+          <div><label id="qrLogoLabel">Logo (opcional)</label><input type="file" id="qrLogo" accept="image/*"><small class="field-msg">Ex.: logo do Instagram</small></div>
           <div><label>Exibição</label><label class="checkbox"><input type="checkbox" id="qrAtivo" checked> Exibir na página da roleta</label></div>
           <div id="qrPreviewWrap" class="hidden"><label>Imagem atual</label><img id="qrPreview" class="qr-preview" alt="QR Code"></div>
+          <div id="qrLogoPreviewWrap" class="hidden"><label>Logo atual</label><img id="qrLogoPreview" class="qr-logo-preview" alt="Logo"></div>
         </div>
         <div class="form-actions"><button type="submit" class="btn btn-primary">Salvar</button><button type="button" class="btn btn-secondary" onclick="fecharFormQr()">Cancelar</button></div>
         <p id="qrMsg" class="msg"></p>
       </form>
-      <div class="table-wrap"><table><thead><tr><th>QR Code</th><th>Título</th><th>Exibir na roleta</th><th>Ações</th></tr></thead><tbody id="tbodyQrcodes"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>QR Code</th><th>Logo</th><th>Título</th><th>Exibir na roleta</th><th>Ações</th></tr></thead><tbody id="tbodyQrcodes"></tbody></table></div>
     </section>
   </main>
   <script>window.ROLETA_API = 'api.php';</script>

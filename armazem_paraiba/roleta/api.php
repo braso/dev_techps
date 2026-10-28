@@ -47,7 +47,7 @@ case 'listar_premios':
 
 case 'listar_qrcodes':
     $rows = [];
-    $q = mysqli_query($conn, "SELECT id,titulo,imagem FROM roleta_qrcodes WHERE ativo=1 ORDER BY id");
+    $q = mysqli_query($conn, "SELECT id,titulo,imagem,logo FROM roleta_qrcodes WHERE ativo=1 ORDER BY id");
     while ($r = mysqli_fetch_assoc($q)) {
         $r['id'] = (int)$r['id'];
         $rows[] = $r;
@@ -472,8 +472,13 @@ case 'create_qrcode':
     $imagem = roleta_salvar_upload_qr($_FILES['imagem'] ?? null);
     if ($imagem === null) roleta_json(['error'=>'imagem_obrigatoria'], 400);
     if ($imagem === false) roleta_json(['error'=>'upload_falhou'], 400);
-    $stmt = mysqli_prepare($conn, "INSERT INTO roleta_qrcodes (titulo,imagem,ativo) VALUES (?,?,?)");
-    mysqli_stmt_bind_param($stmt, 'ssi', $titulo, $imagem, $ativo);
+    $logo = roleta_salvar_upload_logo($_FILES['logo'] ?? null);
+    if ($logo === false) {
+        if ($imagem && file_exists(__DIR__ . '/' . $imagem)) @unlink(__DIR__ . '/' . $imagem);
+        roleta_json(['error'=>'logo_upload_falhou'], 400);
+    }
+    $stmt = mysqli_prepare($conn, "INSERT INTO roleta_qrcodes (titulo,imagem,logo,ativo) VALUES (?,?,?,?)");
+    mysqli_stmt_bind_param($stmt, 'sssi', $titulo, $imagem, $logo, $ativo);
     mysqli_stmt_execute($stmt); mysqli_stmt_close($stmt);
     $id = mysqli_insert_id($conn);
     $q = mysqli_query($conn, "SELECT * FROM roleta_qrcodes WHERE id=$id");
@@ -492,13 +497,19 @@ case 'edit_qrcode':
     $imagem = $row['imagem'];
     $novaImagem = roleta_salvar_upload_qr($_FILES['imagem'] ?? null);
     if ($novaImagem === false) roleta_json(['error'=>'upload_falhou'], 400);
-    if ($novaImagem !== null) {
-        if ($row['imagem'] && file_exists(__DIR__ . '/' . $row['imagem'])) @unlink(__DIR__ . '/' . $row['imagem']);
-        $imagem = $novaImagem;
+    $logo = $row['logo'] ?? null;
+    $novaLogo = roleta_salvar_upload_logo($_FILES['logo'] ?? null);
+    if ($novaLogo === false) {
+        if ($novaImagem !== null && file_exists(__DIR__ . '/' . $novaImagem)) @unlink(__DIR__ . '/' . $novaImagem);
+        roleta_json(['error'=>'logo_upload_falhou'], 400);
     }
-    $stmt = mysqli_prepare($conn, "UPDATE roleta_qrcodes SET titulo=?,imagem=?,ativo=? WHERE id=?");
-    mysqli_stmt_bind_param($stmt, 'ssii', $titulo, $imagem, $ativo, $id);
+    if ($novaImagem !== null) $imagem = $novaImagem;
+    if ($novaLogo !== null) $logo = $novaLogo;
+    $stmt = mysqli_prepare($conn, "UPDATE roleta_qrcodes SET titulo=?,imagem=?,logo=?,ativo=? WHERE id=?");
+    mysqli_stmt_bind_param($stmt, 'sssii', $titulo, $imagem, $logo, $ativo, $id);
     mysqli_stmt_execute($stmt); mysqli_stmt_close($stmt);
+    if ($novaImagem !== null && !empty($row['imagem']) && $row['imagem'] !== $imagem && file_exists(__DIR__ . '/' . $row['imagem'])) @unlink(__DIR__ . '/' . $row['imagem']);
+    if ($novaLogo !== null && !empty($row['logo']) && $row['logo'] !== $logo && file_exists(__DIR__ . '/' . $row['logo'])) @unlink(__DIR__ . '/' . $row['logo']);
     $q = mysqli_query($conn, "SELECT * FROM roleta_qrcodes WHERE id=$id");
     roleta_json(mysqli_fetch_assoc($q));
     break;
@@ -506,10 +517,11 @@ case 'edit_qrcode':
 case 'delete_qrcode':
     $data = roleta_body();
     $id = (int)($data['id'] ?? 0);
-    $stmt = mysqli_prepare($conn, "SELECT imagem FROM roleta_qrcodes WHERE id=?");
+    $stmt = mysqli_prepare($conn, "SELECT imagem,logo FROM roleta_qrcodes WHERE id=?");
     mysqli_stmt_bind_param($stmt, 'i', $id); mysqli_stmt_execute($stmt);
     $row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt)); mysqli_stmt_close($stmt);
     if ($row && $row['imagem'] && file_exists(__DIR__ . '/' . $row['imagem'])) @unlink(__DIR__ . '/' . $row['imagem']);
+    if ($row && !empty($row['logo']) && file_exists(__DIR__ . '/' . $row['logo'])) @unlink(__DIR__ . '/' . $row['logo']);
     $stmt = mysqli_prepare($conn, "DELETE FROM roleta_qrcodes WHERE id=?");
     mysqli_stmt_bind_param($stmt, 'i', $id); mysqli_stmt_execute($stmt); mysqli_stmt_close($stmt);
     roleta_json(['ok'=>true]);
@@ -608,10 +620,10 @@ case 'import':
             mysqli_stmt_execute($stmt); mysqli_stmt_close($stmt);
         }
         foreach (($data['qrcodes'] ?? []) as $qr) {
-            $stmt = mysqli_prepare($conn, "INSERT INTO roleta_qrcodes (id,titulo,imagem,ativo,created_at) VALUES (?,?,?,?,?)");
-            $id=(int)($qr['id']??0); $titulo=$qr['titulo']??''; $imagem=$qr['imagem']??'';
+            $stmt = mysqli_prepare($conn, "INSERT INTO roleta_qrcodes (id,titulo,imagem,logo,ativo,created_at) VALUES (?,?,?,?,?,?)");
+            $id=(int)($qr['id']??0); $titulo=$qr['titulo']??''; $imagem=$qr['imagem']??''; $logo=$qr['logo']??null;
             $ativo=(int)($qr['ativo']??1); $ca=$qr['created_at']??date('Y-m-d H:i:s');
-            mysqli_stmt_bind_param($stmt, 'issis', $id,$titulo,$imagem,$ativo,$ca);
+            mysqli_stmt_bind_param($stmt, 'isssis', $id,$titulo,$imagem,$logo,$ativo,$ca);
             mysqli_stmt_execute($stmt); mysqli_stmt_close($stmt);
         }
         foreach (($data['config'] ?? []) as $cfg) {

@@ -296,12 +296,12 @@ async function carregarQrcodes(){
   const itens=Array.isArray(d)?d:[];
   const tbody=$('#tbodyQrcodes'); tbody.innerHTML='';
   if(!itens.length){
-    tbody.innerHTML='<tr><td colspan="4" class="muted">Nenhum QR Code cadastrado.</td></tr>';
+    tbody.innerHTML='<tr><td colspan="5" class="muted">Nenhum QR Code cadastrado.</td></tr>';
     return;
   }
   itens.forEach(q=>{
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${q.imagem?`<img class="qr-thumb" src="${escapeHtml(q.imagem)}" alt="">`:'—'}</td><td>${escapeHtml(q.titulo)}</td><td><span class="badge ${q.ativo?'on':'off'}">${q.ativo?'Sim':'Não'}</span></td><td><button class="btn btn-secondary btn-small" onclick="editarQr(${q.id})">Editar</button> <button class="btn btn-danger btn-small" onclick="removerQr(${q.id})">Excluir</button></td>`;
+    tr.innerHTML=`<td>${q.imagem?`<img class="qr-thumb" src="${escapeHtml(q.imagem)}" alt="">`:'—'}</td><td>${q.logo?`<img class="qr-thumb" src="${escapeHtml(q.logo)}" alt="">`:'—'}</td><td>${escapeHtml(q.titulo)}</td><td><span class="badge ${q.ativo?'on':'off'}">${q.ativo?'Sim':'Não'}</span></td><td><button class="btn btn-secondary btn-small" onclick="editarQr(${q.id})">Editar</button> <button class="btn btn-danger btn-small" onclick="removerQr(${q.id})">Excluir</button></td>`;
     tbody.appendChild(tr);
   });
 }
@@ -313,9 +313,13 @@ function abrirFormQr(){
   $('#qrImagem').value='';
   $('#qrImagem').required=true;
   $('#qrImagemLabel').textContent='QR Code (imagem) *';
+  $('#qrLogo').value='';
+  $('#qrLogoLabel').textContent='Logo (opcional)';
   $('#qrAtivo').checked=true;
   $('#qrPreviewWrap').classList.add('hidden');
   $('#qrPreview').removeAttribute('src');
+  $('#qrLogoPreviewWrap').classList.add('hidden');
+  $('#qrLogoPreview').removeAttribute('src');
   $('#qrMsg').textContent=''; $('#qrMsg').className='msg';
   $('#qrTitulo').focus();
 }
@@ -331,9 +335,13 @@ async function editarQr(id){
   $('#qrImagem').value='';
   $('#qrImagem').required=false;
   $('#qrImagemLabel').textContent='QR Code (imagem) — opcional, mantém a atual';
+  $('#qrLogo').value='';
+  $('#qrLogoLabel').textContent='Logo (opcional, mantém a atual)';
   $('#qrAtivo').checked=!!q.ativo;
   if(q.imagem){ $('#qrPreview').src=q.imagem; $('#qrPreviewWrap').classList.remove('hidden'); }
   else { $('#qrPreviewWrap').classList.add('hidden'); $('#qrPreview').removeAttribute('src'); }
+  if(q.logo){ $('#qrLogoPreview').src=q.logo; $('#qrLogoPreviewWrap').classList.remove('hidden'); }
+  else { $('#qrLogoPreviewWrap').classList.add('hidden'); $('#qrLogoPreview').removeAttribute('src'); }
   $('#qrMsg').textContent=''; $('#qrMsg').className='msg';
   $('#qrTitulo').focus();
 }
@@ -341,6 +349,7 @@ $('#formQr').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const id=$('#qrId').value;
   const arquivo=$('#qrImagem').files[0];
+  const logo=$('#qrLogo').files[0];
   if(!id && !arquivo){
     $('#qrMsg').textContent='Envie a imagem do QR Code.'; $('#qrMsg').className='msg error'; return;
   }
@@ -349,10 +358,11 @@ $('#formQr').addEventListener('submit', async (e)=>{
   fd.append('ativo',$('#qrAtivo').checked?'1':'0');
   fd.append('id',id);
   if(arquivo) fd.append('imagem',arquivo);
+  if(logo) fd.append('logo',logo);
   const {r,d}=await api(id?'edit_qrcode':'create_qrcode',{method:'POST',body:fd});
   if(r.ok){ fecharFormQr(); carregarQrcodes(); }
   else {
-    const msgs={imagem_obrigatoria:'Envie a imagem do QR Code.',upload_falhou:'Não foi possível enviar a imagem. Use PNG, JPG, GIF ou WEBP.',titulo_obrigatorio:'Informe o título.'};
+    const msgs={imagem_obrigatoria:'Envie a imagem do QR Code.',upload_falhou:'Não foi possível enviar a imagem. Use PNG, JPG, GIF ou WEBP.',logo_upload_falhou:'Não foi possível enviar a logo. Use PNG, JPG, GIF ou WEBP.',titulo_obrigatorio:'Informe o título.'};
     $('#qrMsg').textContent=msgs[d.error]||d.error||'Erro'; $('#qrMsg').className='msg error';
   }
 });

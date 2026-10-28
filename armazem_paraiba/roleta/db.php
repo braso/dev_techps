@@ -95,6 +95,7 @@ $queries = [
     id INT AUTO_INCREMENT PRIMARY KEY,
     titulo VARCHAR(255) NOT NULL,
     imagem VARCHAR(255) NOT NULL,
+    logo VARCHAR(255) NULL,
     ativo TINYINT NOT NULL DEFAULT 1,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
@@ -312,6 +313,19 @@ function roleta_salvar_upload_qr($file) {
     if (!move_uploaded_file($file['tmp_name'], $dir . '/' . $fname)) return false;
     return 'uploads/qrcodes/' . $fname;
 }
+
+// Retorna o caminho salvo, null quando nenhuma logo foi enviada ou false em caso de erro.
+function roleta_salvar_upload_logo($file) {
+    if (!isset($file) || ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) return null;
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) return false;
+    $ext = strtolower(pathinfo($file['name'] ?? '', PATHINFO_EXTENSION));
+    if (!in_array($ext, ['png','jpg','jpeg','gif','webp'], true)) return false;
+    $dir = __DIR__ . '/uploads/qrcodes/logos';
+    if (!is_dir($dir) && !@mkdir($dir, 0777, true)) return false;
+    $fname = bin2hex(random_bytes(16)) . '.' . $ext;
+    if (!move_uploaded_file($file['tmp_name'], $dir . '/' . $fname)) return false;
+    return 'uploads/qrcodes/logos/' . $fname;
+}
 function roleta_primeiro_nome($nome) {
     if (!$nome) return null;
     $parts = preg_split('/\s+/', trim($nome));
@@ -424,6 +438,14 @@ if ($temColuna && roleta_cfg($conn, 'girar_novamente_seed', '0') !== '1') {
         }
     }
     roleta_setcfg($conn, 'girar_novamente_seed', '1');
+}
+
+// Migração: logo opcional nos QR Codes já cadastrados
+$colQrLogo = mysqli_query($conn, "SHOW COLUMNS FROM roleta_qrcodes LIKE 'logo'");
+if ($colQrLogo && mysqli_num_rows($colQrLogo) === 0) {
+    try {
+        mysqli_query($conn, "ALTER TABLE roleta_qrcodes ADD COLUMN logo VARCHAR(255) NULL AFTER imagem");
+    } catch (Throwable $e) {}
 }
 
 // Migração única: recorta as margens dos QR Codes já cadastrados

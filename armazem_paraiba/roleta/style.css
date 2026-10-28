@@ -106,14 +106,17 @@ canvas{display:block;width:100%;height:auto;border-radius:50%;box-shadow:0 0 30p
 .bonus-select{width:auto;min-width:150px;padding:7px 10px;font-size:13px;}
 .bonus-tag{display:inline-block;background:var(--accent);border:1px solid var(--primary);color:var(--primary2);border-radius:6px;padding:1px 6px;font-size:11px;font-weight:700;}
 .qr-preview{width:140px;height:140px;object-fit:contain;background:#fff;border:1px solid var(--border);border-radius:8px;padding:6px;}
+.qr-logo-preview{width:90px;height:90px;object-fit:contain;background:#fff;border:1px solid var(--border);border-radius:8px;padding:6px;}
 .qr-thumb{object-fit:contain !important;background:#fff;padding:2px;}
+.qr-card-head{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 12px;min-height:38px;flex-wrap:wrap;}
+.qr-card-logo{width:38px;height:38px;object-fit:contain;background:#fff;border-radius:8px;flex:0 0 auto;}
 .qr-section{margin-top:30px;}
 .qr-mobile{display:none;}
 .qr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,300px));gap:18px;margin-top:16px;justify-content:center;}
 .qr-card{background:#fff;border:1px solid var(--border);border-radius:18px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.10);text-align:center;max-width:100%;}
-.qr-card h3{font-size:18px;color:var(--primary2);margin:0 0 12px;min-height:22px;}
+.qr-card h3{font-size:18px;color:var(--primary2);margin:0;min-height:22px;}
 .qr-image-frame{display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px;width:100%;}
-.qr-card img{display:block;width:100%;max-width:240px;height:auto;aspect-ratio:1/1;object-fit:contain;background:#fff;image-rendering:pixelated;border-radius:0;}
+.qr-image-frame img{display:block;width:100%;max-width:240px;height:auto;aspect-ratio:1/1;object-fit:contain;background:#fff;image-rendering:pixelated;border-radius:0;}
 @media(max-width:1240px){
   .roleta-main{max-width:760px;}
   .wheel-layout{grid-template-columns:1fr;gap:10px;max-width:760px;}
