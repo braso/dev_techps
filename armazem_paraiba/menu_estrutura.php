@@ -138,15 +138,13 @@
 				],
 				"roleta" => [
 					"/roleta/index.php" => "Roleta",
+					"/roleta/admin.php" => "Administrar Roleta",
 				],
 			];
 			// Logs do Sistema: atalho apenas para Super Administrador, na aba de Relatórios.
 			if(stripos(strval($_SESSION["user_tx_nivel"] ?? ""), "Super Administrador") !== false){
 				if(!isset($paginas["relatórios"])) $paginas["relatórios"] = [];
 				$paginas["relatórios"]["/logs_sistema.php"] = "Logs do Sistema";
-				// Roleta: administracao apenas para Super Administrador.
-				if(!isset($paginas["roleta"])) $paginas["roleta"] = [];
-				$paginas["roleta"]["/roleta/admin.php"] = "Administrar Roleta";
 			}
 			$path = strtolower($_SERVER['REQUEST_URI']);
 			$showComunicado = (strpos($path, "/techps") !== false);

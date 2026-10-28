@@ -75,6 +75,26 @@ function verificaPermissao($pathMenu)
     return true; // Se for admin ou tiver permissão marcada
 }
 
+/**
+ * Versão sem redirecionamento do verificaPermissao(), para uso em APIs que
+ * precisam devolver JSON em vez de mandar o usuário para outra tela.
+ */
+function usuarioPodeAcessar($pathMenu)
+{
+    $nivel = trim($_SESSION["user_tx_nivel"] ?? "");
+    $isAdmin = (
+        preg_match('/administrador/i', $nivel) ||
+        preg_match('/super\s+admin/i', $nivel) ||
+        preg_match('/adminsitrador/i', $nivel)
+    );
+
+    if ($isAdmin) {
+        return true;
+    }
+
+    return temPermissaoMenu($pathMenu);
+}
+
 function temPermissaoMenu($pathMenu)
 {
     global $conn;

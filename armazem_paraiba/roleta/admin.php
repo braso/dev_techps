@@ -2,13 +2,9 @@
 header('Content-Type: text/html; charset=utf-8');
 require_once __DIR__ . '/db.php';
 include_once dirname(__DIR__) . '/conecta.php';
+include_once dirname(__DIR__) . '/check_permission.php';
 
-$nivel = $_SESSION['user_tx_nivel'] ?? '';
-if (stripos($nivel, 'Super Administrador') === false) {
-    http_response_code(403);
-    echo '<h1>Acesso negado</h1><p>Apenas Super Administradores podem acessar a administração da Roleta.</p>';
-    exit;
-}
+verificaPermissao('/roleta/admin.php');
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -125,6 +121,22 @@ if (stripos($nivel, 'Super Administrador') === false) {
         <div class="form-actions"><button class="btn btn-primary" onclick="salvarConfig()">Salvar</button></div>
         <p id="cfgMsg" class="msg"></p>
       </div>
+
+      <div class="section-head" style="margin-top:24px"><h2>QR Codes da Roleta</h2><button class="btn btn-primary" onclick="abrirFormQr()">+ Novo QR Code</button></div>
+      <p class="muted small">Cadastre os QR Codes que devem aparecer na página pública da roleta. Use a opção "Exibir na roleta" para controlar cada um.</p>
+      <form id="formQr" class="form-card hidden">
+        <h3 id="formQrTitulo">Novo QR Code</h3>
+        <input type="hidden" id="qrId">
+        <div class="grid2">
+          <div><label>Título *</label><input type="text" id="qrTitulo" required placeholder="Ex.: Instagram"></div>
+          <div><label id="qrImagemLabel">QR Code (imagem) *</label><input type="file" id="qrImagem" accept="image/*" required></div>
+          <div><label>Exibição</label><label class="checkbox"><input type="checkbox" id="qrAtivo" checked> Exibir na página da roleta</label></div>
+          <div id="qrPreviewWrap" class="hidden"><label>Imagem atual</label><img id="qrPreview" class="qr-preview" alt="QR Code"></div>
+        </div>
+        <div class="form-actions"><button type="submit" class="btn btn-primary">Salvar</button><button type="button" class="btn btn-secondary" onclick="fecharFormQr()">Cancelar</button></div>
+        <p id="qrMsg" class="msg"></p>
+      </form>
+      <div class="table-wrap"><table><thead><tr><th>QR Code</th><th>Título</th><th>Exibir na roleta</th><th>Ações</th></tr></thead><tbody id="tbodyQrcodes"></tbody></table></div>
     </section>
   </main>
   <script>window.ROLETA_API = 'api.php';</script>

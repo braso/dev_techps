@@ -91,6 +91,13 @@ $queries = [
     chave VARCHAR(64) PRIMARY KEY,
     valor TEXT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+"CREATE TABLE IF NOT EXISTS roleta_qrcodes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    titulo VARCHAR(255) NOT NULL,
+    imagem VARCHAR(255) NOT NULL,
+    ativo TINYINT NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 ];
 foreach ($queries as $q) { mysqli_query($conn, $q); }
 
@@ -164,6 +171,146 @@ function roleta_valida_documento($documento) {
     if (strlen($doc) === 11) return roleta_valida_cpf($doc) ? 'cpf' : false;
     if (strlen($doc) === 14) return roleta_valida_cnpj($doc) ? 'cnpj' : false;
     return false;
+}
+// Recorta as margens brancas do QR e recria uma borda de respiro, deixando o código maior.
+function roleta_processar_qr_arquivo($origem, $ext, $destino) {
+    if (!extension_loaded('gd') || !is_file($origem)) return false;
+    $ext = strtolower($ext);
+    $src = false;
+    switch ($ext) {
+        case 'png': $src = @imagecreatefrompng($origem); break;
+        case 'jpg': case 'jpeg': $src = @imagecreatefromjpeg($origem); break;
+        case 'gif': $src = @imagecreatefromgif($origem); break;
+        case 'webp': $src = @imagecreatefromwebp($origem); break;
+    }
+    if (!$src) return false;
+
+    $w = imagesx($src); $h = imagesy($src);
+    if ($w < 10 || $h < 10) { imagedestroy($src); return false; }
+
+    $flat = imagecreatetruecolor($w, $h);
+    $white = imagecolorallocate($flat, 255, 255, 255);
+    imagefilledrectangle($flat, 0, 0, $w - 1, $h - 1, $white);
+    imagealphablending($flat, true);
+    imagecopy($flat, $src, 0, 0, 0, 0, $w, $h);
+    imagedestroy($src);
+
+    $scanMax = 700;
+    $scale = min(1, $scanMax / max($w, $h));
+    $sw = max(1, (int)round($w * $scale));
+    $sh = max(1, (int)round($h * $scale));
+    $scan = imagecreatetruecolor($sw, $sh);
+    $whiteScan = imagecolorallocate($scan, 255, 255, 255);
+    imagefilledrectangle($scan, 0, 0, $sw - 1, $sh - 1, $whiteScan);
+    imagealphablending($scan, true);
+    imagecopyresampled($scan, $flat, 0, 0, 0, 0, $sw, $sh, $w, $h);
+
+    // Detecta as faixas verticais com conteúdo e escolhe o maior bloco (o QR,
+    // ignorando legendas/textos pequenos abaixo ou acima dele).
+    $rowHas = array_fill(0, $sh, false);
+    for ($y = 0; $y < $sh; $y++) {
+        for ($x = 0; $x < $sw; $x++) {
+            $rgb = imagecolorat($scan, $x, $y);
+            $r = ($rgb >> 16) & 0xFF;
+            $g = ($rgb >> 8) & 0xFF;
+            $b = $rgb & 0xFF;
+            if ($r < 220 || $g < 220 || $b < 220) {
+                $rowHas[$y] = true;
+                break;
+            }
+        }
+    }
+    $runs = [];
+    $runStart = null;
+    for ($y = 0; $y < $sh; $y++) {
+        if ($rowHas[$y]) {
+            if ($runStart === null) $runStart = $y;
+        } elseif ($runStart !== null) {
+            $runs[] = [$runStart, $y - 1];
+            $runStart = null;
+        }
+    }
+    if ($runStart !== null) $runs[] = [$runStart, $sh - 1];
+    if (empty($runs)) { imagedestroy($scan); imagedestroy($flat); return false; }
+
+    $mergeGap = max(2, (int)round($sh * 0.005));
+    $merged = [];
+    foreach ($runs as $run) {
+        if (empty($merged)) { $merged[] = $run; continue; }
+        $last = count($merged) - 1;
+        if ($run[0] - $merged[$last][1] - 1 <= $mergeGap) {
+            $merged[$last][1] = $run[1];
+        } else {
+            $merged[] = $run;
+        }
+    }
+    $bestRun = $merged[0];
+    foreach ($merged as $run) {
+        if (($run[1] - $run[0]) > ($bestRun[1] - $bestRun[0])) $bestRun = $run;
+    }
+    $minY = $bestRun[0];
+    $maxY = $bestRun[1];
+    $minX = $sw;
+    $maxX = -1;
+    for ($y = $minY; $y <= $maxY; $y++) {
+        for ($x = 0; $x < $sw; $x++) {
+            $rgb = imagecolorat($scan, $x, $y);
+            $r = ($rgb >> 16) & 0xFF;
+            $g = ($rgb >> 8) & 0xFF;
+            $b = $rgb & 0xFF;
+            if ($r < 220 || $g < 220 || $b < 220) {
+                if ($x < $minX) $minX = $x;
+                if ($x > $maxX) $maxX = $x;
+            }
+        }
+    }
+    imagedestroy($scan);
+    if ($maxX < $minX || $maxY < $minY) { imagedestroy($flat); return false; }
+
+    if ($scale < 1) {
+        $minX = max(0, (int)floor($minX / $scale) - 2);
+        $minY = max(0, (int)floor($minY / $scale) - 2);
+        $maxX = min($w - 1, (int)ceil(($maxX + 1) / $scale) + 2);
+        $maxY = min($h - 1, (int)ceil(($maxY + 1) / $scale) + 2);
+    }
+
+    $cw = $maxX - $minX + 1;
+    $ch = $maxY - $minY + 1;
+    $side = max($cw, $ch);
+    $margin = max(12, (int)round($side * 0.07));
+    $outSize = $side + 2 * $margin;
+    $out = imagecreatetruecolor($outSize, $outSize);
+    $whiteOut = imagecolorallocate($out, 255, 255, 255);
+    imagefilledrectangle($out, 0, 0, $outSize - 1, $outSize - 1, $whiteOut);
+    $dstX = (int)(($outSize - $cw) / 2);
+    $dstY = (int)(($outSize - $ch) / 2);
+    imagecopy($out, $flat, $dstX, $dstY, $minX, $minY, $cw, $ch);
+    imagedestroy($flat);
+
+    $ok = @imagepng($out, $destino, 9);
+    imagedestroy($out);
+    if (!$ok) { @unlink($destino); return false; }
+    return true;
+}
+
+// Retorna o caminho salvo, null quando nenhum arquivo foi enviado ou false em caso de erro.
+function roleta_salvar_upload_qr($file) {
+    if (!isset($file) || ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) return null;
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) return false;
+    $ext = strtolower(pathinfo($file['name'] ?? '', PATHINFO_EXTENSION));
+    if (!in_array($ext, ['png','jpg','jpeg','gif','webp'], true)) return false;
+    $dir = __DIR__ . '/uploads/qrcodes';
+    if (!is_dir($dir) && !@mkdir($dir, 0777, true)) return false;
+    $base = bin2hex(random_bytes(16));
+
+    $destPng = $dir . '/' . $base . '.png';
+    if (roleta_processar_qr_arquivo($file['tmp_name'], $ext, $destPng)) {
+        return 'uploads/qrcodes/' . $base . '.png';
+    }
+
+    $fname = $base . '.' . $ext;
+    if (!move_uploaded_file($file['tmp_name'], $dir . '/' . $fname)) return false;
+    return 'uploads/qrcodes/' . $fname;
 }
 function roleta_primeiro_nome($nome) {
     if (!$nome) return null;
@@ -277,5 +424,25 @@ if ($temColuna && roleta_cfg($conn, 'girar_novamente_seed', '0') !== '1') {
         }
     }
     roleta_setcfg($conn, 'girar_novamente_seed', '1');
+}
+
+// Migração única: recorta as margens dos QR Codes já cadastrados
+if (roleta_cfg($conn, 'qrcodes_crop_migracao', '0') !== '1') {
+    $rsQr = mysqli_query($conn, "SELECT id, imagem FROM roleta_qrcodes");
+    while ($rsQr && ($qr = mysqli_fetch_assoc($rsQr))) {
+        $oldPath = __DIR__ . '/' . $qr['imagem'];
+        if (!is_file($oldPath)) continue;
+        $ext = strtolower(pathinfo($oldPath, PATHINFO_EXTENSION));
+        $novoNome = bin2hex(random_bytes(8)) . '.png';
+        $novoPath = dirname($oldPath) . '/' . $novoNome;
+        if (roleta_processar_qr_arquivo($oldPath, $ext, $novoPath)) {
+            $novoRel = str_replace('\\', '/', ltrim(str_replace(__DIR__, '', $novoPath), '/\\'));
+            $stmt = mysqli_prepare($conn, "UPDATE roleta_qrcodes SET imagem=? WHERE id=?");
+            mysqli_stmt_bind_param($stmt, 'si', $novoRel, $qr['id']);
+            mysqli_stmt_execute($stmt); mysqli_stmt_close($stmt);
+            @unlink($oldPath);
+        }
+    }
+    roleta_setcfg($conn, 'qrcodes_crop_migracao', '1');
 }
 ?>

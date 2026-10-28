@@ -288,7 +288,78 @@ async function removerCodigo(id){ if(!confirm('Excluir?'))return; await api('del
 
 async function carregarHistorico(){ const {d}=await api('historico'); const tbody=$('#tbodyHistorico'); tbody.innerHTML=''; d.forEach((g,i)=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${d.length-i}</td><td>${new Date(g.created_at).toLocaleString('pt-BR')}</td><td>${g.codigo_liberacao||'—'}</td><td>${escapeHtml(g.lead_nome||'—')}</td><td>${g.premio_foto?`<img src="${g.premio_foto}" style="width:28px;height:28px"> `:''}${escapeHtml(g.premio_nome)}</td>`; tbody.appendChild(tr); }); }
 
-async function carregarConfig(){ const {d}=await api('get_config'); $('#cfgModoLivre').checked=d.modo_livre; }
+async function carregarConfig(){ const {d}=await api('get_config'); $('#cfgModoLivre').checked=d.modo_livre; await carregarQrcodes(); }
 async function salvarConfig(){ const body={modo_livre:$('#cfgModoLivre').checked}; const {r}=await api('set_config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); const el=$('#cfgMsg'); if(r.ok){el.textContent='Salvo!';el.className='msg ok';}else{el.textContent='Erro';el.className='msg error';} }
+
+async function carregarQrcodes(){
+  const {d}=await api('list_qrcodes_all');
+  const itens=Array.isArray(d)?d:[];
+  const tbody=$('#tbodyQrcodes'); tbody.innerHTML='';
+  if(!itens.length){
+    tbody.innerHTML='<tr><td colspan="4" class="muted">Nenhum QR Code cadastrado.</td></tr>';
+    return;
+  }
+  itens.forEach(q=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${q.imagem?`<img class="qr-thumb" src="${escapeHtml(q.imagem)}" alt="">`:'—'}</td><td>${escapeHtml(q.titulo)}</td><td><span class="badge ${q.ativo?'on':'off'}">${q.ativo?'Sim':'Não'}</span></td><td><button class="btn btn-secondary btn-small" onclick="editarQr(${q.id})">Editar</button> <button class="btn btn-danger btn-small" onclick="removerQr(${q.id})">Excluir</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+function abrirFormQr(){
+  $('#formQr').classList.remove('hidden');
+  $('#formQrTitulo').textContent='Novo QR Code';
+  $('#qrId').value='';
+  $('#qrTitulo').value='';
+  $('#qrImagem').value='';
+  $('#qrImagem').required=true;
+  $('#qrImagemLabel').textContent='QR Code (imagem) *';
+  $('#qrAtivo').checked=true;
+  $('#qrPreviewWrap').classList.add('hidden');
+  $('#qrPreview').removeAttribute('src');
+  $('#qrMsg').textContent=''; $('#qrMsg').className='msg';
+  $('#qrTitulo').focus();
+}
+function fecharFormQr(){ $('#formQr').classList.add('hidden'); }
+async function editarQr(id){
+  const {d}=await api('list_qrcodes_all');
+  const q=Array.isArray(d)?d.find(x=>x.id===id):null;
+  if(!q){ alert('QR Code não encontrado'); return; }
+  $('#formQr').classList.remove('hidden');
+  $('#formQrTitulo').textContent='Editar QR Code';
+  $('#qrId').value=q.id;
+  $('#qrTitulo').value=q.titulo||'';
+  $('#qrImagem').value='';
+  $('#qrImagem').required=false;
+  $('#qrImagemLabel').textContent='QR Code (imagem) — opcional, mantém a atual';
+  $('#qrAtivo').checked=!!q.ativo;
+  if(q.imagem){ $('#qrPreview').src=q.imagem; $('#qrPreviewWrap').classList.remove('hidden'); }
+  else { $('#qrPreviewWrap').classList.add('hidden'); $('#qrPreview').removeAttribute('src'); }
+  $('#qrMsg').textContent=''; $('#qrMsg').className='msg';
+  $('#qrTitulo').focus();
+}
+$('#formQr').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const id=$('#qrId').value;
+  const arquivo=$('#qrImagem').files[0];
+  if(!id && !arquivo){
+    $('#qrMsg').textContent='Envie a imagem do QR Code.'; $('#qrMsg').className='msg error'; return;
+  }
+  const fd=new FormData();
+  fd.append('titulo',$('#qrTitulo').value.trim());
+  fd.append('ativo',$('#qrAtivo').checked?'1':'0');
+  fd.append('id',id);
+  if(arquivo) fd.append('imagem',arquivo);
+  const {r,d}=await api(id?'edit_qrcode':'create_qrcode',{method:'POST',body:fd});
+  if(r.ok){ fecharFormQr(); carregarQrcodes(); }
+  else {
+    const msgs={imagem_obrigatoria:'Envie a imagem do QR Code.',upload_falhou:'Não foi possível enviar a imagem. Use PNG, JPG, GIF ou WEBP.',titulo_obrigatorio:'Informe o título.'};
+    $('#qrMsg').textContent=msgs[d.error]||d.error||'Erro'; $('#qrMsg').className='msg error';
+  }
+});
+async function removerQr(id){
+  if(!confirm('Excluir este QR Code?')) return;
+  const {r}=await api('delete_qrcode',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
+  if(r.ok) carregarQrcodes();
+}
 
 carregarStats();
