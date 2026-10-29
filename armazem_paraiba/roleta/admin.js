@@ -58,7 +58,7 @@ function validarDocumento(v){
   return false;
 }
 function emailValido(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim()); }
-const mensagensErroLead={nome_obrigatorio:'Informe o nome / razão social.',email_invalido:'E-mail inválido.',telefone_invalido:'Telefone inválido. Informe DDD + número.',documento_invalido:'CPF/CNPJ inválido.',documento_duplicado:'Este CPF/CNPJ já está cadastrado.'};
+const mensagensErroLead={nome_obrigatorio:'Informe o nome / razão social.',email_invalido:'E-mail inválido.',telefone_invalido:'Telefone inválido. Informe DDD + número.',documento_invalido:'CPF/CNPJ inválido.',documento_duplicado:'Este CPF/CNPJ já está cadastrado.',id_obrigatorio:'Cadastro não identificado. Feche o formulário e abra novamente.'};
 async function api(action, opts={}){ const url = API+'?action='+action; const r = await fetch(url, opts); return {r, d: await r.json().catch(()=>({}))}; }
 
 async function carregarStats(){ const {d}=await api('stats'); $('#st-premios').textContent=d.total_premios; $('#st-estoque').textContent=d.estoque_total; $('#st-hoje').textContent=d.giros_hoje; $('#st-total').textContent=d.giros_total; $('#st-codigos').textContent=d.codigos_ativos; $('#st-leads').textContent=d.leads_total; }
@@ -140,7 +140,8 @@ function renderLeads(){
     const bonusTxt=(l.bonus&&l.bonus.length)?l.bonus.map(b=>`${escapeHtml(b.nome)} <span class="bonus-tag">+${b.bonus}%</span>`).join('<br>'):'—';
     const temGiros=l.giros_permitidos!==null&&l.giros_permitidos!==undefined&&l.giros_permitidos!=='';
     const permitidos=Number(l.giros_permitidos)||0, usados=Number(l.giros_usados)||0;
-    const girosTxt=temGiros?`<strong>${permitidos}</strong><br><small class="muted">${usados} usados · ${Math.max(0,permitidos-usados)} restantes</small>`:'—';
+    const restantes=Math.max(0,permitidos-usados);
+    const girosTxt=temGiros?`<strong>${restantes}</strong> ${restantes===1?'restante':'restantes'}<br><small class="muted">${permitidos} ${permitidos===1?'liberado':'liberados'} · ${usados} ${usados===1?'usado':'usados'}</small>`:'—';
     const tr=document.createElement('tr');
     tr.innerHTML=`<td>${escapeHtml(l.nome)}</td><td>${escapeHtml(formatarDocumento(l.documento)||'—')}</td><td>${escapeHtml(l.email||'—')}</td><td>${escapeHtml(formatarTelefone(l.telefone)||'—')}</td><td>${escapeHtml(l.empresa||'—')}</td><td>${escapeHtml(l.segmento||'—')}</td><td>${escapeHtml(l.funcao||'—')}</td><td><span class="obs-text" title="${escapeHtml(l.observacoes||'')}">${escapeHtml(l.observacoes||'—')}</span></td><td>${l.codigo?`<code>${l.codigo}</code>`:'—'}</td><td>${bonusTxt}</td><td>${escapeHtml(l.premios_ganhos||'—')}</td><td>${new Date(l.created_at).toLocaleString('pt-BR')}</td><td>${girosTxt}</td><td><button class="btn btn-secondary btn-small" onclick="editarLead(${l.id})">Editar</button> <button class="btn btn-danger btn-small" onclick="removerLead(${l.id})">Excluir</button></td>`;
     tbody.appendChild(tr);
@@ -257,7 +258,7 @@ $('#formLead').addEventListener('submit', async (e)=>{
     $('#leadMsg').textContent='E-mail inválido.'; $('#leadMsg').className='msg error'; $('#lEmail').focus(); return;
   }
   const id=$('#lId').value;
-  const body={nome:$('#lNome').value.trim(),documento:$('#lDocumento').value.trim()||null,email:$('#lEmail').value.trim()||null,telefone:$('#lTelefone').value.trim()||null,empresa:$('#lEmpresa').value.trim()||null,segmento:$('#lSegmento').value.trim()||null,funcao:$('#lFuncao').value.trim()||null,observacoes:$('#lObservacoes').value.trim()||null,giros:parseInt($('#lGiros').value)||1,expira_em:$('#lExpira').value||null,bonus_premios:coletarBonusPremios()};
+  const body={id:id?parseInt(id):null,nome:$('#lNome').value.trim(),documento:$('#lDocumento').value.trim()||null,email:$('#lEmail').value.trim()||null,telefone:$('#lTelefone').value.trim()||null,empresa:$('#lEmpresa').value.trim()||null,segmento:$('#lSegmento').value.trim()||null,funcao:$('#lFuncao').value.trim()||null,observacoes:$('#lObservacoes').value.trim()||null,giros:parseInt($('#lGiros').value)||1,expira_em:$('#lExpira').value||null,bonus_premios:coletarBonusPremios()};
   const {r,d}=await api(id?'edit_lead':'create_lead',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   if(r.ok){ fecharFormLead(); carregarLeads(); carregarCodigos(); carregarStats(); if(!id) alert('Código: '+d.codigo); }
   else {

@@ -9,7 +9,7 @@ $modoLivre = roleta_cfg($conn, 'modo_livre', '0') === '1';
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Roleta Techps</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=<?php echo (int)@filemtime(__DIR__ . '/style.css'); ?>">
 </head>
 <body class="roleta-body">
   <header class="topbar">
@@ -64,6 +64,6 @@ $modoLivre = roleta_cfg($conn, 'modo_livre', '0') === '1';
     </div>
   </main>
   <script>window.ROLETA_API = 'api.php'; window.ROLETA_MODO_LIVRE = <?php echo $modoLivre?'true':'false'; ?>;</script>
-  <script src="roleta.js"></script>
+  <script src="roleta.js?v=<?php echo (int)@filemtime(__DIR__ . '/roleta.js'); ?>"></script>
 </body>
 </html>
