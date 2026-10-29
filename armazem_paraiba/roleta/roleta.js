@@ -145,26 +145,17 @@ function qrCardHtml(q) {
 async function carregarQrcodes() {
   const section = document.getElementById('qrSection');
   const grid = document.getElementById('qrGrid');
-  const sideLeft = document.getElementById('qrSideLeft');
-  const sideRight = document.getElementById('qrSideRight');
   if(!section || !grid) return;
   try {
     const r = await fetch(API+'?action=listar_qrcodes');
     const data = await r.json();
     const ativos = Array.isArray(data) ? data.filter(q => q && q.imagem) : [];
-    if(sideLeft) sideLeft.innerHTML='';
-    if(sideRight) sideRight.innerHTML='';
     if(ativos.length === 0){ section.classList.add('hidden'); grid.innerHTML=''; return; }
-    const cards = ativos.map(qrCardHtml);
-    const meio = Math.ceil(cards.length / 2);
-    if(sideLeft) sideLeft.innerHTML = cards.slice(0, meio).join('');
-    if(sideRight) sideRight.innerHTML = cards.slice(meio).join('');
-    grid.innerHTML = cards.join('');
+    grid.innerHTML = ativos.map(qrCardHtml).join('');
     section.classList.remove('hidden');
   } catch(e){
     section.classList.add('hidden');
-    if(sideLeft) sideLeft.innerHTML='';
-    if(sideRight) sideRight.innerHTML='';
+    grid.innerHTML='';
   }
 }
 
