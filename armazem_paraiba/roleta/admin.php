@@ -12,7 +12,7 @@ verificaPermissao('/roleta/admin.php');
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Painel Admin - Roleta Techps</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=<?php echo (int)@filemtime(__DIR__ . '/style.css'); ?>">
 </head>
 <body>
   <header class="topbar">
@@ -93,7 +93,7 @@ verificaPermissao('/roleta/admin.php');
       <div class="table-filter">
         <input type="search" id="filtroLeads" placeholder="Filtrar por nome, CPF ou CNPJ..." aria-label="Filtrar por nome, CPF ou CNPJ">
       </div>
-      <div class="table-wrap"><table><thead><tr><th>Nome / Razão Social</th><th>CPF/CNPJ</th><th>E-mail</th><th>Telefone</th><th>Empresa</th><th>Segmento</th><th>Função</th><th>Observações</th><th>Código</th><th>Bônus</th><th>Prêmio(s)</th><th>Data</th><th>Giros liberados</th><th>Ações</th></tr></thead><tbody id="tbodyLeads"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>Nome / Razão Social</th><th>CPF/CNPJ</th><th>E-mail</th><th>Telefone</th><th>Empresa</th><th>Segmento</th><th>Função</th><th>Observações</th><th>Código</th><th>Bônus</th><th>Prêmio(s)</th><th>Data</th><th>Giros restantes</th><th>Ações</th></tr></thead><tbody id="tbodyLeads"></tbody></table></div>
     </section>
     <!-- codigos -->
     <section id="tab-codigos" class="tabpane">
@@ -142,6 +142,6 @@ verificaPermissao('/roleta/admin.php');
     </section>
   </main>
   <script>window.ROLETA_API = 'api.php';</script>
-  <script src="admin.js"></script>
+  <script src="admin.js?v=<?php echo (int)@filemtime(__DIR__ . '/admin.js'); ?>"></script>
 </body>
 </html>
