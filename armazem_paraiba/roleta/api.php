@@ -323,7 +323,7 @@ case 'create_lead':
     mysqli_stmt_execute($stmt);
     $leadId = mysqli_insert_id($conn); mysqli_stmt_close($stmt);
     roleta_sync_bonus_lead($conn, $leadId, $bonusPremios);
-    $codigo = roleta_gen_liberacao();
+    $codigo = roleta_gen_liberacao($conn);
     $stmt = mysqli_prepare($conn, "INSERT INTO roleta_codigos (codigo,lead_id,giros_permitidos,expira_em) VALUES (?,?,?,?)");
     mysqli_stmt_bind_param($stmt, 'siis', $codigo, $leadId, $giros, $expira);
     mysqli_stmt_execute($stmt); mysqli_stmt_close($stmt);
@@ -421,7 +421,7 @@ case 'create_codigo':
     } elseif (!empty($data['lead_id'])) {
         $leadId = (int)$data['lead_id'];
     }
-    $codigo = roleta_gen_liberacao();
+    $codigo = roleta_gen_liberacao($conn);
     $stmt = mysqli_prepare($conn, "INSERT INTO roleta_codigos (codigo,lead_id,giros_permitidos,expira_em) VALUES (?,?,?,?)");
     mysqli_stmt_bind_param($stmt, 'siis', $codigo, $leadId, $giros, $expira);
     mysqli_stmt_execute($stmt); mysqli_stmt_close($stmt);
