@@ -130,8 +130,29 @@ function roleta_json($data, $code = 200) {
 function roleta_gen_codigo($prefix = 'PRM') {
     return $prefix . '-' . strtoupper(substr(bin2hex(random_bytes(3)), 0, 6));
 }
-function roleta_gen_liberacao() {
-    return strtoupper(substr(bin2hex(random_bytes(4)), 0, 8));
+function roleta_gen_liberacao($conn = null) {
+    if (!$conn) {
+        global $conn;
+    }
+    if (!$conn) return 'TECHSP01';
+
+    // Incremento atômico do contador no banco (evita códigos repetidos)
+    $upd = mysqli_query($conn, "UPDATE roleta_config SET valor = LAST_INSERT_ID(CAST(valor AS UNSIGNED) + 1) WHERE chave='codigo_liberacao_seq'");
+    $seq = 0;
+    if ($upd && mysqli_affected_rows($conn) > 0) {
+        $rs = mysqli_query($conn, "SELECT LAST_INSERT_ID() AS seq");
+        if ($rs) {
+            $row = mysqli_fetch_assoc($rs);
+            $seq = (int)($row['seq'] ?? 0);
+        }
+    }
+    if ($seq <= 0) {
+        $rsMax = mysqli_query($conn, "SELECT COALESCE(MAX(CAST(SUBSTRING(codigo, 7) AS UNSIGNED)), 0) AS max_seq FROM roleta_codigos WHERE codigo REGEXP '^TECHSP[0-9]+$'");
+        $maxSeq = $rsMax ? (int)mysqli_fetch_assoc($rsMax)['max_seq'] : 0;
+        $seq = $maxSeq + 1;
+        roleta_setcfg($conn, 'codigo_liberacao_seq', (string)$seq);
+    }
+    return 'TECHSP' . str_pad((string)$seq, 2, '0', STR_PAD_LEFT);
 }
 function roleta_somente_digitos($valor) {
     return preg_replace('/\D+/', '', (string)$valor);
@@ -438,6 +459,14 @@ if ($temColuna && roleta_cfg($conn, 'girar_novamente_seed', '0') !== '1') {
         }
     }
     roleta_setcfg($conn, 'girar_novamente_seed', '1');
+}
+
+// Sequência dos códigos de liberação (TECHSP01, TECHSP02, TECHSP03, ...)
+$rsSeqMax = mysqli_query($conn, "SELECT COALESCE(MAX(CAST(SUBSTRING(codigo, 7) AS UNSIGNED)), 0) AS max_seq FROM roleta_codigos WHERE codigo REGEXP '^TECHSP[0-9]+$'");
+$seqMax = $rsSeqMax ? (int)mysqli_fetch_assoc($rsSeqMax)['max_seq'] : 0;
+$seqAtual = roleta_cfg($conn, 'codigo_liberacao_seq', null);
+if ($seqAtual === null || (int)$seqAtual < $seqMax) {
+    roleta_setcfg($conn, 'codigo_liberacao_seq', (string)$seqMax);
 }
 
 // Migração: logo opcional nos QR Codes já cadastrados
