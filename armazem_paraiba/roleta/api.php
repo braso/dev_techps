@@ -5,7 +5,7 @@ $action = $_REQUEST['action'] ?? '';
 
 // Admin actions require super admin session
 $adminActions = ['stats','list_premios_all','create_premio','edit_premio','delete_premio','ajustar_estoque',
-    'list_leads','create_lead','edit_lead','check_documento','delete_lead','list_codigos','create_codigo','edit_codigo','delete_codigo',
+    'list_leads','search_leads','create_lead','edit_lead','check_documento','delete_lead','list_codigos','create_codigo','edit_codigo','delete_codigo',
     'list_qrcodes_all','create_qrcode','edit_qrcode','delete_qrcode',
     'get_config','set_config','historico','export','import','backup'];
 $isAdminAction = in_array($action, $adminActions, true);
@@ -269,6 +269,31 @@ case 'list_leads':
         $r['bonus'] = $bonusMap[$r['id']] ?? [];
     }
     unset($r);
+    roleta_json($rows);
+    break;
+
+case 'search_leads':
+    $data = roleta_body();
+    $termo = trim((string)($data['nome'] ?? ''));
+    $excludeId = (int)($data['exclude_id'] ?? 0);
+    if (mb_strlen($termo) < 2) roleta_json([]);
+    $sql = "SELECT id,nome,empresa,documento FROM roleta_leads WHERE LOCATE(?, nome) > 0";
+    if ($excludeId > 0) $sql .= " AND id<>?";
+    $sql .= " ORDER BY nome ASC LIMIT 10";
+    $stmt = mysqli_prepare($conn, $sql);
+    if ($excludeId > 0) {
+        mysqli_stmt_bind_param($stmt, 'si', $termo, $excludeId);
+    } else {
+        mysqli_stmt_bind_param($stmt, 's', $termo);
+    }
+    mysqli_stmt_execute($stmt);
+    $res = mysqli_stmt_get_result($stmt);
+    $rows = [];
+    while ($r = mysqli_fetch_assoc($res)) {
+        $r['id'] = (int)$r['id'];
+        $rows[] = $r;
+    }
+    mysqli_stmt_close($stmt);
     roleta_json($rows);
     break;
 
