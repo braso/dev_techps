@@ -71,7 +71,11 @@ verificaPermissao('/roleta/admin.php');
         <h3 id="formLeadTitulo">Novo Cadastro (gera código)</h3>
         <input type="hidden" id="lId">
         <div class="grid2">
-          <div><label>Nome / Razão Social *</label><input type="text" id="lNome" autocomplete="name" required></div>
+          <div class="lead-name-wrap">
+            <label>Nome / Razão Social *</label>
+            <input type="text" id="lNome" autocomplete="name" required>
+            <div id="leadNameResults" class="lead-search-results hidden"></div>
+          </div>
           <div><label>CPF/CNPJ</label><input type="text" id="lDocumento" inputmode="numeric" maxlength="18" placeholder="000.000.000-00 ou 00.000.000/0000-00"><small id="docMsg" class="field-msg"></small></div>
           <div><label>E-mail</label><input type="email" id="lEmail" autocomplete="email"></div>
           <div><label>Telefone</label><input type="tel" id="lTelefone" inputmode="tel" maxlength="15" placeholder="(11) 99999-9999"></div>

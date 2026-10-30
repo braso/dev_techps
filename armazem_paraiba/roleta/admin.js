@@ -6,6 +6,8 @@ let leadsCache = [];
 let docCheckSeq = 0;
 let docExisteLead = false;
 let docUltimaConsulta = '';
+let leadSearchTimer = null;
+let leadSearchSeq = 0;
 $$('.tab').forEach(t=>{ t.addEventListener('click',()=>{ $$('.tab').forEach(x=>x.classList.remove('active')); $$('.tabpane').forEach(x=>x.classList.remove('active')); t.classList.add('active'); document.getElementById('tab-'+t.dataset.tab).classList.add('active'); if(t.dataset.tab==='dashboard')carregarStats(); if(t.dataset.tab==='premios')carregarPremios(); if(t.dataset.tab==='leads')carregarLeads(); if(t.dataset.tab==='codigos')carregarCodigos(); if(t.dataset.tab==='historico')carregarHistorico(); if(t.dataset.tab==='config')carregarConfig(); }); });
 function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function somenteDigitos(v){ return String(v??'').replace(/\D+/g,''); }
@@ -198,20 +200,51 @@ async function consultarDocumento(){
     msg.className='field-msg error';
   }
 }
+function limparBuscaNomeLead(){
+  clearTimeout(leadSearchTimer);
+  leadSearchSeq++;
+  const box=$('#leadNameResults');
+  if(box){ box.innerHTML=''; box.classList.add('hidden'); }
+}
+async function buscarLeadsPorNome(termo){
+  const box=$('#leadNameResults');
+  if(!box) return;
+  const seq=++leadSearchSeq;
+  try {
+    const excludeId=parseInt($('#lId').value)||0;
+    const {r,d}=await api('search_leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome:termo,exclude_id:excludeId})});
+    if(seq!==leadSearchSeq) return;
+    if(!r.ok){ box.classList.add('hidden'); return; }
+    const itens=Array.isArray(d)?d:[];
+    if(!itens.length){
+      box.innerHTML='<div class="lead-search-empty">Nenhum cadastro encontrado com esse nome.</div>';
+      box.classList.remove('hidden');
+      return;
+    }
+    box.innerHTML='<div class="lead-search-title">Cadastros encontrados:</div>'+itens.map(l=>{
+      const empresa=l.empresa?escapeHtml(l.empresa):'Empresa não informada';
+      const doc=l.documento?`<span class="muted">${escapeHtml(formatarDocumento(l.documento))}</span>`:'';
+      return `<div class="lead-search-item"><div><strong>${escapeHtml(l.nome)}</strong><small>${empresa}</small></div>${doc}</div>`;
+    }).join('');
+    box.classList.remove('hidden');
+  } catch(e){
+    if(seq===leadSearchSeq) box.classList.add('hidden');
+  }
+}
 async function abrirFormLead(){
   $('#formLead').classList.remove('hidden');
   $('#formLeadTitulo').textContent='Novo Cadastro (gera código)';
   $('#btnSalvarLead').textContent='Cadastrar e Gerar Código';
   $('#lId').value='';
   ['lNome','lDocumento','lEmail','lTelefone','lEmpresa','lSegmento','lFuncao','lObservacoes'].forEach(i=>$('#'+i).value='');
-  docCheckSeq++; limparStatusDocumento();
+  docCheckSeq++; limparStatusDocumento(); limparBuscaNomeLead();
   $('#lGiros').value=1; $('#lExpira').value='';
   $('#leadMsg').textContent=''; $('#leadMsg').className='msg';
   $('#bonusPremiosList').innerHTML='<p class="muted small">Carregando brindes...</p>';
   await carregarPremiosBonusCache(true);
   renderBonusPremios([]);
 }
-function fecharFormLead(){ $('#formLead').classList.add('hidden'); }
+function fecharFormLead(){ limparBuscaNomeLead(); $('#formLead').classList.add('hidden'); }
 async function editarLead(id){
   const {d}=await api('list_leads');
   const l=Array.isArray(d)?d.find(x=>x.id===id):null;
@@ -222,7 +255,7 @@ async function editarLead(id){
   $('#lId').value=l.id;
   $('#lNome').value=l.nome||'';
   $('#lDocumento').value=formatarDocumento(l.documento||'');
-  docCheckSeq++; limparStatusDocumento();
+  docCheckSeq++; limparStatusDocumento(); limparBuscaNomeLead();
   $('#lEmail').value=l.email||'';
   $('#lTelefone').value=formatarTelefone(l.telefone||'');
   $('#lEmpresa').value=l.empresa||'';
@@ -278,6 +311,18 @@ $('#lDocumento').addEventListener('input', e=>{
 $('#lDocumento').addEventListener('blur', consultarDocumento);
 $('#lTelefone').addEventListener('input', e=>{ e.target.value=formatarTelefone(e.target.value); });
 $('#lEmail').addEventListener('blur', e=>{ e.target.value=e.target.value.trim().toLowerCase(); });
+$('#lNome').addEventListener('input', ()=>{
+  clearTimeout(leadSearchTimer);
+  leadSearchSeq++;
+  const termo=$('#lNome').value.trim();
+  if(termo.length<2){ limparBuscaNomeLead(); return; }
+  leadSearchTimer=setTimeout(()=>buscarLeadsPorNome(termo), 300);
+});
+$('#lNome').addEventListener('blur', ()=>{
+  clearTimeout(leadSearchTimer);
+  leadSearchSeq++;
+  setTimeout(()=>{ const box=$('#leadNameResults'); if(box) box.classList.add('hidden'); }, 180);
+});
 $('#filtroLeads').addEventListener('input', renderLeads);
 async function removerLead(id){ if(!confirm('Excluir?'))return; const {r}=await api('delete_lead',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})}); if(r.ok){carregarLeads();carregarCodigos();carregarStats();} }
 

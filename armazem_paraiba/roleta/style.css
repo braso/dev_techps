@@ -35,6 +35,15 @@ td img{width:40px;height:40px;object-fit:cover;border-radius:6px;}
 .msg{color:var(--muted);font-size:13px;margin-top:8px;min-height:18px;} .msg.error{color:var(--red2);} .msg.ok{color:var(--green);}
 .field-msg{display:block;min-height:16px;margin-top:4px;font-size:12px;color:var(--muted);line-height:1.3;}
 .field-msg.error{color:var(--red2);} .field-msg.ok{color:var(--green);}
+.lead-name-wrap{position:relative;}
+.lead-search-results{position:absolute;left:0;right:0;top:calc(100% + 5px);z-index:60;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 28px rgba(0,0,0,.16);padding:8px;max-height:280px;overflow-y:auto;text-align:left;}
+.lead-search-title{font-size:12px;font-weight:700;color:var(--muted);padding:2px 6px 6px;}
+.lead-search-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 8px;border-radius:8px;}
+.lead-search-item:hover{background:var(--bg);}
+.lead-search-item strong{display:block;font-size:13px;color:var(--text);}
+.lead-search-item small{display:block;font-size:12px;color:var(--muted);margin-top:2px;}
+.lead-search-item .muted{flex:0 0 auto;font-size:11px;}
+.lead-search-empty{padding:8px;font-size:12px;color:var(--muted);}
 .table-filter{margin:0 0 12px;max-width:420px;}
 .muted{color:var(--muted);} .small{font-size:12px;} .link{display:inline-block;margin-top:12px;}
 .login-body{display:flex;align-items:center;justify-content:center;}
