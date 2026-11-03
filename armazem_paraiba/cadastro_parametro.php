@@ -261,20 +261,17 @@
 		$novoCaminho = null;
 		$novoAssinado = $doc["docu_tx_assinado"] ?? "nao";
 		$arquivoEdit = $_FILES["file-edit"] ?? null;
-		if (!$errorMsg && $arquivoEdit && $arquivoEdit["error"] === UPLOAD_ERR_OK) {
-			$formatos = [
-				"image/jpeg" => "jpg",
-				"image/png" => "png",
-				"application/msword" => "doc",
-				"application/vnd.openxmlformats-officedocument.wordprocessingml.document" => "docx",
-				"application/pdf" => "pdf"
-			];
-			$tipo = mime_content_type($arquivoEdit["tmp_name"]);
-			if (!array_key_exists($tipo, $formatos)) {
-				$errorMsg = "Tipo de arquivo não permitido.";
+		/* Entra quando um arquivo foi escolhido, mesmo que o envio tenha
+		   falhado. Antes a condição exigia UPLOAD_ERR_OK: arquivo acima do
+		   limite do servidor caía fora do if e a tela dizia "atualizado com
+		   sucesso" mantendo o arquivo antigo, sem avisar nada. */
+		if (!$errorMsg && $arquivoEdit && ($arquivoEdit["error"] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+			$conferencia = documentoValidarAnexo($arquivoEdit);
+			if (!$conferencia["ok"]) {
+				$errorMsg = $conferencia["erro"];
 			} else {
-				$nomeOriginal = basename($arquivoEdit["name"]);
-				$nomeSeguro = preg_replace('/[^\p{L}\p{N}\s\.\-\_]/u', '_', $nomeOriginal);
+				$extensaoArquivo = $conferencia["extensao"];
+				$nomeSeguro = documentoNomeSeguro($arquivoEdit["name"] ?? "", $extensaoArquivo);
 				$pasta = "arquivos/parametro/" . intval($doc["para_nb_id"]) . "/";
 				if (!is_dir($pasta)) { mkdir($pasta, 0777, true); }
 				$novoCaminho = $pasta . $nomeSeguro;
@@ -285,7 +282,7 @@
 					$nomeSeguro = $base . '_' . time() . $ext;
 					$novoCaminho = $pasta . $nomeSeguro;
 				}
-				if ($tipo === "application/pdf" && function_exists("temAssinaturaRapido")) {
+				if ($extensaoArquivo === "pdf" && function_exists("temAssinaturaRapido")) {
 					$novoAssinado = temAssinaturaRapido($arquivoEdit["tmp_name"]) ? "sim" : "nao";
 				} else {
 					$novoAssinado = "nao";
@@ -426,32 +423,21 @@
 		];
 		
 		$arquivo = $_FILES["file"] ?? null;
-		if (!$arquivo || $arquivo["error"] !== UPLOAD_ERR_OK) {
-			set_status("Erro no upload do arquivo.");
+
+		/* Formatos aceitos, tamanho e erros de envio: regra única em
+		   contex20/formatos_documento.php, que o conecta.php carrega. */
+		$conferencia = documentoValidarAnexo($arquivo);
+		if (!$conferencia["ok"]) {
+			set_status("ERRO: " . $conferencia["erro"]);
 			visualizarCadastro();
 			exit;
 		}
+		$extensaoArquivo = $conferencia["extensao"];
 
-		// Tipos de arquivo permitidos
-		$formatos = [
-			"image/jpeg" => "jpg",
-			"image/png" => "png",
-			"application/msword" => "doc",
-			"application/vnd.openxmlformats-officedocument.wordprocessingml.document" => "docx",
-			"application/pdf" => "pdf"
-		];
-
-		// Valida tipo real do arquivo (mais seguro que apenas $_FILES["type"])
-		$tipo = mime_content_type($arquivo["tmp_name"]);
-		if (!array_key_exists($tipo, $formatos)) {
-			set_status("Tipo de arquivo não permitido.");
-			visualizarCadastro();
-			exit;
-		}
-
-		// Usa o nome original do arquivo (mas sanitiza para evitar caracteres perigosos)
-		$nomeOriginal = basename($arquivo["name"]); // remove possíveis caminhos
-		$nomeSeguro = preg_replace('/[^\p{L}\p{N}\s\.\-\_]/u', '_', $nomeOriginal); // mantém letras, números, espaço, ponto, traço e underscore
+		/* Nome do arquivo em disco: uma extensão só e nada que confunda o
+		   sistema de arquivos. O nome que aparece na tela é outro — o
+		   digitado no formulário, guardado em docu_tx_nome. */
+		$nomeSeguro = documentoNomeSeguro($arquivo["name"] ?? "", $extensaoArquivo);
 
 		$pasta_funcionario = "arquivos/parametro/" . $novoParametro["para_nb_id"] . "/";
 		if (!is_dir($pasta_funcionario)) {
@@ -462,7 +448,7 @@
 		$novoParametro["docu_tx_caminho"] = $pasta_funcionario . $nomeSeguro;
 
 		// Se for PDF, verifica assinatura
-		if ($tipo === "application/pdf" && function_exists("temAssinaturaRapido")) {
+		if ($extensaoArquivo === "pdf" && function_exists("temAssinaturaRapido")) {
 			if (temAssinaturaRapido($arquivo["tmp_name"])) {
 				$novoParametro["docu_tx_assinado"] = "sim";
 			}

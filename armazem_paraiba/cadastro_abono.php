@@ -21,20 +21,14 @@
 				}
 			}
 
-			// Tipos de arquivo permitidos
-			$formatos = [
-				"image/jpeg" => "jpg",
-				"image/png" => "png",
-				"application/msword" => "doc",
-				"application/vnd.openxmlformats-officedocument.wordprocessingml.document" => "docx",
-				"application/pdf" => "pdf"
-			];
-
+			/* Formatos aceitos: mesma regra das telas de documento, em
+			   contex20/formatos_documento.php. */
 			$arquivoEnviado = !empty($_FILES["file"]) && !empty($_FILES["file"]["tmp_name"]);
+			$conferencia = ["extensao" => ""];
 			if ($arquivoEnviado) {
-				$tipo = mime_content_type($_FILES["file"]["tmp_name"]);
-				if (!array_key_exists($tipo, $formatos)) {
-					set_status("ERRO: Tipo de arquivo não permitido.");
+				$conferencia = documentoValidarAnexo($_FILES["file"]);
+				if (!$conferencia["ok"]) {
+					set_status("ERRO: " . $conferencia["erro"]);
 					layout_abono();
 					exit;
 				}
@@ -142,8 +136,7 @@
 				"docu_tx_visivel" => 'sim'
 			];
 
-			$nomeOriginal = basename($_FILES["file"]["name"]);
-			$nomeSeguro = preg_replace('/[^\p{L}\p{N}\s\.\-\_]/u', '_', $nomeOriginal);
+			$nomeSeguro = documentoNomeSeguro($_FILES["file"]["name"] ?? "", $conferencia["extensao"]);
 
 			$pasta_funcionario = "arquivos/Funcionarios/" . $novoArquivo["docu_nb_entidade"] . "/";
 			if (!is_dir($pasta_funcionario)) {

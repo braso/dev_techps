@@ -4,6 +4,12 @@
 		error_reporting(E_ALL);
 	//*/
 
+	/* Formatos aceitos nos anexos de documento. Fica num arquivo só
+	   porque a mesma regra vale para empresa, funcionário, parâmetro e
+	   abono — e porque este funcoes.php entra em todas as telas pelo
+	   conecta.php, então basta carregar aqui. */
+	include_once __DIR__ . "/formatos_documento.php";
+
 	if(isset($_GET["acao"])){
 		if(empty($_POST["acao"])){
 			$_POST["acao"] = $_GET["acao"];
@@ -1300,7 +1306,12 @@ if(function_exists("index")){
 									<i class='far fa-eye' title='Visualizar Documento'></i>
 								</a>";
 						} else {
-							$iconePreview = '<i class="fa-regular fa-eye-slash" title="Preview indisponível"></i>';
+							/* Planilha, Word e afins não abrem dentro do
+							   navegador. O arquivo está lá e o download ao
+							   lado funciona — o título diz isso, em vez de
+							   só "indisponível", que soa como arquivo
+							   perdido. */
+							$iconePreview = '<i class="fa-regular fa-eye-slash" title="Sem pré-visualização no navegador — use o download ao lado"></i>';
 						}
 					} else {
 						$iconeDownload = '<i class="glyphicon glyphicon-cloud-download text-muted" title="Arquivo não encontrado"></i>';
@@ -1605,8 +1616,9 @@ if(function_exists("index")){
 										<label>Arquivo:</label>
 										<div class='dropzone-upload' id='dropzone_" . $idRelacionado . "'>
 											<p>Arraste o arquivo aqui ou clique para selecionar</p>
-											<input type='file' name='file' id='fileInput_" . $idRelacionado . "'>
+											<input type='file' name='file' id='fileInput_" . $idRelacionado . "' accept='" . documentoFormatosAccept() . "'>
 										</div>
+										<p class='help-block'>Aceita " . documentoFormatosTexto() . ".</p>
 									</div>
 									<div class='form-group'>
 										<label>Visível ao funcionário:</label>
@@ -2083,9 +2095,9 @@ if(function_exists("index")){
 									<label>Trocar arquivo:</label>
 									<div class='dropzone-upload' id='dropzone_edit_" . $idRelacionado . "'>
 										<p>Arraste o arquivo aqui ou clique para selecionar</p>
-										<input type='file' name='file-edit' id='fileEditInput_" . $idRelacionado . "'>
+										<input type='file' name='file-edit' id='fileEditInput_" . $idRelacionado . "' accept='" . documentoFormatosAccept() . "'>
 									</div>
-									<p class='help-block'>Formatos permitidos: PDF, JPG, PNG, DOC, DOCX.</p>
+									<p class='help-block'>Aceita " . documentoFormatosTexto() . ".</p>
 								</div>
 								<div class='form-group'>
 									<label>Visível ao funcionário:</label>

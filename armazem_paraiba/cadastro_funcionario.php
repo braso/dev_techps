@@ -954,49 +954,86 @@
 
 		}
 
-		$file_type = $_FILES["cnhAnexo"]["type"]; //returns the mimetype
+		/* ── Anexos do cadastro: CNH, foto e rubrica ────────────────────
 
-		$allowed = ["image/jpeg", "image/gif", "image/png", "application/pdf"];
-		if (in_array($file_type, $allowed) && $_FILES["cnhAnexo"]["name"] != "") {
+		  A conferência era feita com $_FILES[...]["type"], que é o tipo
+		  que o NAVEGADOR declara — dá para mandar qualquer coisa alegando
+		  image/jpeg, e o enviar() grava com a extensão do nome original
+		  dentro de arquivos/, que o servidor publica. Agora vale a mesma
+		  regra dos documentos (contex20/formatos_documento.php): a
+		  extensão precisa estar na lista e o conteúdo do arquivo é lido.
 
-			if (!is_dir("arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}")) {
-				mkdir("arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}", 0777, true);
-			}
+		  A CNH passa a aceitar PDF e qualquer imagem — inclusive .heic do
+		  iPhone e .webp do WhatsApp, que antes eram descartados sem
+		  avisar nada. Foto e rubrica continuam em JPG/PNG/GIF de
+		  propósito: as duas entram em PDF gerado pelo TCPDF (ficha
+		  funcional e carimbo da assinatura), que não embute WEBP nem
+		  HEIC. */
 
-			$arq = enviar("cnhAnexo", "arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}/", "CNH_{$id}_{$_POST["postMatricula"]}");
-			if ($arq) {
-				atualizar("entidade", ["enti_tx_cnhAnexo"], [$arq], $id);
-			}
-		}
-		
-		
 		$idUserFoto = mysqli_fetch_assoc(query("SELECT user_nb_id FROM user WHERE user_nb_entidade = '{$id}' LIMIT 1;"));
-		$file_type = $_FILES["foto"]["type"]; //returns the mimetype
 
-		$allowed = ["image/jpeg", "image/gif", "image/png"];
-		if (in_array($file_type, $allowed) && $_FILES["foto"]["name"] != "") {
+		$anexosCadastro = [
+			"cnhAnexo" => [
+				"rotulo"    => "CNH",
+				"extensoes" => array_merge(["pdf"], documentoFormatosImagem()),
+				"prefixo"   => "CNH",
+				"coluna"    => "enti_tx_cnhAnexo",
+			],
+			"foto" => [
+				"rotulo"    => "Foto",
+				"extensoes" => ["jpg", "jpeg", "png", "gif"],
+				"prefixo"   => "FOTO",
+				"coluna"    => "enti_tx_foto",
+			],
+			"rubrica" => [
+				"rotulo"    => "Rubrica",
+				"extensoes" => ["jpg", "jpeg", "png"],
+				"prefixo"   => "RUBRICA",
+				"coluna"    => "enti_tx_rubrica",
+			],
+		];
 
-			if (!is_dir("arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}")) {
-				mkdir("arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}", 0777, true);
+		$pastaAnexos  = "arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}";
+		$avisosAnexos = [];
+
+		foreach ($anexosCadastro as $campoArquivo => $anexo) {
+			$enviado = $_FILES[$campoArquivo] ?? null;
+
+			/* Campo em branco é o caso normal: nem todo salvamento troca a
+			   CNH, a foto e a rubrica. */
+			if (empty($enviado) || ($enviado["error"] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+				continue;
 			}
 
-			$arq = enviar("foto", "arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}/", "FOTO_{$id}_{$_POST["postMatricula"]}");
-			if($arq){
-				atualizar("entidade", ["enti_tx_foto"], [$arq], $id);
+			$conferenciaAnexo = documentoValidarAnexo($enviado, $anexo["extensoes"]);
+			if (!$conferenciaAnexo["ok"]) {
+				$avisosAnexos[] = $anexo["rotulo"] . " não foi anexada: " . $conferenciaAnexo["erro"];
+				continue;
+			}
+
+			if (!is_dir($pastaAnexos)) {
+				mkdir($pastaAnexos, 0777, true);
+			}
+
+			$arq = enviar($campoArquivo, $pastaAnexos . "/", $anexo["prefixo"] . "_{$id}_{$_POST["postMatricula"]}");
+			if (!$arq) {
+				$avisosAnexos[] = $anexo["rotulo"] . " não pôde ser gravada no servidor.";
+				continue;
+			}
+
+			atualizar("entidade", [$anexo["coluna"]], [$arq], $id);
+
+			/* A foto do funcionário é também a foto do usuário dele. */
+			if ($campoArquivo === "foto" && !empty($idUserFoto["user_nb_id"])) {
 				atualizar("user", ["user_tx_foto"], [$arq], $idUserFoto["user_nb_id"]);
 			}
 		}
 
-		// Rubrica (imagem com fundo branco) para assinatura eletrônica
-		$rubricaType = $_FILES["rubrica"]["type"] ?? "";
-		if (in_array($rubricaType, ["image/jpeg", "image/png"]) && !empty($_FILES["rubrica"]["name"])) {
-			if (!is_dir("arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}")) {
-				mkdir("arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}", 0777, true);
-			}
-			$arqRub = enviar("rubrica", "arquivos/empresa/{$_POST["empresa"]}/motoristas/{$_POST["matricula"]}/", "RUBRICA_{$id}_{$_POST["postMatricula"]}");
-			if($arqRub){
-				atualizar("entidade", ["enti_tx_rubrica"], [$arqRub], $id);
-			}
+		/* Uma mensagem só, no fim: o set_status guarda uma por vez e o
+		   próprio enviar() chama ele a cada arquivo gravado. Antes o anexo
+		   recusado sumia da tela sem nenhuma mensagem. */
+		if (!empty($avisosAnexos)) {
+			set_status("ERRO: " . implode(" ", $avisosAnexos));
 		}
 
 		include_once __DIR__."/suporte/_membros_sync.php";
@@ -1145,20 +1182,17 @@
 		$novoCaminho = null;
 		$novoAssinado = $doc["docu_tx_assinado"] ?? "nao";
 		$arquivoEdit = $_FILES["file-edit"] ?? null;
-		if (!$errorMsg && $arquivoEdit && $arquivoEdit["error"] === UPLOAD_ERR_OK) {
-			$formatos = [
-				"image/jpeg" => "jpg",
-				"image/png" => "png",
-				"application/msword" => "doc",
-				"application/vnd.openxmlformats-officedocument.wordprocessingml.document" => "docx",
-				"application/pdf" => "pdf"
-			];
-			$tipo = mime_content_type($arquivoEdit["tmp_name"]);
-			if (!array_key_exists($tipo, $formatos)) {
-				$errorMsg = "Tipo de arquivo não permitido.";
+		/* Entra quando um arquivo foi escolhido, mesmo que o envio tenha
+		   falhado. Antes a condição exigia UPLOAD_ERR_OK: arquivo acima do
+		   limite do servidor caía fora do if e a tela dizia "atualizado com
+		   sucesso" mantendo o arquivo antigo, sem avisar nada. */
+		if (!$errorMsg && $arquivoEdit && ($arquivoEdit["error"] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+			$conferencia = documentoValidarAnexo($arquivoEdit);
+			if (!$conferencia["ok"]) {
+				$errorMsg = $conferencia["erro"];
 			} else {
-				$nomeOriginal = basename($arquivoEdit["name"]);
-				$nomeSeguro = preg_replace('/[^\p{L}\p{N}\s\.\-\_]/u', '_', $nomeOriginal);
+				$extensaoArquivo = $conferencia["extensao"];
+				$nomeSeguro = documentoNomeSeguro($arquivoEdit["name"] ?? "", $extensaoArquivo);
 				$pasta = "arquivos/Funcionarios/" . intval($doc["docu_nb_entidade"]) . "/";
 				if (!is_dir($pasta)) { mkdir($pasta, 0777, true); }
 				$novoCaminho = $pasta . $nomeSeguro;
@@ -1169,7 +1203,7 @@
 					$nomeSeguro = $base . '_' . time() . $ext;
 					$novoCaminho = $pasta . $nomeSeguro;
 				}
-				if ($tipo === "application/pdf" && function_exists("temAssinaturaRapido")) {
+				if ($extensaoArquivo === "pdf" && function_exists("temAssinaturaRapido")) {
 					$novoAssinado = temAssinaturaRapido($arquivoEdit["tmp_name"]) ? "sim" : "nao";
 				} else {
 					$novoAssinado = "nao";
@@ -1300,32 +1334,21 @@
 		];
 
 		$arquivo = $_FILES["file"] ?? null;
-		if (!$arquivo || $arquivo["error"] !== UPLOAD_ERR_OK) {
-			set_status("Erro no upload do arquivo.");
+
+		/* Formatos aceitos, tamanho e erros de envio: regra única em
+		   contex20/formatos_documento.php, que o conecta.php carrega. */
+		$conferencia = documentoValidarAnexo($arquivo);
+		if (!$conferencia["ok"]) {
+			set_status("ERRO: " . $conferencia["erro"]);
 			visualizarCadastro();
 			exit;
 		}
+		$extensaoArquivo = $conferencia["extensao"];
 
-		// Tipos de arquivo permitidos
-		$formatos = [
-			"image/jpeg" => "jpg",
-			"image/png" => "png",
-			"application/msword" => "doc",
-			"application/vnd.openxmlformats-officedocument.wordprocessingml.document" => "docx",
-			"application/pdf" => "pdf"
-		];
-
-		// Valida tipo real do arquivo (mais seguro que apenas $_FILES["type"])
-		$tipo = mime_content_type($arquivo["tmp_name"]);
-		if (!array_key_exists($tipo, $formatos)) {
-			set_status("Tipo de arquivo não permitido.");
-			visualizarCadastro();
-			exit;
-		}
-
-		// Usa o nome original do arquivo (mas sanitiza para evitar caracteres perigosos)
-		$nomeOriginal = basename($arquivo["name"]); // remove possíveis caminhos
-		$nomeSeguro = preg_replace('/[^\p{L}\p{N}\s\.\-\_]/u', '_', $nomeOriginal); // mantém letras, números, espaço, ponto, traço e underscore
+		/* Nome do arquivo em disco: uma extensão só e nada que confunda o
+		   sistema de arquivos. O nome que aparece na tela é outro — o
+		   digitado no formulário, guardado em docu_tx_nome. */
+		$nomeSeguro = documentoNomeSeguro($arquivo["name"] ?? "", $extensaoArquivo);
 
 		$pasta_funcionario = "arquivos/Funcionarios/" . $novoArquivo["docu_nb_entidade"] . "/";
 		if (!is_dir($pasta_funcionario)) {
@@ -1336,7 +1359,7 @@
 		$novoArquivo["docu_tx_caminho"] = $pasta_funcionario . $nomeSeguro;
 
 		// Se for PDF, verifica assinatura
-		if ($tipo === "application/pdf" && function_exists("temAssinaturaRapido")) {
+		if ($extensaoArquivo === "pdf" && function_exists("temAssinaturaRapido")) {
 			if (temAssinaturaRapido($arquivo["tmp_name"])) {
 				$novoArquivo["docu_tx_assinado"] = "sim";
 			}
@@ -1618,9 +1641,9 @@
 
 		$camposImg = [
 			$img,
-			arquivo("Arquivo (.png, .jpg)", "foto", ($a_mod["enti_tx_foto"]?? ""), 4, "tabindex=".sprintf("%02d", $tabIndex++)),
+			arquivo("Arquivo (.png, .jpg, .gif)", "foto", ($a_mod["enti_tx_foto"]?? ""), 4, "accept='.jpg,.jpeg,.png,.gif' tabindex=".sprintf("%02d", $tabIndex++)),
 			$imgRubrica,
-			arquivo("Rubrica (.png, .jpg, fundo branco)", "rubrica", ($a_mod["enti_tx_rubrica"]?? ""), 4, "tabindex=".sprintf("%02d", $tabIndex++))
+			arquivo("Rubrica (.png, .jpg, fundo branco)", "rubrica", ($a_mod["enti_tx_rubrica"]?? ""), 4, "accept='.jpg,.jpeg,.png' tabindex=".sprintf("%02d", $tabIndex++))
 		];
 
 		$statusOpt = ["ativo" => "Ativo", "inativo" => "Inativo"];
@@ -2018,7 +2041,7 @@
 			campo("Permissão", "cnhPermissao", ($a_mod["enti_tx_cnhPermissao"]?? ""), 3,"","maxlength='65' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo("Pontuação", "cnhPontuacao", ($a_mod["enti_tx_cnhPontuacao"]?? ""), 3,"","maxlength='3' tabindex=".sprintf("%02d", $tabIndex++)),
 			combo("Atividade Remunerada", "cnhAtividadeRemunerada", ($a_mod["enti_tx_cnhAtividadeRemunerada"]?? ""), 3, ["" => "Selecione", "sim" => "Sim", "nao" => "Não"], "tabindex=".sprintf("%02d", $tabIndex++)),
-			arquivo("CNH (.png, .jpg, .pdf)".$iconeExcluirCNH, "cnhAnexo", ($a_mod["enti_tx_cnhAnexo"]?? ""), 4, "tabindex=".sprintf("%02d", $tabIndex++)),
+			arquivo("CNH (PDF ou imagem)".$iconeExcluirCNH, "cnhAnexo", ($a_mod["enti_tx_cnhAnexo"]?? ""), 4, "accept='.pdf,".documentoFormatosAccept(documentoFormatosImagem())."' tabindex=".sprintf("%02d", $tabIndex++)),
 			campo("Observações", "cnhObs", ($a_mod["enti_tx_cnhObs"]?? ""), 3,"","maxlength='500' tabindex=".sprintf("%02d", $tabIndex++))
 		];
 
