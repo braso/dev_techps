@@ -541,6 +541,19 @@
 		}
 	}
 
+	function ensureEntidadeBpoSchema(): void {
+		global $conn;
+		if(!isset($conn) || !($conn instanceof mysqli)){ return; }
+		try{
+			$rs = mysqli_query($conn, "SHOW COLUMNS FROM entidade LIKE 'enti_tx_bpo'");
+			if($rs && mysqli_num_rows($rs) === 0){
+				mysqli_query($conn, "ALTER TABLE entidade ADD COLUMN enti_tx_bpo ENUM('sim','nao') NOT NULL DEFAULT 'nao'");
+			}
+		}catch(Throwable $e){
+			error_log("[cadastro_funcionario] ".$e->getMessage());
+		}
+	}
+
 	// Perfil de acesso ativo do usuário logado marcou "Esconder campo de salário"
 	// (cadastro_perfil_acesso.php)? Usado pra tirar o campo/coluna de salário da
 	// visão de quem estiver nesse perfil.
@@ -565,6 +578,7 @@
 		global $a_mod;
 
 		ensureEntidadeResponsavelSchema();
+		ensureEntidadeBpoSchema();
 
 		if(!empty($_POST["matricula"])){
 			$_POST["postMatricula"] = $_POST["matricula"];
@@ -605,6 +619,7 @@
 			"enti_tx_email" 					=> "email",
 			"enti_tx_referencia" 				=> "referencia",
 			"enti_tx_ocupacao" 				=> "ocupacao",
+			"enti_tx_bpo" 					=> "bpo",
 			"enti_nb_salario" 				=> "salario",
 			"enti_nb_parametro" 				=> "parametro", 
 			"enti_tx_obs" 					=> "obs", 
@@ -1959,6 +1974,7 @@
 		$cContratual = array_merge($cContratual, [
 			//dropbox da ocupação 
 			combo(		"Ocupação*", 		"ocupacao", 		(!empty($a_mod["enti_tx_ocupacao"])? $a_mod["enti_tx_ocupacao"]	:""), 		2, ["" => "Selecione", "Motorista" => "Motorista", "Ajudante" => "Ajudante", "Funcionário" => "Funcionário", "Terceirizado" => "Terceirizado"], "tabindex=".sprintf("%02d", $tabIndex++)." onchange=checkOcupation(this.value)"),
+			combo(		"BPO", 				"bpo", 				(!empty($a_mod["enti_tx_bpo"])? $a_mod["enti_tx_bpo"]				:"nao"), 		2, ["nao" => "Não", "sim" => "Sim"], "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo_data(	"Dt Admissão*", 	"admissao", 		(!empty($a_mod["enti_tx_admissao"])? $a_mod["enti_tx_admissao"]		 	:""), 		2, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo_data(	"Dt. Desligamento", "desligamento", 	(!empty($a_mod["enti_tx_desligamento"])? $a_mod["enti_tx_desligamento"] 	:""), 		2, "tabindex=".sprintf("%02d", $tabIndex++)),
 			campo(		"Saldo de Horas", 	"setBanco", 		(!empty($a_mod["enti_tx_banco"])? $a_mod["enti_tx_banco"] 				:"00:00"), 	1, "MASCARA_HORAS", "placeholder='HH:mm' tabindex=".sprintf("%02d", $tabIndex++)),

@@ -6,6 +6,12 @@ if(!defined("TERMOS_DIR")){
 if(!defined("TERMOS_MODULO_DIR")){
 	define("TERMOS_MODULO_DIR", dirname(__DIR__, 2));
 }
+if(!defined("TERMOS_ARQUIVOS_POP_DIR")){
+	define("TERMOS_ARQUIVOS_POP_DIR", TERMOS_MODULO_DIR . "/arquivos/pop");
+}
+if(!defined("TERMOS_ARQUIVOS_POP_REL")){
+	define("TERMOS_ARQUIVOS_POP_REL", "arquivos/pop");
+}
 
 include_once TERMOS_MODULO_DIR . "/utils/celular_opcoes.php";
 
@@ -25,6 +31,16 @@ function termos_ensure_tables($conn = null): void {
 		mode_tx_status ENUM('ativo','inativo') DEFAULT 'ativo',
 		mode_tx_notificacao ENUM('sim','nao') NOT NULL DEFAULT 'sim',
 		mode_nb_ativo INT NULL,
+		mode_tx_pop ENUM('sim','nao') NOT NULL DEFAULT 'nao',
+		mode_nb_pop_setor INT NULL,
+		mode_tx_pop_codigo VARCHAR(60) NULL,
+		mode_tx_pop_versao VARCHAR(30) NULL,
+		mode_dt_pop_vigencia DATE NULL,
+		mode_tx_pop_objetivo TEXT NULL,
+		mode_tx_pop_responsavel VARCHAR(255) NULL,
+		mode_tx_pop_tags VARCHAR(255) NULL,
+		mode_tx_pop_fluxograma VARCHAR(500) NULL,
+		mode_tx_pop_fluxograma_nome VARCHAR(255) NULL,
 		mode_nb_userCadastro INT NULL,
 		mode_tx_dataCadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
 		mode_nb_userAtualiza INT NULL,
@@ -34,7 +50,17 @@ function termos_ensure_tables($conn = null): void {
 
 	$colsModelo = [
 		"mode_tx_notificacao" => "ALTER TABLE modelo_termo ADD COLUMN mode_tx_notificacao ENUM('sim','nao') NOT NULL DEFAULT 'sim' AFTER mode_tx_status",
-		"mode_nb_ativo" => "ALTER TABLE modelo_termo ADD COLUMN mode_nb_ativo INT NULL AFTER mode_tx_notificacao"
+		"mode_nb_ativo" => "ALTER TABLE modelo_termo ADD COLUMN mode_nb_ativo INT NULL AFTER mode_tx_notificacao",
+		"mode_tx_pop" => "ALTER TABLE modelo_termo ADD COLUMN mode_tx_pop ENUM('sim','nao') NOT NULL DEFAULT 'nao' AFTER mode_nb_ativo",
+		"mode_nb_pop_setor" => "ALTER TABLE modelo_termo ADD COLUMN mode_nb_pop_setor INT NULL AFTER mode_tx_pop",
+		"mode_tx_pop_codigo" => "ALTER TABLE modelo_termo ADD COLUMN mode_tx_pop_codigo VARCHAR(60) NULL AFTER mode_nb_pop_setor",
+		"mode_tx_pop_versao" => "ALTER TABLE modelo_termo ADD COLUMN mode_tx_pop_versao VARCHAR(30) NULL AFTER mode_tx_pop_codigo",
+		"mode_dt_pop_vigencia" => "ALTER TABLE modelo_termo ADD COLUMN mode_dt_pop_vigencia DATE NULL AFTER mode_tx_pop_versao",
+		"mode_tx_pop_objetivo" => "ALTER TABLE modelo_termo ADD COLUMN mode_tx_pop_objetivo TEXT NULL AFTER mode_dt_pop_vigencia",
+		"mode_tx_pop_responsavel" => "ALTER TABLE modelo_termo ADD COLUMN mode_tx_pop_responsavel VARCHAR(255) NULL AFTER mode_tx_pop_objetivo",
+		"mode_tx_pop_tags" => "ALTER TABLE modelo_termo ADD COLUMN mode_tx_pop_tags VARCHAR(255) NULL AFTER mode_tx_pop_responsavel",
+		"mode_tx_pop_fluxograma" => "ALTER TABLE modelo_termo ADD COLUMN mode_tx_pop_fluxograma VARCHAR(500) NULL AFTER mode_tx_pop_tags",
+		"mode_tx_pop_fluxograma_nome" => "ALTER TABLE modelo_termo ADD COLUMN mode_tx_pop_fluxograma_nome VARCHAR(255) NULL AFTER mode_tx_pop_fluxograma"
 	];
 	foreach($colsModelo as $colModelo => $ddlModelo){
 		$checkModelo = mysqli_query($conn, "SHOW COLUMNS FROM modelo_termo LIKE '{$colModelo}'");
@@ -191,6 +217,372 @@ function termos_sanitizar_html(string $html): string {
 	$html = preg_replace('/javascript\s*:/i', '', $html);
 	$html = preg_replace('/\son[a-z]+\s*=/i', '', $html);
 	return strval($html);
+}
+
+/**
+ * Normaliza o HTML do modelo antes de entregá-lo ao TCPDF.
+ *
+ * Conteúdos colados do Google Docs/Word chegam com tudo dentro de <h1>,
+ * line-height 1.15 em todos os elementos, margens inline e fontes externas.
+ * O TCPDF tenta obedecer a isso e acaba sobrepondo o texto em uma única
+ * página. Aqui:
+ *  - removemos classes, data-*, aria-*, scripts e estilos que controlam
+ *    posicionamento/espaçamento/fontes;
+ *  - mantemos apenas estilos seguros (negrito, itálico, sublinhado, cor,
+ *    alinhamento e bordas de tabela);
+ *  - desmontamos headings que envolvem blocos (p, div, ul, ol, table etc.),
+ *    que é um HTML inválido e confunde o renderizador.
+ */
+function termos_preparar_html_pdf(string $html): string {
+	$html = trim($html);
+	if($html === "" || !class_exists("DOMDocument")){
+		return $html;
+	}
+
+	$doc = new DOMDocument("1.0", "UTF-8");
+	$libxmlAnterior = libxml_use_internal_errors(true);
+	$carregou = $doc->loadHTML(
+		'<?xml encoding="utf-8" ?><html><body><div id="termos-pdf-root">' . $html . '</div></body></html>',
+		LIBXML_NOWARNING | LIBXML_NOERROR
+	);
+	libxml_clear_errors();
+	libxml_use_internal_errors($libxmlAnterior);
+	if(!$carregou){
+		return $html;
+	}
+
+	$root = $doc->getElementById("termos-pdf-root");
+	if(!$root){
+		return $html;
+	}
+	$xp = new DOMXPath($doc);
+
+	// Remove elementos que não devem chegar ao PDF.
+	foreach($xp->query('//script|//style|//iframe|//object|//embed|//form|//input|//button|//select|//textarea') as $node){
+		if($node->parentNode){
+			$node->parentNode->removeChild($node);
+		}
+	}
+
+	$propsPermitidas = [
+		"font-weight", "font-style", "text-decoration", "text-align",
+		"color", "background-color", "border", "border-collapse",
+		"list-style", "list-style-type"
+	];
+
+	foreach($xp->query('//*') as $node){
+		if(!$node->hasAttributes()){
+			continue;
+		}
+		for($i = $node->attributes->length - 1; $i >= 0; $i--){
+			$attr = $node->attributes->item($i);
+			if(!$attr){
+				continue;
+			}
+			$nome = strtolower($attr->name);
+
+			if($nome === "style"){
+				$manter = [];
+				foreach(explode(";", $attr->value) as $regra){
+					$partes = explode(":", $regra, 2);
+					if(count($partes) !== 2){
+						continue;
+					}
+					$prop = strtolower(trim($partes[0]));
+					$valor = trim(str_ireplace("!important", "", $partes[1]));
+					if($valor === "" || !in_array($prop, $propsPermitidas, true)){
+						continue;
+					}
+					// TCPDF não entende rgb()/rgba() em todas as propriedades; converte para hexadecimal.
+					if(preg_match_all('/rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*[\d.]+)?\s*\)/i', $valor, $cores, PREG_SET_ORDER)){
+						foreach($cores as $cor){
+							$hex = sprintf(
+								"#%02x%02x%02x",
+								min(255, intval($cor[1])),
+								min(255, intval($cor[2])),
+								min(255, intval($cor[3]))
+							);
+							$valor = str_replace($cor[0], $hex, $valor);
+						}
+					}
+					if($prop === "font-weight"){
+						$valorNormalizado = strtolower($valor);
+						if(is_numeric($valorNormalizado)){
+							$valor = intval($valorNormalizado) >= 600 ? "bold" : "normal";
+						}elseif(in_array($valorNormalizado, ["bolder", "bold"], true)){
+							$valor = "bold";
+						}else{
+							$valor = "normal";
+						}
+					}
+					$manter[] = $prop . ": " . $valor;
+				}
+				if(empty($manter)){
+					$node->removeAttribute($attr->name);
+				}else{
+					$node->setAttribute("style", implode("; ", $manter));
+				}
+				continue;
+			}
+
+			if($nome === "class" || strpos($nome, "data-") === 0 || strpos($nome, "aria-") === 0 || strpos($nome, "on") === 0){
+				$node->removeAttribute($attr->name);
+			}
+		}
+	}
+
+	// Heading não pode conter blocos. Quando isso acontece (comum em conteúdo
+	// colado do Google Docs), troca o heading por uma div para o TCPDF voltar
+	// a paginar normalmente.
+	$tagsBloco = ["p", "div", "ol", "ul", "table", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "pre"];
+	foreach(["h1", "h2", "h3", "h4", "h5", "h6"] as $tag){
+		$headings = [];
+		foreach($xp->query('//' . $tag) as $heading){
+			$headings[] = $heading;
+		}
+		foreach($headings as $heading){
+			$temBloco = false;
+			foreach($heading->childNodes as $filho){
+				if($filho->nodeType === XML_ELEMENT_NODE && in_array(strtolower($filho->nodeName), $tagsBloco, true)){
+					$temBloco = true;
+					break;
+				}
+			}
+			if($temBloco){
+				$div = $doc->createElement("div");
+				while($heading->firstChild){
+					$div->appendChild($heading->firstChild);
+				}
+				$heading->parentNode->replaceChild($div, $heading);
+			}
+		}
+	}
+
+	// Remove blocos vazios (comum no HTML do Google Docs: <div><br></div>).
+	// Eles geravam um grande espaço em branco antes do primeiro título.
+	$vazios = [];
+	foreach($xp->query('//p|//div|//h1|//h2|//h3|//h4|//h5|//h6|//li') as $node){
+		$vazios[] = $node;
+	}
+	foreach($vazios as $node){
+		if(!$node->parentNode){
+			continue;
+		}
+		if($xp->query('.//img|.//table|.//hr', $node)->length > 0){
+			continue;
+		}
+		$texto = trim(str_replace("\xC2\xA0", " ", $node->textContent));
+		if($texto === ""){
+			$node->parentNode->removeChild($node);
+		}
+	}
+
+	$saida = "";
+	foreach($root->childNodes as $filho){
+		$saida .= $doc->saveHTML($filho);
+	}
+	$saida = trim($saida);
+	return $saida !== "" ? $saida : $html;
+}
+
+/**
+ * Salva um anexo do módulo POP (documento em PDF ou fluxograma em imagem/PDF).
+ * A pasta fica fora da árvore pública direta (arquivos/pop) e é servida
+ * exclusivamente pelos endpoints do módulo, que validam permissão/token.
+ *
+ * @return array{ok:bool,erro:string,caminho_rel:string,caminho_abs:string,nome:string,ext:string,vazio:bool}
+ */
+function termos_salvar_arquivo_pop(array $arquivo, string $subpasta, array $extensoesPermitidas, int $maxBytes = 20971520): array {
+	$vazio = [
+		"ok" => false,
+		"erro" => "Nenhum arquivo enviado.",
+		"caminho_rel" => "",
+		"caminho_abs" => "",
+		"nome" => "",
+		"ext" => "",
+		"vazio" => true
+	];
+
+	$erroUpload = intval($arquivo["error"] ?? UPLOAD_ERR_NO_FILE);
+	if($erroUpload === UPLOAD_ERR_NO_FILE){
+		return $vazio;
+	}
+	if($erroUpload !== UPLOAD_ERR_OK){
+		$mensagens = [
+			UPLOAD_ERR_INI_SIZE => "O arquivo excede o limite de upload do servidor.",
+			UPLOAD_ERR_FORM_SIZE => "O arquivo excede o limite permitido pelo formulário.",
+			UPLOAD_ERR_PARTIAL => "O upload do arquivo foi interrompido.",
+			UPLOAD_ERR_NO_TMP_DIR => "Pasta temporária de upload indisponível no servidor.",
+			UPLOAD_ERR_CANT_WRITE => "O servidor não conseguiu gravar o arquivo.",
+			UPLOAD_ERR_EXTENSION => "O upload foi bloqueado por uma extensão do PHP."
+		];
+		return [
+			"ok" => false,
+			"erro" => $mensagens[$erroUpload] ?? "Falha no upload do arquivo (código " . $erroUpload . ").",
+			"caminho_rel" => "",
+			"caminho_abs" => "",
+			"nome" => "",
+			"ext" => "",
+			"vazio" => false
+		];
+	}
+
+	$tmp = strval($arquivo["tmp_name"] ?? "");
+	if($tmp === "" || !is_uploaded_file($tmp)){
+		return [
+			"ok" => false,
+			"erro" => "Arquivo temporário de upload inválido.",
+			"caminho_rel" => "",
+			"caminho_abs" => "",
+			"nome" => "",
+			"ext" => "",
+			"vazio" => false
+		];
+	}
+
+	$tamanho = intval($arquivo["size"] ?? 0);
+	if($tamanho > $maxBytes){
+		return [
+			"ok" => false,
+			"erro" => "O arquivo excede o limite de " . number_format($maxBytes / 1048576, 1, ",", ".") . " MB.",
+			"caminho_rel" => "",
+			"caminho_abs" => "",
+			"nome" => "",
+			"ext" => "",
+			"vazio" => false
+		];
+	}
+
+	$nomeOriginal = basename(str_replace("\\", "/", strval($arquivo["name"] ?? "arquivo")));
+	$ext = strtolower(pathinfo($nomeOriginal, PATHINFO_EXTENSION));
+	$extensoesPermitidas = array_values(array_unique(array_map("strtolower", $extensoesPermitidas)));
+	if($ext === "" || !in_array($ext, $extensoesPermitidas, true)){
+		return [
+			"ok" => false,
+			"erro" => "Formato não permitido. Envie: " . implode(", ", $extensoesPermitidas) . ".",
+			"caminho_rel" => "",
+			"caminho_abs" => "",
+			"nome" => "",
+			"ext" => "",
+			"vazio" => false
+		];
+	}
+
+	$mimesPermitidos = [
+		"pdf" => ["application/pdf", "application/x-pdf"],
+		"png" => ["image/png"],
+		"jpg" => ["image/jpeg", "image/pjpeg"],
+		"jpeg" => ["image/jpeg", "image/pjpeg"],
+		"webp" => ["image/webp"]
+	];
+	if(class_exists("finfo")){
+		$finfo = new finfo(FILEINFO_MIME_TYPE);
+		$mime = strtolower(strval($finfo->file($tmp)));
+		if(isset($mimesPermitidos[$ext]) && !in_array($mime, $mimesPermitidos[$ext], true)){
+			$assinatura = @file_get_contents($tmp, false, null, 0, 8);
+			$ehPdfValido = $ext === "pdf" && is_string($assinatura) && strpos($assinatura, "%PDF-") === 0;
+			if(!$ehPdfValido){
+				return [
+					"ok" => false,
+					"erro" => "O conteúdo do arquivo não corresponde ao formato ." . $ext . ".",
+					"caminho_rel" => "",
+					"caminho_abs" => "",
+					"nome" => "",
+					"ext" => "",
+					"vazio" => false
+				];
+			}
+		}
+	}
+	if(in_array($ext, ["png", "jpg", "jpeg", "webp"], true) && @getimagesize($tmp) === false){
+		return [
+			"ok" => false,
+			"erro" => "A imagem enviada é inválida ou está corrompida.",
+			"caminho_rel" => "",
+			"caminho_abs" => "",
+			"nome" => "",
+			"ext" => "",
+			"vazio" => false
+		];
+	}
+
+	$subpasta = preg_replace('/[^a-z0-9_\-]/i', '', $subpasta);
+	if($subpasta === ""){
+		$subpasta = "geral";
+	}
+	$dirAbs = rtrim(TERMOS_ARQUIVOS_POP_DIR, "/\\") . DIRECTORY_SEPARATOR . $subpasta;
+	if(!is_dir($dirAbs) && !@mkdir($dirAbs, 0775, true) && !is_dir($dirAbs)){
+		return [
+			"ok" => false,
+			"erro" => "Não foi possível criar a pasta de armazenamento dos POPs.",
+			"caminho_rel" => "",
+			"caminho_abs" => "",
+			"nome" => "",
+			"ext" => "",
+			"vazio" => false
+		];
+	}
+	if(!is_writable($dirAbs)){
+		return [
+			"ok" => false,
+			"erro" => "A pasta de armazenamento dos POPs não tem permissão de escrita.",
+			"caminho_rel" => "",
+			"caminho_abs" => "",
+			"nome" => "",
+			"ext" => "",
+			"vazio" => false
+		];
+	}
+
+	$nomeFinal = "pop_" . $subpasta . "_" . date("YmdHis") . "_" . bin2hex(random_bytes(4)) . "." . $ext;
+	$destinoAbs = $dirAbs . DIRECTORY_SEPARATOR . $nomeFinal;
+	if(!@move_uploaded_file($tmp, $destinoAbs)){
+		return [
+			"ok" => false,
+			"erro" => "Não foi possível salvar o arquivo enviado.",
+			"caminho_rel" => "",
+			"caminho_abs" => "",
+			"nome" => "",
+			"ext" => "",
+			"vazio" => false
+		];
+	}
+	@chmod($destinoAbs, 0644);
+
+	return [
+		"ok" => true,
+		"erro" => "",
+		"caminho_rel" => TERMOS_ARQUIVOS_POP_REL . "/" . $subpasta . "/" . $nomeFinal,
+		"caminho_abs" => $destinoAbs,
+		"nome" => mb_substr($nomeOriginal, 0, 255, "UTF-8"),
+		"ext" => $ext,
+		"vazio" => false
+	];
+}
+
+/**
+ * Remove com segurança um arquivo do módulo POP.
+ * Só apaga caminhos que estejam dentro de arquivos/pop.
+ */
+function termos_remover_arquivo_pop(string $caminhoRel): void {
+	$caminhoRel = trim(str_replace("\\", "/", $caminhoRel));
+	if($caminhoRel === ""){
+		return;
+	}
+	$base = realpath(TERMOS_ARQUIVOS_POP_DIR);
+	if($base === false){
+		return;
+	}
+	$abs = realpath(TERMOS_MODULO_DIR . "/" . ltrim($caminhoRel, "/"));
+	if($abs === false || !is_file($abs)){
+		return;
+	}
+	$baseNorm = rtrim(str_replace("\\", "/", $base), "/") . "/";
+	$absNorm = str_replace("\\", "/", $abs);
+	if(strpos($absNorm, $baseNorm) !== 0){
+		return;
+	}
+	@unlink($abs);
 }
 
 function termos_formatar_cpf($v): string {
@@ -958,6 +1350,7 @@ function termos_renderizar_pdf(array $dados, array $modelo, array $tipo, string 
 
 	$assinantes = termos_carregar_assinantes(intval($modelo["mode_nb_id"] ?? 0));
 	$conteudo = termos_resolver_placeholders(strval($modelo["mode_tx_conteudo"] ?? ""), $dados, $modelo, $assinantes, $ativo)[0];
+	$conteudo = termos_preparar_html_pdf($conteudo);
 
 	if(!class_exists("MYPDF_Termos", false)){
 		class MYPDF_Termos extends TCPDF {
