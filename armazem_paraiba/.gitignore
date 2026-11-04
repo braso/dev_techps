@@ -1,6 +1,12 @@
 .env
 
 arquivos/*
+# A pasta de POPs é criada em runtime, mas o .htaccess que bloqueia o acesso
+# direto aos arquivos precisa ir para o repositório.
+!arquivos/pop/
+arquivos/pop/*
+!arquivos/pop/.htaccess
+!arquivos/pop/.gitkeep
 paineis/arquivos/*
 paineis_old/*
 diaDetalhePonto.php

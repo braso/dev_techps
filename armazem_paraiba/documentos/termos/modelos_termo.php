@@ -39,6 +39,9 @@ function index() {
 		botao("Gerar Termos", "irGerar", "", "", "", false, "btn btn-info"),
 		botao("Termos Gerados", "irLista", "", "", "", false, "btn btn-info")
 	];
+	if(termos_pode_acessar("/documentos/pop/index.php")){
+		$buttons[] = "<a href='../pop/index.php' class='btn btn-success'><span class='fa fa-book'></span> Biblioteca de POPs</a>";
+	}
 	echo abre_form();
 	if($filtroTipoDoc > 0){
 		echo "<input type='hidden' name='tipo_doc' value='{$filtroTipoDoc}'>";
@@ -78,9 +81,10 @@ function index() {
 	}
 
 	$res = query(
-		"SELECT m.*, t.tipo_tx_nome, t.tipo_tx_assinatura, t.tipo_tx_ativo
+		"SELECT m.*, t.tipo_tx_nome, t.tipo_tx_assinatura, t.tipo_tx_ativo, g.grup_tx_nome AS pop_setor_nome
 		 FROM modelo_termo m
 		 LEFT JOIN tipos_documentos t ON t.tipo_nb_id = m.mode_nb_tipo_doc
+		 LEFT JOIN grupos_documentos g ON g.grup_nb_id = m.mode_nb_pop_setor
 		 {$whereTipo}
 		 ORDER BY m.mode_tx_dataCadastro DESC",
 		$typesTipo,
@@ -89,11 +93,11 @@ function index() {
 
 	echo "<h3>Modelos Cadastrados</h3>";
 	echo "<div class='table-responsive'><table class='table table-bordered table-striped'>";
-	echo "<thead><tr><th>ID</th><th>Nome</th><th>Tipo de Documento</th><th>Equipamentos</th><th>Tipo exige assinatura</th><th>Status</th><th>Atualizado</th><th>Ações</th></tr></thead>";
+	echo "<thead><tr><th>ID</th><th>Nome</th><th>POP</th><th>Tipo de Documento</th><th>Equipamentos</th><th>Tipo exige assinatura</th><th>Status</th><th>Atualizado</th><th>Ações</th></tr></thead>";
 	echo "<tbody>";
 
 	if(!$res || mysqli_num_rows($res) == 0){
-		echo "<tr><td colspan='8' class='text-center'>Nenhum modelo cadastrado ainda.</td></tr>";
+		echo "<tr><td colspan='9' class='text-center'>Nenhum modelo cadastrado ainda.</td></tr>";
 	}
 
 	while($res && ($row = mysqli_fetch_assoc($res))){
@@ -103,6 +107,19 @@ function index() {
 		$ass = strtolower(trim(strval($row["tipo_tx_assinatura"] ?? "nao"))) === "sim" ? "Sim" : "Não";
 		$status = strtolower(trim(strval($row["mode_tx_status"] ?? "inativo"))) === "ativo" ? "Ativo" : "Inativo";
 		$data = date("d/m/Y H:i", strtotime(strval($row["mode_tx_dataAtualiza"] ?? $row["mode_tx_dataCadastro"])));
+		$ehPop = strtolower(trim(strval($row["mode_tx_pop"] ?? "nao"))) === "sim";
+		$popExibe = "<span class='text-muted'>—</span>";
+		if($ehPop){
+			$setorPop = trim(strval($row["pop_setor_nome"] ?? ""));
+			$versaoPop = trim(strval($row["mode_tx_pop_versao"] ?? ""));
+			$popExibe = "<span class='label label-success'><span class='fa fa-book'></span> POP</span>";
+			if($setorPop !== ""){
+				$popExibe .= "<br><small class='text-muted'>" . termos_h($setorPop) . "</small>";
+			}
+			if($versaoPop !== ""){
+				$popExibe .= " <small class='text-muted'>v" . termos_h($versaoPop) . "</small>";
+			}
+		}
 
 		$ativoExibe = "<span class='text-muted'>—</span>";
 		$vinc = $vinculosPorModelo[$id] ?? [];
@@ -130,6 +147,7 @@ function index() {
 		echo "<tr>";
 		echo "<td>{$id}</td>";
 		echo "<td><b>{$nome}</b></td>";
+		echo "<td>{$popExibe}</td>";
 		echo "<td>{$tipoNome}</td>";
 		echo "<td>{$ativoExibe}</td>";
 		echo "<td>{$ass}</td>";
@@ -693,6 +711,11 @@ function irLista() {
 	exit;
 }
 
+function irPop() {
+	header("Location: ../pop/index.php");
+	exit;
+}
+
 function form() {
 	global $conn;
 	termos_ensure_tables($conn);
@@ -741,11 +764,78 @@ function form() {
 		$tipoDocPadrao = strval($_POST["tipo_doc"] ?? $_GET["tipo_doc"] ?? "");
 	}
 
+	$popSelecionadoRaw = strval($a_mod["mode_tx_pop"] ?? "");
+	if($id <= 0 && trim($popSelecionadoRaw) === ""){
+		$popSelecionadoRaw = strval($_POST["pop"] ?? $_GET["pop"] ?? "nao");
+	}
+	$popSelecionado = in_array(strtolower(trim($popSelecionadoRaw)), ["sim", "1", "true", "yes"], true) ? "sim" : "nao";
+	$popSetorSel = intval($a_mod["mode_nb_pop_setor"] ?? ($_POST["pop_setor"] ?? 0));
+	$popCodigo = strval($a_mod["mode_tx_pop_codigo"] ?? ($_POST["pop_codigo"] ?? ""));
+	$popVersao = strval($a_mod["mode_tx_pop_versao"] ?? ($_POST["pop_versao"] ?? "1.0"));
+	$popVigencia = strval($a_mod["mode_dt_pop_vigencia"] ?? ($_POST["pop_vigencia"] ?? ""));
+	$popObjetivo = strval($a_mod["mode_tx_pop_objetivo"] ?? ($_POST["pop_objetivo"] ?? ""));
+	$popResponsavel = strval($a_mod["mode_tx_pop_responsavel"] ?? ($_POST["pop_responsavel"] ?? ""));
+	$popTags = strval($a_mod["mode_tx_pop_tags"] ?? ($_POST["pop_tags"] ?? ""));
+	$popFluxograma = strval($a_mod["mode_tx_pop_fluxograma"] ?? "");
+	$popFluxogramaNome = strval($a_mod["mode_tx_pop_fluxograma_nome"] ?? "");
+
+	$setoresPop = ["" => "Selecione..."];
+	foreach(termos_opcoes_setores() as $kSetor => $vSetor){
+		if($kSetor === ""){
+			continue;
+		}
+		$setoresPop[intval($kSetor)] = $vSetor;
+	}
+	if($popSetorSel > 0 && !isset($setoresPop[$popSetorSel])){
+		$resSetorAtual = query("SELECT grup_tx_nome FROM grupos_documentos WHERE grup_nb_id = ? LIMIT 1", "i", [$popSetorSel]);
+		if($resSetorAtual instanceof mysqli_result && ($rowSetorAtual = mysqli_fetch_assoc($resSetorAtual))){
+			$setoresPop[$popSetorSel] = strval($rowSetorAtual["grup_tx_nome"] ?? "") . " (inativo)";
+		}
+	}
+
 	$fields = [
 		"<input type='hidden' name='id' value='{$id}'>",
 		campo("Nome do Modelo*", "nome", strval($a_mod["mode_tx_nome"] ?? ""), 5),
 		combo("Tipo de Documento*", "tipo_doc", $tipoDocPadrao, 4, $tipos),
 		combo("Status", "status", strval($a_mod["mode_tx_status"] ?? "ativo"), 3, ["ativo" => "Ativo", "inativo" => "Inativo"])
+	];
+
+	$fluxoExistenteHtml = "";
+	if($popFluxograma !== ""){
+		$cacheFluxo = (int)(strtotime(strval($a_mod["mode_tx_dataAtualiza"] ?? "")) ?: 0);
+		$linkFluxo = "../pop/pop_arquivo.php?origem=termo&id={$id}&tipo=fluxograma&v={$cacheFluxo}";
+		$nomeFluxo = $popFluxogramaNome !== "" ? $popFluxogramaNome : basename($popFluxograma);
+		$fluxoExistenteHtml = "<div style='margin-top:6px; padding:8px 10px; background:#fff; border:1px solid #e5e7eb; border-radius:6px;'>
+			<span class='fa fa-sitemap' style='color:#16a34a;'></span>
+			Fluxograma atual: <a href='" . termos_h($linkFluxo) . "' target='_blank'>" . termos_h($nomeFluxo) . "</a>
+			<label style='font-weight:normal; margin-left:12px; margin-bottom:0;'>
+				<input type='checkbox' name='pop_remover_fluxograma' value='sim'> Remover fluxograma
+			</label>
+		</div>";
+	}
+
+	$fieldsPopLinha1 = [
+		combo("Setor do POP*", "pop_setor", $popSetorSel > 0 ? strval($popSetorSel) : "", 3, $setoresPop),
+		campo("Código do POP", "pop_codigo", $popCodigo, 3),
+		campo("Versão", "pop_versao", $popVersao, 2),
+		campo("Vigência", "pop_vigencia", $popVigencia, 4, "MASCARA_DATA")
+	];
+	$fieldsPopLinha2 = [
+		campo("Responsável pelo POP", "pop_responsavel", $popResponsavel, 4),
+		campo("Palavras-chave (separadas por vírgula)", "pop_tags", $popTags, 8)
+	];
+	$fieldsPopLinha3 = [
+		"<div class='col-sm-12 margin-bottom-5'>
+			<label>Objetivo / Resumo do POP</label>
+			<textarea name='pop_objetivo' class='form-control input-sm' rows='3' placeholder='Explique em poucas linhas o que este procedimento garante e quando deve ser usado.'>" . termos_h($popObjetivo) . "</textarea>
+			<span class='help-block' style='font-size:11px;'>Aparece na prévia da Biblioteca de POPs para ajudar o gestor a encontrar o documento certo.</span>
+		</div>",
+		"<div class='col-sm-12 margin-bottom-5'>
+			<label>Fluxograma do POP (imagem ou PDF) <span class='text-muted'>— opcional</span></label>
+			<input type='file' name='pop_fluxograma' class='form-control input-sm' accept='.png,.jpg,.jpeg,.webp,.pdf'>
+			<span class='help-block' style='font-size:11px;'>Se anexado, a Biblioteca de POPs mostra uma aba exclusiva com o fluxograma do processo.</span>
+			{$fluxoExistenteHtml}
+		</div>"
 	];
 
 	$buttons = [
@@ -763,6 +853,27 @@ function form() {
 	echo abre_form("Dados do Modelo");
 	echo "<input type='hidden' name='id' value='{$id}'>";
 	echo linha_form($fields);
+
+	echo linha_form([
+		combo("Este documento é um POP?", "pop", $popSelecionado, 4, ["nao" => "Não", "sim" => "Sim"], "id='termos_pop_flag' onchange='termosTogglePop()'"),
+		"<div class='col-sm-8 margin-bottom-5' style='padding-top:22px;'>
+			<div class='alert alert-success' style='margin:0; padding:8px 12px; font-size:12px;'>
+				<span class='fa fa-book'></span> Marque <b>Sim</b> para classificar este documento como <b>POP</b>. Ele passa a aparecer na <b>Biblioteca de POPs</b>, organizado pelo setor escolhido e com prévia em PDF, fluxograma e envio para colaboradores.
+			</div>
+		</div>"
+	]);
+
+	echo "<div id='termos_pop_campos' style='display:none; margin:4px 0 14px; padding:14px 10px 4px; border-left:4px solid #16a34a; background:#f7fcf9; border-radius:6px;'>
+		<div class='row' style='margin-bottom:6px;'>
+			<div class='col-sm-12'>
+				<h4 style='margin:0 0 4px; font-size:15px; color:#166534;'><span class='fa fa-book'></span> Classificação do POP</h4>
+				<p class='text-muted' style='font-size:12px; margin:0;'>Esses campos alimentam as abas por setor, os filtros e a prévia da Biblioteca de POPs.</p>
+			</div>
+		</div>";
+	echo linha_form($fieldsPopLinha1);
+	echo linha_form($fieldsPopLinha2);
+	echo linha_form($fieldsPopLinha3);
+	echo "</div>";
 
 	echo "<div class='alert alert-info' style='font-size:12px; margin-top:8px;'>
 		<i class='fa fa-info-circle'></i> <b>Assinatura/Notificação:</b> o modo de envio é escolhido na hora de gerar/enviar o termo: <b>Assinatura Eletrônica</b> (coleta assinatura digital), <b>Assinatura/ICP</b> (assinatura com ICP-Brasil) ou <b>Notificação</b> (sem assinatura, apenas aviso para o funcionário visualizar e confirmar a ciência). Para usar <b>Assinatura/ICP</b>, o tipo de documento precisa estar com <b>Assinatura = Sim</b>; caso contrário, o sistema alerta e oferece um atalho para corrigir o tipo.
@@ -827,6 +938,13 @@ function form() {
 			sel.value = '';
 		}
 
+		function termosTogglePop() {
+			var sel = document.querySelector('select[name=\"pop\"]');
+			var box = document.getElementById('termos_pop_campos');
+			if (!sel || !box) { return; }
+			box.style.display = sel.value === 'sim' ? '' : 'none';
+		}
+
 		function termosInicializarPlaceholdersAtivo() {
 			var sel = document.getElementById('termos_placeholders');
 			if (!sel) { return; }
@@ -856,6 +974,8 @@ function form() {
 			termosEditor.addEventListener('input', termosSync);
 			$('form[name=contex_form]').on('submit', termosSync);
 			termosInicializarPlaceholdersAtivo();
+			termosTogglePop();
+			$('select[name=pop]').on('change', termosTogglePop);
 		});
 	</script>
 	";
@@ -874,6 +994,23 @@ function salvar() {
 	$status = in_array(strval($_POST["status"] ?? "ativo"), ["ativo", "inativo"], true) ? strval($_POST["status"]) : "ativo";
 	$conteudo = termos_sanitizar_html(strval($_POST["conteudo"] ?? ""));
 	$user = intval($_SESSION["user_nb_id"] ?? 0);
+	$modeloAtual = $id > 0 ? termos_carregar_modelo($id) : [];
+	if($id > 0 && empty($modeloAtual)){
+		set_status("ERRO: Modelo não encontrado.");
+		index();
+		exit;
+	}
+
+	$pop = strtolower(trim(strval($_POST["pop"] ?? "nao"))) === "sim" ? "sim" : "nao";
+	$popSetor = $pop === "sim" ? intval($_POST["pop_setor"] ?? 0) : 0;
+	$popCodigo = mb_substr(trim(strval($_POST["pop_codigo"] ?? "")), 0, 60, "UTF-8");
+	$popVersao = mb_substr(trim(strval($_POST["pop_versao"] ?? "")), 0, 30, "UTF-8");
+	$popVigencia = trim(strval($_POST["pop_vigencia"] ?? ""));
+	$popObjetivo = trim(strval($_POST["pop_objetivo"] ?? ""));
+	$popResponsavel = mb_substr(trim(strval($_POST["pop_responsavel"] ?? "")), 0, 255, "UTF-8");
+	$popTags = mb_substr(trim(strval($_POST["pop_tags"] ?? "")), 0, 255, "UTF-8");
+	$popFluxograma = $id > 0 ? trim(strval($modeloAtual["mode_tx_pop_fluxograma"] ?? "")) : "";
+	$popFluxogramaNome = $id > 0 ? trim(strval($modeloAtual["mode_tx_pop_fluxograma_nome"] ?? "")) : "";
 
 	if($nome === ""){
 		set_status("ERRO: Informe o nome do modelo.");
@@ -887,6 +1024,30 @@ function salvar() {
 		form();
 		exit;
 	}
+	if($pop === "sim" && $popSetor <= 0){
+		set_status("ERRO: Selecione o setor do POP.");
+		$_POST["id"] = $id;
+		form();
+		exit;
+	}
+	if($pop === "sim"){
+		$resSetorValido = query("SELECT grup_tx_status FROM grupos_documentos WHERE grup_nb_id = ? LIMIT 1", "i", [$popSetor]);
+		$rowSetorValido = ($resSetorValido instanceof mysqli_result) ? (mysqli_fetch_assoc($resSetorValido) ?: []) : [];
+		if(empty($rowSetorValido)){
+			set_status("ERRO: Setor do POP inválido.");
+			$_POST["id"] = $id;
+			form();
+			exit;
+		}
+		$statusSetorValido = strtolower(trim(strval($rowSetorValido["grup_tx_status"] ?? "inativo")));
+		$setorAtualModelo = intval($modeloAtual["mode_nb_pop_setor"] ?? 0);
+		if($statusSetorValido !== "ativo" && ($id <= 0 || $setorAtualModelo !== $popSetor)){
+			set_status("ERRO: O setor do POP está inativo. Escolha um setor ativo.");
+			$_POST["id"] = $id;
+			form();
+			exit;
+		}
+	}
 
 	$tipo = termos_carregar_tipo($tipoDoc);
 	if(empty($tipo) || strtolower(trim(strval($tipo["tipo_tx_status"] ?? "inativo"))) !== "ativo"){
@@ -896,20 +1057,66 @@ function salvar() {
 		exit;
 	}
 
+	if($popVigencia !== "" && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $popVigencia)){
+		$popVigencia = "";
+	}
+
+	if($pop === "nao" || !empty($_POST["pop_remover_fluxograma"])){
+		$popFluxograma = "";
+		$popFluxogramaNome = "";
+	}
+
+	$arquivoFluxograma = $_FILES["pop_fluxograma"] ?? null;
+	if(is_array($arquivoFluxograma) && intval($arquivoFluxograma["error"] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE){
+		$uploadFluxograma = termos_salvar_arquivo_pop($arquivoFluxograma, "fluxogramas", ["png", "jpg", "jpeg", "webp", "pdf"], 20 * 1024 * 1024);
+		if(empty($uploadFluxograma["ok"])){
+			set_status("ERRO: " . strval($uploadFluxograma["erro"] ?? "Falha ao enviar o fluxograma."));
+			$_POST["id"] = $id;
+			form();
+			exit;
+		}
+		$popFluxograma = strval($uploadFluxograma["caminho_rel"] ?? "");
+		$popFluxogramaNome = strval($uploadFluxograma["nome"] ?? "");
+	}
+
+	$popValores = [
+		$nome, $tipoDoc, $conteudo, $status,
+		$pop, $popSetor, $popCodigo, $popVersao, $popVigencia,
+		$popObjetivo, $popResponsavel, $popTags, $popFluxograma, $popFluxogramaNome
+	];
+	$popTipos = "";
+	foreach($popValores as $valorTipo){
+		$popTipos .= is_int($valorTipo) ? "i" : "s";
+	}
+
 	if($id > 0){
+		$params = array_merge($popValores, [$user, $id]);
 		termos_executar(
-			"UPDATE modelo_termo SET mode_tx_nome = ?, mode_nb_tipo_doc = ?, mode_tx_conteudo = ?, mode_tx_status = ?, mode_nb_userAtualiza = ?, mode_tx_dataAtualiza = NOW() WHERE mode_nb_id = ?",
-			"sissii",
-			[$nome, $tipoDoc, $conteudo, $status, $user, $id]
+			"UPDATE modelo_termo SET
+				mode_tx_nome = ?, mode_nb_tipo_doc = ?, mode_tx_conteudo = ?, mode_tx_status = ?,
+				mode_tx_pop = ?, mode_nb_pop_setor = ?, mode_tx_pop_codigo = ?, mode_tx_pop_versao = ?,
+				mode_dt_pop_vigencia = NULLIF(?, ''),
+				mode_tx_pop_objetivo = ?, mode_tx_pop_responsavel = ?, mode_tx_pop_tags = ?,
+				mode_tx_pop_fluxograma = NULLIF(?, ''), mode_tx_pop_fluxograma_nome = NULLIF(?, ''),
+				mode_nb_userAtualiza = ?, mode_tx_dataAtualiza = NOW()
+			 WHERE mode_nb_id = ?",
+			$popTipos . "ii",
+			$params
 		);
-		termos_log("modelo_atualizado", "Modelo #{$id} atualizado", ["nome" => $nome]);
+		termos_log("modelo_atualizado", "Modelo #{$id} atualizado", ["nome" => $nome, "pop" => $pop]);
 	}else{
+		$params = array_merge($popValores, [$user]);
 		$id = termos_inserir_id(
-			"INSERT INTO modelo_termo (mode_tx_nome, mode_nb_tipo_doc, mode_tx_conteudo, mode_tx_status, mode_nb_userCadastro) VALUES (?, ?, ?, ?, ?)",
-			"sissi",
-			[$nome, $tipoDoc, $conteudo, $status, $user]
+			"INSERT INTO modelo_termo
+				(mode_tx_nome, mode_nb_tipo_doc, mode_tx_conteudo, mode_tx_status,
+				 mode_tx_pop, mode_nb_pop_setor, mode_tx_pop_codigo, mode_tx_pop_versao, mode_dt_pop_vigencia,
+				 mode_tx_pop_objetivo, mode_tx_pop_responsavel, mode_tx_pop_tags,
+				 mode_tx_pop_fluxograma, mode_tx_pop_fluxograma_nome, mode_nb_userCadastro)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, ?, ?, NULLIF(?, ''), NULLIF(?, ''), ?)",
+			$popTipos . "i",
+			$params
 		);
-		termos_log("modelo_criado", "Modelo #{$id} criado", ["nome" => $nome]);
+		termos_log("modelo_criado", "Modelo #{$id} criado", ["nome" => $nome, "pop" => $pop]);
 	}
 
 	set_status("Modelo gravado com sucesso!");
@@ -942,6 +1149,12 @@ function excluir() {
 	if($id > 0){
 		termos_executar("DELETE FROM modelo_termo_assinante WHERE moas_nb_modelo = ?", "i", [$id]);
 		termos_executar("DELETE FROM modelo_termo WHERE mode_nb_id = ?", "i", [$id]);
+		if(function_exists("bancoTabelaExiste") && bancoTabelaExiste($conn, "pop_envio")){
+			query("UPDATE pop_envio SET pev_tx_status = 'cancelado' WHERE pev_tx_origem = 'termo' AND pev_nb_doc = ?", "i", [$id]);
+		}
+		if(function_exists("bancoTabelaExiste") && bancoTabelaExiste($conn, "pop_favorito")){
+			query("DELETE FROM pop_favorito WHERE popf_tx_origem = 'termo' AND popf_nb_doc = ?", "i", [$id]);
+		}
 		termos_log("modelo_excluido", "Modelo #{$id} excluído permanentemente");
 		set_status("Modelo excluído com sucesso!");
 	}
@@ -986,19 +1199,40 @@ function clonar_modelos() {
 			continue;
 		}
 		$nomeNovo = termos_nome_clonado(strval($origem["mode_tx_nome"] ?? ""));
+		$popOrigem = strtolower(trim(strval($origem["mode_tx_pop"] ?? "nao"))) === "sim" ? "sim" : "nao";
+		$valoresClone = [
+			$nomeNovo,
+			intval($origem["mode_nb_tipo_doc"] ?? 0),
+			strval($origem["mode_tx_conteudo"] ?? ""),
+			strval($origem["mode_tx_denominacao"] ?? ""),
+			strval($origem["mode_tx_cidade_assinatura"] ?? ""),
+			strtolower(trim(strval($origem["mode_tx_notificacao"] ?? "sim"))) === "nao" ? "nao" : "sim",
+			intval($origem["mode_nb_ativo"] ?? 0),
+			$popOrigem,
+			intval($origem["mode_nb_pop_setor"] ?? 0),
+			strval($origem["mode_tx_pop_codigo"] ?? ""),
+			strval($origem["mode_tx_pop_versao"] ?? ""),
+			strval($origem["mode_dt_pop_vigencia"] ?? ""),
+			strval($origem["mode_tx_pop_objetivo"] ?? ""),
+			strval($origem["mode_tx_pop_responsavel"] ?? ""),
+			strval($origem["mode_tx_pop_tags"] ?? ""),
+			strval($origem["mode_tx_pop_fluxograma"] ?? ""),
+			strval($origem["mode_tx_pop_fluxograma_nome"] ?? ""),
+			$user
+		];
+		$tiposClone = "";
+		foreach($valoresClone as $valorClone){
+			$tiposClone .= is_int($valorClone) ? "i" : "s";
+		}
 		$novoId = termos_inserir_id(
-			"INSERT INTO modelo_termo (mode_tx_nome, mode_nb_tipo_doc, mode_tx_conteudo, mode_tx_denominacao, mode_tx_cidade_assinatura, mode_tx_notificacao, mode_nb_ativo, mode_tx_status, mode_nb_userCadastro) VALUES (?, ?, ?, ?, ?, ?, ?, 'ativo', ?)",
-			"sissssii",
-			[
-				$nomeNovo,
-				intval($origem["mode_nb_tipo_doc"] ?? 0),
-				strval($origem["mode_tx_conteudo"] ?? ""),
-				strval($origem["mode_tx_denominacao"] ?? ""),
-				strval($origem["mode_tx_cidade_assinatura"] ?? ""),
-				strtolower(trim(strval($origem["mode_tx_notificacao"] ?? "sim"))) === "nao" ? "nao" : "sim",
-				intval($origem["mode_nb_ativo"] ?? 0) > 0 ? intval($origem["mode_nb_ativo"]) : null,
-				$user
-			]
+			"INSERT INTO modelo_termo
+				(mode_tx_nome, mode_nb_tipo_doc, mode_tx_conteudo, mode_tx_denominacao, mode_tx_cidade_assinatura,
+				 mode_tx_notificacao, mode_nb_ativo, mode_tx_pop, mode_nb_pop_setor, mode_tx_pop_codigo,
+				 mode_tx_pop_versao, mode_dt_pop_vigencia, mode_tx_pop_objetivo, mode_tx_pop_responsavel,
+				 mode_tx_pop_tags, mode_tx_pop_fluxograma, mode_tx_pop_fluxograma_nome, mode_tx_status, mode_nb_userCadastro)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, ?, ?, NULLIF(?, ''), NULLIF(?, ''), 'ativo', ?)",
+			$tiposClone,
+			$valoresClone
 		);
 		if($novoId <= 0){
 			continue;

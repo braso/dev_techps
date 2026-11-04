@@ -4,6 +4,8 @@ Módulo para criação de **documentos com texto padrão editável** (ex.: Termo
 
 Localização: `armazem_paraiba/documentos/termos/`
 
+> **Integração com a Biblioteca de POPs:** ao editar um modelo, marque **Este documento é um POP? = Sim** e preencha setor, código, versão, vigência, responsável, palavras-chave, objetivo e fluxograma (opcional). O documento passa a aparecer em **Cadastros > Biblioteca de POPs**, com prévia em PDF, aba de fluxograma e envio para colaboradores. Detalhes em `documentos/pop/README.md`.
+
 ---
 
 ## 1. Visão geral do fluxo
