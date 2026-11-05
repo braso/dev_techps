@@ -39,7 +39,8 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('date_end').value = dateEnd;
     }
 
-    var placa = getParameter('placa');
+    // Usa a placa informada na URL; se não houver, usa a placa vinculada ao motorista.
+    var placa = getParameter('placa') || <?= (json_encode($placaPadrao ?? '', JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '""') ?>;
     if (placa) {
         var plateSelect = document.getElementById('plate');
         if (plateSelect) {
@@ -423,6 +424,115 @@ function salvarNovoTipoPoi(){
 
 
 
+
+<style>
+/* Linha do tempo auxiliar ao lado do grid de paradas */
+.timeline-pontos-header {
+    font-weight: 700;
+    color: #16324f;
+    font-size: 11px;
+    margin: 0 0 4px 0;
+}
+.results-row {
+    margin-top: 10px;
+}
+.timeline-pontos {
+    position: relative;
+    max-height: 480px;
+    overflow-y: auto;
+    padding: 2px 2px 2px 20px;
+}
+.timeline-pontos::before {
+    content: "";
+    position: absolute;
+    left: 8px;
+    top: 4px;
+    bottom: 4px;
+    width: 2px;
+    background: linear-gradient(180deg, #2f6fb2 0%, #9cc3e8 100%);
+    border-radius: 2px;
+}
+.timeline-ponto {
+    position: relative;
+    margin: 0 0 6px;
+    padding: 6px 7px;
+    background: #fff;
+    border: 1px solid #e1e8f0;
+    border-left: 2px solid #2f6fb2;
+    border-radius: 6px;
+    box-shadow: 0 1px 1px rgba(22, 50, 79, .05);
+}
+.timeline-ponto::before {
+    content: "";
+    position: absolute;
+    left: -17px;
+    top: 11px;
+    width: 7px;
+    height: 7px;
+    background: #2f6fb2;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px #2f6fb2;
+}
+.timeline-ponto__data {
+    font-size: 10px;
+    font-weight: 700;
+    color: #16324f;
+}
+.timeline-ponto__hora {
+    font-weight: 600;
+    color: #2f6fb2;
+    margin-left: 3px;
+}
+.timeline-ponto__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-top: 2px;
+}
+.timeline-ponto__tipo,
+.timeline-ponto__placa {
+    display: inline-block;
+    padding: 1px 4px;
+    border-radius: 7px;
+    font-size: 9px;
+    font-weight: 600;
+}
+.timeline-ponto__tipo {
+    background: #eaf2fb;
+    color: #2f6fb2;
+}
+.timeline-ponto__placa {
+    background: #16324f;
+    color: #fff;
+    font-family: "Courier New", monospace;
+    letter-spacing: .5px;
+}
+.timeline-ponto__legenda {
+    margin-top: 3px;
+    font-size: 10px;
+    color: #1a2b3c;
+}
+.timeline-ponto__local {
+    margin-top: 3px;
+    font-size: 10px;
+    color: #546e7a;
+}
+.timeline-ponto__local a {
+    color: #2f6fb2;
+    font-weight: 600;
+    text-decoration: none;
+}
+.timeline-vazio {
+    padding: 10px 6px;
+    color: #7f8c8d;
+    font-size: 10px;
+    text-align: center;
+}
+@media (max-width: 767px) {
+    .timeline-pontos { max-height: none; }
+}
+</style>
 
     <div class="container">
         <div class="accordion" id="accordionExample">

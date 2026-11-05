@@ -489,14 +489,21 @@ document.addEventListener("DOMContentLoaded", () => {
                   </style>`;
   
         resultsDiv.appendChild(summaryDiv);
-  
+
+        const resultsRow = document.createElement("div");
+        resultsRow.className = "row results-row";
+
+        const tableColumn = document.createElement("div");
+        tableColumn.className = "col-lg-10";
+        tableColumn.style.overflowX = "auto";
+
         const dateHeader = document.createElement("h3");
         dateHeader.textContent = `Resultados para ${date}`;
-        resultsDiv.appendChild(dateHeader);
-  
+        tableColumn.appendChild(dateHeader);
+
         table.style.display = "none";
-        resultsDiv.appendChild(table);
-  
+        tableColumn.appendChild(table);
+
         const secondTable = document.createElement("table");
         secondTable.classList.add("table", "table-bordered");
         secondTable.innerHTML = `<thead class="thead-dark">
@@ -519,19 +526,30 @@ document.addEventListener("DOMContentLoaded", () => {
                   </thead>
                   <tbody>
                   </tbody>`;
-  
+
         const secondTbody = secondTable.querySelector("tbody");
-  
+
         tbody.querySelectorAll("tr").forEach((tr) => {
           if (!tr.classList.contains("speed-5")) {
             secondTbody.appendChild(tr.cloneNode(true));
           }
         });
-  
+
         secondTable.style.display = "block";
-        resultsDiv.appendChild(secondTable);
+        tableColumn.appendChild(secondTable);
+
+        const timelineColumn = document.createElement("div");
+        timelineColumn.className = "col-lg-2";
+        timelineColumn.innerHTML = '<div class="timeline-pontos-header"><i class="fa fa-clock-o"></i> Linha do tempo</div>'
+          + '<div class="timeline-pontos timeline-pontos-resultado" data-date="' + escapeHtmlTimeline(date) + '">'
+          + '<div class="timeline-vazio">Carregando...</div></div>';
+
+        resultsRow.appendChild(tableColumn);
+        resultsRow.appendChild(timelineColumn);
+        resultsDiv.appendChild(resultsRow);
       });
-  
+
+      renderTimelineFromTable();
       addRowClickListeners();
       buscarEnderecosFaltantes();
     };
@@ -576,6 +594,7 @@ document.addEventListener("DOMContentLoaded", () => {
               tbody.appendChild(tr);
             });
           }
+          renderTimelineFromTable();
           var info = document.getElementById("pontosResumoInfo");
           if (info) {
             var totalPeriodo = data.total_periodo || data.pontos.length;
@@ -591,6 +610,106 @@ document.addEventListener("DOMContentLoaded", () => {
           console.error("Erro ao carregar pontos do colaborador:", e);
         });
     }
+
+    function escapeHtmlTimeline(value) {
+      return $("<span>").text(value == null ? "" : value).html();
+    }
+
+    function normalizarDataTimeline(valor) {
+      var texto = String(valor || "").trim();
+      var match = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (!match) return texto;
+      return ("0" + match[1]).slice(-2) + "/" + ("0" + match[2]).slice(-2) + "/" + match[3];
+    }
+
+    function obterPontosDaTabela() {
+      var tbody = document.getElementById("tbodyPontosColaborador");
+      if (!tbody) return [];
+
+      var pontos = [];
+      tbody.querySelectorAll("tr").forEach(function (tr) {
+        var cells = tr.querySelectorAll("td");
+        if (cells.length < 5) return;
+
+        var dataHora = (cells[0].textContent || "").trim();
+        var partes = dataHora.split(" ");
+        var dataStr = partes.shift() || dataHora;
+        var horaStr = partes.join(" ");
+        var localLink = cells[4].querySelector("a");
+        var localHtml = "";
+        if (localLink) {
+          localHtml = '<a href="' + localLink.href + '" target="_blank" title="Ver no Google Maps"><i class="fa fa-map"></i> Ver no mapa</a>';
+        } else {
+          localHtml = cells[4].innerHTML;
+        }
+
+        pontos.push({
+          data: normalizarDataTimeline(dataStr),
+          hora: horaStr,
+          tipo: (cells[1].textContent || "").trim(),
+          placa: (cells[2].textContent || "").trim(),
+          legenda: (cells[3].textContent || "").trim(),
+          localHtml: localHtml
+        });
+      });
+      return pontos;
+    }
+
+    function renderTimelineContainer(timeline, pontos) {
+      timeline.innerHTML = "";
+      if (!pontos.length) {
+        timeline.innerHTML = '<div class="timeline-vazio">Nenhum ponto disponível para esta data.</div>';
+        return;
+      }
+
+      pontos.forEach(function (ponto) {
+        var item = document.createElement("div");
+        item.className = "timeline-ponto";
+
+        var html = '<div class="timeline-ponto__data">' + escapeHtmlTimeline(ponto.data);
+        if (ponto.hora) {
+          html += '<span class="timeline-ponto__hora">' + escapeHtmlTimeline(ponto.hora) + '</span>';
+        }
+        html += '</div>';
+
+        if (ponto.tipo || ponto.placa) {
+          html += '<div class="timeline-ponto__meta">';
+          if (ponto.tipo) {
+            html += '<span class="timeline-ponto__tipo">' + escapeHtmlTimeline(ponto.tipo) + '</span>';
+          }
+          if (ponto.placa) {
+            html += '<span class="timeline-ponto__placa">' + escapeHtmlTimeline(ponto.placa) + '</span>';
+          }
+          html += '</div>';
+        }
+
+        if (ponto.legenda) {
+          html += '<div class="timeline-ponto__legenda">' + escapeHtmlTimeline(ponto.legenda) + '</div>';
+        }
+        if (ponto.localHtml) {
+          html += '<div class="timeline-ponto__local">' + ponto.localHtml + '</div>';
+        }
+
+        item.innerHTML = html;
+        timeline.appendChild(item);
+      });
+    }
+
+    function renderTimelineFromTable() {
+      var containers = document.querySelectorAll(".timeline-pontos-resultado");
+      if (!containers.length) return;
+
+      var pontos = obterPontosDaTabela();
+      containers.forEach(function (timeline) {
+        var dataFiltro = normalizarDataTimeline(timeline.getAttribute("data-date") || "");
+        var pontosData = dataFiltro
+          ? pontos.filter(function (ponto) { return ponto.data === dataFiltro; })
+          : pontos;
+        renderTimelineContainer(timeline, pontosData);
+      });
+    }
+
+    renderTimelineFromTable();
 
     var btnTodosDias = document.getElementById("btnMostrarTodosDias");
     if (btnTodosDias) {
