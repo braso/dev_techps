@@ -622,6 +622,25 @@
 				LIMIT 1;"
 		));
 
+		$placaMotorista = "";
+		$idMotoristaPlaca = is_array($motorista) ? intval($motorista["enti_nb_id"] ?? 0) : 0;
+		if($idMotoristaPlaca > 0){
+			$placaMotoristaResult = query(
+				"SELECT plac_tx_placa FROM placa
+				 WHERE plac_nb_entidade = {$idMotoristaPlaca}
+				   AND plac_tx_placa IS NOT NULL
+				   AND plac_tx_placa <> ''
+				 ORDER BY plac_nb_id DESC LIMIT 1;"
+			);
+			if($placaMotoristaResult && ($rowPlacaMotorista = mysqli_fetch_assoc($placaMotoristaResult))){
+				$placaMotorista = strval($rowPlacaMotorista["plac_tx_placa"]);
+			}
+		}
+		$placaMotoristaJson = json_encode($placaMotorista, JSON_UNESCAPED_UNICODE);
+		if($placaMotoristaJson === false){
+			$placaMotoristaJson = '""';
+		}
+
 		$endosso = mysqli_fetch_array(query(
 			"SELECT user_tx_login as endo_nb_userCadastro, endo_tx_dataCadastro FROM endosso
 				JOIN user ON endo_nb_userCadastro = user_nb_id
@@ -645,6 +664,7 @@
 				var matricula = '{$motorista["enti_tx_matricula"]}';
 				var motorista = '{$motorista["enti_tx_nome"]}';
 				var data = document.getElementById('data').value;
+				var placa = {$placaMotoristaJson};
 
 				// Obter todos os CNPJs da variável PHP
 				var cnpjs = ".json_encode($cnpjs).";
@@ -671,6 +691,10 @@
 					'&matricula='+encodeURIComponent(matricula)+
 					'&data='+encodeURIComponent(data) +
 					'&cnpj='+encodeURIComponent(cnpjString);  // Adicionando todos os CNPJs
+
+				if (placa) {
+					url += '&placa=' + encodeURIComponent(placa);
+				}
 
 				// Abrir a nova página em uma nova aba
 				window.open(url, '_blank');

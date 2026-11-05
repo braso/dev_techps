@@ -83,6 +83,25 @@
     // Obtém o valor do CNPJ da URL, esperado como uma lista separada por vírgulas
     $cnpjList = isset($_GET["cnpj"]) ? $_GET["cnpj"] : "";
 
+    // Placa vinculada ao motorista, usada como padrão quando a URL não informar uma placa específica.
+    $placaPadrao = "";
+    if(!empty($matricula)){
+        $placaPadraoResult = query(
+            "SELECT p.plac_tx_placa
+             FROM placa p
+             JOIN entidade e ON e.enti_nb_id = p.plac_nb_entidade
+             WHERE e.enti_tx_matricula = ?
+               AND p.plac_tx_placa IS NOT NULL
+               AND p.plac_tx_placa <> ''
+             ORDER BY p.plac_nb_id DESC LIMIT 1",
+            "s",
+            [$matricula]
+        );
+        if($placaPadraoResult && ($rowPlacaPadrao = mysqli_fetch_assoc($placaPadraoResult))){
+            $placaPadrao = strval($rowPlacaPadrao["plac_tx_placa"]);
+        }
+    }
+
     $plates = [];
     $rsPlacas = query("SELECT plac_tx_placa FROM placa ORDER BY plac_tx_placa ASC");
     while($rsPlacas && ($r = mysqli_fetch_assoc($rsPlacas))){ $plates[] = $r["plac_tx_placa"]; }

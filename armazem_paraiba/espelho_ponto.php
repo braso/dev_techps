@@ -143,7 +143,7 @@
 		return [];
 	}
 
-	function renderFiltroCheckboxGroup($titulo, $name, $opcoes, $selecionados, $width=3) {
+	function renderFiltroCheckboxGroup($titulo, $name, $opcoes, $selecionados, $width=3, $infoHtml="") {
 		$selecionados = normalizarFiltroArray($selecionados);
 		$selecionadosQtd = count($selecionados);
 		$tituloRender = $titulo;
@@ -188,12 +188,6 @@
 			."<button type='button' class='btn btn-xs btn-default js-filtro-todos' data-target='".$nameAttr."' data-action='none'>Desmarcar todos</button>"
 			."</div>";
 
-		if($name === "busca_empresa"){
-			$html .= "<div style='margin-bottom:10px;'>"
-				."<button type='button' class='btn btn-xs btn-info js-aplicar-empresa'>Aplicar empresas</button>"
-				."</div>";
-		}
-
 		if($habilitarBusca){
 			$html .= "<input type='text' class='form-control input-sm js-filtro-search' data-target='".$nameAttr."'"
 				." placeholder='".htmlspecialchars($placeholderBusca, ENT_QUOTES, 'UTF-8')."'"
@@ -213,7 +207,7 @@
 			}
 		}
 
-		$html .= "</div></div></div>";
+		$html .= "</div></div>".$infoHtml."</div>";
 		return $html;
 	}
 
@@ -469,6 +463,7 @@
 		echo "</style>";
 
 		//CAMPOS DE CONSULTA{
+			$funcionariosPlacas = [];
 			$condBuscaMotorista = "AND enti_tx_status = 'ativo'";
 			$condBuscaEmpresa = "AND empr_tx_status = 'ativo'";
 
@@ -553,6 +548,26 @@
 							$funcionariosOpcoes[$rowFuncionario['enti_nb_id']] = "[".$rowFuncionario['enti_tx_matricula']."] ".$rowFuncionario['enti_tx_nome'];
 						}
 					}
+					if(!empty($funcionariosOpcoes)){
+						$idsFuncionariosPlacas = array_map('intval', array_keys($funcionariosOpcoes));
+						$idsFuncionariosPlacas = array_values(array_filter($idsFuncionariosPlacas, function($v){ return $v > 0; }));
+						if(!empty($idsFuncionariosPlacas)){
+							$placasFuncionariosResult = query(
+								"SELECT plac_nb_entidade, plac_tx_placa
+								 FROM placa
+								 WHERE plac_nb_entidade IN (".implode(',', $idsFuncionariosPlacas).")
+								   AND plac_tx_placa IS NOT NULL
+								   AND plac_tx_placa <> ''
+								 ORDER BY plac_nb_id DESC"
+							);
+							while($placasFuncionariosResult && ($rowPlacaFuncionario = mysqli_fetch_assoc($placasFuncionariosResult))){
+								$idFuncionarioPlaca = intval($rowPlacaFuncionario['plac_nb_entidade']);
+								if(!isset($funcionariosPlacas[$idFuncionarioPlaca])){
+									$funcionariosPlacas[$idFuncionarioPlaca] = strval($rowPlacaFuncionario['plac_tx_placa']);
+								}
+							}
+						}
+					}
 				}
 
                 $hasSubsetor = 0;
@@ -563,9 +578,13 @@
                     $hasSubsetor = (int)($row["c"]??0);
                 }
 
+                $infoPlacaFuncionario = "<div class='js-filtro-placa' style='display:none; margin-top:6px; font-size:12px; color:#2c3e50;'>"
+                    ."<i class='fa fa-truck'></i> Placa: <strong class='js-filtro-placa-valor'></strong>"
+                    ."</div>";
+
                 $searchFields = [
 					renderFiltroCheckboxGroup("Empresa*", "busca_empresa", $empresasOpcoes, (string)($_POST["busca_empresa"] ?? ""), 3),
-					renderFiltroCheckboxGroup("{$rotulos["funcionario"]}*", "busca_motorista", $funcionariosOpcoes, $_POST["busca_motorista"] ?? "", 4),
+					renderFiltroCheckboxGroup("{$rotulos["funcionario"]}*", "busca_motorista", $funcionariosOpcoes, $_POST["busca_motorista"] ?? "", 4, $infoPlacaFuncionario),
                     combo_bd("!Cargo", "busca_operacao", (!empty($_POST["busca_operacao"]) ? $_POST["busca_operacao"] : ""), 2, "operacao", "onchange='this.form.submit()'"),
                     combo_bd("!Setor", "busca_setor", (!empty($_POST["busca_setor"]) ? $_POST["busca_setor"] : ""), 2, "grupos_documentos", "onchange='this.form.submit()'"),
                 ];
@@ -615,9 +634,11 @@
 		echo campo_hidden("isAutoReload", "");
 		echo linha_form($searchFields);
 		echo fecha_form($b);
+		echo "<script>window.espelhoPlacasFuncionarios = ".json_encode((object)$funcionariosPlacas, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT).";</script>";
 		echo <<<'JS'
 		<script>(function(){
 			var empresasPendentesAplicacao = false;
+			var submetendoFiltroEmpresas = false;
 			function normalizarFiltroTexto(txt){
 				txt = (txt || '').toString().toLowerCase().trim();
 				if(typeof txt.normalize === 'function'){
@@ -642,31 +663,48 @@
 				});
 			}
 
-			function fecharDropdowns(excecao){
+			function fecharDropdowns(excecao, permitirAutoSubmit){
+				var fechouEmpresa = false;
 				$('.filtro-dropdown').each(function(){
 					if(excecao && $(this).is(excecao)){
 						return;
+					}
+					if($(this).hasClass('open') && $(this).find('input.js-filtro-hidden[data-filter-name="busca_empresa"]').length){
+						fechouEmpresa = true;
 					}
 					$(this).removeClass('open');
 					$(this).find('.filtro-dropdown-menu').hide();
 					$(this).find('.js-filtro-toggle').attr('aria-expanded', 'false');
 				});
+				if(fechouEmpresa && permitirAutoSubmit !== false){
+					submeterFiltroEmpresas();
+				}
 			}
 
 			function alternarDropdown(botao){
 				var wrapper = $(botao).closest('.filtro-dropdown');
 				var menu = wrapper.find('.filtro-dropdown-menu').first();
 				var isOpen = wrapper.hasClass('open');
-				fecharDropdowns(wrapper);
-				if(!isOpen){
-					wrapper.addClass('open');
-					menu.show();
-					$(botao).attr('aria-expanded', 'true');
-					var campoBusca = wrapper.find('.js-filtro-search').first();
-					if(campoBusca.length){
-						campoBusca.focus();
-						aplicarBuscaDropdown(campoBusca.data('target'));
+				if(isOpen){
+					wrapper.removeClass('open');
+					menu.hide();
+					$(botao).attr('aria-expanded', 'false');
+					if(wrapper.find('input.js-filtro-hidden[data-filter-name="busca_empresa"]').length){
+						submeterFiltroEmpresas();
 					}
+					return;
+				}
+				fecharDropdowns(wrapper);
+				if(submetendoFiltroEmpresas){
+					return;
+				}
+				wrapper.addClass('open');
+				menu.show();
+				$(botao).attr('aria-expanded', 'true');
+				var campoBusca = wrapper.find('.js-filtro-search').first();
+				if(campoBusca.length){
+					campoBusca.focus();
+					aplicarBuscaDropdown(campoBusca.data('target'));
 				}
 			}
 
@@ -699,6 +737,47 @@
 				atualizarTituloFiltro(nome);
 			}
 
+			function submeterFiltroEmpresas(){
+				if(!empresasPendentesAplicacao || submetendoFiltroEmpresas){
+					return;
+				}
+				var form = document.contex_form;
+				if(!form){
+					return;
+				}
+				submetendoFiltroEmpresas = true;
+				empresasPendentesAplicacao = false;
+				if(form.isAutoReload){
+					form.isAutoReload.value = '1';
+				}
+				$('input.js-filtro-checkbox[data-target="busca_motorista"]').prop('checked', false);
+				atualizarHidden('busca_motorista');
+				atualizarPlacaFuncionario();
+				form.submit();
+			}
+
+			function atualizarPlacaFuncionario(){
+				var container = $('.js-filtro-placa');
+				if(!container.length){
+					return;
+				}
+				var selecionados = $('input.js-filtro-checkbox[data-target="busca_motorista"]:checked');
+				var placa = '';
+				if(selecionados.length === 1){
+					var id = String(selecionados.first().val());
+					var mapa = window.espelhoPlacasFuncionarios || {};
+					placa = mapa[id] || '';
+				}
+				var valor = container.find('.js-filtro-placa-valor');
+				if(placa){
+					valor.text(placa);
+					container.show();
+				}else{
+					valor.text('');
+					container.hide();
+				}
+			}
+
 			function sincronizarFiltros(){
 				$('input.js-filtro-hidden').each(function(){
 					atualizarHidden($(this).data('filter-name'));
@@ -708,29 +787,11 @@
 			$(document).on('change', 'input.js-filtro-checkbox', function(){
 				var target = $(this).data('target');
 				atualizarHidden(target);
-				if(target === 'busca_empresa'){
+				if(target === 'busca_motorista'){
+					atualizarPlacaFuncionario();
+				}else if(target === 'busca_empresa'){
 					empresasPendentesAplicacao = true;
 				}
-			});
-
-			$(document).on('click', '.js-aplicar-empresa', function(e){
-				e.preventDefault();
-				e.stopPropagation();
-				var form = document.contex_form;
-				if(!form){
-					return;
-				}
-				if(!empresasPendentesAplicacao){
-					fecharDropdowns();
-					return;
-				}
-				if(form.isAutoReload){
-					form.isAutoReload.value = '1';
-				}
-				$('input.js-filtro-checkbox[data-target="busca_motorista"]').prop('checked', false);
-				atualizarHidden('busca_motorista');
-				empresasPendentesAplicacao = false;
-				form.submit();
 			});
 
 			$(document).on('click', '.js-filtro-toggle', function(e){
@@ -757,8 +818,19 @@
 				aplicarBuscaDropdown($(this).data('target'));
 			});
 
-			$(document).on('click', function(){
-				fecharDropdowns();
+			$(document).on('click', function(e){
+				var alvo = $(e.target);
+				if(alvo.closest('.js-filtro-toggle, .filtro-dropdown-menu').length){
+					return;
+				}
+				var controleDeEnvio = alvo.closest('button, input[type="submit"], input[type="button"], a').length > 0;
+				fecharDropdowns(null, !controleDeEnvio);
+			});
+
+			$(document).on('keydown', function(e){
+				if(e.key === 'Escape'){
+					fecharDropdowns();
+				}
 			});
 
 			$(document).on('click', '.filtro-dropdown-menu', function(e){
@@ -773,6 +845,7 @@
 			});
 
 			sincronizarFiltros();
+			atualizarPlacaFuncionario();
 		})();</script>
 JS;
 		// if(!in_array($_SESSION["user_tx_nivel"], ["Motorista", "Ajudante", "Funcionário"])){

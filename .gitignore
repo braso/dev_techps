@@ -39,3 +39,6 @@ package.json
 HISTORICO_ALTERACOES.md
 HISTORICO_ALTERACOES.txt
 
+# POPs locais do time de desenvolvimento (nao versionar)
+docs/pop/
+
