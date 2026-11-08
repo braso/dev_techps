@@ -1,0 +1,3 @@
+# Ferramentas de teste local: usam o banco do container de desenvolvimento
+# e nao devem ir para a pasta publica dos clientes.
+_*.php

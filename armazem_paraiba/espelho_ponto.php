@@ -973,6 +973,23 @@ JS;
 						$rows[] = $row;
 					//*/
 
+					/* Marca o DSR na coluna do dia da semana. Vai aqui, e não em
+					   $aDetalhado, porque chave nova naquele array viraria coluna
+					   nova na tabela e no total — todo consumidor transforma esse
+					   array em linha e remove inicioEscala/fimEscala à mão. */
+					if(function_exists("parametroDiaSemana")){
+						$cfgDiaSemana = parametroDiaSemana($motorista, $date->format("Y-m-d"));
+						if(!empty($cfgDiaSemana["ehDsr"])){
+							$tituloDsr = "Descanso semanal remunerado";
+							if($cfgDiaSemana["perc"] !== null){
+								$tituloDsr .= " — se trabalhado, paga ".$cfgDiaSemana["perc"]."%";
+							}
+							$aDetalhado["diaSemana"] .= " <a><i style='color:#2563eb;' title='"
+								.htmlspecialchars($tituloDsr, ENT_QUOTES)
+								."' class='fa fa-bed'></i></a>";
+						}
+					}
+
 					if(isset($aDetalhado['inicioEscala'])) unset($aDetalhado['inicioEscala']);
 					if(isset($aDetalhado['fimEscala'])) unset($aDetalhado['fimEscala']);
 

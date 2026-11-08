@@ -616,6 +616,446 @@ function runnerIntegrationTests(array &$summary): void
         $layoutHeader = runnerReadFile($appDir . '/assinatura/componentes/layout_header.php');
         runnerAssertContains('menu_estrutura_do_nivel(', $layoutHeader, 'Header de assinatura deixou de usar a estrutura compartilhada do menu.');
     }, $summary);
+
+    runnerDiaSemanaPercentualTests($summary);
+}
+
+/**
+ * DSR e percentual por dia da semana.
+ *
+ * A regra antiga: dia sem jornada prevista pagava tudo na faixa extraordinaria
+ * (he100). Era isso que fazia um sabado de folga pagar 100%, sem jeito de dizer
+ * que naquele parametro ele vale 50%.
+ *
+ * Os casos batem ponto de verdade num dia sem jornada prevista, chamam o
+ * diaDetalhePonto e conferem em qual faixa as horas cairam. No fim devolvem a
+ * configuracao do parametro e apagam o ponto que criaram.
+ */
+function runnerDiaSemanaPercentualTests(array &$summary): void
+{
+    runnerRunCase('integration', 'dia da semana: tabela de configuracao existe e e idempotente', function (): void {
+        for ($vez = 0; $vez < 2; $vez++) {
+            query("CREATE TABLE IF NOT EXISTS parametro_dia_semana (
+                pdsm_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+                pdsm_nb_parametro INT NOT NULL,
+                pdsm_nb_diaSemana TINYINT NOT NULL,
+                pdsm_tx_ehDsr ENUM('sim','nao') NOT NULL DEFAULT 'nao',
+                pdsm_nb_percTrabalhado TINYINT UNSIGNED NULL DEFAULT NULL,
+                UNIQUE KEY uq_parametro_dia (pdsm_nb_parametro, pdsm_nb_diaSemana),
+                KEY idx_parametro (pdsm_nb_parametro)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        }
+        runnerAssertTrue(
+            (bool) runnerFetchOne("SHOW TABLES LIKE 'parametro_dia_semana'"),
+            'A tabela parametro_dia_semana nao foi criada.'
+        );
+    }, $summary);
+
+    /* Um funcionario ativo com parametro, para bater ponto num dia sem
+       jornada prevista. */
+    $alvo = runnerFetchOne(
+        "SELECT en.enti_nb_id, en.enti_tx_matricula, en.enti_nb_parametro
+            FROM entidade en
+            JOIN parametro p ON p.para_nb_id = en.enti_nb_parametro
+            WHERE en.enti_tx_status = 'ativo'
+              AND en.enti_tx_matricula IS NOT NULL
+              AND en.enti_tx_matricula <> ''
+            ORDER BY en.enti_nb_id ASC
+            LIMIT 1"
+    );
+
+    if (empty($alvo)) {
+        runnerRunCase('integration', 'dia da semana: percentual do dia de folga', function (): void {
+            runnerSkip('SKIP: nenhum funcionario ativo com parametro e matricula no banco.');
+        }, $summary);
+        return;
+    }
+
+    $idParametro = intval($alvo['enti_nb_parametro']);
+    $matricula = (string) $alvo['enti_tx_matricula'];
+
+    /* Snapshot da configuracao inteira deste parametro, uma vez. Antes cada
+       caso guardava e devolvia a sua propria linha; interleavados, um devolvia
+       o estado que o outro tinha criado e a suite deixava lixo no banco. */
+    $snapshot = runnerFetchAll(
+        "SELECT pdsm_nb_diaSemana, pdsm_tx_ehDsr, pdsm_nb_percTrabalhado
+            FROM parametro_dia_semana WHERE pdsm_nb_parametro = {$idParametro}
+            ORDER BY pdsm_nb_diaSemana"
+    );
+
+    $devolverSnapshot = function () use ($idParametro, $snapshot): void {
+        query("DELETE FROM parametro_dia_semana WHERE pdsm_nb_parametro = {$idParametro}");
+        foreach ($snapshot as $linha) {
+            $p = $linha['pdsm_nb_percTrabalhado'];
+            query(
+                "INSERT INTO parametro_dia_semana (pdsm_nb_parametro, pdsm_nb_diaSemana, pdsm_tx_ehDsr, pdsm_nb_percTrabalhado)"
+                . " VALUES ({$idParametro}, " . intval($linha['pdsm_nb_diaSemana']) . ", '"
+                . ($linha['pdsm_tx_ehDsr'] === 'sim' ? 'sim' : 'nao') . "', "
+                . ($p === null ? 'NULL' : intval($p)) . ")"
+            );
+        }
+        carregarDiasSemanaParametro($idParametro, true);
+    };
+
+    $motoristaDe = function () use ($alvo): array {
+        $m = runnerFetchOne(
+            "SELECT * FROM entidade
+                LEFT JOIN parametro ON enti_nb_parametro = para_nb_id
+                LEFT JOIN escala ON para_nb_id = esca_nb_parametro
+                WHERE enti_nb_id = " . intval($alvo['enti_nb_id']) . "
+                LIMIT 1"
+        );
+        return is_array($m) ? $m : [];
+    };
+
+    /* Procura uma data sem jornada prevista: e nela que a regra atua. */
+    $dataFolga = null;
+    $diaSemanaFolga = null;
+    $motoristaBase = $motoristaDe();
+    for ($i = 0; $i < 21; $i++) {
+        $candidata = date('Y-m-d', strtotime('2026-06-01 +' . $i . ' day'));
+        $r = diaDetalhePonto($motoristaBase, $candidata);
+        if (($r['jornadaPrevista'] ?? '') === '00:00') {
+            $dataFolga = $candidata;
+            $diaSemanaFolga = intval(date('w', strtotime($candidata)));
+            break;
+        }
+    }
+
+    if ($dataFolga === null) {
+        runnerRunCase('integration', 'dia da semana: percentual do dia de folga', function (): void {
+            runnerSkip('SKIP: nao foi encontrado dia sem jornada prevista para o funcionario.');
+        }, $summary);
+        return;
+    }
+
+    $gravarDia = function (?int $perc, string $ehDsr) use ($idParametro, $diaSemanaFolga): void {
+        query(
+            "INSERT INTO parametro_dia_semana (pdsm_nb_parametro, pdsm_nb_diaSemana, pdsm_tx_ehDsr, pdsm_nb_percTrabalhado)
+                VALUES ({$idParametro}, {$diaSemanaFolga}, '{$ehDsr}', " . ($perc === null ? 'NULL' : intval($perc)) . ")
+                ON DUPLICATE KEY UPDATE pdsm_tx_ehDsr = VALUES(pdsm_tx_ehDsr),
+                    pdsm_nb_percTrabalhado = VALUES(pdsm_nb_percTrabalhado)"
+        );
+        /* O carregarDiasSemanaParametro() tem cache por parametro, porque o
+           espelho pergunta uma vez por dia do mes. Quem grava pelo
+           salvarDiasSemanaParametro() tem o cache invalidado de brinde; este
+           teste escreve direto no SQL, entao precisa invalidar na mao. */
+        carregarDiasSemanaParametro($idParametro, true);
+    };
+
+    $limparPonto = function () use ($matricula, $dataFolga): void {
+        query(
+            "DELETE FROM ponto WHERE pont_tx_matricula = '" . $matricula . "'"
+            . " AND DATE(pont_tx_data) = '" . $dataFolga . "'"
+            . " AND pont_tx_descricao = 'TESTE_REGRESSAO_DIA_SEMANA'"
+        );
+    };
+
+    $limparPonto();
+    foreach ([['1', '08:00:00'], ['2', '16:00:00']] as $batida) {
+        query(
+            "INSERT INTO ponto (pont_tx_matricula, pont_tx_data, pont_tx_tipo, pont_tx_status, pont_tx_descricao, pont_tx_dataCadastro)"
+            . " VALUES ('" . $matricula . "', '" . $dataFolga . " " . $batida[1] . "', '" . $batida[0] . "', 'ativo', 'TESTE_REGRESSAO_DIA_SEMANA', NOW())"
+        );
+    }
+
+    try {
+        runnerRunCase('integration', 'dia da semana: sem percentual paga a faixa extraordinaria', function () use ($gravarDia, $motoristaDe, $dataFolga): void {
+            $gravarDia(null, 'nao');
+            $r = diaDetalhePonto($motoristaDe(), $dataFolga);
+
+            runnerAssertSame('00:00', $r['jornadaPrevista'], 'O dia escolhido deveria estar sem jornada prevista.');
+            runnerAssertTrue($r['he100'] !== '00:00', 'Sem percentual, as horas deveriam cair em he100.');
+            runnerAssertSame('00:00', $r['he50'], 'Sem percentual, he50 deveria ficar zerado.');
+        }, $summary);
+
+        runnerRunCase('integration', 'dia da semana: a 50% paga a faixa comum, nao 100%', function () use ($gravarDia, $motoristaDe, $dataFolga): void {
+            $gravarDia(null, 'nao');
+            $antesCfg = diaDetalhePonto($motoristaDe(), $dataFolga);
+
+            $gravarDia(50, 'nao');
+            $depois = diaDetalhePonto($motoristaDe(), $dataFolga);
+
+            runnerAssertSame($antesCfg['he100'], $depois['he50'], 'As horas de he100 deveriam ter ido para he50.');
+            runnerAssertSame('00:00', $depois['he100'], 'he100 deveria ficar zerado com o dia a 50%.');
+            runnerAssertSame(
+                $antesCfg['diffSaldo'],
+                $depois['diffSaldo'],
+                'O saldo do dia nao pode mudar: muda a faixa, nao o total.'
+            );
+        }, $summary);
+
+        runnerRunCase('integration', 'dia da semana: a 100% continua na faixa extraordinaria', function () use ($gravarDia, $motoristaDe, $dataFolga): void {
+            $gravarDia(100, 'nao');
+            $r = diaDetalhePonto($motoristaDe(), $dataFolga);
+
+            runnerAssertTrue($r['he100'] !== '00:00', 'Com 100%, as horas deveriam continuar em he100.');
+            runnerAssertSame('00:00', $r['he50'], 'Com 100%, he50 deveria ficar zerado.');
+        }, $summary);
+
+        runnerRunCase('integration', 'dia da semana: DSR e percentual saem por parametroDiaSemana', function () use ($gravarDia, $motoristaDe, $dataFolga, $diaSemanaFolga): void {
+            $gravarDia(50, 'sim');
+
+            /* Sem a configuracao pre-carregada: a funcao tem de buscar sozinha. */
+            $m = $motoristaDe();
+            unset($m['diasSemana']);
+            $cfg = parametroDiaSemana($m, $dataFolga);
+
+            runnerAssertSame($diaSemanaFolga, $cfg['diaSemana'], 'O dia da semana resolvido esta errado.');
+            runnerAssertTrue($cfg['ehDsr'] === true, 'parametroDiaSemana deveria marcar o dia como DSR.');
+            runnerAssertSame(50, $cfg['perc'], 'parametroDiaSemana deveria devolver o percentual do dia.');
+
+            $gravarDia(50, 'nao');
+        }, $summary);
+
+        runnerRunCase('integration', 'dia da semana: retorno do calculo mantem a forma da linha', function () use ($motoristaDe, $dataFolga): void {
+            $r = diaDetalhePonto($motoristaDe(), $dataFolga);
+            foreach (['ehDsr', 'percDiaSemana', 'diaSemanaConfig'] as $chave) {
+                runnerAssertTrue(
+                    !array_key_exists($chave, $r),
+                    'A chave ' . $chave . ' entrou no retorno do diaDetalhePonto: o espelho e o '
+                    . 'endosso transformam esse array em linha e ela viraria coluna.'
+                );
+            }
+        }, $summary);
+
+        runnerRunCase('integration', 'dia da semana: dia COM jornada prevista nao muda de faixa', function () use ($gravarDia, $motoristaDe, $idParametro): void {
+            /* Procura um dia escalado e confere que o percentual de outro dia
+               da semana nao interfere nele. */
+            $motorista = $motoristaDe();
+            $dataCheia = null;
+            for ($i = 0; $i < 21; $i++) {
+                $candidata = date('Y-m-d', strtotime('2026-06-01 +' . $i . ' day'));
+                $r = diaDetalhePonto($motorista, $candidata);
+                if (($r['jornadaPrevista'] ?? '00:00') !== '00:00') {
+                    $dataCheia = $candidata;
+                    break;
+                }
+            }
+            if ($dataCheia === null) {
+                runnerSkip('SKIP: o funcionario nao tem dia com jornada prevista no periodo.');
+            }
+
+            $diaCheio = intval(date('w', strtotime($dataCheia)));
+            query(
+                "INSERT INTO parametro_dia_semana (pdsm_nb_parametro, pdsm_nb_diaSemana, pdsm_tx_ehDsr, pdsm_nb_percTrabalhado)
+                    VALUES ({$idParametro}, {$diaCheio}, 'nao', 50)
+                    ON DUPLICATE KEY UPDATE pdsm_tx_ehDsr = 'nao', pdsm_nb_percTrabalhado = 50"
+            );
+            carregarDiasSemanaParametro($idParametro, true);
+
+            $r = diaDetalhePonto($motoristaDe(), $dataCheia);
+            runnerAssertTrue(
+                ($r['jornadaPrevista'] ?? '00:00') !== '00:00',
+                'O dia escolhido deveria ter jornada prevista.'
+            );
+            /* Nao devolve nada aqui: o snapshot do inicio cobre tudo. */
+        }, $summary);
+    } finally {
+        $devolverSnapshot();
+        $limparPonto();
+    }
+
+    runnerRunCase('integration', 'dia da semana: teste devolveu a configuracao e limpou o ponto', function () use ($idParametro, $snapshot, $matricula, $dataFolga): void {
+        /* A tabela tem de voltar exatamente ao estado do snapshot: a suite nao
+           pode deixar configuracao de parametro inventada no banco. */
+        $atual = runnerFetchAll(
+            "SELECT pdsm_nb_diaSemana, pdsm_tx_ehDsr, pdsm_nb_percTrabalhado
+                FROM parametro_dia_semana WHERE pdsm_nb_parametro = {$idParametro}
+                ORDER BY pdsm_nb_diaSemana"
+        );
+        runnerAssertSame(
+            json_encode($snapshot),
+            json_encode($atual),
+            'A configuracao do parametro nao voltou ao estado em que estava antes dos testes.'
+        );
+
+        $sobrou = runnerFetchOne(
+            "SELECT COUNT(*) AS n FROM ponto WHERE pont_tx_matricula = '" . $matricula . "'"
+            . " AND DATE(pont_tx_data) = '" . $dataFolga . "' AND pont_tx_descricao = 'TESTE_REGRESSAO_DIA_SEMANA'"
+        );
+        runnerAssertSame('0', strval($sobrou['n'] ?? '-1'), 'O ponto criado pelo teste nao foi apagado.');
+    }, $summary);
+
+    /* O salvar e a tela vivem no funcoes_dia_semana.php, compartilhado com o
+       calculo, e por isso dao para ser exercitados de verdade aqui. */
+    runnerRunCase('integration', 'dia da semana: salvar grava os sete dias e o DSR escolhido', function () use ($idParametro, $devolverSnapshot): void {
+        try {
+            /* Escala 5x2: dois dias de descanso, sabado e domingo. */
+            $gravados = salvarDiasSemanaParametro($idParametro, [
+                'diaDsr' => ['0', '6'],
+                'percDiaSemana' => [0 => '100', 6 => '50'],
+            ]);
+            runnerAssertSame(7, $gravados, 'O salvar deveria gravar os sete dias da semana.');
+
+            $config = carregarDiasSemanaParametro($idParametro, true);
+            runnerAssertSame(7, count($config), 'A configuracao lida deveria ter sete dias.');
+            runnerAssertSame('sim', $config[0]['ehDsr'], 'O domingo deveria ter ficado como DSR.');
+            runnerAssertSame('sim', $config[6]['ehDsr'], 'O sabado deveria ter ficado como DSR (5x2 tem dois).');
+            runnerAssertSame('nao', $config[3]['ehDsr'], 'A quarta nao deveria ser DSR.');
+            runnerAssertSame(100, intval($config[0]['perc']), 'O percentual do domingo nao foi gravado.');
+            runnerAssertSame(50, intval($config[6]['perc']), 'O percentual do sabado nao foi gravado.');
+            runnerAssertTrue($config[3]['perc'] === null, 'Dia sem escolha deveria ficar NULL, nao 0.');
+
+            /* Salvar de novo com um dia so: o outro tem de deixar de ser DSR. */
+            salvarDiasSemanaParametro($idParametro, [
+                'diaDsr' => ['6'],
+                'percDiaSemana' => [],
+            ]);
+            $config = carregarDiasSemanaParametro($idParametro, true);
+            runnerAssertSame(7, count($config), 'Salvar duas vezes duplicou linhas.');
+            runnerAssertSame('sim', $config[6]['ehDsr'], 'O sabado deveria continuar como DSR.');
+            runnerAssertSame('nao', $config[0]['ehDsr'], 'O domingo continuou como DSR depois de ser desmarcado.');
+            runnerAssertTrue($config[6]['perc'] === null, 'O percentual deveria ter voltado para o padrao.');
+
+            /* Nenhum dia marcado: nenhum DSR. */
+            salvarDiasSemanaParametro($idParametro, ['diaDsr' => [], 'percDiaSemana' => []]);
+            $config = carregarDiasSemanaParametro($idParametro, true);
+            foreach (array_keys(diasDaSemanaParametro()) as $d) {
+                runnerAssertSame('nao', $config[$d]['ehDsr'], 'Sem marcar nada, o dia ' . $d . ' nao deveria ser DSR.');
+            }
+
+            /* Formato antigo, de valor unico, continua aceito. */
+            salvarDiasSemanaParametro($idParametro, ['diaDsr' => '2', 'percDiaSemana' => []]);
+            $config = carregarDiasSemanaParametro($idParametro, true);
+            runnerAssertSame('sim', $config[2]['ehDsr'], 'O formato antigo de valor unico deixou de funcionar.');
+        } finally {
+            $devolverSnapshot();
+        }
+    }, $summary);
+
+    runnerRunCase('integration', 'dia da semana: tela mostra os sete dias e marca o escolhido', function (): void {
+        /* Escala 5x2: sabado e domingo marcados. */
+        $html = blocoDiasSemanaParametro([
+            'para_tx_percHESemanal' => '50',
+            'para_tx_percHEEx' => '100',
+            'diasSemana' => [
+                0 => ['ehDsr' => 'sim', 'perc' => 100],
+                6 => ['ehDsr' => 'sim', 'perc' => 50],
+            ],
+        ]);
+
+        foreach (diasDaSemanaParametro() as $nome) {
+            runnerAssertContains($nome, $html, 'O dia ' . $nome . ' nao aparece na tela.');
+        }
+
+        /* Caixa de selecao, nao radio: da para marcar mais de um dia. */
+        runnerAssertSame(7, substr_count($html, "name='diaDsr[]'"), 'A tela deveria ter sete caixas de DSR.');
+        runnerAssertSame(0, substr_count($html, "type='radio'"), 'O DSR nao pode mais ser radio: so deixaria marcar um dia.');
+        runnerAssertSame(7, substr_count($html, "name='percDiaSemana["), 'A tela deveria ter sete campos de percentual.');
+
+        /* Os dois dias do 5x2 vem marcados ao reabrir. */
+        runnerAssertSame(2, substr_count($html, 'checked'), 'A tela deveria reabrir com os dois dias marcados.');
+        runnerAssertContains("value='0' checked", $html, 'O domingo deveria estar marcado.');
+        runnerAssertContains("value='6' checked", $html, 'O sabado deveria estar marcado.');
+        runnerAssertContains("value='50' selected", $html, 'O sabado deveria estar com 50% selecionado.');
+
+        /* Alvo de clique: o nome do dia e um label da propria caixa. */
+        foreach (array_keys(diasDaSemanaParametro()) as $num) {
+            runnerAssertContains("for='dsr_" . $num . "'", $html, 'O dia ' . $num . ' nao tem label ligado a caixa.');
+            runnerAssertContains("id='dsr_" . $num . "'", $html, 'A caixa do dia ' . $num . ' nao tem id para o label.');
+        }
+        runnerAssertSame(
+            14,
+            substr_count($html, "for='dsr_"),
+            'Deveriam ser dois labels por dia (o nome e a celula da caixa), para o clique pegar em qualquer um.'
+        );
+
+        /* Os percentuais oferecidos sao os do proprio parametro. */
+        $html110 = blocoDiasSemanaParametro([
+            'para_tx_percHESemanal' => '60',
+            'para_tx_percHEEx' => '110',
+            'diasSemana' => [],
+        ]);
+        runnerAssertContains('60% — H.E. semanal', $html110, 'A tela ignorou o percentual semanal do parametro.');
+        runnerAssertContains('110% — H.E. extraordinária', $html110, 'A tela ignorou o percentual extraordinario do parametro.');
+        runnerAssertContains('padrão (110%)', $html110, 'O rotulo do padrao deveria citar o percentual do parametro.');
+    }, $summary);
+
+    runnerRunCase('integration', 'dia da semana: faixa comum e decidida pelo percentual do parametro', function (): void {
+        /* Extraordinaria em 110%: 100% passa a ser faixa comum. */
+        $motorista110 = ['para_tx_percHEEx' => '110'];
+        runnerAssertTrue(diaSemanaFaixaComum($motorista110, 100), '100% com extraordinaria em 110% deveria ser faixa comum.');
+        runnerAssertTrue(!diaSemanaFaixaComum($motorista110, 110), '110% com extraordinaria em 110% nao e faixa comum.');
+
+        $motorista100 = ['para_tx_percHEEx' => '100'];
+        runnerAssertTrue(diaSemanaFaixaComum($motorista100, 50), '50% deveria ser faixa comum.');
+        runnerAssertTrue(!diaSemanaFaixaComum($motorista100, 100), '100% nao e faixa comum.');
+        runnerAssertTrue(!diaSemanaFaixaComum($motorista100, null), 'Sem percentual nao ha troca de faixa.');
+
+        /* Parametro sem percentual configurado cai em 100. */
+        runnerAssertTrue(diaSemanaFaixaComum([], 50), 'Sem percHEEx deveria assumir 100 e tratar 50 como faixa comum.');
+    }, $summary);
+
+    runnerRunCase('integration', 'dia da semana: tela sem dados nao derruba a pagina', function (): void {
+        /* Num GET sem POST o $a_mod da tela ainda nao existe. Com o parametro
+           tipado so como "array" isso virava TypeError e o cadastro de
+           parametro renderizava so o titulo. */
+        foreach (['null' => null, 'vazio' => []] as $rotulo => $arg) {
+            $html = blocoDiasSemanaParametro($arg);
+            runnerAssertTrue(
+                strpos($html, 'Descanso semanal') !== false,
+                'blocoDiasSemanaParametro(' . $rotulo . ') nao renderizou o bloco.'
+            );
+            runnerAssertSame(
+                7,
+                substr_count($html, "name='percDiaSemana["),
+                'blocoDiasSemanaParametro(' . $rotulo . ') deveria render os sete dias.'
+            );
+        }
+
+        /* Sem argumento nenhum tambem. */
+        $html = blocoDiasSemanaParametro();
+        runnerAssertSame(7, substr_count($html, "name='diaDsr[]'"), 'Chamada sem argumento nao rendeu as sete caixas.');
+        runnerAssertSame(0, substr_count($html, 'checked'), 'Sem dados, nenhum dia deveria vir marcado.');
+    }, $summary);
+
+    runnerRunCase('integration', 'dia da semana: require vem antes do include do conecta', function (): void {
+        global $appDir;
+
+        /* O contex20/funcoes.php, que o conecta inclui, executa a acao do
+           $_POST["acao"] ali dentro. Funcao carregada depois do conecta nao
+           existe na hora em que a acao roda: a tela do parametro ficava so com
+           o titulo, e o espelho quebraria igual ao chamar parametroDiaSemana
+           dentro do diaDetalhePonto. */
+        $casos = [
+            'cadastro_parametro.php' => 'include "conecta.php"',
+            'funcoes_ponto.php'      => 'include_once __DIR__."/conecta.php"',
+        ];
+
+        foreach ($casos as $arquivo => $marcaConecta) {
+            $fonte = runnerReadFile($appDir . '/' . $arquivo);
+
+            $posRequire = strpos($fonte, 'funcoes_dia_semana.php');
+            $posConecta = strpos($fonte, $marcaConecta);
+
+            runnerAssertTrue($posRequire !== false, $arquivo . ' deixou de incluir o funcoes_dia_semana.php.');
+            runnerAssertTrue($posConecta !== false, $arquivo . ' mudou a forma de incluir o conecta.php.');
+            runnerAssertTrue(
+                $posRequire < $posConecta,
+                'Em ' . $arquivo . ' o require do funcoes_dia_semana.php precisa vir ANTES do include do '
+                . 'conecta.php: o dispatcher do POST roda dentro desse include.'
+            );
+        }
+    }, $summary);
+
+    runnerRunCase('integration', 'dia da semana: a tela e o calculo usam a mesma regra', function (): void {
+        global $appDir;
+
+        /* Os dois lados tem de incluir o compartilhado, senao a regra volta a
+           existir em duas versoes que divergem com o tempo. */
+        $cadastro = runnerReadFile($appDir . '/cadastro_parametro.php');
+        runnerAssertContains('funcoes_dia_semana.php', $cadastro, 'O cadastro deixou de usar a regra compartilhada.');
+        runnerAssertContains('salvarDiasSemanaParametro(', $cadastro, 'O cadastro deixou de gravar a configuracao.');
+        runnerAssertContains('blocoDiasSemanaParametro(', $cadastro, 'O bloco saiu da tela do parametro.');
+
+        $ponto = runnerReadFile($appDir . '/funcoes_ponto.php');
+        runnerAssertContains('funcoes_dia_semana.php', $ponto, 'O calculo deixou de usar a regra compartilhada.');
+        runnerAssertContains('diaSemanaFaixaComum(', $ponto, 'O calculo deixou de consultar a faixa do dia.');
+
+        $espelho = runnerReadFile($appDir . '/espelho_ponto.php');
+        runnerAssertContains('parametroDiaSemana(', $espelho, 'O espelho deixou de marcar o DSR.');
+    }, $summary);
 }
 
 function runnerPrintSummary(array $summary, bool $jsonMode): void

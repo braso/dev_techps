@@ -8,7 +8,14 @@
 		header("Pragma: no-cache"); // HTTP 1.0.
 	//*/
 
-	
+	/* ANTES do conecta.php, de propósito: o contex20/funcoes.php, que o
+	   conecta inclui, executa o dispatcher do $_POST["acao"] ali dentro. Uma
+	   função que a tela só carregue depois do conecta não existe na hora em
+	   que a ação é chamada — a página renderizava só o título e morria com
+	   "Call to undefined function". O funcoes_ponto.php tem a mesma nota no
+	   topo, pelo mesmo motivo. */
+	require_once __DIR__ . "/funcoes_dia_semana.php";
+
 	include "conecta.php";
 
 	// Verificação e criação da coluna turno
@@ -30,6 +37,10 @@
 	if(mysqli_num_rows(query("SHOW COLUMNS FROM parametro LIKE 'para_tx_pagarAdicNoturno'")) == 0){
 		query("ALTER TABLE parametro ADD COLUMN para_tx_pagarAdicNoturno VARCHAR(3) DEFAULT 'sim' COMMENT 'Pagar Adicional Noturno (sim/nao)'");
 	}
+
+	/* A regra do descanso semanal mora em funcoes_dia_semana.php, incluído no
+	   topo. Aqui só a criação da tabela, que depende do query() do conecta. */
+	diaSemanaGarantirTabela();
 
 	// Verificação e criação da coluna Abonar Feriado Escala
 	if(mysqli_num_rows(query("SHOW COLUMNS FROM parametro LIKE 'para_tx_abonarFeriadoEscala'")) == 0){
@@ -561,6 +572,10 @@
 		global $a_mod;
 		$a_mod = carregar("parametro", $_POST["id"]);
 
+		/* Fora do if do tipo: a configuração por dia da semana vale para os
+		   dois regimes. */
+		$a_mod["diasSemana"] = carregarDiasSemanaParametro($_POST["id"]);
+
 		if($a_mod["para_tx_tipo"] == "escala"){
 			$escalaExistente = mysqli_fetch_assoc(query(
 				"SELECT * FROM escala WHERE esca_nb_parametro = {$_POST["id"]};"
@@ -762,7 +777,12 @@
 			}
 
 			atualizar("parametro", array_keys($novoParametro),array_values($novoParametro),$_POST["id"]);
-			
+
+			/* Fora do if do tipo: o DSR e o percentual por dia da semana valem
+			   para escala e para horas por dia - os dois tem dia sem jornada
+			   prevista pagando a faixa extraordinaria. */
+			salvarDiasSemanaParametro($_POST["id"], $_POST);
+
 			if($novoParametro["para_tx_tipo"] == "escala"){
 				cadastrarEscala($_POST["id"]);
 			}else{
@@ -799,7 +819,9 @@
 			$id = inserir("parametro", array_keys($novoParametro), array_values($novoParametro));
 
 			$_POST["id"] = $id[0];
-			
+
+			salvarDiasSemanaParametro($id[0], $_POST);
+
 			if($novoParametro["para_tx_tipo"] == "escala"){
 				cadastrarEscala($id[0]);
 			}
@@ -875,6 +897,25 @@
 
 			$a_mod["esca_nb_periodicidade"] = $_POST["periodicidade"]?? null;
 			$a_mod["esca_tx_dataInicio"] = $_POST["dataInicio"]?? null;
+
+			/* Formulário voltando com erro: mantém o DSR e os percentuais que a
+			   pessoa já tinha escolhido, para ela não ter de marcar de novo. */
+			$diasDsrPost = $_POST["diaDsr"] ?? [];
+			if(!is_array($diasDsrPost)){
+				$diasDsrPost = trim(strval($diasDsrPost)) !== ""? [$diasDsrPost]: [];
+			}
+			$diasDsrPost = array_map("intval", $diasDsrPost);
+			$percPost = is_array($_POST["percDiaSemana"] ?? null) ? $_POST["percDiaSemana"] : [];
+
+			if(!empty($diasDsrPost) || !empty($percPost)){
+				$a_mod["diasSemana"] = [];
+				foreach(array_keys(diasDaSemanaParametro()) as $numDia){
+					$a_mod["diasSemana"][$numDia] = [
+						"ehDsr" => in_array($numDia, $diasDsrPost, true)? "sim": "nao",
+						"perc"  => trim(strval($percPost[$numDia] ?? "")) !== "" ? intval($percPost[$numDia]) : null,
+					];
+				}
+			}
 
 			if(!empty($a_mod["para_tx_ignorarCampos"])){
 				foreach(explode(",", $a_mod["para_tx_ignorarCampos"]) as $campo){
@@ -978,6 +1019,7 @@
 				campo_hora("Máx. de \"H.E. Semanal\" por dia*", "maxHESemanalDiario", ($a_mod["para_tx_maxHESemanalDiario"]?? "02:00"), 3),
 				combo("Pagar H.E. Ex. mesmo com Período Neg.*", "pagarHEExComPerNeg", ($a_mod["para_tx_pagarHEExComPerNeg"]?? "sim"), 3, ["sim" => "Sim", "nao" => "Não"]),
 				combo("Pagar Adicional Noturno*", "pagarAdicNoturno", ($a_mod["para_tx_pagarAdicNoturno"]?? "sim"), 3, ["sim" => "Sim", "nao" => "Não"]),
+				blocoDiasSemanaParametro($a_mod ?? []),
 				"<div class='col-sm-3 margin-bottom-5 campo-fit-content ".(!empty($_POST["errorFields"]) && in_array("descFaltas", $_POST["errorFields"]))."' style='min-width:fit-content; min-height: 50px;'>
 					<label>Descontar horas por faltas não justificadas?</label><br>
 					<label class='radio-inline'>

@@ -7,11 +7,15 @@
         header("Pragma: no-cache"); // HTTP 1.0.
         header("Expires: 0");
 	//*/
-	// O helper precisa ser incluido antes do conecta.php: o contex20/funcoes.php executa a
+	// Os helpers precisam ser incluidos antes do conecta.php: o contex20/funcoes.php executa a
 	// acao do POST durante o include e algumas acoes (ex.: buscarEspelho) chamam diaDetalhePonto.
 	if(file_exists(__DIR__."/trocadeturno/helpers_troca_turno.php")){
 		include_once __DIR__."/trocadeturno/helpers_troca_turno.php";
 	}
+	// Mesmo motivo: o diaDetalhePonto chama parametroDiaSemana(), e se este
+	// require ficasse depois do conecta a funcao nao existiria na hora em que a
+	// acao do espelho roda.
+	require_once __DIR__."/funcoes_dia_semana.php";
 	if(!defined('NO_CONNECTION')){
 		include_once __DIR__."/conecta.php";
 	}
@@ -905,6 +909,13 @@
 					WHERE para_nb_id = {$motorista["enti_nb_parametro"]}
 					LIMIT 1;"
 			));
+			/* DSR e percentual por dia da semana viajam junto do parâmetro: o
+			   carregarDiasSemanaParametro() tem cache, mas levar a configuração
+			   aqui evita até a chamada repetida a cada dia do mês. */
+			if(!empty($parametro)){
+				$parametro["diasSemana"] = carregarDiasSemanaParametro($motorista["enti_nb_parametro"]);
+			}
+
 			if(!empty($parametro) && $parametro["para_tx_tipo"] == "escala"){
 				$parametro["diasEscala"] = mysqli_fetch_all(query(
 					"SELECT * FROM escala_dia 
@@ -1507,6 +1518,21 @@
 							$aRetorno["he100"] = operarHorarios([$aRetorno["he100"], $aRetorno["jornadaPrevista"]], "-");
 							$aRetorno["diffSaldo"] = $aRetorno["he100"];
 						}
+					}
+
+					/* ── Percentual configurado para este dia da semana ──────
+					   Tudo acima caiu na faixa extraordinária porque o dia não
+					   tem jornada prevista. Se o parâmetro disser que este dia
+					   da semana paga a faixa comum — o caso do sábado de folga
+					   que a CCT manda pagar a 50% —, as horas mudam de faixa
+					   aqui.
+
+					   Soma em he50 em vez de sobrescrever para não perder o que
+					   o ajuste de virada de meia-noite já tinha posto lá. */
+					$cfgDiaSemana = parametroDiaSemana($motorista, $data);
+					if($aRetorno["he100"] != "00:00" && diaSemanaFaixaComum($motorista, $cfgDiaSemana["perc"])){
+						$aRetorno["he50"] = operarHorarios([$aRetorno["he50"], $aRetorno["he100"]], "+");
+						$aRetorno["he100"] = "00:00";
 					}
 				}else{
 					if(!empty($motorista["para_tx_maxHESemanalDiario"]) 
