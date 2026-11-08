@@ -7,6 +7,12 @@
 		header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
 		header("Cache-Control: post-check=0, pre-check=0", FALSE);
 
+	/* ANTES do funcoes_ponto.php, que inclui o conecta.php: o
+	   contex20/funcoes.php, que o conecta inclui, executa o dispatcher do
+	   $_POST["acao"] ali dentro, e funcao carregada depois disso nao existe na
+	   hora em que a acao roda. Vale a mesma nota do cadastro_parametro.php. */
+	require_once __DIR__ . "/placa_proxima.php";
+
 
 	// ---- Helper para salvar ações esperadas de POI ----
 	function salvarAcoesEsperadasPoi($poiId, $acoes){
@@ -1563,6 +1569,16 @@ AJUSTEPOIJS;
 		$iconeExcluir = criarSQLIconeTabela("pont_nb_id", "excluirPonto", "Excluir", "glyphicon glyphicon-remove", "Deseja inativar o registro?", "excluirPontoJS(',pont_nb_id,')");
 		$checkboxBulk = "CONCAT('<input type=\"checkbox\" class=\"bulk-excluir\" data-id=\"', pont_nb_id, '\"/>')";
 
+		/* O botao so aparece onde ele resolve algo: batida com coordenada e sem
+		   placa. Onde a placa ja esta preenchida nao ha nada a adivinhar, e sem
+		   coordenada nao ha de onde medir. */
+		$iconePlacaProxima = "IF("
+			. "pont_tx_latitude IS NOT NULL AND pont_tx_latitude <> 0"
+			. " AND (pont_tx_placa IS NULL OR pont_tx_placa = '')"
+			. " AND pont_tx_status = 'ativo',"
+			. " CONCAT('<a title=\"Buscar a placa mais proxima desta coordenada\" style=\"color:#2563eb; display:block; white-space:nowrap; cursor:pointer;\" onclick=\"buscarPlacaProximaJS(', pont_nb_id, ')\"><span class=\"glyphicon glyphicon-search\"></span> placa</a>'),"
+			. " NULL)";
+
 		$rsFotoPlaca = query("SHOW COLUMNS FROM ponto LIKE 'pont_tx_fotoPlaca'");
 		if ($rsFotoPlaca && !mysqli_fetch_assoc($rsFotoPlaca)) {
 			query("ALTER TABLE ponto ADD COLUMN pont_tx_fotoPlaca VARCHAR(255) NULL");
@@ -1586,6 +1602,7 @@ AJUSTEPOIJS;
 				"pont_tx_latitude", 
 				"pont_tx_longitude",
 				"pont_tx_dataAtualiza",
+				"{$iconePlacaProxima} as iconePlacaProxima",
 				"IF(pont_tx_status = 'ativo' AND endo_tx_status IS NULL, {$checkboxBulk}, NULL) as bulkExcluir",
 				"IF(pont_tx_status = 'ativo' AND endo_tx_status IS NULL, {$iconeExcluir}, NULL) as iconeExcluir"
 			]
@@ -1604,11 +1621,16 @@ AJUSTEPOIJS;
 			"DATA CADASTRO"								=> "data(pont_tx_dataCadastro,1)",
 			"DATA EXCLUSÃO"								=> "data(pont_tx_dataAtualiza,1)",
             "LOCALIZAÇÃO"								=> "map(pont_nb_id)",
+			"BUSCAR PLACA"								=> "iconePlacaProxima",
             "Excluir Vários"								=> "bulkExcluir",
             "<spam class='glyphicon glyphicon-remove'></spam>"	=> "iconeExcluir"
         ];
 
 		grid($sql, array_keys($gridFields), array_values($gridFields), "", "12", 1, "desc", -1);
+
+		/* O popup do ranking de placas. Sai do placa_proxima.php para o espelho
+		   e a nao conformidade poderem usar o mesmo. */
+		echo placaProximaBlocoModal();
 
 		echo "<script>
 		$(document).ready(function(){

@@ -618,6 +618,282 @@ function runnerIntegrationTests(array &$summary): void
     }, $summary);
 
     runnerEscalaDsrCalculoTests($summary);
+    runnerPlacaProximaTests($summary);
+}
+
+/**
+ * Busca da placa mais provavel de uma batida sem placa.
+ *
+ * Nenhum caso aqui chama a API de logistica. Suite que depende de HTTP externo
+ * falha quando a rede cai e para de ser sinal; o que precisa de rede foi
+ * conferido a mao pelos scripts _testar_placa_proxima.php e
+ * _testar_endpoint_placa.php. Ficam aqui a conta de distancia, a ordenacao do
+ * ranking, a leitura da resposta da API (com amostra real) e as recusas.
+ */
+function runnerPlacaProximaTests(array &$summary): void
+{
+    global $appDir;
+    require_once $appDir . '/placa_proxima.php';
+
+    runnerRunCase('integration', 'placa proxima: distancia em metros bate com valor conhecido', function (): void {
+        /* Um grau de latitude vale ~111,2 km. A origem nao pode ser 0,0:
+           ali a funcao entende "sem coordenada", de proposito. */
+        $m = placaProximaDistanciaMetros(-22.0, -43.0, -21.0, -43.0);
+        runnerAssertTrue(
+            abs($m - 111195) < 400,
+            'Um grau de latitude deveria dar ~111,2 km, deu ' . round($m) . ' m.'
+        );
+
+        /* Mesma coordenada: zero. */
+        runnerAssertSame(0, intval(round(placaProximaDistanciaMetros(-22.7, -43.3, -22.7, -43.3))), 'Mesma coordenada deveria dar zero.');
+
+        /* ~111 m por 0,001 grau de latitude. */
+        $m = placaProximaDistanciaMetros(-22.700000, -43.300000, -22.701000, -43.300000);
+        runnerAssertTrue(abs($m - 111) < 3, '0,001 grau deveria dar ~111 m, deu ' . round($m) . ' m.');
+
+        /* Coordenada zerada e ausencia de coordenada, nao a ilha a 0,0: sem
+           isto a placa apareceria a 5.000 km em vez de fora da lista. */
+        runnerAssertTrue(placaProximaDistanciaMetros(0, 0, -22.7, -43.3) < 0, 'Coordenada zerada deveria ser recusada.');
+        runnerAssertTrue(placaProximaDistanciaMetros(-22.7, -43.3, 0, 0) < 0, 'Coordenada zerada deveria ser recusada.');
+    }, $summary);
+
+    runnerRunCase('integration', 'placa proxima: distancia e defasagem saem em texto legivel', function (): void {
+        runnerAssertSame('370 m', placaProximaFormatarDistancia(370.4), 'Abaixo de 1 km deveria sair em metros.');
+        runnerAssertSame('1,00 km', placaProximaFormatarDistancia(1000.0), 'Em 1 km deveria virar km.');
+        runnerAssertSame('9,99 km', placaProximaFormatarDistancia(9990.0), 'Abaixo de 10 km usa duas casas.');
+        runnerAssertSame('12,3 km', placaProximaFormatarDistancia(12345.0), 'De 10 km para cima usa uma casa.');
+        runnerAssertSame('123,5 km', placaProximaFormatarDistancia(123456.0), 'De 10 km para cima usa uma casa.');
+        runnerAssertSame('-', placaProximaFormatarDistancia(-1.0), 'Sem medida deveria sair como tracinho.');
+
+        runnerAssertSame('45s', placaProximaFormatarDefasagem(45), 'Menos de um minuto sai em segundos.');
+        runnerAssertSame('11 min', placaProximaFormatarDefasagem(11 * 60 + 20), 'Minutos.');
+        runnerAssertSame('2h 05min', placaProximaFormatarDefasagem(2 * 3600 + 5 * 60), 'Horas e minutos.');
+        runnerAssertSame('30 min', placaProximaFormatarDefasagem(-1800), 'Defasagem negativa conta pelo modulo.');
+    }, $summary);
+
+    runnerRunCase('integration', 'placa proxima: le a resposta da API no formato real', function (): void {
+        /* Amostra copiada de uma resposta de verdade do POST /data1. */
+        $amostra = '[{"vehicle_plate":"SSA2D62","longitude":"-46.1824437","latitude":"-22.7813993",'
+            . '"speed":"0","ignition":"false","moduleTime":"2026-10-08T00:18:32.0","hodometro":"147719",'
+            . '"endereco":"Unnamed Road, Camanducaia, MG","nomeMotorista":"","cnpj":"08036202000103"},'
+            . '{"vehicle_plate":"SSA2D62","longitude":"-46.1824309","latitude":"-22.7814685",'
+            . '"speed":"62","moduleTime":"2026-10-08T00:48:35.0","hodometro":"147719","endereco":"R A, MG"}]';
+
+        $trilha = placaProximaNormalizarTrilha($amostra);
+        runnerAssertSame(2, count($trilha), 'As duas posicoes da amostra deveriam ser lidas.');
+
+        /* O moduleTime e o que esta busca precisa: o cliente do modulo de
+           diarias joga esse campo fora, e sem ele nao da para saber onde o
+           veiculo estava na hora da batida. */
+        runnerAssertSame(
+            strtotime('2026-10-08 00:18:32'),
+            $trilha[0]['ts'],
+            'O moduleTime nao foi convertido em horario.'
+        );
+        runnerAssertSame('00:18:32', $trilha[0]['hora'], 'A hora da posicao saiu errada.');
+        runnerAssertTrue(abs($trilha[0]['lat'] - (-22.7813993)) < 0.0000001, 'A latitude nao foi lida.');
+        runnerAssertTrue(abs($trilha[0]['lon'] - (-46.1824437)) < 0.0000001, 'A longitude nao foi lida.');
+        runnerAssertSame('Unnamed Road, Camanducaia, MG', $trilha[0]['endereco'], 'O endereco nao foi lido.');
+        runnerAssertSame(62, $trilha[1]['velocidade'], 'A velocidade nao foi lida.');
+
+        /* Linha sem coordenada ou sem horario nao entra. */
+        $trilha = placaProximaNormalizarTrilha('[{"latitude":"0","longitude":"0","moduleTime":"2026-10-08T01:00:00.0"},'
+            . '{"latitude":"-22.7","longitude":"-43.3"},'
+            . '{"latitude":"-22.7","longitude":"-43.3","moduleTime":"2026-10-08T02:00:00.0"}]');
+        runnerAssertSame(1, count($trilha), 'Posicao sem coordenada ou sem horario nao deveria entrar.');
+
+        /* A API responde {ok:false} quando nao tem dado para a placa. */
+        runnerAssertSame(0, count(placaProximaNormalizarTrilha('{"ok":false,"erro":"sem dados"}')), 'ok:false deveria virar trilha vazia.');
+        runnerAssertSame(0, count(placaProximaNormalizarTrilha('')), 'Resposta vazia deveria virar trilha vazia.');
+        runnerAssertSame(0, count(placaProximaNormalizarTrilha('nao e json')), 'Resposta invalida deveria virar trilha vazia.');
+    }, $summary);
+
+    runnerRunCase('integration', 'placa proxima: ranking ordena por distancia e respeita a janela', function (): void {
+        $ts = strtotime('2026-10-08 08:56:00');
+
+        /* Batida em -22.70, -43.29. Tres placas a distancias diferentes e uma
+           com posicao so muito depois do horario. */
+        $trilhas = [
+            'LONGE' => [['lat' => -22.80, 'lon' => -43.29, 'ts' => $ts + 60,   'hora' => '08:57:00', 'endereco' => '', 'velocidade' => 0]],
+            'PERTO' => [['lat' => -22.7005, 'lon' => -43.29, 'ts' => $ts - 120, 'hora' => '08:54:00', 'endereco' => '', 'velocidade' => 0]],
+            'MEIO'  => [['lat' => -22.71, 'lon' => -43.29, 'ts' => $ts + 30,   'hora' => '08:56:30', 'endereco' => '', 'velocidade' => 0]],
+            'TARDE' => [['lat' => -22.7001, 'lon' => -43.29, 'ts' => $ts + 7200, 'hora' => '10:56:00', 'endereco' => '', 'velocidade' => 0]],
+            'VAZIA' => [],
+        ];
+
+        $ranking = placaProximaRanking($trilhas, -22.70, -43.29, $ts, 60);
+
+        $ok = array_values(array_filter($ranking, function ($r) { return $r['situacao'] === 'ok'; }));
+        runnerAssertSame(3, count($ok), 'Deveriam entrar tres placas: as outras estao fora da janela ou sem trilha.');
+        runnerAssertSame('PERTO', $ok[0]['placa'], 'A mais perto deveria vir primeiro.');
+        runnerAssertSame('MEIO', $ok[1]['placa'], 'A do meio deveria vir em segundo.');
+        runnerAssertSame('LONGE', $ok[2]['placa'], 'A mais longe deveria vir por ultimo.');
+
+        runnerAssertSame(1, $ok[0]['posicao'], 'A numeracao do ranking comeca em 1.');
+        runnerAssertSame(3, $ok[2]['posicao'], 'A numeracao do ranking deveria ser sequencial.');
+
+        /* A que so tem posicao duas horas depois fica fora e diz por que. */
+        $porPlaca = [];
+        foreach ($ranking as $r) { $porPlaca[$r['placa']] = $r; }
+        runnerAssertSame('fora_da_janela', $porPlaca['TARDE']['situacao'], 'Posicao a 2h da batida deveria ficar fora da janela.');
+        runnerAssertSame('sem_trilha', $porPlaca['VAZIA']['situacao'], 'Placa sem posicao no dia deveria ser marcada como tal.');
+        runnerAssertTrue($porPlaca['TARDE']['posicao'] === null, 'Quem fica fora nao recebe posicao no ranking.');
+
+        /* Com a janela aberta, a de duas horas passa a contar - e ela esta
+           perto no espaco, entao assume a lideranca. */
+        $ranking = placaProximaRanking($trilhas, -22.70, -43.29, $ts, 240);
+        $ok = array_values(array_filter($ranking, function ($r) { return $r['situacao'] === 'ok'; }));
+        runnerAssertSame(4, count($ok), 'Com janela de 4h a placa de 2h depois deveria entrar.');
+        runnerAssertSame('TARDE', $ok[0]['placa'], 'Na janela larga a mais perto no espaco lidera.');
+        runnerAssertSame('2h 00min', $ok[0]['defasagemTx'], 'A defasagem precisa aparecer: e o que avisa que a medida e de outro horario.');
+    }, $summary);
+
+    runnerRunCase('integration', 'placa proxima: empate de distancia desempata pelo horario', function (): void {
+        /* Dois veiculos no mesmo patio ficam a metros um do outro. Entre eles a
+           distancia nao decide nada, entao vale a medida mais perto da batida. */
+        $ts = strtotime('2026-10-08 08:56:00');
+        $trilhas = [
+            'ANTIGA' => [['lat' => -22.70, 'lon' => -43.29, 'ts' => $ts - 1500, 'hora' => '08:31:00', 'endereco' => '', 'velocidade' => 0]],
+            'RECENTE' => [['lat' => -22.70, 'lon' => -43.29, 'ts' => $ts - 10,  'hora' => '08:55:50', 'endereco' => '', 'velocidade' => 0]],
+        ];
+
+        $ranking = placaProximaRanking($trilhas, -22.70, -43.29, $ts, 60);
+        runnerAssertSame('RECENTE', $ranking[0]['placa'], 'Com a mesma distancia, a medida mais perto do horario vem primeiro.');
+    }, $summary);
+
+    runnerRunCase('integration', 'placa proxima: busca recusa batida sem coordenada e inexistente', function (): void {
+        /* Estes dois caminhos saem antes de qualquer chamada HTTP. */
+        $r = placaProximaDoPonto(0);
+        runnerAssertTrue(empty($r['ok']), 'Sem id a busca deveria recusar.');
+
+        $r = placaProximaDoPonto(999999999);
+        runnerAssertTrue(empty($r['ok']), 'Batida inexistente deveria recusar.');
+        runnerAssertContains('não encontrada', $r['erro'], 'O motivo deveria dizer que a batida nao existe.');
+
+        $semCoord = runnerFetchOne(
+            "SELECT pont_nb_id FROM ponto WHERE pont_tx_latitude IS NULL OR pont_tx_latitude = 0 LIMIT 1"
+        );
+        if (empty($semCoord)) {
+            runnerSkip('SKIP: nao ha batida sem coordenada no banco.');
+            return;
+        }
+        $r = placaProximaDoPonto($semCoord['pont_nb_id']);
+        runnerAssertTrue(empty($r['ok']), 'Batida sem coordenada deveria recusar.');
+        runnerAssertContains('latitude', $r['erro'], 'O motivo deveria citar a falta de coordenada.');
+    }, $summary);
+
+    runnerRunCase('integration', 'placa proxima: gravar so aceita placa da empresa do funcionario', function (): void {
+        $alvo = runnerFetchOne(
+            "SELECT p.pont_nb_id, p.pont_tx_placa, e.enti_nb_empresa
+                FROM ponto p
+                JOIN entidade e ON e.enti_tx_matricula = p.pont_tx_matricula
+                WHERE p.pont_tx_latitude IS NOT NULL AND p.pont_tx_latitude <> 0
+                  AND EXISTS (SELECT 1 FROM placa WHERE plac_nb_empresa = e.enti_nb_empresa)
+                ORDER BY p.pont_nb_id DESC LIMIT 1"
+        );
+        if (empty($alvo)) {
+            runnerSkip('SKIP: nao ha batida com coordenada numa empresa com placa cadastrada.');
+            return;
+        }
+
+        $idPonto = intval($alvo['pont_nb_id']);
+        $placaAntes = $alvo['pont_tx_placa'];
+
+        $placas = placaProximaPlacasDaEmpresa($alvo['enti_nb_empresa']);
+        runnerAssertTrue(!empty($placas), 'A empresa deveria ter placa cadastrada.');
+
+        try {
+            /* Texto inventado nao entra: a tela manda uma string, e sem esta
+               conferencia daria para gravar qualquer coisa no campo. */
+            $r = placaProximaGravar($idPonto, 'XXX0000', 1);
+            runnerAssertTrue(empty($r['ok']), 'Placa inventada deveria ser recusada.');
+            runnerAssertContains('não está cadastrada', $r['erro'], 'O motivo deveria dizer que a placa nao e da empresa.');
+
+            /* Placa de outra empresa tambem nao. */
+            $outra = runnerFetchOne(
+                "SELECT plac_tx_placa FROM placa WHERE plac_nb_empresa <> " . intval($alvo['enti_nb_empresa']) . " LIMIT 1"
+            );
+            if (!empty($outra)) {
+                $r = placaProximaGravar($idPonto, $outra['plac_tx_placa'], 1);
+                runnerAssertTrue(empty($r['ok']), 'Placa de outra empresa deveria ser recusada.');
+            }
+
+            /* A placa certa entra, com a trilha de quem mexeu. */
+            $r = placaProximaGravar($idPonto, $placas[0], 1);
+            runnerAssertTrue(!empty($r['ok']), 'A placa da empresa deveria ser aceita.');
+
+            $depois = runnerFetchOne("SELECT pont_tx_placa, pont_nb_userAtualiza FROM ponto WHERE pont_nb_id = {$idPonto}");
+            runnerAssertSame($placas[0], strval($depois['pont_tx_placa']), 'A placa gravada nao foi a pedida.');
+            runnerAssertSame(1, intval($depois['pont_nb_userAtualiza']), 'Quem gravou deveria ficar registrado.');
+        } finally {
+            query(
+                "UPDATE ponto SET pont_tx_placa = "
+                . ($placaAntes === null ? "NULL" : "'" . str_replace("'", "", $placaAntes) . "'")
+                . " WHERE pont_nb_id = {$idPonto}"
+            );
+        }
+
+        $volta = runnerFetchOne("SELECT pont_tx_placa FROM ponto WHERE pont_nb_id = {$idPonto}");
+        runnerAssertSame(
+            strval($placaAntes),
+            strval($volta['pont_tx_placa']),
+            'O teste nao devolveu a placa que estava na batida.'
+        );
+    }, $summary);
+
+    runnerRunCase('integration', 'placa proxima: cache das trilhas existe e a migracao repete sem erro', function (): void {
+        placaProximaGarantirCache();
+        placaProximaGarantirCache();
+
+        runnerAssertTrue(
+            (bool) runnerFetchOne("SHOW TABLES LIKE 'placa_posicao_cache'"),
+            'A tabela de cache das trilhas nao foi criada.'
+        );
+
+        /* Trilha de dia passado nao muda, e o gestor confere varias batidas do
+           mesmo dia: sem cache seriam 29 requisicoes por clique. */
+        global $appDir;
+        $fonte = runnerReadFile($appDir . '/placa_proxima.php');
+        runnerAssertContains('curl_multi_init', $fonte, 'As consultas precisam ir em paralelo: serial a tela estoura o tempo.');
+        runnerAssertContains('placa_posicao_cache', $fonte, 'O cache das trilhas saiu do codigo.');
+        runnerAssertContains('date("Y-m-d")', $fonte, 'O dia de hoje nao pode ser guardado: a trilha dele ainda cresce.');
+    }, $summary);
+
+    runnerRunCase('integration', 'placa proxima: a tela e o endpoint estao ligados e protegidos', function (): void {
+        global $appDir;
+
+        /* O botao no grid do ajuste, so onde resolve algo. */
+        $ajuste = runnerReadFile($appDir . '/ajuste_ponto.php');
+        runnerAssertContains('placa_proxima.php', $ajuste, 'O ajuste de ponto deixou de incluir a regra.');
+        runnerAssertContains('buscarPlacaProximaJS(', $ajuste, 'O botao saiu do grid do ajuste de ponto.');
+        runnerAssertContains('placaProximaBlocoModal()', $ajuste, 'O popup saiu da tela.');
+        runnerAssertContains("pont_tx_placa IS NULL OR pont_tx_placa = ''", $ajuste, 'O botao deveria aparecer so onde a placa esta vazia.');
+        runnerAssertContains('pont_tx_latitude IS NOT NULL', $ajuste, 'O botao deveria aparecer so onde ha coordenada.');
+
+        /* O require antes do include que arrasta o conecta, pelo mesmo motivo
+           de sempre: o dispatcher do POST roda dentro daquele include. */
+        $posRequire = strpos($ajuste, 'placa_proxima.php');
+        $posPonto = strpos($ajuste, 'include_once "funcoes_ponto.php"');
+        runnerAssertTrue($posPonto !== false, 'O ajuste mudou a forma de incluir o funcoes_ponto.php.');
+        runnerAssertTrue(
+            $posRequire < $posPonto,
+            'O require do placa_proxima.php precisa vir antes do funcoes_ponto.php, que inclui o conecta.php.'
+        );
+
+        /* O endpoint: permissao conferida e acao em chave propria. */
+        $endpoint = runnerReadFile($appDir . '/ajax_placa_proxima.php');
+        runnerAssertContains('conecta.php', $endpoint, 'O endpoint precisa passar pelo portao de login.');
+        runnerAssertContains('usuarioPodeAcessar(', $endpoint, 'O endpoint precisa conferir permissao: a resposta expoe a posicao da frota.');
+        runnerAssertTrue(
+            preg_match('/\$_POST\["placaAcao"\]/', $endpoint) === 1,
+            'A acao do endpoint deveria ser lida de $_POST["placaAcao"].'
+        );
+        runnerAssertSame(
+            0,
+            preg_match_all('/=\s*\$_POST\["acao"\]/', $endpoint),
+            'O endpoint nao pode ler $_POST["acao"]: o contex20 executa esse valor como nome de funcao.'
+        );
+    }, $summary);
 }
 
 /**
