@@ -909,13 +909,6 @@
 					WHERE para_nb_id = {$motorista["enti_nb_parametro"]}
 					LIMIT 1;"
 			));
-			/* DSR e percentual por dia da semana viajam junto do parâmetro: o
-			   carregarDiasSemanaParametro() tem cache, mas levar a configuração
-			   aqui evita até a chamada repetida a cada dia do mês. */
-			if(!empty($parametro)){
-				$parametro["diasSemana"] = carregarDiasSemanaParametro($motorista["enti_nb_parametro"]);
-			}
-
 			if(!empty($parametro) && $parametro["para_tx_tipo"] == "escala"){
 				$parametro["diasEscala"] = mysqli_fetch_all(query(
 					"SELECT * FROM escala_dia 
@@ -1019,9 +1012,7 @@
 					$jornadaPrevistaOriginal = $motorista["enti_tx_jornadaSemanal"];
 				}
 			}elseif($motorista["para_tx_tipo"] == "escala"){
-				$diferenca = (new DateTime($motorista["esca_tx_dataInicio"]))->diff(new DateTime($data));
-			$diferenca = $diferenca->days*($diferenca->invert? -1: 1);
-			$diaDoCiclo = round($motorista["esca_nb_periodicidade"]*(($diferenca)/($motorista["esca_nb_periodicidade"])-floor($diferenca/$motorista["esca_nb_periodicidade"]))+1);
+			$diaDoCiclo = diaSemanaDiaDoCiclo($motorista, $data);
 			
 			$diaEscala = null;
 			foreach ($motorista["diasEscala"] as $d) {
@@ -1459,9 +1450,7 @@
 								if($proximoDiaJornada != "00:00") $proximoDiaEscalado = true;
 								
 							}elseif($motorista["para_tx_tipo"] == "escala"){
-								$diferenca = (new DateTime($motorista["esca_tx_dataInicio"]))->diff(new DateTime($dataProximoDia));
-								$diferenca = $diferenca->days*($diferenca->invert? -1: 1);
-								$diaDoCiclo = round($motorista["esca_nb_periodicidade"]*(($diferenca)/($motorista["esca_nb_periodicidade"])-floor($diferenca/$motorista["esca_nb_periodicidade"]))+1);
+								$diaDoCiclo = diaSemanaDiaDoCiclo($motorista, $dataProximoDia);
 								
 								foreach ($motorista["diasEscala"] as $d) {
 									if ($d["esca_nb_numeroDia"] == $diaDoCiclo) {

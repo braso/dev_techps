@@ -38,9 +38,9 @@
 		query("ALTER TABLE parametro ADD COLUMN para_tx_pagarAdicNoturno VARCHAR(3) DEFAULT 'sim' COMMENT 'Pagar Adicional Noturno (sim/nao)'");
 	}
 
-	/* A regra do descanso semanal mora em funcoes_dia_semana.php, incluído no
-	   topo. Aqui só a criação da tabela, que depende do query() do conecta. */
-	diaSemanaGarantirTabela();
+	/* A regra do DSR mora em funcoes_dia_semana.php, incluído no topo. Aqui só
+	   as colunas, que dependem do query() do conecta. */
+	diaSemanaGarantirColunasEscala();
 
 	// Verificação e criação da coluna Abonar Feriado Escala
 	if(mysqli_num_rows(query("SHOW COLUMNS FROM parametro LIKE 'para_tx_abonarFeriadoEscala'")) == 0){
@@ -84,6 +84,7 @@
 		echo 
 			"<script>
 				camposHora = ".json_encode($camposHora).";
+				camposDsrEscala = ".json_encode(camposDsrEscalaDia($a_mod?? [])).";
 				diasEscala = ".json_encode($a_mod["diasEscala"]?? []).";
 
 				semana = ['(Dom)', '(Seg)', '(Ter)', '(Qua)', '(Qui)', '(Sex)', '(Sab)'];
@@ -121,8 +122,14 @@
 						var linha = document.createElement('div');
 						linha.className = 'linhaDiaEscala';
 						linha.id = 'linhaDiaEscala_'+i;
-						linha.innerHTML = '<div class=\"labelDiaEscala\">Dia '+i+'<div class=\"diaSemana\"></div></div>'+camposHora[0] + camposHora[1] + camposHora[2];
-						document.getElementById('divHorasEscala').innerHTML += linha.outerHTML;
+						linha.innerHTML = '<div class=\"labelDiaEscala\">Dia '+i+'<div class=\"diaSemana\"></div></div>'+camposHora[0] + camposHora[1] + camposHora[2]
+							+ camposDsrEscala.replace(/__N__/g, i);
+
+						/* appendChild, e nao innerHTML +=: o += reserializa o
+						   container inteiro a cada volta, e valor digitado e
+						   caixa marcada nao viajam no HTML \u2014 some tudo o que
+						   estava nas linhas anteriores. */
+						document.getElementById('divHorasEscala').appendChild(linha);
 					}
 					
 					atualizarDiaSemana();
@@ -137,6 +144,19 @@
 							linhasDiaEscala[i-1].getElementsByTagName('input')[0].value = diasEscala[i-1].esca_tx_horaInicio ?? diasEscala[i-1][0] ?? '';
 							linhasDiaEscala[i-1].getElementsByTagName('input')[1].value = diasEscala[i-1].esca_tx_horaFim ?? diasEscala[i-1][1] ?? '';
 							linhasDiaEscala[i-1].getElementsByTagName('input')[2].value = diasEscala[i-1].esca_tx_intervaloInterno ?? diasEscala[i-1][2] ?? '';
+
+							/* O name do DSR ja sai numerado do PHP, por isso ele
+							   nao entra na renomeacao acima. Aqui so volta o que
+							   estava gravado. */
+							var caixaDsr = linhasDiaEscala[i-1].querySelector('input[type=checkbox]');
+							if(caixaDsr){
+								caixaDsr.checked = ((diasEscala[i-1].esca_tx_ehDsr ?? diasEscala[i-1][3] ?? '') == 'sim');
+							}
+
+							var selPerc = linhasDiaEscala[i-1].querySelector('select');
+							if(selPerc){
+								selPerc.value = diasEscala[i-1].esca_nb_percTrabalhado ?? diasEscala[i-1][4] ?? '';
+							}
 						}
 					}
 				}
@@ -496,6 +516,10 @@
 	}
 
 	function cadastrarEscala($idParametro){
+		/* As colunas de DSR podem nao existir numa base que ainda nao abriu
+		   esta tela; sem isto o INSERT abaixo quebraria. */
+		diaSemanaGarantirColunasEscala();
+
 		$escalaExistente = mysqli_fetch_assoc(query(
 			"SELECT * FROM escala WHERE esca_nb_parametro = {$idParametro};"
 		));
@@ -519,6 +543,8 @@
 						"esca_tx_horaInicio" 		=> !empty($_POST["diasEscala"][$f][0])? $_POST["diasEscala"][$f][0]: NULL,
 						"esca_tx_horaFim" 			=> !empty($_POST["diasEscala"][$f][1])? $_POST["diasEscala"][$f][1]: NULL,
 						"esca_tx_intervaloInterno" 	=> !empty($_POST["diasEscala"][$f][2])? $_POST["diasEscala"][$f][2]: NULL,
+						"esca_tx_ehDsr" 			=> (($_POST["diasEscala"][$f][3]?? "nao") == "sim")? "sim": "nao",
+						"esca_nb_percTrabalhado" 	=> ($_POST["diasEscala"][$f][4]?? NULL) !== NULL? intval($_POST["diasEscala"][$f][4]): NULL,
 					];
 					
 					$idDia = inserir("escala_dia", array_keys($diaEscala), array_values($diaEscala));
@@ -547,6 +573,8 @@
 					"esca_tx_horaInicio" => !empty($_POST["diasEscala"][$f][0])? $_POST["diasEscala"][$f][0]: NULL,
 					"esca_tx_horaFim" => !empty($_POST["diasEscala"][$f][1])? $_POST["diasEscala"][$f][1]: NULL,
 					"esca_tx_intervaloInterno" => !empty($_POST["diasEscala"][$f][2])? $_POST["diasEscala"][$f][2]: NULL,
+					"esca_tx_ehDsr" => (($_POST["diasEscala"][$f][3]?? "nao") == "sim")? "sim": "nao",
+					"esca_nb_percTrabalhado" => ($_POST["diasEscala"][$f][4]?? NULL) !== NULL? intval($_POST["diasEscala"][$f][4]): NULL,
 				];
 
 				atualizar("escala_dia", array_keys($diaEscala), array_values($diaEscala), $diasEscala[$f]["esca_nb_id"]);
@@ -562,6 +590,8 @@
 					"esca_tx_horaInicio" => !empty($dia[0])? $dia[0]: NULL,
 					"esca_tx_horaFim" => !empty($dia[1])? $dia[1]: NULL,
 					"esca_tx_intervaloInterno" => !empty($dia[2])? $dia[2]: NULL,
+					"esca_tx_ehDsr" => (($dia[3]?? "nao") == "sim")? "sim": "nao",
+					"esca_nb_percTrabalhado" => ($dia[4]?? NULL) !== NULL? intval($dia[4]): NULL,
 				];
 				inserir("escala_dia", array_keys($diaEscala), array_values($diaEscala));
 			}
@@ -571,10 +601,6 @@
 	function duplicarParametro(){
 		global $a_mod;
 		$a_mod = carregar("parametro", $_POST["id"]);
-
-		/* Fora do if do tipo: a configuração por dia da semana vale para os
-		   dois regimes. */
-		$a_mod["diasSemana"] = carregarDiasSemanaParametro($_POST["id"]);
 
 		if($a_mod["para_tx_tipo"] == "escala"){
 			$escalaExistente = mysqli_fetch_assoc(query(
@@ -588,7 +614,10 @@
 
 				$diasEscala = [];
 				foreach($escalaExistente["diasEscala"] as $diaEscala){
-					$diasEscala[] = [$diaEscala["esca_tx_horaInicio"], $diaEscala["esca_tx_horaFim"], $diaEscala["esca_tx_intervaloInterno"]];
+					$diasEscala[] = [
+						$diaEscala["esca_tx_horaInicio"], $diaEscala["esca_tx_horaFim"], $diaEscala["esca_tx_intervaloInterno"],
+						$diaEscala["esca_tx_ehDsr"]?? "nao", $diaEscala["esca_nb_percTrabalhado"]?? NULL,
+					];
 				}
 				$a_mod = array_merge($a_mod, $escalaExistente);
 				$a_mod["diasEscala"] = $diasEscala;	
@@ -639,7 +668,18 @@
 
 					$diasEscala = [];
 					for($f = 1; $f <= intval($_POST["periodicidade"]); $f++){
-						$diasEscala[] = [$_POST["horaInicio_".$f], $_POST["horaFim_".$f], $_POST["intervaloInterno_".$f]];
+						/* [3] e [4] sao o DSR do quadrado. Percentual em branco
+						   fica NULL de proposito: NULL quer dizer "mantem a
+						   regra padrao", enquanto 0 seria um percentual. */
+						$percDia = trim(strval($_POST["percDia_".$f]?? ""));
+
+						$diasEscala[] = [
+							$_POST["horaInicio_".$f],
+							$_POST["horaFim_".$f],
+							$_POST["intervaloInterno_".$f],
+							!empty($_POST["dsrDia_".$f])? "sim": "nao",
+							$percDia !== ""? intval($percDia): NULL,
+						];
 					}
 					$_POST["diasEscala"] = $diasEscala;
 				}elseif($_POST["tipo"] == "horas_por_dia"){
@@ -778,11 +818,8 @@
 
 			atualizar("parametro", array_keys($novoParametro),array_values($novoParametro),$_POST["id"]);
 
-			/* Fora do if do tipo: o DSR e o percentual por dia da semana valem
-			   para escala e para horas por dia - os dois tem dia sem jornada
-			   prevista pagando a faixa extraordinaria. */
-			salvarDiasSemanaParametro($_POST["id"], $_POST);
-
+			/* O DSR vai dentro do cadastrarEscala(): ele mora na linha de
+			   escala_dia de cada dia do ciclo. */
 			if($novoParametro["para_tx_tipo"] == "escala"){
 				cadastrarEscala($_POST["id"]);
 			}else{
@@ -819,8 +856,6 @@
 			$id = inserir("parametro", array_keys($novoParametro), array_values($novoParametro));
 
 			$_POST["id"] = $id[0];
-
-			salvarDiasSemanaParametro($id[0], $_POST);
 
 			if($novoParametro["para_tx_tipo"] == "escala"){
 				cadastrarEscala($id[0]);
@@ -898,25 +933,6 @@
 			$a_mod["esca_nb_periodicidade"] = $_POST["periodicidade"]?? null;
 			$a_mod["esca_tx_dataInicio"] = $_POST["dataInicio"]?? null;
 
-			/* Formulário voltando com erro: mantém o DSR e os percentuais que a
-			   pessoa já tinha escolhido, para ela não ter de marcar de novo. */
-			$diasDsrPost = $_POST["diaDsr"] ?? [];
-			if(!is_array($diasDsrPost)){
-				$diasDsrPost = trim(strval($diasDsrPost)) !== ""? [$diasDsrPost]: [];
-			}
-			$diasDsrPost = array_map("intval", $diasDsrPost);
-			$percPost = is_array($_POST["percDiaSemana"] ?? null) ? $_POST["percDiaSemana"] : [];
-
-			if(!empty($diasDsrPost) || !empty($percPost)){
-				$a_mod["diasSemana"] = [];
-				foreach(array_keys(diasDaSemanaParametro()) as $numDia){
-					$a_mod["diasSemana"][$numDia] = [
-						"ehDsr" => in_array($numDia, $diasDsrPost, true)? "sim": "nao",
-						"perc"  => trim(strval($percPost[$numDia] ?? "")) !== "" ? intval($percPost[$numDia]) : null,
-					];
-				}
-			}
-
 			if(!empty($a_mod["para_tx_ignorarCampos"])){
 				foreach(explode(",", $a_mod["para_tx_ignorarCampos"]) as $campo){
 					$_POST["ignorarCampos_".$campo] = true;
@@ -949,7 +965,10 @@
 
 					$diasEscala = [];
 					foreach($escalaExistente["diasEscala"] as $diaEscala){
-						$diasEscala[] = [$diaEscala["esca_tx_horaInicio"], $diaEscala["esca_tx_horaFim"], $diaEscala["esca_tx_intervaloInterno"]];
+						$diasEscala[] = [
+							$diaEscala["esca_tx_horaInicio"], $diaEscala["esca_tx_horaFim"], $diaEscala["esca_tx_intervaloInterno"],
+							$diaEscala["esca_tx_ehDsr"]?? "nao", $diaEscala["esca_nb_percTrabalhado"]?? NULL,
+						];
 					}
 					$a_mod = array_merge($a_mod, $escalaExistente);
 					$a_mod["diasEscala"] = $diasEscala;	
@@ -1019,7 +1038,6 @@
 				campo_hora("Máx. de \"H.E. Semanal\" por dia*", "maxHESemanalDiario", ($a_mod["para_tx_maxHESemanalDiario"]?? "02:00"), 3),
 				combo("Pagar H.E. Ex. mesmo com Período Neg.*", "pagarHEExComPerNeg", ($a_mod["para_tx_pagarHEExComPerNeg"]?? "sim"), 3, ["sim" => "Sim", "nao" => "Não"]),
 				combo("Pagar Adicional Noturno*", "pagarAdicNoturno", ($a_mod["para_tx_pagarAdicNoturno"]?? "sim"), 3, ["sim" => "Sim", "nao" => "Não"]),
-				blocoDiasSemanaParametro($a_mod ?? []),
 				"<div class='col-sm-3 margin-bottom-5 campo-fit-content ".(!empty($_POST["errorFields"]) && in_array("descFaltas", $_POST["errorFields"]))."' style='min-width:fit-content; min-height: 50px;'>
 					<label>Descontar horas por faltas não justificadas?</label><br>
 					<label class='radio-inline'>

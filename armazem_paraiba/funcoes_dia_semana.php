@@ -1,6 +1,6 @@
 <?php
 /**
- * Descanso semanal e percentual de hora extra por dia da semana.
+ * Descanso semanal e percentual de hora extra do dia.
  *
  * ── O problema que isto resolve
  *
@@ -10,13 +10,20 @@
  * como dizer que naquele parâmetro ele vale 50% — o que várias convenções
  * coletivas exigem.
  *
- * ── Por que por dia da semana, e não por dia do ciclo da escala
+ * ── Onde a marca de DSR mora
  *
- * "Sábado" só coincidiria com um dia do ciclo se a periodicidade fosse 7 e a
- * data de início caísse na segunda. Com periodicidade 5 ou 12, dia do ciclo não
- * tem relação com dia da semana. Por dia da semana a regra também passa a valer
- * para o regime de horas por dia, que tem o mesmo problema: sábado com jornada
- * 00:00 paga 100%.
+ * Na própria linha de escala_dia, junto do início, do fim e do intervalo
+ * daquele dia do ciclo. É o quadrado "Dia N" que a pessoa já enxerga ao montar
+ * a escala, e por ser o dia do ciclo funciona com periodicidade 5 ou 12, onde
+ * dia do ciclo não tem relação nenhuma com dia da semana — com periodicidade
+ * diferente de 7 a tela nem mostra o "(Seg)".
+ *
+ * ── Só no regime de escala
+ *
+ * O regime de horas por dia não tem DSR: o cadastro dele é "Dias Úteis" e
+ * "Sábado", e não há quadrado de dia onde marcar. Houve uma versão com uma
+ * tabela parametro_dia_semana para atender esse regime; ela saiu por não ser
+ * necessária. A tabela pode ter sido criada em alguma base — ninguém a lê mais.
  *
  * ── Por que só dois percentuais
  *
@@ -29,62 +36,96 @@
  * funcoes_ponto.php (que calcula), para a regra não existir em duas versões.
  */
 
-if (!function_exists("diasDaSemanaParametro")) {
-	/** Nomes dos dias, na ordem que o date("w") do PHP usa. */
-	function diasDaSemanaParametro(): array {
-		return [
-			0 => "Domingo",
-			1 => "Segunda-feira",
-			2 => "Terça-feira",
-			3 => "Quarta-feira",
-			4 => "Quinta-feira",
-			5 => "Sexta-feira",
-			6 => "Sábado",
-		];
+if (!function_exists("diaSemanaDiaDoCiclo")) {
+	/**
+	 * Em que dia do ciclo da escala a data cai, de 1 até a periodicidade.
+	 *
+	 * A fórmula estava escrita duas vezes dentro do funcoes_ponto.php, nos dois
+	 * lugares que resolvem o dia da escala. Veio para cá porque o DSR também
+	 * precisa dela, e três cópias de uma conta de calendário é pedir para elas
+	 * divergirem.
+	 *
+	 * @return int|null null quando o parâmetro não tem escala carregada
+	 */
+	function diaSemanaDiaDoCiclo(array $motorista, string $data): ?int {
+		$periodicidade = intval($motorista["esca_nb_periodicidade"] ?? 0);
+		$dataInicio = trim(strval($motorista["esca_tx_dataInicio"] ?? ""));
+
+		if ($periodicidade <= 0 || $dataInicio === "") {
+			return null;
+		}
+
+		$diferenca = (new DateTime($dataInicio))->diff(new DateTime($data));
+		$diferenca = $diferenca->days * ($diferenca->invert ? -1 : 1);
+
+		return intval(round(
+			$periodicidade * (($diferenca) / ($periodicidade) - floor($diferenca / $periodicidade)) + 1
+		));
 	}
 }
 
-if (!function_exists("diaSemanaTabelaExiste")) {
+if (!function_exists("diaSemanaColunasEscalaExistem")) {
 	/**
-	 * A tabela é criada na primeira abertura do cadastro de parâmetro. Até lá,
-	 * e em qualquer base onde a migração não tenha rodado, vale a regra antiga
-	 * em vez de erro.
+	 * Se as colunas de DSR já existem em escala_dia.
+	 *
+	 * Enquanto não existirem vale a regra antiga, em vez de erro: a base de um
+	 * cliente só ganha as colunas na primeira abertura do cadastro de
+	 * parâmetro, e o cálculo pode rodar antes disso.
 	 */
-	function diaSemanaTabelaExiste(): bool {
+	function diaSemanaColunasEscalaExistem(bool $recarregar = false): bool {
 		static $existe = null;
+		if ($recarregar) {
+			$existe = null;
+		}
 		if ($existe === null) {
-			$r = query("SHOW TABLES LIKE 'parametro_dia_semana'");
+			$r = query("SHOW COLUMNS FROM escala_dia LIKE 'esca_tx_ehDsr'");
 			$existe = ($r && mysqli_num_rows($r) > 0);
 		}
 		return $existe;
 	}
 }
 
-if (!function_exists("diaSemanaGarantirTabela")) {
-	/** Cria a tabela, no padrão de migração automática do sistema. */
-	function diaSemanaGarantirTabela(): void {
-		query("CREATE TABLE IF NOT EXISTS parametro_dia_semana (
-			pdsm_nb_id INT AUTO_INCREMENT PRIMARY KEY,
-			pdsm_nb_parametro INT NOT NULL,
-			pdsm_nb_diaSemana TINYINT NOT NULL COMMENT '0=domingo ... 6=sabado',
-			pdsm_tx_ehDsr ENUM('sim','nao') NOT NULL DEFAULT 'nao',
-			pdsm_nb_percTrabalhado TINYINT UNSIGNED NULL DEFAULT NULL COMMENT 'Percentual quando o dia e trabalhado. NULL = regra padrao',
-			UNIQUE KEY uq_parametro_dia (pdsm_nb_parametro, pdsm_nb_diaSemana),
-			KEY idx_parametro (pdsm_nb_parametro)
-		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+if (!function_exists("diaSemanaGarantirColunasEscala")) {
+	/**
+	 * Acrescenta as duas colunas de DSR em escala_dia.
+	 *
+	 * Confere coluna por coluna com SHOW COLUMNS em vez de usar
+	 * "ADD COLUMN IF NOT EXISTS": esse IF NOT EXISTS é do MariaDB, e os
+	 * servidores de homologação e de produção são MySQL, onde ele é erro de
+	 * sintaxe — a página inteira voltaria 500.
+	 */
+	function diaSemanaGarantirColunasEscala(): void {
+		$colunas = [
+			"esca_tx_ehDsr"          => "ENUM('sim','nao') NOT NULL DEFAULT 'nao'",
+			"esca_nb_percTrabalhado" => "TINYINT UNSIGNED NULL DEFAULT NULL",
+		];
+
+		foreach ($colunas as $coluna => $tipo) {
+			/* Nome e tipo são literais daqui, não vem nada da tela. */
+			$r = query("SHOW COLUMNS FROM escala_dia LIKE '{$coluna}'");
+			if ($r && mysqli_num_rows($r) > 0) {
+				continue;
+			}
+			query("ALTER TABLE escala_dia ADD COLUMN {$coluna} {$tipo}");
+		}
+
+		diaSemanaColunasEscalaExistem(true);
 	}
 }
 
-if (!function_exists("carregarDiasSemanaParametro")) {
+if (!function_exists("carregarEscalaParametro")) {
 	/**
-	 * Configuração gravada dos sete dias de um parâmetro.
+	 * A escala de um parâmetro: data de início, periodicidade e os dias.
 	 *
-	 * Fica em cache por parâmetro: o espelho pergunta uma vez por dia do mês, e
-	 * sem o cache seriam mais de trinta consultas iguais por funcionário.
+	 * Existe porque só o funcoes_ponto.php carrega a escala junto do
+	 * funcionário. O espelho monta o $motorista com um SELECT sem join na
+	 * escala, e o endosso, o cadastro_endosso, a não conformidade e os painéis
+	 * fazem igual — sem isto o DSR da escala não apareceria em nenhuma dessas
+	 * telas, só no cálculo.
 	 *
-	 * @return array<int, array{ehDsr: string, perc: int|null}>
+	 * Fica em cache por parâmetro: o espelho pergunta uma vez por dia do mês.
 	 */
-	function carregarDiasSemanaParametro($idParametro, bool $recarregar = false): array {
+	function carregarEscalaParametro($idParametro, bool $recarregar = false): array {
 		static $cache = [];
 
 		$idParametro = intval($idParametro);
@@ -99,90 +140,85 @@ if (!function_exists("carregarDiasSemanaParametro")) {
 		}
 
 		$cache[$idParametro] = [];
-		if (!diaSemanaTabelaExiste()) {
+
+		$escala = mysqli_fetch_assoc(query(
+			"SELECT esca_nb_id, esca_tx_dataInicio, esca_nb_periodicidade
+				FROM escala WHERE esca_nb_parametro = {$idParametro} LIMIT 1;"
+		));
+		if (empty($escala)) {
 			return $cache[$idParametro];
 		}
 
-		$linhas = mysqli_fetch_all(query(
-			"SELECT pdsm_nb_diaSemana, pdsm_tx_ehDsr, pdsm_nb_percTrabalhado
-				FROM parametro_dia_semana
-				WHERE pdsm_nb_parametro = {$idParametro}
-				ORDER BY pdsm_nb_diaSemana ASC;"
+		$dias = mysqli_fetch_all(query(
+			"SELECT * FROM escala_dia
+				WHERE esca_nb_escala = " . intval($escala["esca_nb_id"]) . "
+				ORDER BY esca_nb_numeroDia ASC;"
 		), MYSQLI_ASSOC);
 
-		foreach (($linhas ?: []) as $linha) {
-			$cache[$idParametro][intval($linha["pdsm_nb_diaSemana"])] = [
-				"ehDsr" => strval($linha["pdsm_tx_ehDsr"]),
-				"perc"  => $linha["pdsm_nb_percTrabalhado"],
-			];
-		}
+		$cache[$idParametro] = [
+			"esca_tx_dataInicio"    => $escala["esca_tx_dataInicio"],
+			"esca_nb_periodicidade" => $escala["esca_nb_periodicidade"],
+			"diasEscala"            => $dias ?: [],
+		];
 
 		return $cache[$idParametro];
 	}
 }
 
-if (!function_exists("salvarDiasSemanaParametro")) {
+if (!function_exists("diaSemanaEscalaDoDia")) {
 	/**
-	 * Grava a configuração dos sete dias.
+	 * DSR e percentual da linha de escala_dia em que a data cai.
 	 *
-	 * @param array $dados normalmente o $_POST: diaDsr (0..6 ou vazio) e
-	 *                     percDiaSemana[0..6]
-	 * @return int quantos dias foram gravados
+	 * @return array{ehDsr: bool, perc: int|null}|null null quando não há escala
+	 *         carregada, a data não resolve num dia do ciclo, ou as colunas
+	 *         ainda não existem naquela base
 	 */
-	function salvarDiasSemanaParametro($idParametro, array $dados): int {
-		$idParametro = intval($idParametro);
-		if ($idParametro <= 0) {
-			return 0;
-		}
-		diaSemanaGarantirTabela();
+	function diaSemanaEscalaDoDia(array $motorista, string $data): ?array {
+		/* Quem já tem a escala em mãos usa a dele, sem consulta: é o caso do
+		   cálculo, que a carrega junto do funcionário. Quem não tem — o
+		   espelho e as outras telas — cai no carregarEscalaParametro(), que
+		   tem cache. */
+		$temEscala = (!empty($motorista["diasEscala"]) && is_array($motorista["diasEscala"]))
+			&& trim(strval($motorista["esca_tx_dataInicio"] ?? "")) !== "";
 
-		/* Lista de dias, não um só: escala 5x2 tem dois dias de descanso, e há
-		   convenção com DSR em dias diferentes por semana. Aceita também o
-		   formato antigo, de valor único, para não perder o que já foi gravado
-		   se algum fluxo ainda mandar assim. */
-		$diasDsr = $dados["diaDsr"] ?? [];
-		if (!is_array($diasDsr)) {
-			$diasDsr = trim(strval($diasDsr)) !== "" ? [$diasDsr] : [];
-		}
-		$diasDsr = array_map("intval", array_filter($diasDsr, function ($v) {
-			return trim(strval($v)) !== "";
-		}));
-
-		$percPorDia = is_array($dados["percDiaSemana"] ?? null) ? $dados["percDiaSemana"] : [];
-
-		$gravados = 0;
-		foreach (array_keys(diasDaSemanaParametro()) as $num) {
-			$ehDsr = in_array($num, $diasDsr, true) ? "sim" : "nao";
-
-			/* Percentual em branco fica NULL de propósito: NULL quer dizer
-			   "mantém a regra padrão", enquanto 0 seria um percentual. */
-			$percBruto = trim(strval($percPorDia[$num] ?? ""));
-			$perc = $percBruto !== "" ? intval($percBruto) : null;
-
-			/* Todos os valores saem de intval() ou de literal fixo: não há
-			   string da tela indo para o SQL. */
-			query(
-				"INSERT INTO parametro_dia_semana
-						(pdsm_nb_parametro, pdsm_nb_diaSemana, pdsm_tx_ehDsr, pdsm_nb_percTrabalhado)
-					VALUES ({$idParametro}, {$num}, '{$ehDsr}', " . ($perc === null ? "NULL" : intval($perc)) . ")
-					ON DUPLICATE KEY UPDATE
-						pdsm_tx_ehDsr = VALUES(pdsm_tx_ehDsr),
-						pdsm_nb_percTrabalhado = VALUES(pdsm_nb_percTrabalhado);"
-			);
-			$gravados++;
+		if (!$temEscala) {
+			$daBase = carregarEscalaParametro($motorista["enti_nb_parametro"] ?? 0);
+			if (empty($daBase["diasEscala"])) {
+				return null;
+			}
+			$motorista = array_merge($motorista, $daBase);
 		}
 
-		/* O cache precisa cair, senão a mesma requisição que gravou continuaria
-		   lendo a configuração antiga. */
-		carregarDiasSemanaParametro($idParametro, true);
+		$diaDoCiclo = diaSemanaDiaDoCiclo($motorista, $data);
+		if ($diaDoCiclo === null) {
+			return null;
+		}
 
-		return $gravados;
+		foreach ($motorista["diasEscala"] as $d) {
+			if (!is_array($d) || intval($d["esca_nb_numeroDia"] ?? 0) !== $diaDoCiclo) {
+				continue;
+			}
+
+			/* Chave ausente é base sem a migração: cai no padrão de antes. */
+			$perc = $d["esca_nb_percTrabalhado"] ?? null;
+
+			return [
+				"ehDsr" => (strval($d["esca_tx_ehDsr"] ?? "nao") === "sim"),
+				"perc"  => (trim(strval($perc)) !== "") ? intval($perc) : null,
+			];
+		}
+
+		return null;
 	}
 }
 
 if (!function_exists("parametroDiaSemana")) {
 	/**
-	 * Configuração do dia da semana da data, para o funcionário.
+	 * DSR e percentual do dia, para o funcionário.
+	 *
+	 * Só o regime de escala tem DSR; qualquer outro devolve vazio, que é a
+	 * regra de antes desta funcionalidade. O chamador não precisa saber de
+	 * regime: por isso a decisão acontece aqui, e não no cálculo nem no espelho.
 	 *
 	 * @return array{diaSemana: int, ehDsr: bool, perc: int|null}
 	 */
@@ -190,23 +226,19 @@ if (!function_exists("parametroDiaSemana")) {
 		$diaSemana = intval(date("w", strtotime($data)));
 		$vazio = ["diaSemana" => $diaSemana, "ehDsr" => false, "perc" => null];
 
-		/* Quem já carregou a configuração junto do parâmetro usa a dele; quem
-		   não carregou cai no carregarDiasSemanaParametro(), que tem cache. */
-		$config = (!empty($motorista["diasSemana"]) && is_array($motorista["diasSemana"]))
-			? $motorista["diasSemana"]
-			: carregarDiasSemanaParametro($motorista["enti_nb_parametro"] ?? 0);
-
-		if (empty($config[$diaSemana])) {
+		if (strval($motorista["para_tx_tipo"] ?? "") !== "escala") {
 			return $vazio;
 		}
 
-		$cfg = $config[$diaSemana];
+		$cfgEscala = diaSemanaEscalaDoDia($motorista, $data);
+		if ($cfgEscala === null) {
+			return $vazio;
+		}
+
 		return [
 			"diaSemana" => $diaSemana,
-			"ehDsr"     => (($cfg["ehDsr"] ?? "nao") === "sim"),
-			"perc"      => (isset($cfg["perc"]) && trim(strval($cfg["perc"])) !== "")
-				? intval($cfg["perc"])
-				: null,
+			"ehDsr"     => $cfgEscala["ehDsr"],
+			"perc"      => $cfgEscala["perc"],
 		];
 	}
 }
@@ -231,81 +263,74 @@ if (!function_exists("diaSemanaFaixaComum")) {
 	}
 }
 
-if (!function_exists("blocoDiasSemanaParametro")) {
+if (!function_exists("diaSemanaOpcoesPercentual")) {
 	/**
-	 * Bloco "Descanso semanal e percentual por dia da semana" do formulário.
+	 * As opções do seletor de percentual.
 	 *
-	 * Um radio para dizer qual dia é o DSR (um só por parâmetro) e, em cada
-	 * linha, o percentual pago se a pessoa trabalhar naquele dia.
+	 * São as duas faixas que o sistema realmente paga, lidas do próprio
+	 * parâmetro: o espelho, o endosso e as exportações têm he50 e he100 e nada
+	 * mais, e para_tx_percHESemanal / para_tx_percHEEx são os rótulos delas. Um
+	 * campo livre aceitaria 70% e a folha não teria onde pagar.
 	 */
-	function blocoDiasSemanaParametro(?array $a_mod = null): string {
-		/* Aceita null de propósito: no cadastro novo, e num GET sem POST, o
-		   $a_mod da tela ainda não existe. Com o parâmetro tipado só como
-		   "array" isso virava TypeError e a página inteira ficava em branco
-		   depois do título. */
+	function diaSemanaOpcoesPercentual(?array $a_mod, ?int $percAtual): string {
 		$a_mod = is_array($a_mod) ? $a_mod : [];
-
-		$dias = diasDaSemanaParametro();
 
 		$percSemanal = trim(strval($a_mod["para_tx_percHESemanal"] ?? "")) !== "" ? intval($a_mod["para_tx_percHESemanal"]) : 50;
 		$percExtra   = trim(strval($a_mod["para_tx_percHEEx"] ?? "")) !== "" ? intval($a_mod["para_tx_percHEEx"]) : 100;
 
-		$config = $a_mod["diasSemana"] ?? [];
+		/* Rótulo curto: os quadrados ficam lado a lado num flex que quebra
+		   linha, e "100% — H.E. extraordinária" esticaria cada quadrado a ponto
+		   de caber bem menos dias por linha. O que cada faixa significa está
+		   nos campos de H.E. do próprio parâmetro, na mesma tela. */
+		$opcoes = "<option value=''>padrão</option>";
 
-		$linhas = "";
-		foreach ($dias as $num => $nome) {
-			$cfg = $config[$num] ?? [];
-			$ehDsr = (($cfg["ehDsr"] ?? "nao") === "sim");
-			$percAtual = isset($cfg["perc"]) && trim(strval($cfg["perc"])) !== "" ? intval($cfg["perc"]) : null;
-
-			$opcoes = "<option value=''>padrão (" . $percExtra . "%)</option>";
-			foreach ([$percSemanal => "H.E. semanal", $percExtra => "H.E. extraordinária"] as $valor => $rotulo) {
-				$opcoes .= "<option value='" . intval($valor) . "'"
-					. ($percAtual !== null && $percAtual === intval($valor) ? " selected" : "")
-					. ">" . intval($valor) . "% — " . $rotulo . "</option>";
-			}
-
-			/* O nome do dia é um <label for> da caixa: clicar no nome marca o
-			   dia. O radio de antes era um alvo de 13px e só ele respondia ao
-			   clique — era difícil acertar. */
-			$linhas .= "<tr" . ($ehDsr ? " style='background:#eff6ff;'" : "") . ">"
-				. "<td style='padding:0; border-bottom:1px solid #f1f1f1;'>"
-					. "<label for='dsr_" . $num . "' style='display:block; margin:0; padding:9px 16px 9px 4px; font-weight:" . ($ehDsr ? "600" : "normal") . "; cursor:pointer; white-space:nowrap;'>"
-						. $nome
-					. "</label>"
-				. "</td>"
-				. "<td style='padding:0; text-align:center; border-bottom:1px solid #f1f1f1;'>"
-					. "<label for='dsr_" . $num . "' style='display:block; margin:0; padding:9px 18px; cursor:pointer;'>"
-						. "<input type='checkbox' id='dsr_" . $num . "' name='diaDsr[]' value='" . $num . "'"
-						. ($ehDsr ? " checked" : "")
-						. " style='width:18px; height:18px; vertical-align:middle; cursor:pointer;'>"
-					. "</label>"
-				. "</td>"
-				. "<td style='padding:5px 0 5px 6px; border-bottom:1px solid #f1f1f1;'>"
-					. "<select name='percDiaSemana[" . $num . "]' class='form-control input-sm' style='min-width:215px;'>"
-					. $opcoes
-					. "</select>"
-				. "</td>"
-			. "</tr>";
+		foreach ([$percSemanal, $percExtra] as $valor) {
+			$opcoes .= "<option value='" . intval($valor) . "'"
+				. ($percAtual !== null && $percAtual === intval($valor) ? " selected" : "")
+				. ">" . intval($valor) . "%</option>";
 		}
 
-		return "<div style='clear:both; width:100%; padding:10px 15px 5px 15px;'>"
-			. "<div style='font-weight:bold;'>Descanso semanal e percentual por dia da semana</div>"
-			. "<small class='text-muted' style='display:block; margin-bottom:8px; max-width:720px;'>"
-				. "Marque quantos dias de descanso o regime tiver — numa 5x2 são dois. "
-				. "O percentual vale quando a pessoa trabalha num dia <strong>sem jornada prevista</strong> "
-				. "— folga, DSR, sábado não escalado. Hoje esses casos pagam sempre a faixa extraordinária. "
-				. "Dia com jornada prevista continua como está: o excesso na faixa semanal, e a "
-				. "extraordinária só acima do limite diário."
-			. "</small>"
-			. "<table style='border-collapse:collapse; border:1px solid #e5e5e5;'>"
-				. "<tr style='background:#fafafa;'>"
-					. "<th style='padding:6px 16px 6px 4px; text-align:left; font-weight:600;'>Dia</th>"
-					. "<th style='padding:6px 18px; font-weight:600;'>DSR</th>"
-					. "<th style='padding:6px 0 6px 6px; text-align:left; font-weight:600;'>% se trabalhado</th>"
-				. "</tr>"
-				. $linhas
-			. "</table>"
-		. "</div>";
+		return $opcoes;
+	}
+}
+
+if (!function_exists("camposDsrEscalaDia")) {
+	/**
+	 * Os dois controles de DSR que entram em cada quadrado de dia da escala.
+	 *
+	 * Sai com __N__ no lugar do número do dia: os quadrados são montados em
+	 * JavaScript, porque a quantidade deles muda quando a periodicidade muda, e
+	 * o JS troca o __N__ pelo número da linha. A marcação do dia fica aqui, e
+	 * não numa tabela à parte, porque o quadrado é onde a escala é montada.
+	 *
+	 * O percentual acompanha o checkbox porque sozinha a marca não decide nada:
+	 * é o percentual que escolhe entre a faixa comum e a extraordinária.
+	 */
+	function camposDsrEscalaDia(?array $a_mod = null): string {
+		$opcoes = diaSemanaOpcoesPercentual($a_mod, null);
+
+		/* As duas colunas são col-sm-1, como as de hora: o cadastro tem a regra
+		   ".linhaDiaEscala > .col-sm-1 { padding: 0 }", e um col-sm-2 ficaria
+		   fora dela, com os 15px do Bootstrap de cada lado — era isso que
+		   deixava o quadrado desalinhado dos campos ao lado. O padding-left
+		   inline vence a regra e dá o respiro entre as colunas.
+		   A caixa mora numa linha de 30px, a altura do .input-sm dos campos de
+		   hora, e é o que a põe na mesma pauta deles em vez de subir. O label
+		   inteiro é o alvo de clique, não os 17px do quadradinho. */
+		return "<div class='col-sm-1 margin-bottom-5 campo-fit-content' style='padding-left:10px; text-align:center;'>"
+				. "<label style='display:block; margin-bottom:5px;'>DSR</label>"
+				. "<label for='dsrDia___N__' style='display:block; height:30px; line-height:30px; margin:0; cursor:pointer; font-weight:normal;'>"
+					. "<input type='checkbox' id='dsrDia___N__' name='dsrDia___N__' value='1'"
+					. " style='width:17px; height:17px; margin:0; vertical-align:middle; cursor:pointer;'>"
+				. "</label>"
+			. "</div>"
+			. "<div class='col-sm-1 margin-bottom-5 campo-fit-content' style='padding-left:10px;'>"
+				. "<label style='display:block; margin-bottom:5px; white-space:nowrap;'>% se trab.</label>"
+				. "<select name='percDia___N__' id='percDia___N__' class='form-control input-sm'"
+				. " title='Percentual pago se a pessoa trabalhar neste dia'"
+				. " style='min-width:76px; text-align:center;'>"
+				. $opcoes
+				. "</select>"
+			. "</div>";
 	}
 }
