@@ -1,6 +1,8 @@
 <?php
 use setasign\Fpdi\Tcpdf\Fpdi;
 
+require_once __DIR__ . "/marcas_helper.php";
+
 function assinatura_normalizarCpf(string $cpf): string {
     return preg_replace('/\D+/', '', $cpf);
 }
@@ -192,6 +194,25 @@ function assinatura_finalizar_documento_icp($conn, int $idDocumento, array $opts
         if (file_exists($abs)) {
             $alreadyFinalized = true;
             $existingAbs = $abs;
+        }
+    }
+
+    /* ── Carimbos posicionados pelos signatários ───────────────────────
+       Desenhados aqui, antes do setSignature(): a assinatura ICP cobre uma
+       faixa de bytes do arquivo, então carimbo aplicado depois a
+       invalidaria. A função é idempotente — guarda o arquivo já carimbado
+       em solicitacoes_assinatura.caminho_marcado e não redesenha se a
+       finalização rodar de novo, nem se o assinar.php já tiver carimbado. */
+    if (!$alreadyFinalized && $caminhoAtual !== "" && function_exists("assinaturaMarcas_aplicarNoPdf")) {
+        $resMarcasFin = assinaturaMarcas_aplicarNoPdf($conn, $idDocumento, $caminhoAtual);
+        if (!empty($resMarcasFin["ok"]) && strval($resMarcasFin["caminho"]) !== "") {
+            $caminhoAtual = strval($resMarcasFin["caminho"]);
+            $stmtMarFin = mysqli_prepare($conn, "UPDATE solicitacoes_assinatura SET caminho_arquivo = ? WHERE id = ? LIMIT 1");
+            if ($stmtMarFin) {
+                mysqli_stmt_bind_param($stmtMarFin, "si", $caminhoAtual, $idDocumento);
+                @mysqli_stmt_execute($stmtMarFin);
+                mysqli_stmt_close($stmtMarFin);
+            }
         }
     }
 

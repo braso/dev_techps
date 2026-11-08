@@ -1,0 +1,12 @@
+Bibliotecas de terceiros usadas na tela de assinatura, servidas pelo proprio
+servidor em vez de CDN. Um fluxo com valor juridico nao pode parar porque um
+CDN de terceiros saiu do ar ou mudou o conteudo de uma versao.
+
+  pdf.min.js          pdf.js 3.11.174   (Mozilla, Apache-2.0)
+  pdf.worker.min.js   pdf.js 3.11.174   worker, obrigatorio junto
+  pdf-lib.min.js      pdf-lib 1.17.1    (MIT) - mesma versao que antes vinha
+                                        do unpkg.com
+
+Origem: cdnjs.cloudflare.com (pdf.js) e unpkg.com (pdf-lib).
+Para atualizar, baixe a nova versao, troque os arquivos e teste a tela de
+assinatura inteira - o editor de carimbos depende da API do pdf.js.

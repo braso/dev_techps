@@ -6,3 +6,8 @@ pfx/
 temp/
 *.log
 log_assinar.txt
+rubricas/
+
+# Scripts de teste local do modulo de assinatura: usam o banco do container
+# de desenvolvimento e nao devem ir para a pasta publica dos clientes.
+_teste_*.php

@@ -15,6 +15,17 @@ require_once __DIR__ . '/../../PHPMailer/src/Exception.php';
 require_once __DIR__ . '/../../PHPMailer/src/PHPMailer.php';
 require_once __DIR__ . '/../../PHPMailer/src/SMTP.php';
 
+/* enviarEmailAssinatura() mora em email_assinatura.php, e o require TEM de
+   ficar aqui, no topo.
+
+   Antes esta linha estava no meio do arquivo, no lugar onde a função era
+   declarada. Função declarada no próprio arquivo o PHP antecipa, então
+   funcionava; require_once só roda quando a execução chega nele — e nunca
+   chegava, porque todo caminho que envia e-mail termina em redirectTo(), que
+   dá exit antes. Resultado: "Call to undefined function
+   enviarEmailAssinatura()" em todos os envios. */
+require_once __DIR__ . "/email_assinatura.php";
+
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
@@ -312,6 +323,14 @@ if($prazoExpiracaoDias > 30){
 }
 
 // Captura signatários do formulário (Array)
+require_once __DIR__ . "/marcas_helper.php";
+
+/* Carimbos que o remetente posicionou na tela, antes de enviar. Vêm amarrados
+   à ORDEM do signatário no formulário, porque os assinantes ainda não existem
+   no banco neste ponto; o id real entra depois de inserir cada um. */
+$marcasRemetenteBrutas = strval($_POST["marcas_remetente"] ?? "");
+$marcasRemetente = assinaturaMarcas_normalizarListaRemetente($marcasRemetenteBrutas, 0);
+
 $signatarios = $_POST['signatarios'] ?? [];
 
 // Validação básica
@@ -1089,6 +1108,17 @@ if($modo_envio === "avulso" && $avulsoDestino === "todos"){
             continue;
         }
 
+        /* O mesmo documento vai para todos: a posição escolhida uma vez vale
+           para cada cópia, com o único assinante de cada uma (ordem 1). */
+        if (!empty($marcasRemetente)) {
+            assinaturaMarcas_salvarDoRemetente(
+                $conn,
+                $id_solicitacao,
+                $marcasRemetente,
+                [1 => mysqli_insert_id($conn)]
+            );
+        }
+
         enviarEmailAssinatura($email, $nome, $tokenAssinante, $fileName, $id_documento, $funcao);
         $enviados++;
     }
@@ -1399,6 +1429,7 @@ if(move_uploaded_file($fileTmpPath, $dest_path)) {
         });
         
         // 3. Insere os Assinantes com ordens sequenciais
+        $ordemParaIdAssinante = [];
         foreach ($signatarios as $index => $sig) {
             $tokenAssinante = bin2hex(random_bytes(32));
             $ordem = $index + 1; // Sempre sequencial: 1, 2, 3...
@@ -1413,13 +1444,21 @@ if(move_uploaded_file($fileTmpPath, $dest_path)) {
             $stmtAssinante = mysqli_prepare($conn, $sqlAssinante);
             mysqli_stmt_bind_param($stmtAssinante, "iisssiss", $id_solicitacao, $entiNbId, $sig['nome'], $sig['email'], $funcao, $ordem, $salvarDoc, $tokenAssinante);
             mysqli_stmt_execute($stmtAssinante);
+            $ordemParaIdAssinante[$ordem] = mysqli_insert_id($conn);
             
             // Se for o primeiro (ordem 1), enviamos o e-mail agora
             if ($ordem == 1) {
                 enviarEmailAssinatura($sig['email'], $sig['nome'], $tokenAssinante, $fileName, $id_documento, $funcao);
             }
         }
-        
+
+        /* Carimbos reservados pelo remetente: só agora existe o id de cada
+           assinante para amarrar a marca. Nascem sem conteúdo; nome, CPF, RG,
+           data e rubrica entram quando a pessoa assinar. */
+        if (!empty($marcasRemetente)) {
+            assinaturaMarcas_salvarDoRemetente($conn, $id_solicitacao, $marcasRemetente, $ordemParaIdAssinante);
+        }
+
         redirectTo($redirect_to, "success");
         
     } else {
@@ -1430,37 +1469,15 @@ if(move_uploaded_file($fileTmpPath, $dest_path)) {
     redirectTo($redirect_to, "error", "Erro ao salvar arquivo");
 }
 
-// Função Auxiliar de Envio de E-mail
-function assinatura_getBaseUrl(): string {
-    $fallback = defined("BASE_URL_ASSINATURA") ? rtrim((string)BASE_URL_ASSINATURA, "/") : "";
+/* assinatura_getBaseUrl() era declarada aqui, idêntica à de
+   email_helper.php, que agora entra pelo require do topo. Duas declarações da
+   mesma função no mesmo request é erro fatal de redeclaração, então ficou só a
+   compartilhada. */
 
-    $proto = trim(strval($_SERVER["HTTP_X_FORWARDED_PROTO"] ?? ""));
-    if($proto === ""){
-        $https = strtolower(trim(strval($_SERVER["HTTPS"] ?? "")));
-        $proto = ($https !== "" && $https !== "off") ? "https" : "http";
-    }
-
-    $host = trim(strval($_SERVER["HTTP_X_FORWARDED_HOST"] ?? ""));
-    if($host === ""){
-        $host = trim(strval($_SERVER["HTTP_HOST"] ?? ""));
-    }
-    if($host === ""){
-        return $fallback;
-    }
-
-    $scriptName = str_replace("\\", "/", strval($_SERVER["SCRIPT_NAME"] ?? ""));
-    $dir = rtrim(str_replace("\\", "/", dirname($scriptName)), "/");
-    if($dir === "."){
-        $dir = "";
-    }
-
-    return rtrim($proto . "://" . $host . $dir, "/");
-}
-
-/* A definição de enviarEmailAssinatura() foi para email_assinatura.php,
-   para o renovar_link.php poder reutilizá-la sem incluir este script
-   inteiro — incluí-lo aqui dispararia um envio. */
-require_once __DIR__ . "/email_assinatura.php";
+/* A definição de enviarEmailAssinatura() foi para email_assinatura.php, para o
+   renovar_link.php poder reutilizá-la sem incluir este script inteiro —
+   incluí-lo aqui dispararia um envio. O require dela está no topo deste
+   arquivo, e precisa continuar lá: aqui no meio ele nunca é alcançado. */
 
 function enviarEmailDocumento(string $email, string $nome, string $filePath, string $fileName, string $tipoNome = ""): bool {
     $mail = new PHPMailer(true);

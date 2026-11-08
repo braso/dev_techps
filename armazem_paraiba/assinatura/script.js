@@ -49,6 +49,12 @@ window.loadPdfFromUrl = async function(url) {
         const pdfPreview = document.getElementById('pdfPreview');
         if (pdfPreview) pdfPreview.src = previewUrl;
 
+        // O editor de carimbos lê o documento desta URL local em vez de baixar
+        // de novo: num contrato de alguns MB, pelo celular, baixar duas vezes
+        // custa tempo e dados do signatário.
+        window.ASSINATURA_PDF_BLOB_URL = previewUrl;
+        document.dispatchEvent(new CustomEvent('assinatura:documento-pronto', { detail: { url: previewUrl } }));
+
         // Atualiza interface para estado de "Pronto para assinar"
         const uploadStep = document.getElementById('uploadStep');
         const assinaturaStep = document.getElementById('assinaturaStep');
@@ -63,8 +69,12 @@ window.loadPdfFromUrl = async function(url) {
         const pdfPreview = document.getElementById('pdfPreview');
         if (pdfPreview) {
             pdfPreview.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 't=' + Date.now();
-        } else {
-            alert("Não foi possível carregar o documento solicitado. Tente recarregar a página.");
+        }
+        const avisoDoc = document.getElementById('marcasCarregando');
+        if (avisoDoc) {
+            avisoDoc.innerHTML = "<i class='fas fa-triangle-exclamation text-amber-500 mr-1'></i>"
+                + "Não foi possível baixar o documento. Recarregue a página ou use o link "
+                + "\"Abrir Documento em nova aba\".";
         }
     }
 };
@@ -601,7 +611,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                 const arquivoAssinado = new File([pdfBlob], nomeFinalArquivo, { type: 'application/pdf' });
 
-                // 2. Enviar para o servidor
+                // 2. Posições dos carimbos escolhidas no editor. Só coordenadas:
+                //    o conteúdo de cada marca é montado no servidor, e é lá que o
+                //    desenho acontece — carimbo aplicado depois da assinatura
+                //    ICP invalidaria a assinatura.
+                const campoMarcas = document.getElementById('marcas');
+                if (campoMarcas && window.MarcasEditor) {
+                    try {
+                        campoMarcas.value = JSON.stringify(window.MarcasEditor.coletar());
+                    } catch (e) {
+                        console.warn('Não foi possível ler as marcas do editor:', e);
+                        campoMarcas.value = '[]';
+                    }
+                }
+
+                // 3. Enviar para o servidor
                 const formData = new FormData(form);
                 formData.append('arquivo_assinado', arquivoAssinado);
                 // Envia os dados gerados para consistência

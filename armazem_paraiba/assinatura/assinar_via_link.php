@@ -5,6 +5,7 @@ $interno = true;
 include "../conecta.php";
 include "email_config.php";
 include_once "tipo_assinatura_helper.php";
+include_once "marcas_helper.php";
 assinatura_expirarPendentes($conn);
 
 $token = isset($_GET['token']) ? $_GET['token'] : '';
@@ -84,6 +85,52 @@ function assinatura_resolverArquivoAbs(string $path): string {
         }
     }
     return $ok ? $abs : "";
+}
+/* Marcas que outros signatarios ja posicionaram, para aparecerem em cinza no
+   editor. Somente leitura, e so para quem tem o token deste documento. */
+if (strval($_GET["marcas"] ?? "") === "1") {
+    header("Content-Type: application/json; charset=utf-8");
+    header("Cache-Control: no-store");
+    $lista = [];
+    $stmtSol = mysqli_prepare($conn, "SELECT a.id_solicitacao, a.id FROM assinantes a WHERE a.token = ? LIMIT 1");
+    if ($stmtSol) {
+        mysqli_stmt_bind_param($stmtSol, "s", $token);
+        mysqli_stmt_execute($stmtSol);
+        $rowSol = mysqli_fetch_assoc(mysqli_stmt_get_result($stmtSol));
+        mysqli_stmt_close($stmtSol);
+        $idSol = intval($rowSol["id_solicitacao"] ?? 0);
+        $idAss = intval($rowSol["id"] ?? 0);
+        if ($idSol > 0 && function_exists("assinaturaMarcas_listar")) {
+            foreach (assinaturaMarcas_listar($conn, $idSol) as $m) {
+                if (intval($m["id_assinante"] ?? 0) === $idAss) {
+                    continue; // as proprias ficam no editor, nao em cinza
+                }
+                $lista[] = [
+                    "pagina" => intval($m["pagina"]),
+                    "pos_x"  => floatval($m["pos_x"]),
+                    "pos_y"  => floatval($m["pos_y"]),
+                    "larg"   => floatval($m["larg"]),
+                    "alt"    => floatval($m["alt"]),
+                    "assinante_nome" => strval($m["assinante_nome"] ?? "")
+                ];
+            }
+        }
+    }
+    $obrigatorias = [];
+    if (!empty($idSol) && !empty($idAss) && function_exists("assinaturaMarcas_listarDoRemetente")) {
+        foreach (assinaturaMarcas_listarDoRemetente($conn, $idSol, $idAss) as $o) {
+            $obrigatorias[] = [
+                "tipo"   => strval($o["tipo"]),
+                "pagina" => intval($o["pagina"]),
+                "pos_x"  => floatval($o["pos_x"]),
+                "pos_y"  => floatval($o["pos_y"]),
+                "larg"   => floatval($o["larg"]),
+                "alt"    => floatval($o["alt"]),
+            ];
+        }
+    }
+    echo json_encode(["marcas" => $lista, "obrigatorias" => $obrigatorias], JSON_UNESCAPED_UNICODE);
+    exit;
 }
 if (strval($_GET["arquivo"] ?? "") === "1") {
     $caminhoArquivoRaw = "";
@@ -232,7 +279,12 @@ $rg_cadastro_mask = '';
 $cadastro_ok = false;
 
 // 1. Tenta buscar na tabela nova de Assinantes
-$sqlAssinante = "SELECT a.*, s.caminho_arquivo, s.nome_arquivo_original, s.id_documento as doc_id_global, s.expires_at, s.prazo_expiracao_dias, s.modo_envio 
+/* s.empresa_id entra aqui porque o tipo de assinatura exigido vem do
+   cadastro da empresa (empr_tx_tipoAssinatura) e, para signatario externo,
+   a empresa so pode ser descoberta pela solicitacao. Sem esta coluna o
+   assinatura_obterTipoAssinatura recebia sempre 0 e caia no padrao cpf_rg,
+   ignorando a configuracao de "rubrica" ou "ambos" da empresa. */
+$sqlAssinante = "SELECT a.*, s.caminho_arquivo, s.nome_arquivo_original, s.id_documento as doc_id_global, s.expires_at, s.prazo_expiracao_dias, s.modo_envio, s.empresa_id 
                  FROM assinantes a 
                  JOIN solicitacoes_assinatura s ON a.id_solicitacao = s.id 
                  WHERE a.token = ?";
@@ -500,16 +552,186 @@ $cadastro_ok = $exigeCpfRg ? $cadastro_cpf_rg_ok : true;
     <title>Assinar Documento - Solicitação via E-mail</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- PDF Lib -->
-    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <!-- pdf-lib e pdf.js servidos pelo proprio servidor: um fluxo com valor
+         juridico nao pode parar porque um CDN de terceiros saiu do ar. -->
+    <script src="vendor_js/pdf-lib.min.js"></script>
+    <script src="vendor_js/pdf.min.js"></script>
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        /* Ajuste específico para o iframe */
-        #pdfPreview {
-            height: 400px; /* Reduzido de 600px */
+        /* ── Editor de carimbos: documento renderizado pelo pdf.js com uma
+              camada de marcas arrastaveis por cima ───────────────────── */
+        /* Altura pela janela, nao em pixel fixo: numa tela de notebook o
+           documento ocupava um terco do espaco disponivel e nao dava para ver
+           onde o carimbo estava caindo. O min-height segura o caso de janela
+           muito baixa. */
+        #marcasScroll {
+            height: calc(100vh - 300px);
+            min-height: 520px;
+            max-height: calc(100vh - 160px);
+            overflow: auto;
+            background: #e5e7eb;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            overscroll-behavior: contain;
+        }
+        .pdf-pagina {
+            position: relative;
+            background: #fff;
+            box-shadow: 0 1px 4px rgba(0,0,0,.18);
+            flex: 0 0 auto;
+        }
+        .pdf-pagina canvas { display: block; }
+        .pdf-camada {
+            position: absolute;
+            inset: 0;
+            touch-action: none;
+        }
+        .pdf-pagina-bloqueada .pdf-camada { cursor: not-allowed; }
+        .pdf-pagina-bloqueada::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(45deg, rgba(0,0,0,.035) 0 8px, transparent 8px 16px);
+            pointer-events: none;
+        }
+        .pdf-numero {
+            position: absolute;
+            left: 0; right: 0; bottom: -11px;
+            text-align: center;
+            font-size: 10px;
+            color: #6b7280;
+        }
+        .marca {
+            position: absolute;
+            border: 1.5px dashed #2563eb;
+            background: rgba(37,99,235,.06);
+            cursor: move;
+            touch-action: none;
+            box-sizing: border-box;
+        }
+        .marca-bloco { background: rgba(255,255,255,.92); border-style: solid; }
+        .marca-sel { border-color: #1d4ed8; box-shadow: 0 0 0 2px rgba(37,99,235,.25); }
+        .marca-corpo {
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: flex-start;
+            padding: 1px 3px;
+            font-size: 9px; line-height: 1.15;
+            color: #111827;
+            white-space: pre-line;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        .marca-aviso { color: #9ca3af; font-style: italic; }
+        .marca-alca {
+            position: absolute;
+            right: -7px; bottom: -7px;
+            width: 16px; height: 16px;
+            border-radius: 4px;
+            background: #2563eb; color: #fff;
+            font-size: 8px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: nwse-resize;
+            touch-action: none;
+        }
+        .marca-excluir {
+            position: absolute;
+            right: -8px; top: -8px;
+            width: 17px; height: 17px;
+            border-radius: 50%;
+            background: #dc2626; color: #fff;
+            font-size: 9px; line-height: 1;
+            border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .marca-etiqueta {
+            position: absolute;
+            left: 0; top: -15px;
+            font-size: 9px;
+            color: #1d4ed8;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+        .marca-obrigatoria {
+            position: absolute;
+            border: 2px solid #f59e0b;
+            background: rgba(245,158,11,.12);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 8px; font-weight: 600; color: #92400e;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        .marca-anterior {
+            position: absolute;
+            border: 1px solid #9ca3af;
+            background: rgba(156,163,175,.14);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 8px; color: #4b5563;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        /* ── Tela cheia ─────────────────────────────────────────────────
+           Para posicionar carimbo em contrato de muitas paginas, a coluna
+           dividida com o formulario nao basta. Em tela cheia a area do
+           documento ocupa a janela inteira; o formulario volta ao sair. */
+        #areaDocumento.tela-cheia {
+            position: fixed;
+            inset: 0;
+            z-index: 900;
+            margin: 0;
+            border-radius: 0;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+        }
+        #areaDocumento.tela-cheia #marcasScroll {
+            height: auto;
+            max-height: none;
+            flex: 1 1 auto;
+        }
+        body.documento-em-tela-cheia {
+            overflow: hidden;
+        }
+
+        .btn-marca {
+            font-size: 11px;
+            font-weight: 600;
+            color: #374151;
+            background: #fff;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            padding: 3px 7px;
+        }
+        .btn-marca:hover { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+        .btn-marca:disabled { opacity: .5; cursor: not-allowed; }
+        @media (max-width: 640px) {
+            /* 58vh deixa o documento grande e ainda mostra o começo da barra
+               de carimbos, para a pessoa perceber que há mais coisa abaixo. */
+            #marcasScroll {
+                height: 58vh;
+                min-height: 280px;
+                max-height: none;
+            }
+            /* Alvos maiores no toque, e a linha de botões rola na horizontal em
+               vez de quebrar em quatro fileiras. */
+            #barraCarimbos .flex-wrap:first-child {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                overscroll-behavior-x: contain;
+                padding-bottom: 4px;
+                -webkit-overflow-scrolling: touch;
+            }
+            #barraCarimbos .flex-wrap:first-child > * {
+                flex: 0 0 auto;
+            }
+            .btn-marca { font-size: 12px; padding: 5px 9px; }
+            .marca-alca { width: 22px; height: 22px; right: -10px; bottom: -10px; }
+            .marca-excluir { width: 22px; height: 22px; right: -11px; top: -11px; font-size: 11px; }
         }
         /* Scrollbar customizada para o termo */
         .scrollbar-thin::-webkit-scrollbar {
@@ -527,10 +749,14 @@ $cadastro_ok = $exigeCpfRg ? $cadastro_cpf_rg_ok : true;
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center py-6 px-4 font-sans">
+<body class="bg-gray-100 min-h-screen flex items-start justify-center py-4 px-3 sm:px-4 font-sans">
 
-<!-- Container Principal Reduzido e Centralizado -->
-<div id="main-container" class="max-w-3xl w-full bg-white shadow-2xl rounded-xl overflow-hidden">
+<!-- Antes era max-w-3xl (768px) e a pagina inteira ficava presa nessa largura:
+     a coluna do documento sobrava com uns 440px e a A4 aparecia do tamanho de
+     um selo. Agora a largura acompanha a tela, com um teto para nao esticar
+     demais em monitor ultralargo. Os paineis de mensagem continuam estreitos,
+     porque tem max-w-lg proprio. -->
+<div id="main-container" class="max-w-[1800px] w-full bg-white shadow-2xl rounded-xl overflow-hidden">
     
     <!-- Header Compacto -->
     <div class="bg-white px-6 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -660,24 +886,112 @@ $cadastro_ok = $exigeCpfRg ? $cadastro_cpf_rg_ok : true;
                 </span>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- 5 colunas em telas grandes: 3 para o documento e 2 para o
+                 formulario. Em telas muito largas o documento leva 4 de 6,
+                 porque e nele que se trabalha. -->
+            <div class="grid grid-cols-1 lg:grid-cols-5 xl:grid-cols-6 gap-6">
                 
-                <!-- Coluna 1: Visualização (Esquerda em Desktop) -->
-                <div class="space-y-2">
+                <!-- Coluna 1: Documento e posicionamento dos carimbos -->
+                <div id="areaDocumento" class="space-y-2 lg:col-span-3 xl:col-span-4">
                     <div class="flex items-center justify-between gap-2">
-                        <h3 class="text-sm font-semibold text-gray-600 uppercase tracking-wide">Documento</h3>
+                        <h3 class="text-sm font-semibold text-gray-600 uppercase tracking-wide flex items-center gap-2">
+                            <span class="lg:hidden inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold">1</span>
+                            Documento
+                        </h3>
                         <a id="openPdfInNewTab" href="#" target="_blank" rel="noopener" class="text-xs font-semibold text-blue-600 hover:text-blue-800">
                             Abrir Documento em nova aba
                         </a>
                     </div>
-                    <div class="border border-gray-300 rounded-lg overflow-hidden shadow-sm bg-gray-100 h-[400px]">
-                        <iframe id="pdfPreview" class="w-full h-full border-none" src="" allowfullscreen></iframe>
+                    <!-- No celular a ordem é documento, barra de carimbos e depois
+                         os dados; no desktop a barra volta para cima do documento.
+                         Daí o flex-col com order nos filhos. -->
+                    <div class="border border-gray-300 rounded-lg overflow-hidden shadow-sm bg-white flex flex-col">
+                        <!-- Barra de carimbos: cada botão solta uma marca na página
+                             que está à vista, e ela é arrastada dali para o lugar. -->
+                        <div id="barraCarimbos" class="order-2 lg:order-1 border-t lg:border-t-0 lg:border-b border-gray-200 bg-gray-50 p-2 space-y-2">
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mr-1">Adicionar</span>
+                                <?php if ($exigeRubrica): ?>
+                                <button type="button" data-marca="rubrica" class="btn-marca"><i class="fas fa-pen-nib mr-1"></i>Rubrica</button>
+                                <button type="button" data-marca="assinatura" class="btn-marca"><i class="fas fa-signature mr-1"></i>Assinatura</button>
+                                <?php endif; ?>
+                                <button type="button" data-marca="carimbo" class="btn-marca"><i class="fas fa-stamp mr-1"></i>Carimbo</button>
+                                <button type="button" data-marca="cpf" class="btn-marca"><i class="fas fa-id-card mr-1"></i>CPF</button>
+                                <button type="button" data-marca="rg" class="btn-marca"><i class="fas fa-address-card mr-1"></i>RG</button>
+                                <button type="button" data-marca="nome" class="btn-marca"><i class="fas fa-user mr-1"></i>Nome</button>
+                                <button type="button" data-marca="data" class="btn-marca"><i class="fas fa-clock mr-1"></i>Data</button>
+                                <button type="button" data-marca="texto" class="btn-marca"><i class="fas fa-font mr-1"></i>Texto</button>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button type="button" id="btnRubricarTodas" class="text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded px-2 py-1 hover:bg-blue-100">
+                                    <i class="fas fa-layer-group mr-1"></i>Rubricar todas as páginas
+                                </button>
+                                <button type="button" id="btnLimparMarcas" class="text-[11px] font-semibold text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1 hover:bg-red-100">
+                                    <i class="fas fa-eraser mr-1"></i>Limpar marcas
+                                </button>
+                                <label class="text-[11px] text-gray-600 flex items-center gap-1 ml-auto">
+                                    <span>Clicar na página insere:</span>
+                                    <select id="marcaTipoAtivo" class="text-[11px] border border-gray-300 rounded px-1 py-0.5 bg-white">
+                                        <option value="">nada</option>
+                                        <?php if ($exigeRubrica): ?>
+                                        <option value="rubrica">Rubrica</option>
+                                        <option value="assinatura">Assinatura</option>
+                                        <?php endif; ?>
+                                        <option value="carimbo">Carimbo</option>
+                                        <option value="cpf">CPF</option>
+                                        <option value="rg">RG</option>
+                                        <option value="nome">Nome</option>
+                                        <option value="data">Data</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[11px] text-gray-500">Zoom</span>
+                                <button type="button" id="btnZoomMenos" class="btn-marca" title="Diminuir">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                <span id="marcasZoomRotulo" class="text-[11px] font-semibold text-gray-700 w-10 text-center">100%</span>
+                                <button type="button" id="btnZoomMais" class="btn-marca" title="Aumentar">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                                <button type="button" id="btnZoomAjustar" class="btn-marca" title="Ajustar à largura">
+                                    <i class="fas fa-arrows-left-right-to-line"></i>
+                                </button>
+                                <button type="button" id="btnTelaCheia" class="btn-marca font-bold text-blue-700 border-blue-200 bg-blue-50" title="Abrir o documento em tela cheia (Esc para sair)">
+                                    <i class="fas fa-expand mr-1"></i><span id="btnTelaCheiaRotulo">Tela cheia</span>
+                                </button>
+                                <span class="text-[11px] text-gray-400 hidden sm:inline">
+                                    com a marca selecionada, as setas do teclado ajustam fino
+                                </span>
+                            </div>
+                            <p id="marcasResumo" class="text-[11px] text-gray-500">Nenhuma marca posicionada.</p>
+                        </div>
+                        <div id="marcasScroll" class="order-1 lg:order-2">
+                            <p id="marcasCarregando" class="text-xs text-gray-500 py-6">
+                                <i class="fas fa-circle-notch fa-spin mr-1"></i>Carregando o documento...
+                            </p>
+                        </div>
                     </div>
+                    <p class="text-[11px] text-gray-500 leading-relaxed">
+                        Arraste cada marca para o lugar, use o canto inferior direito para
+                        redimensionar e o X para remover. As marcas em cinza são de outros
+                        signatários. Posicionar carimbo é opcional: sem nenhum, a assinatura
+                        continua valendo pela página de comprovante.
+                    </p>
+                    <!-- No celular, aviso de que os campos estão logo abaixo: sem isso
+                         a pessoa não percebe que ainda falta preencher. -->
+                    <p class="lg:hidden text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded px-2 py-1.5">
+                        <i class="fas fa-arrow-down mr-1"></i>
+                        <?php echo $exigeRubrica ? "Abaixo: seus dados e o quadro da rubrica." : "Abaixo: seus dados para assinar."; ?>
+                    </p>
                 </div>
 
                 <!-- Coluna 2: Formulário (Direita em Desktop) -->
-                <div class="flex flex-col h-full">
-                    <h3 class="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2">Seus Dados</h3>
+                <div class="flex flex-col h-full lg:col-span-2 xl:col-span-2">
+                    <h3 class="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-2">
+                        <span class="lg:hidden inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold">2</span>
+                        Seus Dados
+                    </h3>
                     
                     <form id="formAssinatura" class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm flex-1 flex flex-col">
                         <input type="hidden" id="id_documento" name="id_documento" value="<?php echo htmlspecialchars($id_documento); ?>">
@@ -685,6 +999,9 @@ $cadastro_ok = $exigeCpfRg ? $cadastro_cpf_rg_ok : true;
                         <input type="hidden" id="papel_usuario" name="papel_usuario" value="<?php echo htmlspecialchars($papel_usuario); ?>">
                         
                         <input type="hidden" id="tipo_assinatura" name="tipo_assinatura" value="<?php echo htmlspecialchars($tipoAssinatura); ?>">
+                        <!-- Posições dos carimbos. Só coordenadas: o conteúdo de cada
+                             marca é montado no servidor, não aqui. -->
+                        <input type="hidden" id="marcas" name="marcas" value="[]">
                         <?php if ($exigeCpfRg && !$cadastro_cpf_rg_ok): ?>
                             <div class="mb-4 bg-yellow-50 border border-yellow-200 text-yellow-900 rounded-lg p-3 text-xs leading-relaxed">
                                 Não foi possível validar CPF e RG com o cadastro. Verifique se CPF e RG estão preenchidos no cadastro antes de assinar.
@@ -806,6 +1123,159 @@ $cadastro_ok = $exigeCpfRg ? $cadastro_cpf_rg_ok : true;
                 window.RUBRICA_CADASTRO_URL = <?php echo json_encode($rubricaCadastroUrl); ?>;
                 window.ASSINATURA_TOKEN = <?php echo json_encode($token); ?>;
                 window.ASSINATURA_AUTO = <?php echo (strval($_GET["auto"] ?? "") === "1") ? 'true' : 'false'; ?>;
+                window.ASSINATURA_NOME = <?php echo json_encode($nome_usuario); ?>;
+                window.MARCAS_URL = <?php echo json_encode("assinar_via_link.php?token=" . urlencode($token) . "&marcas=1"); ?>;
+            </script>
+
+            <?php $editorV = @filemtime(__DIR__ . "/editor_marcas.js"); ?>
+            <script src="editor_marcas.js?v=<?php echo $editorV ? $editorV : time(); ?>"></script>
+            <script>
+            /* ============================================================
+               Barra de carimbos: liga os botões da tela ao editor.
+               ============================================================ */
+            (function () {
+                var Ed = window.MarcasEditor;
+                if (!Ed) { return; }
+
+                function avisar(titulo, texto, icone) {
+                    if (window.Swal) {
+                        Swal.fire({ icon: icone || 'info', title: titulo, text: texto, confirmButtonColor: '#3b82f6' });
+                    }
+                }
+
+                /* O script.js baixa o documento e avisa; o editor aproveita o
+                   mesmo arquivo em vez de baixar outra vez. Se o aviso não
+                   vier (falha no download, por exemplo), começa pela URL da
+                   rede para não ficar uma tela vazia sem explicação. */
+                var jaIniciou = false;
+                function iniciarEditor(url) {
+                    if (jaIniciou) { return; }
+                    jaIniciou = true;
+                    Ed.iniciar(url).then(function (ok) {
+                        if (!ok) { return; }
+
+                        /* Marcas dos outros signatários, em cinza, para ninguém
+                           carimbar em cima do que já foi assinado. */
+                        fetch(window.MARCAS_URL, { credentials: 'same-origin' })
+                            .then(function (r) { return r.json(); })
+                            .then(function (d) {
+                                Ed.mostrarAnteriores((d && d.marcas) || []);
+                                /* Lugares que quem enviou reservou para este
+                                   signatário: travados, para ele ver onde já
+                                   está sendo esperado. */
+                                Ed.mostrarObrigatorias((d && d.obrigatorias) || []);
+                            })
+                            .catch(function () { /* sem marcas anteriores: segue */ });
+
+                        /* A rubrica já desenhada aparece dentro das marcas. */
+                        var campoRub = document.getElementById('rubrica');
+                        if (campoRub && campoRub.value) { Ed.atualizarRubrica(campoRub.value); }
+                    });
+                }
+
+                document.addEventListener('assinatura:documento-pronto', function (ev) {
+                    iniciarEditor((ev.detail && ev.detail.url) || window.PDF_URL_TO_LOAD);
+                });
+
+                document.addEventListener('DOMContentLoaded', function () {
+                    setTimeout(function () { iniciarEditor(window.PDF_URL_TO_LOAD); }, 12000);
+
+                    document.querySelectorAll('[data-marca]').forEach(function (btn) {
+                        btn.addEventListener('click', function () {
+                            var tipo = btn.getAttribute('data-marca');
+                            if (!Ed.pronto()) {
+                                return avisar('Documento ainda carregando', 'Aguarde o documento aparecer para posicionar os carimbos.', 'info');
+                            }
+                            if ((tipo === 'rubrica' || tipo === 'assinatura')) {
+                                var r = document.getElementById('rubrica');
+                                if (!r || !r.value) {
+                                    avisar('Desenhe a rubrica primeiro', 'A marca será posicionada agora e a imagem aparece assim que você desenhar a rubrica no quadro ao lado.', 'info');
+                                }
+                            }
+                            Ed.adicionar(tipo);
+                        });
+                    });
+
+                    <?php if (!$exigeRubrica): ?>
+                    /* Sem rubrica no tipo de assinatura desta empresa, o botão
+                       de rubricar todas as páginas não tem o que estampar. */
+                    var todasOculto = document.getElementById('btnRubricarTodas');
+                    if (todasOculto) { todasOculto.style.display = 'none'; }
+                    <?php endif; ?>
+
+                    var btnTodas = document.getElementById('btnRubricarTodas');
+                    if (btnTodas) {
+                        btnTodas.addEventListener('click', function () {
+                            if (!Ed.pronto()) {
+                                return avisar('Documento ainda carregando', 'Aguarde o documento aparecer.', 'info');
+                            }
+                            var n = Ed.rubricarTodas();
+                            if (n === 0) {
+                                avisar('Nada a acrescentar', 'Todas as páginas já têm rubrica posicionada.', 'info');
+                            }
+                        });
+                    }
+
+                    var btnLimpar = document.getElementById('btnLimparMarcas');
+                    if (btnLimpar) {
+                        btnLimpar.addEventListener('click', function () { Ed.limpar(); });
+                    }
+
+                    /* Tela cheia: a area do documento passa a ocupar a janela
+                       inteira e o pdf.js redesenha as paginas na largura nova —
+                       sem o ajustarLargura() o canvas continuaria no tamanho da
+                       coluna antiga e o documento ficaria pequeno no espaço
+                       grande. */
+                    var areaDoc = document.getElementById('areaDocumento');
+                    var btnCheia = document.getElementById('btnTelaCheia');
+                    var rotuloCheia = document.getElementById('btnTelaCheiaRotulo');
+
+                    function alternarTelaCheia(ligar) {
+                        if (!areaDoc) { return; }
+                        var ativo = (ligar === undefined)
+                            ? !areaDoc.classList.contains('tela-cheia')
+                            : !!ligar;
+                        areaDoc.classList.toggle('tela-cheia', ativo);
+                        document.body.classList.toggle('documento-em-tela-cheia', ativo);
+                        if (btnCheia) {
+                            btnCheia.innerHTML = ativo
+                                ? "<i class='fas fa-compress mr-1'></i><span id='btnTelaCheiaRotulo'>Sair da tela cheia</span>"
+                                : "<i class='fas fa-expand mr-1'></i><span id='btnTelaCheiaRotulo'>Tela cheia</span>";
+                        }
+                        /* Espera o navegador aplicar o novo tamanho antes de
+                           medir a área. */
+                        requestAnimationFrame(function () { Ed.ajustarLargura(); });
+                    }
+
+                    if (btnCheia) {
+                        btnCheia.addEventListener('click', function () { alternarTelaCheia(); });
+                    }
+                    document.addEventListener('keydown', function (e) {
+                        if (e.key === 'Escape' && areaDoc && areaDoc.classList.contains('tela-cheia')) {
+                            alternarTelaCheia(false);
+                        }
+                    });
+
+                    var zMenos = document.getElementById('btnZoomMenos');
+                    var zMais = document.getElementById('btnZoomMais');
+                    var zAjustar = document.getElementById('btnZoomAjustar');
+                    if (zMenos) { zMenos.addEventListener('click', function () { Ed.zoom(Ed.zoomAtual() - 0.25); }); }
+                    if (zMais) { zMais.addEventListener('click', function () { Ed.zoom(Ed.zoomAtual() + 0.25); }); }
+                    if (zAjustar) { zAjustar.addEventListener('click', function () { Ed.zoom(1); }); }
+
+                    /* CPF, RG e nome aparecem dentro das marcas: refaz o texto
+                       quando o signatário digita. */
+                    ['cpf', 'rg', 'nome'].forEach(function (id) {
+                        var campo = document.getElementById(id);
+                        if (campo) { campo.addEventListener('input', function () { Ed.atualizarTextos(); }); }
+                    });
+                });
+
+                /* Chamado pelo quadro de rubrica a cada traço e a cada limpeza. */
+                window.notificarRubricaParaMarcas = function (dataUrl) {
+                    Ed.atualizarRubrica(dataUrl || '');
+                };
+            })();
             </script>
 
             <script>
@@ -1028,7 +1498,7 @@ $cadastro_ok = $exigeCpfRg ? $cadastro_cpf_rg_ok : true;
                 }
                 function end(e){ if (!drawing) return; drawing = false; exportPng(); }
                 function exportPng(){
-                    if (!hasInk) { out.value = ''; return; }
+                    if (!hasInk) { out.value = ''; if (window.notificarRubricaParaMarcas) window.notificarRubricaParaMarcas(''); return; }
                     // Recorta a área desenhada e reduz para no máximo 480x160 px (mantém o PDF leve)
                     const w = canvas.width, h = canvas.height;
                     const data = ctx.getImageData(0, 0, w, h).data;
@@ -1036,7 +1506,7 @@ $cadastro_ok = $exigeCpfRg ? $cadastro_cpf_rg_ok : true;
                     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
                         if (data[(y * w + x) * 4 + 3] > 10) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
                     }
-                    if (maxX < 0) { out.value = ''; return; }
+                    if (maxX < 0) { out.value = ''; if (window.notificarRubricaParaMarcas) window.notificarRubricaParaMarcas(''); return; }
                     const pad = 6 * dpr;
                     minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
                     maxX = Math.min(w - 1, maxX + pad); maxY = Math.min(h - 1, maxY + pad);
@@ -1046,10 +1516,12 @@ $cadastro_ok = $exigeCpfRg ? $cadastro_cpf_rg_ok : true;
                     oc.width = Math.max(1, Math.round(cw * scale)); oc.height = Math.max(1, Math.round(ch * scale));
                     oc.getContext('2d').drawImage(canvas, minX, minY, cw, ch, 0, 0, oc.width, oc.height);
                     out.value = oc.toDataURL('image/png');
+                    if (window.notificarRubricaParaMarcas) { window.notificarRubricaParaMarcas(out.value); }
                 }
                 function clear(){
                     ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.restore();
                     hasInk = false; out.value = ''; if (hint) hint.style.display = '';
+                    if (window.notificarRubricaParaMarcas) { window.notificarRubricaParaMarcas(''); }
                 }
                 canvas.addEventListener('pointerdown', start);
                 canvas.addEventListener('pointermove', move);

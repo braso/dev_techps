@@ -444,7 +444,9 @@ if (($_SERVER["REQUEST_METHOD"] ?? "") !== "POST") {
 
 ensureAssinaturaTables($conn);
 require_once __DIR__ . "/tipo_assinatura_helper.php";
+require_once __DIR__ . "/marcas_helper.php";
 assinatura_garantirColunasRubrica($conn);
+assinaturaMarcas_garantirEstrutura($conn);
 
 $token = trim(strval($_POST["token_solicitacao"] ?? ""));
 if ($token === "") {
@@ -460,6 +462,7 @@ $deviceInfo = trim(strval($_POST["device_info"] ?? ""));
 $hash = trim(strval($_POST["hash_assinatura"] ?? ""));
 $dataHora = parseDataHora(strval($_POST["data_hora"] ?? ""));
 $rubricaDataUrl = strval($_POST["rubrica"] ?? "");
+$marcasBrutas = strval($_POST["marcas"] ?? "");
 
 $arquivo = $_FILES["arquivo_assinado"] ?? null;
 
@@ -678,6 +681,48 @@ if (!$jaAssinado) {
         mysqli_stmt_close($stmtUpd);
     }
 
+    /* ── Carimbos e rubricas posicionados pelo signatário ──────────────
+       A tela manda apenas tipo, página e coordenadas; o conteúdo de cada
+       marca é montado aqui, com o que o signatário declarou, e o desenho no
+       PDF acontece na finalização (carimbo aplicado depois da assinatura
+       ICP invalidaria a assinatura).
+
+       O total de páginas vai como 0 porque o servidor não abre o PDF neste
+       ponto: página inexistente simplesmente não encontra onde ser
+       desenhada na finalização. */
+    $marcas = assinaturaMarcas_normalizarLista($marcasBrutas, 0);
+    $idAssinanteAtual = intval($row["id"] ?? 0);
+    $conteudosMarcas = assinaturaMarcas_montarConteudos(
+        $nome,
+        $cpf,
+        $rg,
+        $dataHora !== "" ? date("d/m/Y H:i", strtotime($dataHora)) : date("d/m/Y H:i"),
+        $protocolo
+    );
+
+    if (!empty($marcas)) {
+        assinaturaMarcas_salvar(
+            $conn,
+            $idSolicitacao,
+            $idAssinanteAtual,
+            $marcas,
+            $conteudosMarcas,
+            $rubricaPath,
+            $ip
+        );
+    }
+
+    /* Lugares que o remetente reservou para este signatário: a posição é dele,
+       o conteúdo entra agora — nome, CPF, RG, data, protocolo e a rubrica só
+       existem neste momento. */
+    assinaturaMarcas_preencherDoRemetente(
+        $conn,
+        $idSolicitacao,
+        $idAssinanteAtual,
+        $conteudosMarcas,
+        $rubricaPath
+    );
+
     // Se o assinante que acabou de assinar tem funcao 'Responsável', vamos marcar todos os outros assinantes com funcao 'Responsável' desta mesma solicitação como 'dispensado'.
     // Isso garante que apenas um responsável precise assinar.
     $funcaoAssinante = strtolower(trim(strval($row["funcao"] ?? "")));
@@ -789,6 +834,28 @@ if (!$ultimo) {
     }
 
     $caminhoFinal = $caminhoRel;
+
+    /* ── Desenho dos carimbos, no servidor ─────────────────────────────
+       Tem de vir ANTES do ICP: o setSignature() assina uma faixa de bytes
+       do arquivo, então carimbo aplicado depois invalidaria a assinatura.
+       Roda também quando o ICP está desligado — senão metade dos clientes
+       não veria carimbo nenhum. */
+    $resMarcas = assinaturaMarcas_aplicarNoPdf($conn, $idSolicitacao, $caminhoRel);
+    if (!empty($resMarcas["ok"]) && $resMarcas["caminho"] !== "") {
+        $caminhoFinal = strval($resMarcas["caminho"]);
+        $caminhoRel = $caminhoFinal;
+        $stmtMar = mysqli_prepare($conn, "UPDATE solicitacoes_assinatura SET caminho_arquivo = ? WHERE id = ? LIMIT 1");
+        if ($stmtMar) {
+            mysqli_stmt_bind_param($stmtMar, "si", $caminhoFinal, $idSolicitacao);
+            @mysqli_stmt_execute($stmtMar);
+            mysqli_stmt_close($stmtMar);
+        }
+    } elseif (!empty($resMarcas["error"]) && $warning === "") {
+        /* Assinatura não é descartada por causa de carimbo: o documento
+           continua assinado e a falha aparece como aviso. */
+        $warning = strval($resMarcas["error"]);
+    }
+
     // O ICP só é aplicado quando a solicitação foi criada com validar_icp = sim.
     // O auto_sign do config_pfx.php serve apenas para usar o certificado configurado
     // automaticamente nesse momento; não deve forçar ICP em assinaturas eletrônicas.

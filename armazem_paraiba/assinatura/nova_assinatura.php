@@ -1195,6 +1195,13 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                                 </p>
                             </div>
 
+                            <input type="hidden" name="marcas_remetente" id="marcas_remetente_ind" value="[]">
+                            <button type="button" onclick="abrirPosicionador('ind')"
+                                class="w-full mt-4 mb-3 flex justify-center items-center py-2.5 px-4 border border-blue-200 rounded-lg text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">
+                                <i class="fas fa-stamp mr-2"></i>
+                                <span id="ind_resumo_marcas">Posicionar carimbos no documento (opcional)</span>
+                            </button>
+
                             <button type="submit" id="btnEnviar" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all transform hover:-translate-y-0.5">
                                 <i class="fas fa-paper-plane mr-2 text-lg"></i> <span id="btnEnviarLabel">Enviar para Assinatura</span>
                             </button>
@@ -1512,6 +1519,16 @@ if($resEmpresas){
                                 </select>
                                 <p class="text-xs text-gray-400 mt-1">O link de assinatura expirará após este prazo.</p>
                             </div>
+
+                            <!-- Carimbos que o remetente reserva para cada signatário.
+                                 O campo leva só posição e a ordem do signatário; o
+                                 conteúdo é montado no servidor na hora da assinatura. -->
+                            <input type="hidden" name="marcas_remetente" id="marcas_remetente_ext" value="[]">
+                            <button type="button" onclick="abrirPosicionador('ext')"
+                                class="w-full mb-3 flex justify-center items-center py-2.5 px-4 border border-blue-200 rounded-lg text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">
+                                <i class="fas fa-stamp mr-2"></i>
+                                <span id="ext_resumo_marcas">Posicionar carimbos no documento (opcional)</span>
+                            </button>
 
                             <button type="submit" id="btnEnviarExterno"
                                 class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all transform hover:-translate-y-0.5">
@@ -2308,5 +2325,310 @@ include_once "componentes/layout_footer.php";
             }
         }, 20000);
     }, true);
+})();
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     Posicionador de carimbos do remetente.
+
+     Mesmo editor da tela de assinatura (editor_marcas.js), em modo
+     "remetente": aqui o PDF ainda não foi enviado, então o pdf.js lê os
+     bytes do arquivo escolhido. Cada marca guarda a ORDEM do signatário no
+     formulário, porque os assinantes só existem no banco depois do envio.
+     ══════════════════════════════════════════════════════════════════════ -->
+<div id="posicionadorModal" class="hidden fixed inset-0 z-[1000] bg-black/60 p-1 sm:p-3">
+  <!-- Largura quase total: posicionar carimbo exige ver a pagina grande. -->
+  <div class="bg-white rounded-xl shadow-2xl w-full h-full mx-auto flex flex-col overflow-hidden">
+    <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-200 bg-gray-50">
+      <div>
+        <h3 class="font-bold text-gray-800 text-sm sm:text-base">
+          <i class="fas fa-stamp text-blue-600 mr-1"></i> Posicionar carimbos
+        </h3>
+        <p class="text-[11px] text-gray-500">
+          Escolha o signatário, clique no botão do carimbo e arraste para o lugar.
+          O que você reservar aqui aparece travado para quem assina.
+        </p>
+      </div>
+      <button type="button" id="posFechar" class="text-gray-400 hover:text-gray-700 text-xl px-2">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="px-4 py-2 border-b border-gray-200 bg-white space-y-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <label class="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Signatário</label>
+        <select id="posDono" class="text-xs border border-gray-300 rounded px-2 py-1 bg-white font-semibold"></select>
+        <span id="posDonoCor" class="inline-block w-3 h-3 rounded-full"></span>
+      </div>
+      <div class="flex flex-wrap items-center gap-1.5">
+        <span class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mr-1">Adicionar</span>
+        <button type="button" data-posmarca="rubrica" class="btn-pos"><i class="fas fa-pen-nib mr-1"></i>Rubrica</button>
+        <button type="button" data-posmarca="assinatura" class="btn-pos"><i class="fas fa-signature mr-1"></i>Assinatura</button>
+        <button type="button" data-posmarca="carimbo" class="btn-pos"><i class="fas fa-stamp mr-1"></i>Carimbo</button>
+        <button type="button" data-posmarca="cpf" class="btn-pos"><i class="fas fa-id-card mr-1"></i>CPF</button>
+        <button type="button" data-posmarca="rg" class="btn-pos"><i class="fas fa-address-card mr-1"></i>RG</button>
+        <button type="button" data-posmarca="nome" class="btn-pos"><i class="fas fa-user mr-1"></i>Nome</button>
+        <button type="button" data-posmarca="data" class="btn-pos"><i class="fas fa-clock mr-1"></i>Data</button>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <button type="button" id="posRubricarTodas" class="btn-pos text-blue-700 bg-blue-50 border-blue-200">
+          <i class="fas fa-layer-group mr-1"></i>Rubricar todas as páginas
+        </button>
+        <button type="button" id="posLimpar" class="btn-pos text-red-600 bg-red-50 border-red-200">
+          <i class="fas fa-eraser mr-1"></i>Limpar
+        </button>
+        <label class="text-[11px] text-gray-600 flex items-center gap-1">
+          <span>clicar na página insere:</span>
+          <select id="marcaTipoAtivo" class="text-[11px] border border-gray-300 rounded px-1 py-0.5 bg-white">
+            <option value="">nada</option>
+            <option value="rubrica">Rubrica</option>
+            <option value="assinatura">Assinatura</option>
+            <option value="carimbo">Carimbo</option>
+            <option value="cpf">CPF</option>
+            <option value="rg">RG</option>
+            <option value="nome">Nome</option>
+            <option value="data">Data</option>
+          </select>
+        </label>
+        <div class="flex items-center gap-1.5 ml-auto">
+          <span class="text-[11px] text-gray-500">Zoom</span>
+          <button type="button" id="posZoomMenos" class="btn-pos"><i class="fas fa-minus"></i></button>
+          <span id="marcasZoomRotulo" class="text-[11px] font-semibold text-gray-700 w-10 text-center">100%</span>
+          <button type="button" id="posZoomMais" class="btn-pos"><i class="fas fa-plus"></i></button>
+          <button type="button" id="posZoomAjustar" class="btn-pos" title="Ajustar à largura"><i class="fas fa-arrows-left-right-to-line"></i></button>
+        </div>
+      </div>
+      <p id="marcasResumo" class="text-[11px] text-gray-500">Nenhuma marca posicionada.</p>
+    </div>
+
+    <div id="marcasScroll" class="flex-1"></div>
+
+    <div class="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-2">
+      <button type="button" id="posCancelar" class="px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-800">
+        Cancelar
+      </button>
+      <button type="button" id="posConfirmar" class="px-5 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm">
+        <i class="fas fa-check mr-1"></i> Usar estas posições
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+#marcasScroll { overflow: auto; background: #e5e7eb; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 14px; overscroll-behavior: contain; }
+.pdf-pagina { position: relative; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.18); flex: 0 0 auto; }
+.pdf-pagina canvas { display: block; }
+.pdf-camada { position: absolute; inset: 0; touch-action: none; }
+.pdf-pagina-bloqueada .pdf-camada { cursor: not-allowed; }
+.pdf-pagina-bloqueada::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(45deg, rgba(0,0,0,.035) 0 8px, transparent 8px 16px); pointer-events: none; }
+.pdf-numero { position: absolute; left: 0; right: 0; bottom: -11px; text-align: center; font-size: 10px; color: #6b7280; }
+.marca { position: absolute; border: 1.5px dashed #2563eb; background: rgba(37,99,235,.06); cursor: move; touch-action: none; box-sizing: border-box; }
+.marca-bloco { background: rgba(255,255,255,.92); border-style: solid; }
+.marca-sel { box-shadow: 0 0 0 2px rgba(37,99,235,.25); }
+.marca-corpo { width: 100%; height: 100%; display: flex; align-items: center; justify-content: flex-start; padding: 1px 3px; font-size: 9px; line-height: 1.15; color: #111827; white-space: pre-line; overflow: hidden; pointer-events: none; }
+.marca-aviso { color: #9ca3af; font-style: italic; }
+.marca-alca { position: absolute; right: -7px; bottom: -7px; width: 16px; height: 16px; border-radius: 4px; background: #2563eb; color: #fff; font-size: 8px; display: flex; align-items: center; justify-content: center; cursor: nwse-resize; touch-action: none; }
+.marca-excluir { position: absolute; right: -8px; top: -8px; width: 17px; height: 17px; border-radius: 50%; background: #dc2626; color: #fff; font-size: 9px; line-height: 1; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.marca-etiqueta { position: absolute; left: 0; top: -15px; font-size: 9px; color: #1d4ed8; white-space: nowrap; pointer-events: none; }
+.marca-anterior, .marca-obrigatoria { position: absolute; pointer-events: none; }
+.btn-pos { font-size: 11px; font-weight: 600; color: #374151; background: #fff; border: 1px solid #d1d5db; border-radius: 4px; padding: 3px 7px; }
+.btn-pos:hover { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+@media (max-width: 640px) {
+  .btn-pos { font-size: 12px; padding: 5px 9px; }
+  .marca-alca { width: 22px; height: 22px; right: -10px; bottom: -10px; }
+  .marca-excluir { width: 22px; height: 22px; right: -11px; top: -11px; font-size: 11px; }
+}
+</style>
+
+<script src="vendor_js/pdf.min.js"></script>
+<?php $edV = @filemtime(__DIR__ . "/editor_marcas.js"); ?>
+<script src="editor_marcas.js?v=<?php echo $edV ? $edV : time(); ?>"></script>
+<script>
+/* ──────────────────────────────────────────────────────────────────────────
+   Posicionador: abre o modal com o PDF que o remetente escolheu e devolve as
+   posições para o campo oculto do formulário.
+   ────────────────────────────────────────────────────────────────────────── */
+(function () {
+    var modal = document.getElementById('posicionadorModal');
+    if (!modal || !window.MarcasEditor) { return; }
+
+    var Ed = window.MarcasEditor;
+    var fluxoAtual = 'ext';
+    var iniciado = false;
+
+    /* De onde vem o arquivo e para onde vai o resultado, por fluxo. */
+    var FLUXOS = {
+        ext: { input: 'pdfInputExterno', campo: 'marcas_remetente_ext', resumo: 'ext_resumo_marcas' },
+        ind: { input: 'fileInput',       campo: 'marcas_remetente_ind', resumo: 'ind_resumo_marcas' }
+    };
+
+    function avisar(titulo, texto, icone) {
+        if (window.Swal) {
+            Swal.fire({ icon: icone || 'info', title: titulo, text: texto, confirmButtonColor: '#3b82f6' });
+        } else {
+            console.warn(titulo + ': ' + texto);
+        }
+    }
+
+    /* Nome dos signatários do formulário, na ordem - é o que amarra a marca. */
+    function signatariosDoFormulario() {
+        var lista = [];
+        document.querySelectorAll('input[name^="signatarios"][name$="[nome]"]').forEach(function (campo) {
+            var bloco = campo.closest('div');
+            var ordemInput = null;
+            while (bloco && !ordemInput) {
+                ordemInput = bloco.querySelector('input[name$="[ordem]"]');
+                bloco = bloco.parentElement;
+            }
+            var ordem = ordemInput ? (parseInt(ordemInput.value, 10) || 0) : 0;
+            var nome = String(campo.value || '').trim();
+            if (ordem > 0) { lista.push({ ordem: ordem, nome: nome }); }
+        });
+
+        /* Fluxo individual: há um único signatário, de ordem 1. */
+        if (lista.length === 0) {
+            var nomeSimples = document.getElementById('nome');
+            lista.push({ ordem: 1, nome: nomeSimples ? String(nomeSimples.value || '').trim() : '' });
+        }
+
+        lista.sort(function (a, b) { return a.ordem - b.ordem; });
+        var vistos = {};
+        return lista.filter(function (s) {
+            if (vistos[s.ordem]) { return false; }
+            vistos[s.ordem] = true;
+            return true;
+        });
+    }
+
+    function montarSeletorDonos() {
+        var sel = document.getElementById('posDono');
+        var anterior = sel.value;
+        sel.innerHTML = '';
+        signatariosDoFormulario().forEach(function (s) {
+            var o = document.createElement('option');
+            o.value = s.ordem;
+            o.textContent = s.ordem + '. ' + (s.nome || '(sem nome ainda)');
+            sel.appendChild(o);
+        });
+        if (sel.options.length === 0) {
+            var u = document.createElement('option');
+            u.value = '1';
+            u.textContent = '1. Signatário';
+            sel.appendChild(u);
+        }
+        if (anterior) { sel.value = anterior; }
+        if (!sel.value) { sel.selectedIndex = 0; }
+        aplicarDono();
+    }
+
+    function aplicarDono() {
+        var sel = document.getElementById('posDono');
+        var ordem = Ed.definirDono(sel.value || 1);
+        var bolinha = document.getElementById('posDonoCor');
+        if (bolinha) { bolinha.style.background = Ed.corDoDono(ordem); }
+    }
+
+    window.abrirPosicionador = function (fluxo) {
+        fluxoAtual = FLUXOS[fluxo] ? fluxo : 'ext';
+        var cfg = FLUXOS[fluxoAtual];
+        var input = document.getElementById(cfg.input);
+        var arquivo = input && input.files && input.files[0] ? input.files[0] : null;
+
+        if (!arquivo) {
+            return avisar('Escolha o PDF primeiro',
+                'Anexe o documento para poder marcar onde cada assinatura vai ficar.', 'info');
+        }
+
+        modal.classList.remove('hidden');
+        montarSeletorDonos();
+
+        if (iniciado) {
+            /* Reabrir depois de a janela ter mudado de tamanho: redesenha as
+               paginas na largura atual. */
+            requestAnimationFrame(function () { Ed.ajustarLargura(); });
+            return;
+        }
+
+        /* pdf.js recebe os bytes do arquivo local: o PDF ainda não foi
+           enviado, então não há URL no servidor para ler. */
+        var leitor = new FileReader();
+        leitor.onload = function () {
+            Ed.iniciar(leitor.result, { modo: 'remetente', workerSrc: 'vendor_js/pdf.worker.min.js' })
+                .then(function (ok) {
+                    iniciado = !!ok;
+                    if (!ok) {
+                        avisar('Não foi possível abrir o PDF',
+                            'O arquivo pode estar protegido por senha ou corrompido.', 'warning');
+                    }
+                });
+        };
+        leitor.onerror = function () {
+            avisar('Não foi possível ler o arquivo', 'Tente anexar o PDF novamente.', 'error');
+        };
+        leitor.readAsArrayBuffer(arquivo);
+    };
+
+    function fechar() { modal.classList.add('hidden'); }
+
+    document.getElementById('posFechar').addEventListener('click', fechar);
+    document.getElementById('posCancelar').addEventListener('click', fechar);
+    document.getElementById('posDono').addEventListener('change', aplicarDono);
+
+    document.getElementById('posConfirmar').addEventListener('click', function () {
+        var cfg = FLUXOS[fluxoAtual];
+        var campo = document.getElementById(cfg.campo);
+        var marcas = Ed.coletar();
+        if (campo) { campo.value = JSON.stringify(marcas); }
+
+        var resumo = document.getElementById(cfg.resumo);
+        if (resumo) {
+            resumo.textContent = marcas.length === 0
+                ? 'Posicionar carimbos no documento (opcional)'
+                : (marcas.length === 1 ? '1 carimbo posicionado - alterar'
+                                       : marcas.length + ' carimbos posicionados - alterar');
+        }
+        fechar();
+    });
+
+    modal.querySelectorAll('[data-posmarca]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            if (!Ed.pronto()) {
+                return avisar('Documento ainda carregando', 'Aguarde o documento aparecer.', 'info');
+            }
+            Ed.adicionar(btn.getAttribute('data-posmarca'));
+        });
+    });
+
+    document.getElementById('posRubricarTodas').addEventListener('click', function () {
+        if (!Ed.pronto()) {
+            return avisar('Documento ainda carregando', 'Aguarde o documento aparecer.', 'info');
+        }
+        if (Ed.rubricarTodas() === 0) {
+            avisar('Nada a acrescentar',
+                'Este signatário já tem rubrica reservada em todas as páginas.', 'info');
+        }
+    });
+
+    document.getElementById('posLimpar').addEventListener('click', function () { Ed.limpar(); });
+
+    /* Trocar o PDF depois de posicionar zera o editor e o campo oculto: as
+       marcas do documento antigo não podem seguir com o documento novo. */
+    Object.keys(FLUXOS).forEach(function (fluxo) {
+        var cfg = FLUXOS[fluxo];
+        var input = document.getElementById(cfg.input);
+        if (!input) { return; }
+        input.addEventListener('change', function () {
+            if (!iniciado) { return; }
+            Ed.reiniciar();
+            iniciado = false;
+            var campo = document.getElementById(cfg.campo);
+            if (campo) { campo.value = '[]'; }
+            var resumo = document.getElementById(cfg.resumo);
+            if (resumo) { resumo.textContent = 'Posicionar carimbos no documento (opcional)'; }
+        });
+    });
+    document.getElementById('posZoomMenos').addEventListener('click', function () { Ed.zoom(Ed.zoomAtual() - 0.25); });
+    document.getElementById('posZoomMais').addEventListener('click', function () { Ed.zoom(Ed.zoomAtual() + 0.25); });
+    document.getElementById('posZoomAjustar').addEventListener('click', function () { Ed.zoom(1); });
 })();
 </script>
