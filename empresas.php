@@ -43,6 +43,8 @@
         "TRANS ROCHA"           => "transrocha",
         "TRANSP RAISSA"         => "trans_raissa",
         "SAMBAIBA"              => "sambaiba",
+        "TRANS_ROCHA"            => "trans_rocha",
+
 
     ];
 
@@ -83,6 +85,7 @@
         "transrocha"        => "TRANS ROCHA",
         "trans_raissa"      => "TRANSP RAISSA",
         "sambaiba"          => "SAMBAIBA",
+        "trans_rocha"       => "TRANS_ROCHA",      
     ];
 
     // Empresas criadas pelo provisionador (empresas.json). Sem o arquivo, vale só a lista acima.
