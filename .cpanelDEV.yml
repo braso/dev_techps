@@ -20,6 +20,10 @@ deployment:
     - export QUALY=/home/devtechpsgj/public_html/dev/qualy_transportes
     - export GST=/home/devtechpsgj/public_html/dev/gst
     - export DEMO=/home/devtechpsgj/public_html/dev/demo
+    - export TRANS_ROCHA=/home/devtechpsgj/public_html/dev/trans_rocha
+    - export TECHPS=/home/devtechpsgj/public_html/dev/techps
+
+
 
 
     # Copiando diretórios
@@ -36,5 +40,8 @@ deployment:
     - /bin/cp -R $DOMAIN $LEMON
     - /bin/cp -R $DOMAIN $QUALY
     - /bin/cp -R $DOMAIN $GST   
-    - /bin/cp -R $DOMAIN $DEMO          
+    - /bin/cp -R $DOMAIN $DEMO   
+    - /bin/cp -R $DOMAIN $TRANS_ROCHA 
+    - /bin/cp -R $DOMAIN $TECHPS 
+
     
