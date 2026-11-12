@@ -40,7 +40,7 @@
         "GST"                   => "gst",
         "ARMAPLAST"             => "armaplast",
         "HARMONY VET"           => "harmonyvet",
-        "TRANS_ROCHA"           => "trans_rocha",
+        "TRANS ROCHA"           => "transrocha",
         "TRANSP RAISSA"         => "trans_raissa",
         "SAMBAIBA"              => "sambaiba",
        
