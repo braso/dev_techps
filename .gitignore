@@ -39,6 +39,12 @@ package.json
 HISTORICO_ALTERACOES.md
 HISTORICO_ALTERACOES.txt
 
+# Planos locais de desenvolvimento (nao versionar)
+PLANOS_DE_DESENVOLVIMENTO.md
+
+# Apresentacoes HTML locais (nao versionar)
+/html/
+
 # POPs locais do time de desenvolvimento (nao versionar)
 docs/pop/
 

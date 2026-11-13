@@ -138,6 +138,12 @@
 					"/treinamento/treinamento_assistir.php" => "Meus Treinamentos",
 					"/treinamento/treinamento_chat_gestao.php" => "Conversas de Treinamentos",
 				],
+				"whatsapp" => [
+					"/whatsapp/index.php"         => "Chat",
+					"/whatsapp/contatos.php"      => "Contatos",
+					"/whatsapp/lote.php"          => "Envio em Lote",
+					"/whatsapp/configuracoes.php" => "Configurações",
+				],
 				"roleta" => [
 					"/roleta/index.php" => "Roleta",
 					"/roleta/admin.php" => "Administrar Roleta",
@@ -159,6 +165,11 @@
 
 			if ($showComunicado) {
 				$paginas["cadastros"]["/cadastro_comunicado.php"] = "Comunicado";
+			}
+
+			// Módulo CRM - TECHPS (WhatsApp): só aparece quando habilitado no .env do tenant.
+			if (trim(strval($_ENV["WHATSAPP_ENABLED"] ?? "")) !== "1") {
+				unset($paginas["whatsapp"]);
 			}
 
 			// Criação automática de empresas: só no domínio mestre (PROVISIONAMENTO_HABILITADO=1 no .env)
@@ -275,8 +286,8 @@
 					$secoes[$title] = [
 						"tipo"         => "secao",
 						"chave"        => $title,
-						// Mantém o título original das demais seções e personaliza apenas a de ponto.
-						"titulo"       => ($secKey === "ponto") ? $rotuloSecaoPonto : ucfirst($title),
+						// Mantém o título original das demais seções e personaliza apenas Ponto e CRM - TECHPS.
+						"titulo"       => ($secKey === "ponto") ? $rotuloSecaoPonto : (($secKey === "whatsapp") ? "CRM - TECHPS" : ucfirst($title)),
 						"paths"        => array_keys($secao),
 						"itens"        => $itens,
 						"duas_colunas" => count($itens) > 10,
@@ -285,7 +296,7 @@
 			}
 
 			// Ordem de exibição das seções (diferente da ordem de definição acima).
-			$ordem = ["cadastros", "ponto", "painel", "logística", "epi", "assinatura", "diárias", "suporte", "relatórios", "treinamento", "roleta"];
+			$ordem = ["cadastros", "ponto", "painel", "logística", "epi", "assinatura", "diárias", "suporte", "relatórios", "treinamento", "whatsapp", "roleta"];
 			$todas = [];
 			foreach($ordem as $chave){
 				if(isset($secoes[$chave])){

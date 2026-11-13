@@ -136,7 +136,7 @@ function formPerfil(){
     $menuPath = __DIR__."/menu_estrutura.php";
     if(file_exists($menuPath)){
         $txt = file_get_contents($menuPath);
-        $secs = ["cadastros","ponto","diárias","painel","logística","epi","relatórios","assinatura","suporte","treinamento","roleta"];
+        $secs = ["cadastros","ponto","diárias","painel","logística","epi","relatórios","assinatura","suporte","treinamento","whatsapp","roleta"];
         foreach($secs as $sec){
             if(preg_match('/"'.preg_quote($sec,'/').'"\s*=>\s*\[(.*?)\]/s', $txt, $m)){
                 if(preg_match_all('/"([^"]+)"\s*=>\s*"([^"]+)"/', $m[1], $mm, PREG_SET_ORDER)){
@@ -226,8 +226,9 @@ function formPerfil(){
         ."</div>";
     foreach($grupo as $secao => $lista){
         $secSlug = strtolower(preg_replace('/[^a-z0-9_]+/i','_', $secao));
+        $rotuloSecao = ($secao === 'whatsapp') ? 'CRM - TECHPS' : ucfirst($secao);
         $checksSection .= "<div class='row' style='margin-bottom:10px' data-sec='".$secSlug."'>"
-            ."<div class='col-sm-12' style='display:flex; align-items:center; margin-bottom:6px; border-left:4px solid #4c6ef5; padding-left:8px'>".ucfirst($secao)
+            ."<div class='col-sm-12' style='display:flex; align-items:center; margin-bottom:6px; border-left:4px solid #4c6ef5; padding-left:8px'>".$rotuloSecao
             ."<button type='button' style='margin-left:10px; display:inline-flex; align-items:center; gap:8px; font-size:12px; padding:4px 8px; border:1px solid #e5e7eb; border-radius:6px; background:#eaffea; cursor:pointer'>Marcar todos</button>"
             ."<button type='button' style='margin-left:6px; display:inline-flex; align-items:center; gap:8px; font-size:12px; padding:4px 8px; border:1px solid #e5e7eb; border-radius:6px; background:#ffeaeb; cursor:pointer'>Desmarcar todos</button>"
             ."</div>"

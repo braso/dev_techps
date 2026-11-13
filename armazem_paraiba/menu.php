@@ -188,4 +188,13 @@
         }
     }
     */
+
+    // Widget flutuante do WhatsApp (somente com a flag ligada e permissão de chat).
+    if (trim(strval($_ENV["WHATSAPP_ENABLED"] ?? "")) === "1"
+        && strpos(strval($_SERVER["REQUEST_URI"] ?? ""), "/whatsapp/") === false
+        && function_exists("usuarioPodeAcessar")
+        && usuarioPodeAcessar("/whatsapp/index.php")
+    ) {
+        include_once __DIR__ . "/whatsapp/widget.php";
+    }
 	
