@@ -133,6 +133,10 @@
 				"suporte" => [
 					"/suporte/index.php" => "Chamados de Suporte",
 				],
+				"assistente" => [
+					"/assistente_virtual/index.php" => "Assistente Virtual",
+					"/assistente_virtual/admin.php" => "Base de Conhecimento (IA)",
+				],
 				"treinamento" => [
 					"/treinamento/cadastro_treinamento.php" => "Gerenciar Treinamentos",
 					"/treinamento/treinamento_assistir.php" => "Meus Treinamentos",
@@ -297,7 +301,7 @@
 			}
 
 			// Ordem de exibição das seções (diferente da ordem de definição acima).
-			$ordem = ["cadastros", "ponto", "painel", "logística", "epi", "assinatura", "diárias", "suporte", "relatórios", "treinamento", "whatsapp", "roleta"];
+			$ordem = ["cadastros", "ponto", "painel", "logística", "epi", "assinatura", "diárias", "suporte", "assistente", "relatórios", "treinamento", "whatsapp", "roleta"];
 			$todas = [];
 			foreach($ordem as $chave){
 				if(isset($secoes[$chave])){

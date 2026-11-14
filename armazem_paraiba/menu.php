@@ -197,4 +197,7 @@
     ) {
         include_once __DIR__ . "/whatsapp/widget.php";
     }
+
+    // Widget flutuante do Assistente Virtual (100% local).
+    include_once __DIR__ . "/assistente_virtual/widget.php";
 	
