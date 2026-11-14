@@ -1,4 +1,9 @@
 <?php
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    echo 'Forbidden';
+    exit;
+}
 
 /**
  * Testes básicos de validação e armazenamento de mídia.

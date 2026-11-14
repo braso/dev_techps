@@ -122,8 +122,9 @@ class CloudApiProvider implements ProviderInterface {
         if ($url === '') {
             return ['success' => false, 'error' => 'A Meta não retornou a URL da mídia.'];
         }
-        // 2) Baixa o binário autenticado.
-        $res = WaHttpClient::raw($url, $this->headers());
+        // 2) Baixa o binário autenticado, com limite de tamanho.
+        $limite = function_exists('wa_midia_limite_bytes') ? wa_midia_limite_bytes() : (25 * 1024 * 1024);
+        $res = WaHttpClient::raw($url, $this->headers(), 45, $limite);
         if (empty($res['ok']) || $res['body'] === '') {
             return ['success' => false, 'error' => strval($res['error'] ?? 'Falha ao baixar a mídia.')];
         }
@@ -164,6 +165,114 @@ class CloudApiProvider implements ProviderInterface {
         return ['success' => true, 'provider_id' => strval($res['data']['messages'][0]['id'] ?? ''), 'data' => $res['data']];
     }
 
+    public function getCallPermission(string $to): array {
+        $numero = preg_replace('/\D+/', '', $to);
+        if ($numero === '') {
+            return ['success' => false, 'error' => 'Número inválido para consultar permissão.'];
+        }
+        $res = $this->request('GET', $this->phoneNumberId . '/call_permissions?user_wa_id=' . rawurlencode($numero));
+        if (empty($res['success'])) {
+            return $res;
+        }
+        return ['success' => true, 'data' => $res['data']];
+    }
+
+    public function sendCallPermissionRequest(string $to, string $text = ''): array {
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'recipient_type' => 'individual',
+            'to' => preg_replace('/\D+/', '', $to),
+            'type' => 'interactive',
+            'interactive' => [
+                'type' => 'call_permission_request',
+                'action' => ['name' => 'call_permission_request'],
+            ],
+        ];
+        if (trim($text) !== '') {
+            $payload['interactive']['body'] = ['text' => $text];
+        }
+        $res = $this->request('POST', $this->phoneNumberId . '/messages', $payload);
+        if (empty($res['success'])) {
+            return $res;
+        }
+        return [
+            'success' => true,
+            'provider_id' => strval($res['data']['messages'][0]['id'] ?? ''),
+            'data' => $res['data'],
+        ];
+    }
+
+    public function initiateCall(string $to, string $sdpOffer, string $opaque = ''): array {
+        $numero = preg_replace('/\D+/', '', $to);
+        if ($numero === '' || trim($sdpOffer) === '') {
+            return ['success' => false, 'error' => 'Número ou SDP da chamada inválido.'];
+        }
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'to' => $numero,
+            'action' => 'connect',
+            'session' => ['sdp_type' => 'offer', 'sdp' => $sdpOffer],
+        ];
+        if ($opaque !== '') {
+            $payload['biz_opaque_callback_data'] = substr($opaque, 0, 512);
+        }
+        $res = $this->request('POST', $this->phoneNumberId . '/calls', $payload);
+        if (empty($res['success'])) {
+            return $res;
+        }
+        $callId = strval($res['data']['calls'][0]['id'] ?? '');
+        if ($callId === '') {
+            return ['success' => false, 'error' => 'A Meta não retornou o id da chamada.'];
+        }
+        return ['success' => true, 'call_id' => $callId, 'data' => $res['data']];
+    }
+
+    public function preAcceptCall(string $callId, string $sdpAnswer): array {
+        return $this->callAction($callId, 'pre_accept', $sdpAnswer);
+    }
+
+    public function acceptCall(string $callId, string $sdpAnswer): array {
+        return $this->callAction($callId, 'accept', $sdpAnswer);
+    }
+
+    public function rejectCall(string $callId): array {
+        return $this->callAction($callId, 'reject');
+    }
+
+    public function terminateCall(string $callId): array {
+        return $this->callAction($callId, 'terminate');
+    }
+
+    private function callAction(string $callId, string $action, string $sdpAnswer = ''): array {
+        $callId = trim($callId);
+        if ($callId === '') {
+            return ['success' => false, 'error' => 'Call ID inválido.'];
+        }
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'call_id' => $callId,
+            'action' => $action,
+        ];
+        if ($sdpAnswer !== '') {
+            $payload['session'] = ['sdp_type' => 'answer', 'sdp' => $sdpAnswer];
+        }
+        $res = $this->request('POST', $this->phoneNumberId . '/calls', $payload);
+        if (empty($res['success'])) {
+            return $res;
+        }
+        return ['success' => true, 'data' => $res['data']];
+    }
+
+    public function setCallingStatus(bool $enabled): array {
+        $res = $this->request('POST', $this->phoneNumberId . '/settings', [
+            'calling' => ['status' => $enabled ? 'ENABLED' : 'DISABLED'],
+        ]);
+        if (empty($res['success'])) {
+            return $res;
+        }
+        return ['success' => true, 'data' => $res['data']];
+    }
+
     public function markRead(string $providerMessageId): void {
         if ($providerMessageId === '') {
             return;
@@ -200,6 +309,46 @@ class CloudApiProvider implements ProviderInterface {
                 $value = $change['value'] ?? [];
                 $contatos = $value['contacts'] ?? [];
                 $nomeContato = strval($contatos[0]['profile']['name'] ?? '');
+                $numeroNegocio = preg_replace('/\D+/', '', strval($value['metadata']['display_phone_number'] ?? ''));
+
+                foreach (($value['calls'] ?? []) as $call) {
+                    if (!is_array($call)) {
+                        continue;
+                    }
+                    $session = is_array($call['session'] ?? null) ? $call['session'] : [];
+                    $erros = $call['errors'] ?? [];
+                    $erro = is_array($erros) && !empty($erros[0]['message']) ? strval($erros[0]['message']) : '';
+                    $evento = strtolower(strval($call['event'] ?? ''));
+                    $direcaoDeclarada = strtoupper(strval($call['direction'] ?? ''));
+                    $fromDigitos = preg_replace('/\D+/', '', strval($call['from'] ?? ''));
+                    $toDigitos = preg_replace('/\D+/', '', strval($call['to'] ?? ''));
+                    if ($direcaoDeclarada === 'USER_INITIATED') {
+                        $direcao = 'in';
+                    } elseif ($direcaoDeclarada === 'BUSINESS_INITIATED') {
+                        $direcao = 'out';
+                    } elseif ($numeroNegocio !== '' && $fromDigitos === $numeroNegocio && $toDigitos !== $numeroNegocio) {
+                        $direcao = 'out';
+                    } else {
+                        $direcao = 'in';
+                    }
+                    $eventos[] = [
+                        'tipo' => 'chamada_evento',
+                        'call_id' => strval($call['id'] ?? ''),
+                        'direcao' => $direcao,
+                        'from' => strval($call['from'] ?? ''),
+                        'to' => strval($call['to'] ?? ''),
+                        'nome' => $nomeContato,
+                        'evento' => $evento,
+                        'status' => $evento === 'terminate' ? strtolower(strval(is_array($call['status'] ?? null) ? ($call['status'][0] ?? '') : ($call['status'] ?? ''))) : '',
+                        'sdp' => strval($session['sdp'] ?? ''),
+                        'sdp_tipo' => strval($session['sdp_type'] ?? ''),
+                        'duracao' => (int)($call['duration'] ?? 0),
+                        'inicio' => intval($call['start_time'] ?? 0),
+                        'fim' => intval($call['end_time'] ?? 0),
+                        'erro' => $erro,
+                        'timestamp' => intval($call['timestamp'] ?? time()),
+                    ];
+                }
 
                 foreach (($value['messages'] ?? []) as $msg) {
                     $tipo = strval($msg['type'] ?? 'texto');
@@ -242,6 +391,15 @@ class CloudApiProvider implements ProviderInterface {
                 }
 
                 foreach (($value['statuses'] ?? []) as $status) {
+                    if (strtolower(strval($status['type'] ?? '')) === 'call') {
+                        $eventos[] = [
+                            'tipo' => 'chamada_status',
+                            'call_id' => strval($status['id'] ?? ''),
+                            'status' => strtolower(strval($status['status'] ?? '')),
+                            'timestamp' => intval($status['timestamp'] ?? time()),
+                        ];
+                        continue;
+                    }
                     $eventos[] = [
                         'tipo' => 'status',
                         'provider_id' => strval($status['id'] ?? ''),

@@ -37,7 +37,7 @@ if ($anexoId > 0) {
 }
 
 $arquivo = basename($arquivo);
-$caminho = $arquivo !== '' ? __DIR__ . '/arquivos/' . $arquivo : '';
+$caminho = $arquivo !== '' ? wa_midia_pasta() . '/' . $arquivo : '';
 if ($arquivo === '' || !is_file($caminho)) {
     http_response_code(404);
     echo 'Arquivo não encontrado.';
@@ -46,16 +46,20 @@ if ($arquivo === '' || !is_file($caminho)) {
 
 if (!headers_sent()) {
     $nomeFinal = $nome !== '' ? $nome : $arquivo;
-    $inline = !$download && (
-        str_starts_with($mime, 'image/') ||
-        str_starts_with($mime, 'audio/') ||
-        str_starts_with($mime, 'video/')
-    );
-    header('Content-Type: ' . ($mime !== '' ? $mime : 'application/octet-stream'));
+    $mimeBase = strtolower(trim(explode(';', $mime)[0]));
+    $tipoPermitido = function_exists('wa_midia_tipo_por_mime')
+        ? wa_midia_tipo_por_mime($mimeBase)
+        : null;
+    if ($tipoPermitido === null) {
+        $mimeBase = 'application/octet-stream';
+    }
+    $inline = !$download && $tipoPermitido !== null && in_array($tipoPermitido, ['imagem', 'audio', 'video'], true);
+    header('Content-Type: ' . $mimeBase);
     header('Content-Length: ' . filesize($caminho));
     header('Content-Disposition: ' . ($inline ? 'inline' : 'attachment') . '; filename="' . rawurlencode($nomeFinal) . '"');
     header('Cache-Control: private, max-age=0, no-store');
     header('X-Content-Type-Options: nosniff');
+    header("Content-Security-Policy: default-src 'none'");
 }
 readfile($caminho);
 exit;

@@ -139,10 +139,11 @@
 					"/treinamento/treinamento_chat_gestao.php" => "Conversas de Treinamentos",
 				],
 				"whatsapp" => [
-					"/whatsapp/index.php"         => "Chat",
-					"/whatsapp/contatos.php"      => "Contatos",
-					"/whatsapp/lote.php"          => "Envio em Lote",
-					"/whatsapp/configuracoes.php" => "Configurações",
+					"/whatsapp/index.php"              => "Chat",
+					"/whatsapp/contatos.php"           => "Contatos",
+					"/whatsapp/lote.php"               => "Envio em Lote",
+					"/whatsapp/mensagens_prontas.php"  => "Mensagens Prontas",
+					"/whatsapp/configuracoes.php"      => "Configurações",
 				],
 				"roleta" => [
 					"/roleta/index.php" => "Roleta",

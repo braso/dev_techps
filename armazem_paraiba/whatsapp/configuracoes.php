@@ -17,6 +17,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['wa_fo
                 'status' => $_POST['status'] ?? 'inativo',
                 'test_number' => $_POST['test_number'] ?? '',
                 'retencao_dias' => $_POST['retencao_dias'] ?? 0,
+                'call_status' => $_POST['call_status'] ?? 'inativo',
             ];
             if ($providerPost === 'cloud') {
                 $dadosConfig['base_url'] = $_POST['base_url_cloud'] ?? '';
@@ -39,7 +40,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['wa_fo
             }
         } catch (Throwable $e) {
             wa_log('config_erro', $e->getMessage(), [], 'error');
-            $erro = 'Não foi possível salvar a configuração: ' . $e->getMessage();
+            $erro = 'Não foi possível salvar a configuração.';
         }
     }
 }
@@ -108,6 +109,7 @@ cabecalho('Configurações - CRM - TECHPS');
         <li><a href="#tabTemplates" data-toggle="tab">Templates</a></li>
         <li><a href="#tabLogs" data-toggle="tab">Logs</a></li>
         <li><a href="#tabRetencao" data-toggle="tab">Retenção</a></li>
+        <li><a href="#tabChamadas" data-toggle="tab">Chamadas</a></li>
     </ul>
 
     <form method="post" action="configuracoes.php" class="tab-content" autocomplete="off">
@@ -244,7 +246,7 @@ cabecalho('Configurações - CRM - TECHPS');
                         <tbody>
                         <?php foreach ($logs as $log): ?>
                             <tr>
-                                <td><?= wa_e(date('d/m/Y H:i', strtotime($log['evt_dt_criacao']))) ?></td>
+                                <td><?= wa_e(wa_data_utc_para_local($log['evt_dt_criacao'] ?? '')) ?></td>
                                 <td><?= wa_e($log['evt_tx_provider']) ?></td>
                                 <td><?= wa_e($log['evt_tx_tipo']) ?></td>
                                 <td><span class="wa-chip <?= $log['evt_tx_status'] === 'erro' ? 'wa-chip-nao' : 'wa-chip-sim' ?>"><?= wa_e($log['evt_tx_status']) ?></span></td>
@@ -269,13 +271,36 @@ cabecalho('Configurações - CRM - TECHPS');
             <p class="text-muted" style="font-size:10.5px;">A limpeza é executada pelo cron do módulo. Com 0, o cron não remove mensagens nem anexos. Com valor maior que 0, mensagens e anexos mais antigos que o prazo são removidos.</p>
             <button type="submit" class="btn btn-success btn-sm"><i class="fa fa-save"></i> Salvar retenção</button>
         </div>
+
+        <div class="tab-pane" id="tabChamadas">
+            <p class="wa-secao-titulo">Chamadas de voz (Cloud API)</p>
+            <div class="row">
+                <div class="col-sm-3">
+                    <label>Status das chamadas</label>
+                    <select name="call_status" class="form-control input-sm">
+                        <option value="inativo" <?= strval($cfg['cfg_tx_call_status'] ?? 'inativo') !== 'ativo' ? 'selected' : '' ?>>Inativo</option>
+                        <option value="ativo" <?= strval($cfg['cfg_tx_call_status'] ?? 'inativo') === 'ativo' ? 'selected' : '' ?>>Ativo</option>
+                    </select>
+                </div>
+            </div>
+            <p class="text-muted" style="font-size:10.5px;margin-top:8px;">
+                Exclusivo do provedor <strong>Cloud API</strong>. O número precisa estar na Cloud API, com Calling habilitado na Meta,
+                limite de mensagens de pelo menos 2.000 destinatários, linha de crédito e webhook <strong>calls</strong>.
+                A chamada do gestor para o contato exige permissão do usuário no WhatsApp.
+            </p>
+            <div class="wa-config-acoes">
+                <button type="submit" class="btn btn-success btn-sm"><i class="fa fa-save"></i> Salvar chamadas</button>
+                <button type="button" class="btn btn-default btn-sm" id="waHabilitarCalling"><i class="fa fa-phone"></i> Habilitar calling no número</button>
+            </div>
+            <div id="waResultadoCalling" style="font-size:11px;margin-top:8px;"></div>
+        </div>
     </form>
 </div>
 
 <script>
 window.WA_CONFIG_PAGE = {
-    api: <?= json_encode(wa_e($CONTEX['path']) . '/whatsapp/api.php') ?>,
-    csrf: <?= json_encode(wa_csrf_token()) ?>
+    api: <?= wa_json_script(wa_e($CONTEX['path']) . '/whatsapp/api.php') ?>,
+    csrf: <?= wa_json_script(wa_csrf_token()) ?>
 };
 </script>
 <script>
@@ -323,14 +348,16 @@ window.WA_CONFIG_PAGE = {
     function mostrarResultado(id, texto, sucesso) {
         var el = document.getElementById(id);
         if (!el) return;
-        el.innerHTML = '<span style="color:' + (sucesso ? '#15803d' : '#b91c1c') + ';font-weight:700;">' + texto + '</span>';
+        el.textContent = String(texto == null ? '' : texto);
+        el.style.color = sucesso ? '#15803d' : '#b91c1c';
+        el.style.fontWeight = '700';
     }
 
     var testar = document.getElementById('waTestar');
     if (testar) testar.addEventListener('click', function () {
         testar.disabled = true;
         mostrarResultado('waResultadoConexao', 'Testando...', true);
-        apiGet({ acao: 'testar_provider' }).then(function (data) {
+        apiPost({ acao: 'testar_provider' }, {}).then(function (data) {
             mostrarResultado('waResultadoConexao', data.message || (data.success ? 'Conectado.' : 'Falha na conexão.'), !!data.success);
         }).catch(function () { mostrarResultado('waResultadoConexao', 'Falha de comunicação.', false); })
           .finally(function () { testar.disabled = false; });
@@ -350,7 +377,7 @@ window.WA_CONFIG_PAGE = {
     if (conectar) conectar.addEventListener('click', function () {
         conectar.disabled = true;
         mostrarResultado('waResultadoConexao', 'Gerando QR Code...', true);
-        apiGet({ acao: 'qrcode' }).then(function (data) {
+        apiPost({ acao: 'qrcode' }, {}).then(function (data) {
             var alvo = document.getElementById('waQrContainer');
             if (!data.success) {
                 mostrarResultado('waResultadoConexao', data.message || 'Não foi possível gerar o QR Code.', false);
@@ -358,9 +385,26 @@ window.WA_CONFIG_PAGE = {
             }
             mostrarResultado('waResultadoConexao', data.message || 'QR Code gerado.', true);
             if (alvo) {
-                var src = data.base64 || '';
-                if (src && src.indexOf('data:image') !== 0) src = 'data:image/png;base64,' + src;
-                alvo.innerHTML = src ? '<div class="wa-qr"><img src="' + src + '" alt="QR Code"></div>' : '<p style="font-size:11px;color:#64748b;">Código: ' + (data.code || '') + '</p>';
+                alvo.innerHTML = '';
+                var src = String(data.base64 || '');
+                if (src && !/^data:image\/(png|jpe?g|webp);base64,/i.test(src)) {
+                    src = 'data:image/png;base64,' + src.replace(/^data:[^,]*,/, '');
+                }
+                if (src) {
+                    var caixa = document.createElement('div');
+                    caixa.className = 'wa-qr';
+                    var img = document.createElement('img');
+                    img.src = src;
+                    img.alt = 'QR Code';
+                    caixa.appendChild(img);
+                    alvo.appendChild(caixa);
+                } else {
+                    var p = document.createElement('p');
+                    p.style.fontSize = '11px';
+                    p.style.color = '#64748b';
+                    p.textContent = 'Código: ' + String(data.code || '');
+                    alvo.appendChild(p);
+                }
             }
         }).catch(function () { mostrarResultado('waResultadoConexao', 'Falha de comunicação.', false); })
           .finally(function () { conectar.disabled = false; });
@@ -379,7 +423,7 @@ window.WA_CONFIG_PAGE = {
     if (tpl) tpl.addEventListener('click', function () {
         tpl.disabled = true;
         mostrarResultado('waResultadoTemplates', 'Sincronizando...', true);
-        apiGet({ acao: 'sincronizar_templates' }).then(function (data) {
+        apiPost({ acao: 'sincronizar_templates' }, {}).then(function (data) {
             mostrarResultado('waResultadoTemplates', data.message || (data.success ? 'Templates sincronizados.' : 'Falha ao sincronizar.'), !!data.success);
         }).catch(function () { mostrarResultado('waResultadoTemplates', 'Falha de comunicação.', false); })
           .finally(function () { tpl.disabled = false; });
@@ -395,6 +439,37 @@ window.WA_CONFIG_PAGE = {
                 setTimeout(function () { copiar.innerHTML = '<i class="fa fa-copy"></i>'; }, 1200);
             });
         }
+    });
+
+    var habilitarCalling = document.getElementById('waHabilitarCalling');
+    if (habilitarCalling) habilitarCalling.addEventListener('click', function () {
+        var alvo = document.getElementById('waResultadoCalling');
+        habilitarCalling.disabled = true;
+        if (alvo) alvo.textContent = 'Configurando Calling na Meta...';
+        var body = new URLSearchParams();
+        body.append('csrf', WA_CONFIG_PAGE.csrf);
+        body.append('enabled', '1');
+        fetch(WA_CONFIG_PAGE.api + '?wa_acao=habilitar_calling', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-Token': WA_CONFIG_PAGE.csrf,
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+            },
+            body: body.toString()
+        }).then(function (r) { return r.json(); }).then(function (data) {
+            if (alvo) {
+                alvo.textContent = data.message || (data.success ? 'Calling habilitado.' : 'Falha ao habilitar.');
+                alvo.style.color = data.success ? '#15803d' : '#b91c1c';
+            }
+            if (data.success) {
+                var status = document.querySelector('select[name="call_status"]');
+                if (status) status.value = 'ativo';
+            }
+        }).catch(function () {
+            if (alvo) { alvo.textContent = 'Falha de comunicação.'; alvo.style.color = '#b91c1c'; }
+        }).finally(function () {
+            habilitarCalling.disabled = false;
+        });
     });
 })();
 </script>

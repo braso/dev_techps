@@ -17,17 +17,26 @@ if ($exportar > 0) {
     );
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="whatsapp-lote-' . $exportar . '.csv"');
+    header('Cache-Control: private, no-store');
+    header('X-Content-Type-Options: nosniff');
     echo "\xEF\xBB\xBF";
+    $csvSeguro = static function ($valor): string {
+        $texto = strval($valor ?? '');
+        if ($texto !== '' && preg_match('/^[=+\-@]/', $texto)) {
+            return "'" . $texto;
+        }
+        return $texto;
+    };
     $saida = fopen('php://output', 'w');
     fputcsv($saida, ['Nome', 'Telefone', 'Status', 'Erro', 'ID do provedor', 'Atualizado em'], ';');
     while ($rs && ($row = mysqli_fetch_assoc($rs))) {
         fputcsv($saida, [
-            $row['cont_tx_nome'] ?? '',
-            $row['ld_tx_telefone'] ?? '',
-            $row['ld_tx_status'] ?? '',
-            $row['ld_tx_erro'] ?? '',
-            $row['ld_tx_provider_id'] ?? '',
-            $row['ld_dt_atualizacao'] ?? '',
+            $csvSeguro($row['cont_tx_nome'] ?? ''),
+            $csvSeguro($row['ld_tx_telefone'] ?? ''),
+            $csvSeguro($row['ld_tx_status'] ?? ''),
+            $csvSeguro($row['ld_tx_erro'] ?? ''),
+            $csvSeguro($row['ld_tx_provider_id'] ?? ''),
+            wa_data_utc_para_local($row['ld_dt_atualizacao'] ?? ''),
         ], ';');
     }
     fclose($saida);
@@ -75,6 +84,11 @@ cabecalho('Envio em Lote - CRM - TECHPS');
 .wa-lote-resumo strong { display:block; font-size:20px; color:#0f172a; }
 .wa-preview-msg { background:#eef6f1; border:1px solid #d8ece2; border-radius:12px; padding:14px 16px; font-size:12.5px; color:#1e293b; white-space:pre-wrap; }
 .wa-preview-msg small { display:block; color:#64748b; font-size:10px; margin-bottom:6px; text-transform:uppercase; letter-spacing:.7px; font-weight:800; }
+.wa-variaveis { display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:6px; padding:8px; border:1px dashed #bbf7d0; border-radius:9px; background:#f0fdf4; }
+.wa-variaveis > span { width:100%; font-size:9px; font-weight:800; letter-spacing:.7px; text-transform:uppercase; color:#15803d; }
+.wa-variavel { border:1px solid #86efac; background:#fff; color:#15803d; border-radius:999px; padding:4px 8px; font-family:Consolas, monospace; font-size:10px; font-weight:700; cursor:pointer; }
+.wa-variavel:hover { background:#dcfce7; }
+.wa-variavel:active { transform:translateY(1px); }
 .wa-wizard-actions { display:flex; justify-content:space-between; gap:10px; padding:14px 22px; border-top:1px solid #eef2f6; background:#fbfcfe; }
 .wa-progress { height:10px; border-radius:999px; background:#eef1f6; overflow:hidden; margin:8px 0 14px; }
 .wa-progress span { display:block; height:100%; width:0; background:linear-gradient(90deg,#16a34a,#25d366); transition:width .4s; }
@@ -162,9 +176,33 @@ cabecalho('Envio em Lote - CRM - TECHPS');
                 </div>
             </div>
             <div class="row">
+                <div class="col-sm-6">
+                    <label>Mensagem pré-pronta (opcional)</label>
+                    <select class="form-control input-sm" id="loteProntaTitulo">
+                        <option value="">Selecione o título...</option>
+                    </select>
+                </div>
+                <div class="col-sm-6">
+                    <label>Subtítulo</label>
+                    <select class="form-control input-sm" id="loteProntaSubtitulo" disabled>
+                        <option value="">Selecione o título primeiro</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row">
                 <div class="col-sm-12">
                     <label>Mensagem</label>
                     <textarea class="form-control" id="loteMensagem" rows="7" maxlength="4096" placeholder="Olá {primeiro_nome}, ..."></textarea>
+                    <div class="wa-variaveis" id="loteVariaveisMensagem">
+                        <span>Variáveis disponíveis — clique para inserir na posição do cursor</span>
+                        <button type="button" class="wa-variavel" data-variavel="{nome}">{nome}</button>
+                        <button type="button" class="wa-variavel" data-variavel="{primeiro_nome}">{primeiro_nome}</button>
+                        <button type="button" class="wa-variavel" data-variavel="{setor}">{setor}</button>
+                        <button type="button" class="wa-variavel" data-variavel="{cargo}">{cargo}</button>
+                        <button type="button" class="wa-variavel" data-variavel="{empresa}">{empresa}</button>
+                        <button type="button" class="wa-variavel" data-variavel="{telefone}">{telefone}</button>
+                    </div>
+                    <small class="text-muted" id="loteProntaAjuda" style="font-size:10.5px;">Selecione uma mensagem pronta ou escreva livremente. As variáveis continuam disponíveis.</small>
                 </div>
             </div>
             <div class="wa-preview-msg" id="lotePreviewMensagem"><small>Prévia</small>A prévia aparece aqui conforme você digita.</div>
@@ -219,12 +257,12 @@ cabecalho('Envio em Lote - CRM - TECHPS');
 
 <script>
 window.WA_LOTE = {
-    api: <?= json_encode(wa_e($CONTEX['path']) . '/whatsapp/api.php') ?>,
-    csrf: <?= json_encode(wa_csrf_token()) ?>,
-    idsIniciais: <?= json_encode($idsIniciais) ?>,
+    api: <?= wa_json_script(wa_e($CONTEX['path']) . '/whatsapp/api.php') ?>,
+    csrf: <?= wa_json_script(wa_csrf_token()) ?>,
+    idsIniciais: <?= wa_json_script($idsIniciais) ?>,
     isAdmin: <?= $isAdmin ? 'true' : 'false' ?>,
-    urlContatos: <?= json_encode(wa_e($CONTEX['path']) . '/whatsapp/contatos.php') ?>
+    urlContatos: <?= wa_json_script(wa_e($CONTEX['path']) . '/whatsapp/contatos.php') ?>
 };
 </script>
-<script src="<?= wa_e($CONTEX['path']) ?>/whatsapp/assets/lote.js?v=2"></script>
+<script src="<?= wa_e($CONTEX['path']) ?>/whatsapp/assets/lote.js?v=6"></script>
 <?php rodape(); ?>

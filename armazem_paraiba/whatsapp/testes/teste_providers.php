@@ -1,4 +1,9 @@
 <?php
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    echo 'Forbidden';
+    exit;
+}
 require_once __DIR__ . '/../lib/provider/ProviderFactory.php';
 
 $falhas = 0;
@@ -72,6 +77,59 @@ verificar(($eventosImg[0]['tipo_msg'] ?? '') === 'imagem', 'Cloud identifica ima
 verificar(($eventosImg[0]['media_id'] ?? '') === 'media-123', 'Cloud extrai media_id da imagem');
 verificar(($eventosImg[0]['mime'] ?? '') === 'image/jpeg', 'Cloud extrai MIME da imagem');
 verificar(($eventosImg[0]['texto'] ?? '') === 'Foto', 'Cloud extrai legenda da imagem');
+
+$payloadCloudCall = [
+    'entry' => [[
+        'changes' => [[
+            'value' => [
+                'contacts' => [['profile' => ['name' => 'Maria Teste']]],
+                'calls' => [[
+                    'id' => 'wacid.TESTE',
+                    'from' => '5511999999999',
+                    'to' => '5511888888888',
+                    'event' => 'connect',
+                    'direction' => 'BUSINESS_INITIATED',
+                    'session' => ['sdp_type' => 'answer', 'sdp' => 'v=0 teste'],
+                    'timestamp' => '1700000003',
+                ]],
+                'statuses' => [[
+                    'id' => 'wacid.TESTE',
+                    'type' => 'call',
+                    'status' => 'ACCEPTED',
+                    'timestamp' => '1700000004',
+                ]],
+            ],
+        ]],
+    ]],
+];
+$eventosCall = $cloud->parseWebhook($payloadCloudCall);
+verificar(count($eventosCall) === 2, 'Cloud parseWebhook retorna evento de chamada e status');
+verificar(($eventosCall[0]['tipo'] ?? '') === 'chamada_evento', 'Cloud identifica evento de chamada');
+verificar(($eventosCall[0]['call_id'] ?? '') === 'wacid.TESTE', 'Cloud extrai call_id');
+verificar(($eventosCall[0]['sdp'] ?? '') === 'v=0 teste', 'Cloud extrai SDP da chamada');
+verificar(($eventosCall[1]['tipo'] ?? '') === 'chamada_status' && ($eventosCall[1]['status'] ?? '') === 'accepted', 'Cloud identifica status de chamada aceita');
+
+$payloadCloudCallIn = [
+    'entry' => [[
+        'changes' => [[
+            'value' => [
+                'metadata' => ['display_phone_number' => '5511888888888'],
+                'contacts' => [['profile' => ['name' => 'João']]],
+                'calls' => [[
+                    'id' => 'wacid.IN',
+                    'from' => '5511999999999',
+                    'to' => '5511888888888',
+                    'event' => 'connect',
+                    'session' => ['sdp_type' => 'offer', 'sdp' => 'v=0 offer'],
+                    'timestamp' => '1700000005',
+                ]],
+            ],
+        ]],
+    ]],
+];
+$eventosCallIn = $cloud->parseWebhook($payloadCloudCallIn);
+verificar(($eventosCallIn[0]['direcao'] ?? '') === 'in', 'Cloud infere chamada recebida sem direction');
+verificar(($eventosCallIn[0]['sdp_tipo'] ?? '') === 'offer', 'Cloud preserva SDP offer da chamada recebida');
 
 $raw = json_encode($payloadCloud);
 $assinatura = 'sha256=' . hash_hmac('sha256', $raw, 'segredo');

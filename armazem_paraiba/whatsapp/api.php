@@ -3,6 +3,7 @@
  * API AJAX autenticada do módulo WhatsApp.
  */
 
+define('WA_API_REQUEST', true);
 require_once __DIR__ . '/bootstrap.php';
 
 if (!function_exists('wa_api_permissao')) {
@@ -32,6 +33,23 @@ if (!function_exists('wa_api_usuario')) {
     }
 }
 
+if (!function_exists('wa_api_exigir_post')) {
+    function wa_api_exigir_post(string $acao): void {
+        $metodo = strtoupper(strval($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+        $acoesPost = [
+            'enviar', 'enviar_midia', 'marcar_lida', 'novo_contato',
+            'criar_lote', 'sincronizar_contatos', 'processar_fila',
+            'enviar_teste', 'testar_provider', 'solicitar_permissao_chamada', 'iniciar_chamada',
+            'pre_aceitar_chamada', 'confirmar_chamada', 'rejeitar_chamada',
+            'encerrar_chamada', 'habilitar_calling', 'salvar_config',
+            'sincronizar_templates', 'qrcode',
+        ];
+        if (in_array($acao, $acoesPost, true) && $metodo !== 'POST') {
+            wa_json(['success' => false, 'message' => 'Método não permitido para esta ação.'], 405);
+        }
+    }
+}
+
 if (!function_exists('wa_api_ids')) {
     function wa_api_ids($valor): array {
         if (is_array($valor)) {
@@ -53,6 +71,7 @@ if (!function_exists('wa_api_ids')) {
 try {
     $acao = strval($_GET['wa_acao'] ?? $_POST['wa_acao'] ?? '');
     wa_api_csrf();
+    wa_api_exigir_post($acao);
 
     switch ($acao) {
         case 'conversas':
@@ -60,8 +79,16 @@ try {
             $lista = wa_conversa_listar([
                 'busca' => strval($_GET['busca'] ?? ''),
                 'filtro' => strval($_GET['filtro'] ?? 'todas'),
+                'origem' => strval($_GET['origem'] ?? 'todas'),
                 'usuario' => wa_api_usuario(),
             ]);
+            foreach ($lista as &$conversa) {
+                $conversa['ultima_data_fmt'] = wa_data_utc_para_local(
+                    $conversa['ultima_data'] ?? $conversa['conv_dt_ultima_atividade'] ?? '',
+                    'd/m'
+                );
+            }
+            unset($conversa);
             wa_json(['success' => true, 'conversas' => $lista]);
 
         case 'mensagens':
@@ -72,7 +99,11 @@ try {
             if (!$conv) {
                 wa_json(['success' => false, 'message' => 'Conversa não encontrada.'], 404);
             }
-            $mensagens = wa_mensagens_listar($conversaId, $aposId);
+            $mensagens = wa_mensagens_listar($conversaId, $aposId, 200);
+            foreach ($mensagens as &$mensagem) {
+                $mensagem['msg_dt_criacao_fmt'] = wa_data_utc_para_local($mensagem['msg_dt_criacao'] ?? '');
+            }
+            unset($mensagem);
             if ($aposId === 0) {
                 wa_marcar_conversa_lida($conversaId);
             }
@@ -88,6 +119,14 @@ try {
                     'cont_tx_cargo' => $conv['cont_tx_cargo'],
                 ],
             ]);
+
+        case 'mensagens_prontas':
+            if (!function_exists('usuarioPodeAcessar')
+                || (!usuarioPodeAcessar('/whatsapp/index.php') && !usuarioPodeAcessar('/whatsapp/lote.php'))) {
+                wa_json(['success' => false, 'message' => 'Você não tem permissão para esta ação.'], 403);
+            }
+            $prontas = wa_mensagens_prontas_listar(true);
+            wa_json(['success' => true, 'mensagens' => $prontas]);
 
         case 'enviar':
             wa_api_permissao('/whatsapp/index.php');
@@ -151,8 +190,14 @@ try {
 
         case 'novo_contato':
             wa_api_permissao('/whatsapp/index.php');
+            if (!wa_rate_limit('novo_contato', 10, 60)) {
+                wa_json(['success' => false, 'message' => 'Muitas tentativas. Aguarde um minuto.'], 429);
+            }
             $nome = trim(strval($_POST['nome'] ?? ''));
             $telefone = trim(strval($_POST['telefone'] ?? ''));
+            if (mb_strlen($nome) > 180 || mb_strlen($telefone) > 30) {
+                wa_json(['success' => false, 'message' => 'Nome ou telefone muito longo.'], 422);
+            }
             if (wa_normalizar_telefone($telefone) === null) {
                 wa_json(['success' => false, 'message' => 'Telefone inválido. Informe DDD + número.'], 422);
             }
@@ -194,6 +239,9 @@ try {
 
         case 'criar_lote':
             wa_api_permissao('/whatsapp/lote.php');
+            if (!wa_rate_limit('criar_lote', 10, 60)) {
+                wa_json(['success' => false, 'message' => 'Muitos lotes em sequência. Aguarde um minuto.'], 429);
+            }
             $ids = wa_api_ids($_POST['ids'] ?? []);
             $mensagem = trim(strval($_POST['mensagem'] ?? ''));
             $titulo = trim(strval($_POST['titulo'] ?? ''));
@@ -202,6 +250,12 @@ try {
             }
             if ($mensagem === '') {
                 wa_json(['success' => false, 'message' => 'Informe a mensagem do lote.'], 422);
+            }
+            if (mb_strlen($mensagem) > 4096) {
+                wa_json(['success' => false, 'message' => 'A mensagem do lote excede 4096 caracteres.'], 422);
+            }
+            if (mb_strlen($titulo) > 150) {
+                wa_json(['success' => false, 'message' => 'O título do lote excede 150 caracteres.'], 422);
             }
             if (count($ids) > 200) {
                 wa_json(['success' => false, 'message' => 'O limite por lote é de 200 destinatários.'], 422);
@@ -227,6 +281,10 @@ try {
             }
 
             $permitirOptout = !empty($_POST['permitir_optout']) && preg_match('/administrador/i', strval($_SESSION['user_tx_nivel'] ?? ''));
+            $justificativaOptout = trim(strval($_POST['justificativa'] ?? ''));
+            if ($permitirOptout && mb_strlen($justificativaOptout) < 10) {
+                wa_json(['success' => false, 'message' => 'Informe uma justificativa com pelo menos 10 caracteres para enviar sem opt-in.'], 422);
+            }
             $selecionados = [];
             $semTelefone = 0;
             $semOptin = 0;
@@ -294,6 +352,14 @@ try {
             wa_exec("UPDATE wa_lote SET lote_nb_total = ? WHERE lote_nb_id = ?", "ii", [$criados, $loteId]);
             wa_lote_recalcular($loteId);
             wa_log('lote_criado', 'Lote criado.', ['lote' => $loteId, 'destinatarios' => $criados]);
+            if ($permitirOptout) {
+                wa_log('lote_optout_liberado', 'Envio em lote liberado sem opt-in.', [
+                    'lote' => $loteId,
+                    'sem_optin' => $semOptin,
+                    'justificativa' => $justificativaOptout,
+                    'usuario' => wa_api_usuario(),
+                ], 'warning');
+            }
             wa_json([
                 'success' => true,
                 'lote_id' => $loteId,
@@ -327,6 +393,9 @@ try {
 
         case 'sincronizar_contatos':
             wa_api_permissao('/whatsapp/contatos.php');
+            if (!wa_rate_limit('sincronizar_contatos', 2, 300)) {
+                wa_json(['success' => false, 'message' => 'Sincronização já executada recentemente. Aguarde alguns minutos.'], 429);
+            }
             $resumo = wa_sincronizar_contatos();
             wa_json(['success' => true, 'resumo' => $resumo, 'message' => 'Contatos sincronizados.']);
 
@@ -335,18 +404,27 @@ try {
             if (!preg_match('/administrador/i', strval($_SESSION['user_tx_nivel'] ?? ''))) {
                 wa_json(['success' => false, 'message' => 'Apenas administradores podem forçar a fila.'], 403);
             }
+            if (!wa_rate_limit('processar_fila', 5, 60)) {
+                wa_json(['success' => false, 'message' => 'Muitas execuções da fila. Aguarde um minuto.'], 429);
+            }
             @set_time_limit(90);
             $resultado = wa_processar_fila(10);
             wa_json(['success' => true, 'resultado' => $resultado, 'message' => 'Fila processada.']);
 
         case 'testar_provider':
             wa_api_permissao('/whatsapp/configuracoes.php');
+            if (!wa_rate_limit('testar_provider', 10, 60)) {
+                wa_json(['success' => false, 'message' => 'Muitos testes de conexão. Aguarde um minuto.'], 429);
+            }
             [$provider] = wa_config_provider();
             $teste = $provider->testConnection();
             wa_json($teste, !empty($teste['success']) ? 200 : 422);
 
         case 'enviar_teste':
             wa_api_permissao('/whatsapp/configuracoes.php');
+            if (!wa_rate_limit('enviar_teste', 3, 60)) {
+                wa_json(['success' => false, 'message' => 'Muitos envios de teste. Aguarde um minuto.'], 429);
+            }
             $cfgTeste = wa_config();
             $numero = trim(strval($_POST['numero'] ?? ($cfgTeste['cfg_tx_test_number'] ?? '')));
             if ($numero === '') {
@@ -364,8 +442,194 @@ try {
                 'provider_id' => $envio['provider_id'] ?? '',
             ], !empty($envio['success']) ? 200 : 422);
 
+        case 'chamada_permissao':
+            wa_api_permissao('/whatsapp/index.php');
+            if (!wa_calling_ativa()) {
+                wa_json(['success' => false, 'message' => 'Chamadas não estão ativas. Configure a Cloud API e habilite Calling.'], 422);
+            }
+            $conv = wa_conversa_por_id((int)($_GET['conversa'] ?? 0));
+            if (!$conv || trim(strval($conv['cont_tx_e164'] ?? '')) === '') {
+                wa_json(['success' => false, 'message' => 'Conversa ou telefone inválido.'], 422);
+            }
+            [$provider] = wa_config_provider();
+            $permissao = $provider->getCallPermission(strval($conv['cont_tx_e164']));
+            wa_json($permissao, !empty($permissao['success']) ? 200 : 422);
+
+        case 'solicitar_permissao_chamada':
+            wa_api_permissao('/whatsapp/index.php');
+            if (!wa_calling_ativa()) {
+                wa_json(['success' => false, 'message' => 'Chamadas não estão ativas.'], 422);
+            }
+            $conv = wa_conversa_por_id((int)($_POST['conversa'] ?? 0));
+            if (!$conv || trim(strval($conv['cont_tx_e164'] ?? '')) === '') {
+                wa_json(['success' => false, 'message' => 'Conversa ou telefone inválido.'], 422);
+            }
+            [$provider] = wa_config_provider();
+            $texto = trim(strval($_POST['texto'] ?? ''));
+            if ($texto === '') {
+                $texto = 'Podemos ligar para você pelo WhatsApp para ajudar no atendimento?';
+            }
+            if (mb_strlen($texto) > 1024) {
+                wa_json(['success' => false, 'message' => 'Texto de permissão acima do limite.'], 422);
+            }
+            $envio = $provider->sendCallPermissionRequest(strval($conv['cont_tx_e164']), $texto);
+            wa_json([
+                'success' => !empty($envio['success']),
+                'message' => !empty($envio['success']) ? 'Solicitação de permissão enviada. Aguarde a aprovação no WhatsApp.' : strval($envio['error'] ?? 'Falha ao solicitar permissão.'),
+                'provider_id' => $envio['provider_id'] ?? '',
+            ], !empty($envio['success']) ? 200 : 422);
+
+        case 'iniciar_chamada':
+            wa_api_permissao('/whatsapp/index.php');
+            if (!wa_calling_ativa()) {
+                wa_json(['success' => false, 'message' => 'Chamadas não estão ativas.'], 422);
+            }
+            $conv = wa_conversa_por_id((int)($_POST['conversa'] ?? 0));
+            $sdp = strval($_POST['sdp'] ?? '');
+            if (!$conv || trim(strval($conv['cont_tx_e164'] ?? '')) === '') {
+                wa_json(['success' => false, 'message' => 'Conversa ou telefone inválido.'], 422);
+            }
+            if (trim($sdp) === '') {
+                wa_json(['success' => false, 'message' => 'Oferta SDP não informada.'], 422);
+            }
+            if (strlen($sdp) > 200000) {
+                wa_json(['success' => false, 'message' => 'Oferta SDP acima do limite permitido.'], 422);
+            }
+            [$provider] = wa_config_provider();
+            $opaque = 'crm-' . (int)$conv['conv_nb_id'] . '-' . time();
+            $chamada = $provider->initiateCall(strval($conv['cont_tx_e164']), $sdp, $opaque);
+            if (empty($chamada['success'])) {
+                wa_json(['success' => false, 'message' => strval($chamada['error'] ?? 'Falha ao iniciar chamada.')], 422);
+            }
+            $callId = strval($chamada['call_id'] ?? '');
+            $localId = wa_chamada_criar_saida((int)$conv['conv_nb_id'], $callId, $sdp, wa_api_usuario(), $opaque);
+            wa_json([
+                'success' => true,
+                'call_id' => $callId,
+                'chamada_id' => $localId,
+                'message' => 'Chamada iniciada. Aguardando conexão.',
+            ]);
+
+        case 'chamada_poll':
+            wa_api_permissao('/whatsapp/index.php');
+            $callId = trim(strval($_GET['call_id'] ?? ''));
+            $chamada = wa_chamada_por_call_id($callId);
+            if (!$chamada) {
+                wa_json(['success' => false, 'message' => 'Chamada não encontrada.'], 404);
+            }
+            wa_json(['success' => true, 'chamada' => [
+                'id' => (int)$chamada['ch_nb_id'],
+                'call_id' => $chamada['ch_tx_call_id'],
+                'status' => $chamada['ch_tx_status'],
+                'direcao' => $chamada['ch_tx_direcao'],
+                'sdp_offer' => $chamada['ch_tx_sdp_offer'],
+                'sdp_answer' => $chamada['ch_tx_sdp_answer'],
+                'erro' => $chamada['ch_tx_erro'],
+                'duracao' => (int)($chamada['ch_nb_duracao'] ?? 0),
+            ]]);
+
+        case 'chamadas_pendentes':
+            wa_api_permissao('/whatsapp/index.php');
+            $pendentes = wa_chamadas_pendentes(5);
+            $out = [];
+            foreach ($pendentes as $ch) {
+                $out[] = [
+                    'id' => (int)$ch['ch_nb_id'],
+                    'call_id' => $ch['ch_tx_call_id'],
+                    'contato' => $ch['cont_tx_nome'] ?? '',
+                    'telefone' => $ch['cont_tx_e164'] ?? '',
+                    'sdp_offer' => $ch['ch_tx_sdp_offer'],
+                    'criada_em' => $ch['ch_dt_criacao'],
+                ];
+            }
+            wa_json(['success' => true, 'chamadas' => $out]);
+
+        case 'pre_aceitar_chamada':
+            wa_api_permissao('/whatsapp/index.php');
+            $callId = trim(strval($_POST['call_id'] ?? ''));
+            $sdp = strval($_POST['sdp'] ?? '');
+            if ($callId === '' || trim($sdp) === '') {
+                wa_json(['success' => false, 'message' => 'Chamada ou resposta SDP inválida.'], 422);
+            }
+            if (strlen($sdp) > 200000) {
+                wa_json(['success' => false, 'message' => 'Resposta SDP acima do limite permitido.'], 422);
+            }
+            [$provider] = wa_config_provider();
+            $res = $provider->preAcceptCall($callId, $sdp);
+            if (empty($res['success'])) {
+                wa_json(['success' => false, 'message' => strval($res['error'] ?? 'Falha ao pré-aceitar chamada.')], 422);
+            }
+            wa_chamada_iniciar_aceite($callId, $sdp, wa_api_usuario());
+            wa_json(['success' => true, 'message' => 'Chamada pré-aceita.']);
+
+        case 'confirmar_chamada':
+            wa_api_permissao('/whatsapp/index.php');
+            $callId = trim(strval($_POST['call_id'] ?? ''));
+            $chamada = wa_chamada_por_call_id($callId);
+            if (!$chamada) {
+                wa_json(['success' => false, 'message' => 'Chamada não encontrada.'], 422);
+            }
+            if (trim(strval($chamada['ch_tx_sdp_answer'] ?? '')) === '') {
+                wa_json(['success' => false, 'message' => 'Resposta SDP da chamada não encontrada.'], 422);
+            }
+            if (strval($chamada['ch_tx_status'] ?? '') === 'conectada') {
+                wa_json(['success' => true, 'message' => 'Chamada já conectada.']);
+            }
+            [$provider] = wa_config_provider();
+            $res = $provider->acceptCall($callId, strval($chamada['ch_tx_sdp_answer']));
+            if (empty($res['success'])) {
+                wa_json(['success' => false, 'message' => strval($res['error'] ?? 'Falha ao aceitar chamada.')], 422);
+            }
+            wa_exec("UPDATE wa_chamada SET ch_tx_status = 'conectada', ch_dt_inicio = COALESCE(ch_dt_inicio, NOW()), ch_dt_atualizacao = NOW() WHERE ch_nb_id = ?", "i", [(int)$chamada['ch_nb_id']]);
+            wa_json(['success' => true, 'message' => 'Chamada aceita.']);
+
+        case 'rejeitar_chamada':
+            wa_api_permissao('/whatsapp/index.php');
+            $callId = trim(strval($_POST['call_id'] ?? ''));
+            $chamada = wa_chamada_por_call_id($callId);
+            [$provider] = wa_config_provider();
+            $res = $provider->rejectCall($callId);
+            if ($chamada) {
+                wa_exec("UPDATE wa_chamada SET ch_tx_status = 'rejeitada', ch_dt_fim = COALESCE(ch_dt_fim, NOW()), ch_dt_atualizacao = NOW() WHERE ch_nb_id = ?", "i", [(int)$chamada['ch_nb_id']]);
+            }
+            wa_json(['success' => !empty($res['success']), 'message' => !empty($res['success']) ? 'Chamada rejeitada.' : strval($res['error'] ?? 'Falha ao rejeitar.')], !empty($res['success']) ? 200 : 422);
+
+        case 'encerrar_chamada':
+            wa_api_permissao('/whatsapp/index.php');
+            $callId = trim(strval($_POST['call_id'] ?? ''));
+            $chamada = wa_chamada_por_call_id($callId);
+            [$provider] = wa_config_provider();
+            $res = $provider->terminateCall($callId);
+            if ($chamada) {
+                wa_exec("UPDATE wa_chamada SET ch_tx_status = 'encerrada', ch_dt_fim = COALESCE(ch_dt_fim, NOW()), ch_dt_atualizacao = NOW() WHERE ch_nb_id = ?", "i", [(int)$chamada['ch_nb_id']]);
+            }
+            wa_json(['success' => !empty($res['success']), 'message' => !empty($res['success']) ? 'Chamada encerrada.' : strval($res['error'] ?? 'Falha ao encerrar.')], !empty($res['success']) ? 200 : 422);
+
+        case 'habilitar_calling':
+            wa_api_permissao('/whatsapp/configuracoes.php');
+            if (!wa_rate_limit('habilitar_calling', 5, 60)) {
+                wa_json(['success' => false, 'message' => 'Muitas alterações de Calling. Aguarde um minuto.'], 429);
+            }
+            if (strval(wa_config()['cfg_tx_provider'] ?? '') !== 'cloud') {
+                wa_json(['success' => false, 'message' => 'Chamadas oficiais exigem o provedor Cloud API.'], 422);
+            }
+            [$provider] = wa_config_provider();
+            $habilitar = !empty($_POST['enabled']);
+            $res = $provider->setCallingStatus($habilitar);
+            if (!empty($res['success'])) {
+                wa_exec("UPDATE wa_config SET cfg_tx_call_status = ?, cfg_tx_dataAtualiza = NOW() WHERE cfg_nb_id = 1", "s", [$habilitar ? 'ativo' : 'inativo']);
+                wa_config(true);
+            }
+            wa_json([
+                'success' => !empty($res['success']),
+                'message' => !empty($res['success']) ? ($habilitar ? 'Calling habilitado no número.' : 'Calling desabilitado no número.') : strval($res['error'] ?? 'Falha ao configurar Calling.'),
+            ], !empty($res['success']) ? 200 : 422);
+
         case 'salvar_config':
             wa_api_permissao('/whatsapp/configuracoes.php');
+            if (!wa_rate_limit('salvar_config', 10, 60)) {
+                wa_json(['success' => false, 'message' => 'Muitas alterações de configuração. Aguarde um minuto.'], 429);
+            }
             $resultado = wa_config_salvar([
                 'provider' => $_POST['provider'] ?? 'evolution',
                 'status' => $_POST['status'] ?? 'inativo',
@@ -377,6 +641,7 @@ try {
                 'verify_token' => $_POST['verify_token'] ?? '',
                 'app_secret' => $_POST['app_secret'] ?? '',
                 'retencao_dias' => $_POST['retencao_dias'] ?? 0,
+                'call_status' => $_POST['call_status'] ?? 'inativo',
             ], wa_api_usuario());
             if (!empty($resultado['success'])) {
                 wa_log('config_atualizada', 'Configuração do provedor atualizada.', ['provider' => $_POST['provider'] ?? '']);
@@ -385,6 +650,9 @@ try {
 
         case 'qrcode':
             wa_api_permissao('/whatsapp/configuracoes.php');
+            if (!wa_rate_limit('qrcode', 6, 60)) {
+                wa_json(['success' => false, 'message' => 'Muitas solicitações de QR Code. Aguarde um minuto.'], 429);
+            }
             [$provider] = wa_config_provider();
             $qr = $provider->getQrCode();
             wa_json($qr, !empty($qr['success']) ? 200 : 422);
@@ -397,6 +665,9 @@ try {
 
         case 'sincronizar_templates':
             wa_api_permissao('/whatsapp/configuracoes.php');
+            if (!wa_rate_limit('sincronizar_templates', 5, 60)) {
+                wa_json(['success' => false, 'message' => 'Muitas sincronizações de templates. Aguarde um minuto.'], 429);
+            }
             [$provider] = wa_config_provider();
             $tpl = $provider->getTemplates();
             wa_json($tpl, !empty($tpl['success']) ? 200 : 422);

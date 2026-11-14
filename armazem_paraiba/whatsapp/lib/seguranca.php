@@ -15,9 +15,68 @@ if (!function_exists('wa_json')) {
         if (!headers_sent()) {
             http_response_code($status);
             header('Content-Type: application/json; charset=utf-8');
+            header('Cache-Control: no-store, private');
+            @header_remove('X-Powered-By');
+        header('X-Content-Type-Options: nosniff');
         }
         echo json_encode($dados, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
+    }
+}
+
+if (!function_exists('wa_json_script')) {
+    /**
+     * JSON seguro para ser embutido dentro de <script>. Evita que um nome de
+     * contato ou mensagem com </script> quebre o documento e vire XSS.
+     */
+    function wa_json_script($dados): string {
+        $json = json_encode(
+            $dados,
+            JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+            | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE
+        );
+        return is_string($json) ? $json : 'null';
+    }
+}
+
+if (!function_exists('wa_security_headers')) {
+    function wa_security_headers(): void {
+        if (PHP_SAPI === 'cli' || headers_sent()) {
+            return;
+        }
+        @header_remove('X-Powered-By');
+        header('X-Content-Type-Options: nosniff');
+        header('X-Frame-Options: SAMEORIGIN');
+        header('X-Permitted-Cross-Domain-Policies: none');
+        header('Referrer-Policy: strict-origin-when-cross-origin');
+        header('Permissions-Policy: camera=(self), microphone=(self), geolocation=()');
+        header("Content-Security-Policy: frame-ancestors 'self'; base-uri 'self'; form-action 'self'");
+        $https = (!empty($_SERVER['HTTPS']) && strtolower(strval($_SERVER['HTTPS'])) !== 'off')
+            || strtolower(strval($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
+        if ($https) {
+            header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+        }
+    }
+}
+
+if (!function_exists('wa_url_http_valida')) {
+    function wa_url_http_valida(string $url, bool $exigirHttps = false): bool {
+        $url = trim($url);
+        if ($url === '' || strlen($url) > 2048 || preg_match('/[\x00-\x1F\x7F]/', $url)) {
+            return false;
+        }
+        $partes = parse_url($url);
+        if (!is_array($partes) || empty($partes['scheme']) || empty($partes['host'])) {
+            return false;
+        }
+        $scheme = strtolower(strval($partes['scheme']));
+        if ($exigirHttps ? $scheme !== 'https' : !in_array($scheme, ['http', 'https'], true)) {
+            return false;
+        }
+        if (isset($partes['user']) || isset($partes['pass'])) {
+            return false;
+        }
+        return true;
     }
 }
 

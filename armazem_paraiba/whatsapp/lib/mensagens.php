@@ -34,9 +34,10 @@ if (!function_exists('wa_conversa_por_id')) {
             return null;
         }
         $rs = query(
-            "SELECT cv.*, c.*
+            "SELECT cv.*, c.*, empr.empr_tx_nome AS cont_tx_empresa_nome
              FROM wa_conversa cv
              JOIN wa_contato c ON c.cont_nb_id = cv.conv_nb_contato
+             LEFT JOIN empresa empr ON empr.empr_nb_id = c.cont_nb_empresa
              WHERE cv.conv_nb_id = ? LIMIT 1",
             "i",
             [$id]
@@ -52,9 +53,10 @@ if (!function_exists('wa_conversa_por_contato')) {
             return null;
         }
         $rs = query(
-            "SELECT cv.*, c.*
+            "SELECT cv.*, c.*, empr.empr_tx_nome AS cont_tx_empresa_nome
              FROM wa_conversa cv
              JOIN wa_contato c ON c.cont_nb_id = cv.conv_nb_contato
+             LEFT JOIN empresa empr ON empr.empr_nb_id = c.cont_nb_empresa
              WHERE cv.conv_nb_contato = ? LIMIT 1",
             "i",
             [$contatoId]
@@ -84,6 +86,10 @@ if (!function_exists('wa_conversa_listar')) {
             $where[] = 'cv.conv_nb_responsavel = ?';
             $types .= 'i';
             $vals[] = (int)($filtros['usuario'] ?? 0);
+        }
+        $origem = strval($filtros['origem'] ?? 'todas');
+        if ($origem === 'empresa') {
+            $where[] = "(c.cont_nb_entidade IS NOT NULL OR c.cont_nb_user IS NOT NULL OR c.cont_tx_origem IN ('entidade','user'))";
         }
 
         $sql = "SELECT cv.conv_nb_id, cv.conv_nb_contato, cv.conv_nb_responsavel, cv.conv_tx_status,
@@ -191,6 +197,19 @@ if (!function_exists('wa_mensagem_registrar')) {
     }
 }
 
+if (!function_exists('wa_conversa_contar')) {
+    function wa_conversa_contar(string $origem = 'todas'): int {
+        $where = $origem === 'empresa'
+            ? " WHERE (c.cont_nb_entidade IS NOT NULL OR c.cont_nb_user IS NOT NULL OR c.cont_tx_origem IN ('entidade','user'))"
+            : '';
+        $rs = query(
+            "SELECT COUNT(*) AS total FROM wa_conversa cv JOIN wa_contato c ON c.cont_nb_id = cv.conv_nb_contato{$where}"
+        );
+        $row = $rs ? mysqli_fetch_assoc($rs) : null;
+        return $row ? (int)$row['total'] : 0;
+    }
+}
+
 if (!function_exists('wa_mensagens_listar')) {
     function wa_mensagens_listar(int $conversaId, int $aposId = 0, int $limite = 200): array {
         if ($conversaId <= 0) {
@@ -237,16 +256,23 @@ if (!function_exists('wa_personalizar_mensagem')) {
         $nome = trim(strval($contato['cont_tx_nome'] ?? ''));
         $partes = preg_split('/\s+/', $nome);
         $primeiro = $partes && isset($partes[0]) ? $partes[0] : $nome;
+        $valores = [
+            $nome,
+            $primeiro,
+            strval($contato['cont_tx_setor'] ?? ''),
+            strval($contato['cont_tx_cargo'] ?? ''),
+            strval($contato['cont_tx_empresa_nome'] ?? ''),
+            wa_formatar_telefone($contato['cont_tx_e164'] ?? $contato['cont_tx_telefone'] ?? ''),
+        ];
+        // Aceita tanto {nome} quanto {{nome}}.
+        $texto = str_replace(
+            ['{{nome}}', '{{primeiro_nome}}', '{{setor}}', '{{cargo}}', '{{empresa}}', '{{telefone}}'],
+            $valores,
+            $texto
+        );
         return str_replace(
             ['{nome}', '{primeiro_nome}', '{setor}', '{cargo}', '{empresa}', '{telefone}'],
-            [
-                $nome,
-                $primeiro,
-                strval($contato['cont_tx_setor'] ?? ''),
-                strval($contato['cont_tx_cargo'] ?? ''),
-                strval($contato['cont_tx_empresa_nome'] ?? ''),
-                wa_formatar_telefone($contato['cont_tx_e164'] ?? $contato['cont_tx_telefone'] ?? ''),
-            ],
+            $valores,
             $texto
         );
     }
@@ -271,6 +297,11 @@ if (!function_exists('wa_enviar_texto')) {
         }
         if (trim(strval($conv['cont_tx_e164'] ?? '')) === '') {
             return ['success' => false, 'message' => 'O contato não possui um número de WhatsApp válido.'];
+        }
+        // Mensagens prontas podem conter as mesmas variáveis do lote.
+        $texto = wa_personalizar_mensagem($texto, $conv);
+        if (mb_strlen($texto) > 4096) {
+            return ['success' => false, 'message' => 'A mensagem personalizada excede 4096 caracteres.'];
         }
 
         $msgId = wa_mensagem_registrar([

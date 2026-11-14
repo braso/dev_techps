@@ -2,7 +2,7 @@
 
 > **Módulo:** CRM - TECHPS (internamente `armazem_paraiba/whatsapp/`)
 > **Data:** 13/11/2026
-> **Status:** em implementação; itens 1, 2, 4 e 5 concluídos no código. Item 2 aguarda homologação de envio real.
+> **Status:** em implementação; itens 1, 2, 4, 5 e 6 concluídos no código. Itens 2 e 3 aguardam homologação real com conta Cloud API elegível.
 > **Plano de controle:** `PLANOS_DE_DESENVOLVIMENTO.md` — PLANO-001.
 
 ## 1. Resumo
@@ -11,10 +11,10 @@
 |---|---|---|---|
 | 1 | Renomear a interface de WhatsApp para **CRM - TECHPS** | Concluído em 13/11/2026 | 1 dia |
 | 2 | Enviar e receber mídias + câmera e gravação de áudio | Implementado; teste real pendente | 4–6 dias |
-| 3 | Ligações quando a API permitir | Planejado (condicional) | 2–3 dias |
+| 3 | Ligações quando a API permitir | Estrutura implementada; homologação real pendente | 2–3 dias (spike/flag) + integração WebRTC/SIP |
 | 4 | Retenção padrão **0 = nunca apagar** | Implementado em 13/11/2026 | 0,5 dia (dentro da Fase E4) |
 | 5 | Exportar conversas por dias ou intervalo de datas | Implementado em 13/11/2026 | 1,5–2,5 dias (dentro da Fase E4) |
-| 6 | Separar mensagens e cadastrar mensagens pré-prontas | Planejado | 3–5 dias |
+| 6 | Separar mensagens e cadastrar mensagens pré-prontas | Implementado em 13/11/2026 | 3–5 dias |
 
 **Total da evolução:** 13–20 dias úteis (média 16,5).
 **Sem ligações (se a API não permitir):** 11–17 dias úteis (média 13,5).
@@ -91,7 +91,7 @@ Permitir enviar e receber imagens, documentos, áudio e vídeo pelo chat, quando
 - Upload de arquivo no chat com preview antes do envio.
 - Tipos iniciais: imagem (`jpg`, `jpeg`, `png`, `webp`), documento (`pdf`, `doc`, `docx`, `xls`, `xlsx`), áudio (`ogg`, `mp3`, `m4a`) e vídeo (`mp4`).
 - Validação de tipo e tamanho no cliente e no servidor.
-- Armazenamento em `whatsapp/arquivos/` com nome aleatório.
+- Armazenamento fora do document root (`WHATSAPP_MEDIA_PATH`) com nome aleatório.
 - Download somente por `arquivo.php`, com verificação de permissão.
 - Registro do tipo, nome original, MIME, tamanho e caminho na mensagem.
 - Exibição de imagem com preview, áudio com player, vídeo com player e documento com link.
@@ -128,7 +128,7 @@ Permitir enviar e receber imagens, documentos, áudio e vídeo pelo chat, quando
 - Formatos de gravação priorizam MP4/M4A; o navegador pode usar OGG/Opus quando disponível. WebM é fallback e pode não ser aceito pelo provedor.
 - Tipos aceitos: JPG/PNG/WEBP, OGG/MP3/M4A/AAC/AMR/WAV, MP4/3GP, PDF/DOC/DOCX/XLS/XLSX/PPT/PPTX/TXT/CSV/ZIP.
 - Limites: imagem 5 MB; áudio, vídeo e documento 16 MB (documento pode subir com `WHATSAPP_MEDIA_MAX_MB`).
-- Envio pela fila existente; o arquivo é gravado em `whatsapp/arquivos/` com nome aleatório.
+- Envio pela fila existente; o arquivo é gravado em `WHATSAPP_MEDIA_PATH`, fora do document root, com nome aleatório.
 - Download somente por `arquivo.php`, com sessão e permissão; documentos usam `download=1`.
 - Recebimento pela Cloud API: baixa o `media_id` e salva antes da URL expirar.
 - Recebimento pela Evolution: usa `base64` do webhook, endpoint `getBase64FromMediaMessage` ou URL de fallback.
@@ -148,8 +148,52 @@ Oferecer botão de ligação no chat **somente se** o provedor e a conta permiti
 
 ### O que a API oferece
 
-- **Cloud API:** a Calling API existe, mas depende de país, número, conta comercial, aprovação e permissões específicas. Não está disponível de forma universal.
+- **Cloud API:** a Calling API oficial permite **fazer e receber chamadas de voz** com usuários do WhatsApp via VoIP/WebRTC ou SIP.
+- **Chamadas iniciadas pela empresa (business-initiated):** o caso do botão “Ligar” do gestor, disponível nas localidades da Cloud API, exceto Estados Unidos, Canadá, Egito, Vietnã e Nigéria. O Brasil não está na lista de exceção, mas o número precisa estar habilitado e elegível.
+- **Chamadas iniciadas pelo usuário:** disponíveis em todas as localidades da Cloud API.
 - **Evolution API/Baileys:** não oferece uma API oficial e estável para iniciar chamadas de voz. Eventos de chamada podem aparecer no webhook, mas isso não equivale a discar.
+
+### Pesquisa oficial (13/11/2026)
+
+A documentação oficial da Meta confirma o suporte. Para o TechPS, uma chamada iniciada pelo gestor exige:
+
+1. Número em uso na **Cloud API** (não no WhatsApp Business app).
+2. App inscrito no webhook `calls` e com permissão `whatsapp_business_messaging`.
+3. Limite diário de mensagens de pelo menos **2.000 destinatários únicos**.
+4. **Calling habilitado** no número; vem desabilitado por padrão.
+5. Linha de crédito/forma de pagamento válida; chamadas são cobradas por duração, em pulsos de 6 segundos. Para o usuário, a chamada é gratuita.
+6. Permissão do usuário para receber chamada da empresa: temporária (7 dias) ou permanente. No Brasil, fora do modelo quality-based (Colômbia/México), é necessário obter essa permissão por mensagem interativa ou template.
+7. Limite de **100 chamadas conectadas por usuário/24h** e limites de pedido de permissão (1 em 24h e 2 em 7 dias por par).
+8. Implementação de **WebRTC ou SIP** para o áudio/SDP; a API não fornece pilha de mídia pronta. Também é necessário tratar webhooks de `connect`, `ringing`, `accepted`, `rejected` e `terminate`.
+
+**Conclusão:** é tecnicamente possível e oficial, mas não é apenas um `POST` de mensagem. É uma integração de voz (WebRTC/SIP), com permissão do usuário e requisitos de conta. A estimativa de 2–3 dias cobre o spike e a flag; a implementação completa tende a ser maior.
+
+### Implementação preparada (13/11/2026)
+
+- Tabelas `wa_chamada` e `wa_chamada_evento` (schema versão 6).
+- Configuração **Configurações → Chamadas**: status ativo/inativo e botão para habilitar Calling no número.
+- Métodos Cloud API para consultar permissão, solicitar permissão, iniciar, pré-aceitar, aceitar, rejeitar e encerrar chamadas.
+- Webhook `calls` processa connect, ringing, accepted, rejected e terminate, com SDP e duração.
+- Chat com botão de telefone no cabeçalho (habilitado somente com Cloud API + Calling ativo).
+- Modal WebRTC para chamada de saída e entrada, com aceitar, rejeitar, mudo e encerrar.
+- Polling de chamadas recebidas a cada 3 segundos enquanto o chat está aberto.
+- Testes locais: criação de chamada, evento de conexão/resposta SDP, status, término, chamada de entrada pendente e pré-aceite. **Não foi possível testar uma chamada real sem credenciais Cloud API elegíveis.**
+
+### Limitações desta preparação
+
+- O WhatsApp Web oficial faz chamadas, mas a Evolution API usa Baileys, não o cliente Web oficial. O endpoint `call/offer` atual é um stub e não liga de verdade; o Baileys não implementa oferta/atendimento de áudio.
+- Para voz real via Evolution seria necessário um webphone terceirizado (Wavoip) com token/dispositivo próprio; a alternativa oficial é a Cloud API com número elegível.
+- O número precisa estar na Cloud API e com Calling habilitado na Meta.
+- A permissão do usuário é obrigatória no modelo padrão.
+- O pedido de permissão usa mensagem interativa livre (janela de 24h); o envio por template aprovado ainda pode ser adicionado.
+- A chamada real depende de WebRTC/SIP, microfone e conta elegível; a homologação em produção ainda é necessária.
+
+Fontes oficiais:
+- https://developers.facebook.com/documentation/business-messaging/whatsapp/calling/
+- https://developers.facebook.com/documentation/business-messaging/whatsapp/calling/business-initiated-calls/
+- https://developers.facebook.com/documentation/business-messaging/whatsapp/calling/user-call-permissions/
+- https://developers.facebook.com/documentation/business-messaging/whatsapp/calling/call-settings/
+- https://developers.facebook.com/documentation/business-messaging/whatsapp/calling/pricing/
 
 ### Estratégia
 
@@ -252,11 +296,10 @@ Exportar uma conversa informando **quantidade de dias** ou **datas específicas*
 
 ### 8.1 Filtro “Todas” x “Da empresa”
 
-- No chat, adicionar abas ou segmento:
-  - **Todas:** mensagens recebidas e enviadas.
-  - **Da empresa:** somente mensagens de saída (`direcao = saida`).
+- Na lista de conversas, adicionar abas ou segmento:
+  - **Todas:** todas as conversas, incluindo números externos que chegam no aparelho.
+  - **Da empresa:** somente contatos vinculados ao cadastro de funcionário/usuário (`cont_nb_entidade` ou `cont_nb_user`).
 - Manter a posição da conversa e o campo de resposta.
-- Exibir contador de mensagens por filtro.
 - Não alterar o badge de não lidas.
 
 ### 8.2 Cadastro de mensagens pré-prontas
@@ -269,7 +312,6 @@ Criar um cadastro administrativo com:
 | Subtítulo | Código ou descrição curta. Ex.: “T1 — Template único, mensagem personalizada.” |
 | Mensagem | Corpo do texto, com variáveis opcionais. |
 | Ativo | Permite ocultar sem excluir. |
-| Ordem | Ordena a lista. |
 
 Exemplo do solicitante:
 
@@ -291,8 +333,8 @@ Mensagem: Olá, {{nome}}! Sou da {{empresa}}...
 
 - Ao digitar `/` no campo de mensagem, abrir a lista de títulos.
 - Ao escolher o título, listar os subtítulos.
-- Ao escolher o subtítulo, inserir o texto no campo (ou enviar, conforme configuração).
-- Fechar com `Esc`; navegar com setas e `Enter`.
+- Ao escolher o subtítulo, inserir o texto no campo para revisão e envio.
+- Fechar com `Esc`; seleção por clique.
 - Não disparar o comando se `/` fizer parte de uma URL ou texto comum; usar `/` no início do campo ou após espaço.
 
 ### 8.5 Permissões
@@ -303,11 +345,26 @@ Mensagem: Olá, {{nome}}! Sou da {{empresa}}...
 
 ### Critérios de aceite
 
-- Cadastrar título, subtítulo e mensagem; listar na ordem definida.
+- Cadastrar título, subtítulo e mensagem; listar por título e subtítulo.
 - No lote, selecionar título e subtítulo e enviar para os destinatários.
 - No chat, digitar `/`, escolher título/subtítulo e inserir a mensagem.
 - Variáveis são substituídas corretamente ou destacadas quando ausentes.
 - Usuário sem permissão não vê o cadastro administrativo.
+
+### Implementação (13/11/2026)
+
+- Lista de conversas com abas **Todas** e **Da empresa**; “Da empresa” filtra contatos vinculados a funcionário/usuário, e “Todas” inclui números externos. O filtro é aplicado no carregamento e no polling da lista.
+- Tabela `wa_mensagem_pronta` com título, subtítulo, mensagem, status e auditoria.
+- Página **CRM - TECHPS → Mensagens Prontas** com cadastro, edição, exclusão e ativação/inativação.
+- O campo **Ordem** foi removido da tela e da lógica em 13/11/2026; a listagem segue título, subtítulo e ID. A coluna permanece no banco sem uso para evitar migração destrutiva.
+- Título funciona como tag reutilizável: o formulário lista tags existentes em chips e datalist; o subtítulo sugere as variações daquela tag.
+- Campo Mensagem tem botões para inserir `{nome}`, `{primeiro_nome}`, `{setor}`, `{cargo}`, `{empresa}` e `{telefone}` na posição do cursor.
+- Menu e permissões atualizados; perfis administrativos recebem o novo item na migração.
+- API `mensagens_prontas` liberada para usuários de chat ou lote, retornando apenas itens ativos.
+- Chat: digitar `/` abre títulos; clicar no título lista subtítulos; clicar no subtítulo insere o texto já personalizado com os dados do contato; `Esc` fecha.
+- Lote: selects de **Título** e **Subtítulo** preenchem o campo de mensagem, mantendo a edição livre e a prévia; botões de variáveis também inserem na posição do cursor.
+- O envio de texto também personaliza variáveis no servidor, garantindo consistência mesmo se o texto for editado; aceita `{nome}` e `{{nome}}`.
+- Testes: cadastro/exclusão via HTTP, listagem pela API e filtro `Da empresa` retornando somente contatos vinculados a funcionário/usuário.
 
 ---
 
@@ -321,15 +378,12 @@ Mensagem: Olá, {{nome}}! Sou da {{empresa}}...
 - Teste de concorrência no lote e no comando `/`.
 - Checklist de aceite por item antes de avançar.
 
-## 10. Decisões pendentes
+## 10. Decisões e pendências
 
-- Limite máximo de mídia por tipo e provedor.
-- Formatos de áudio e vídeo aceitos no primeiro momento.
-- Exportação apenas CSV ou também PDF/HTML.
-- Retenção de tenants existentes: manter valor atual ou migrar para 0.
+- Limite máximo de mídia por tipo e provedor em produção.
+- Exportação em PDF/HTML (opcional; CSV já implementado).
 - Disponibilidade real da Calling API no número/país.
-- Variáveis suportadas nas mensagens pré-prontas.
-- Gravação de áudio pelo navegador entra ou fica para depois.
+- Homologação de envio real de mídia e das permissões por perfil em produção.
 
 ## 11. Mapeamento com o Task64/Trello
 

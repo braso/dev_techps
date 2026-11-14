@@ -35,6 +35,7 @@ if (!function_exists('wa_config')) {
                 'cfg_tx_webhook_url' => wa_webhook_url(),
                 'cfg_tx_test_number' => '',
                 'cfg_nb_retencao_dias' => 0,
+                'cfg_tx_call_status' => 'inativo',
             ];
             return $cache;
         }
@@ -57,6 +58,15 @@ if (!function_exists('wa_config_ativa')) {
     }
 }
 
+if (!function_exists('wa_calling_ativa')) {
+    function wa_calling_ativa(): bool {
+        $cfg = wa_config();
+        return strval($cfg['cfg_tx_provider'] ?? '') === 'cloud'
+            && strval($cfg['cfg_tx_status'] ?? '') === 'ativo'
+            && strval($cfg['cfg_tx_call_status'] ?? 'inativo') === 'ativo';
+    }
+}
+
 if (!function_exists('wa_config_salvar')) {
     function wa_config_salvar(array $dados, int $usuarioId = 0): array {
         global $conn;
@@ -70,6 +80,18 @@ if (!function_exists('wa_config_salvar')) {
         $status = strval($dados['status'] ?? 'inativo');
         if (!in_array($status, ['ativo', 'inativo'], true)) {
             $status = 'inativo';
+        }
+
+        $baseUrlValidar = array_key_exists('base_url', $dados)
+            ? trim(strval($dados['base_url']))
+            : trim(strval($cfgAtual['cfg_tx_base_url'] ?? ''));
+        if ($baseUrlValidar !== '' && !wa_url_http_valida($baseUrlValidar, $provider === 'cloud')) {
+            return [
+                'success' => false,
+                'message' => $provider === 'cloud'
+                    ? 'A URL da Cloud API deve ser HTTPS e válida.'
+                    : 'A URL da Evolution deve ser HTTP/HTTPS e válida.',
+            ];
         }
 
         $token = trim(strval($dados['token'] ?? ''));
@@ -86,6 +108,7 @@ if (!function_exists('wa_config_salvar')) {
             ? trim(strval($dados['test_number']))
             : trim(strval($cfgAtual['cfg_tx_test_number'] ?? ''));
         $retencao = max(0, intval($dados['retencao_dias'] ?? 0));
+        $callStatus = strval($dados['call_status'] ?? ($cfgAtual['cfg_tx_call_status'] ?? 'inativo')) === 'ativo' ? 'ativo' : 'inativo';
         $webhook = wa_webhook_url();
 
         $tokenEnc = $token !== '' ? wa_encrypt($token) : '';
@@ -104,6 +127,7 @@ if (!function_exists('wa_config_salvar')) {
                     cfg_tx_webhook_url = ?,
                     cfg_tx_test_number = ?,
                     cfg_nb_retencao_dias = ?,
+                    cfg_tx_call_status = ?,
                     cfg_nb_userAtualiza = ?,
                     cfg_tx_dataAtualiza = NOW()
                 WHERE cfg_nb_id = ?";
@@ -132,7 +156,7 @@ if (!function_exists('wa_config_salvar')) {
 
         mysqli_stmt_bind_param(
             $stmt,
-            'sssssssssssiii',
+            'sssssssssssisii',
             $provider,
             $status,
             $baseUrl,
@@ -145,6 +169,7 @@ if (!function_exists('wa_config_salvar')) {
             $webhook,
             $testNumber,
             $retencao,
+            $callStatus,
             $usuarioId,
             $id
         );

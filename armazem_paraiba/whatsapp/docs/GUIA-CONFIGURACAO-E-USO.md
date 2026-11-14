@@ -237,6 +237,7 @@ Use para diagnosticar webhook, assinatura inválida e falhas de processamento.
 - Botão **Novo** para buscar contato ou cadastrar um número.
 - Polling de 5 segundos para novas mensagens.
 - Atalhos nas grids de funcionário/usuário abrem a conversa correspondente.
+- Acima da lista de conversas, o filtro **Todas** mostra todas as conversas, inclusive números externos que chegam no aparelho; **Da empresa** mostra apenas contatos vinculados ao cadastro de funcionário/usuário.
 
 ### 10.1.1 Mídias
 
@@ -250,12 +251,24 @@ Use para diagnosticar webhook, assinatura inválida e falhas de processamento.
 - Formatos: JPG/PNG/WEBP; OGG/MP3/M4A/AAC/AMR/WAV; MP4/3GP; PDF/DOC/DOCX/XLS/XLSX/PPT/PPTX/TXT/CSV/ZIP.
 - Imagens abrem em nova aba; áudios e vídeos têm player; documentos são baixados pelo link.
 - Mídias recebidas e enviadas pelo celular também aparecem no histórico.
-- O arquivo fica em `whatsapp/arquivos/` e só é entregue por `arquivo.php`, com sessão e permissão.
+- O arquivo fica em `WHATSAPP_MEDIA_PATH` (fora do document root) e só é entregue por `arquivo.php`, com sessão e permissão.
 - A gravação usa o microfone do dispositivo e exige permissão do navegador; em produção o site precisa estar em HTTPS.
 - A câmera usa `getUserMedia` para prévia ao vivo; no celular, prioriza a câmera traseira. Se a permissão for negada, o seletor nativo é aberto.
 - O chat evita exibir a mesma mensagem duas vezes quando a atualização automática e o envio acontecem ao mesmo tempo.
 
-### 10.1.2 Exportar conversa
+### 10.1.2 Mensagens prontas e comando `/`
+
+- Cadastre em **CRM - TECHPS → Mensagens Prontas**.
+- O **título/tag** funciona como “quando usar” e agrupa as variações; no cadastro é possível escolher uma tag existente ou digitar uma nova.
+- O **subtítulo** é a opção que aparece na lista.
+- Variáveis aceitas: `{nome}`, `{primeiro_nome}`, `{setor}`, `{cargo}`, `{empresa}` e `{telefone}`; também funciona com chaves duplas (`{{nome}}`).
+- No campo **Mensagem**, clique nos botões de variáveis para inseri-las na posição do cursor.
+- No chat, digite `/` no início do campo (ou após um espaço) para abrir a lista.
+- Selecione o título e depois o subtítulo; o texto é inserido no campo já com as variáveis do contato para revisão antes de enviar.
+- No envio em lote, selecione **Título** e **Subtítulo** na etapa 2; o corpo é preenchido no campo de mensagem.
+- Mensagens inativas não aparecem no chat nem no lote.
+
+### 10.1.3 Exportar conversa
 
 - Abra a conversa e clique no ícone de **download** no cabeçalho.
 - Escolha **Últimos N dias** e informe a quantidade, ou **Intervalo de datas** com data inicial e final.
@@ -274,7 +287,7 @@ Use para diagnosticar webhook, assinatura inválida e falhas de processamento.
 ### 10.3 Envio em lote
 
 1. **Destinatários:** filtros e seleção manual.
-2. **Mensagem:** texto com variáveis `{nome}`, `{primeiro_nome}`, `{setor}`, `{cargo}`, `{empresa}`, `{telefone}`.
+2. **Mensagem:** texto com variáveis `{nome}`, `{primeiro_nome}`, `{setor}`, `{cargo}`, `{empresa}`, `{telefone}`. Os botões de variáveis inserem cada uma na posição do cursor.
 3. **Prévia:** totais, opt-in e confirmação.
 4. **Envio:** cria o lote, enfileira e mostra o progresso.
 
@@ -307,6 +320,21 @@ Regras:
 - Ao abrir uma conversa com a aba focada, ela é marcada como lida.
 - Ao voltar para a aba, a lista e a conversa aberta são atualizadas.
 - Não é necessário recarregar a página para ver mensagens novas.
+
+### 10.7 Chamadas de voz
+
+Disponível somente com **Cloud API** e número com Calling habilitado na Meta.
+
+- Em **Configurações → Chamadas**, selecione **Ativo** e salve; use **Habilitar calling no número** para ligar o recurso na Graph API.
+- No chat, o ícone de telefone fica habilitado quando o recurso está ativo.
+- Na primeira ligação, o contato pode precisar autorizar; use **Solicitar permissão**. A chamada começa após a aprovação no WhatsApp.
+- Para chamadas recebidas, mantenha o CRM aberto; o sistema consulta chamadas pendentes e mostra **Aceitar / Rejeitar**.
+- Durante a chamada: **Mudo** e **Encerrar**.
+- Requisitos: limite de mensagens ≥ 2.000 destinatários, linha de crédito, webhook `calls` e permissão do usuário.
+- A Evolution API não realiza chamadas oficiais; o botão fica desabilitado nesse provedor.
+- É necessário HTTPS e permissão de microfone no navegador. A chamada real deve ser homologada com a conta Cloud API de produção.
+
+**Evolution API:** o WhatsApp Web oficial faz chamadas, mas a Evolution usa Baileys, que não implementa oferta/atendimento de áudio. O endpoint `call/offer` é um stub. Para voz real na Evolution seria necessário um webphone terceirizado (Wavoip) com token/dispositivo próprio; a alternativa oficial é a Cloud API com número elegível.
 
 ---
 

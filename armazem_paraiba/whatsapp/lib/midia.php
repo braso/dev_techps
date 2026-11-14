@@ -3,8 +3,8 @@
 /**
  * Mídias do CRM - TECHPS: validação, armazenamento e download pelo provedor.
  *
- * Os arquivos ficam em whatsapp/arquivos/ e só são entregues por arquivo.php,
- * que exige sessão e permissão de acesso ao chat.
+ * Os arquivos ficam fora do document root (WHATSAPP_MEDIA_PATH) e só são
+ * entregues por arquivo.php, que exige sessão e permissão de acesso ao chat.
  */
 
 if (!function_exists('wa_midia_limites')) {
@@ -155,11 +155,52 @@ if (!function_exists('wa_midia_nome_seguro')) {
 }
 
 if (!function_exists('wa_midia_pasta')) {
+    /**
+     * Diretório de mídia fora do document root. Em produção, configure
+     * WHATSAPP_MEDIA_PATH para um volume persistente fora da pasta pública.
+     * O fallback em temp evita deixar anexos acessíveis por URL direta.
+     */
     function wa_midia_pasta(): string {
-        $dir = WA_MODULE_DIR . '/arquivos';
-        if (!is_dir($dir)) {
-            @mkdir($dir, 0755, true);
+        $dir = trim(strval($_ENV['WHATSAPP_MEDIA_PATH'] ?? getenv('WHATSAPP_MEDIA_PATH') ?: ''));
+        if ($dir === '') {
+            $docroot = realpath(strval($_SERVER['DOCUMENT_ROOT'] ?? ''));
+            if ($docroot !== false && $docroot !== '') {
+                $dir = dirname($docroot) . DIRECTORY_SEPARATOR . 'techps_whatsapp_media';
+            } else {
+                $dir = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR
+                    . 'techps_whatsapp_media_' . substr(hash('sha256', strval($_ENV['DB_NAME'] ?? 'default')), 0, 8);
+            }
         }
+
+        // Nunca aceitar um diretório dentro do document root.
+        $docroot = realpath(strval($_SERVER['DOCUMENT_ROOT'] ?? ''));
+        $dirReal = realpath($dir);
+        if ($docroot !== false && $docroot !== '' && $dirReal !== false
+            && str_starts_with($dirReal, rtrim($docroot, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR)) {
+            $dir = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR
+                . 'techps_whatsapp_media_' . substr(hash('sha256', strval($_ENV['DB_NAME'] ?? 'default')), 0, 8);
+        }
+
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0750, true);
+        }
+        $dirReal = realpath($dir);
+        if ($docroot !== false && $docroot !== '' && $dirReal !== false
+            && str_starts_with($dirReal, rtrim($docroot, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR)) {
+            $dir = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR
+                . 'techps_whatsapp_media_' . substr(hash('sha256', strval($_ENV['DB_NAME'] ?? 'default')), 0, 8);
+            if (!is_dir($dir)) {
+                @mkdir($dir, 0750, true);
+            }
+        }
+        if (!is_dir($dir) || !is_writable($dir)) {
+            $dir = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR
+                . 'techps_whatsapp_media_' . substr(hash('sha256', strval($_ENV['DB_NAME'] ?? 'default')), 0, 8);
+            if (!is_dir($dir)) {
+                @mkdir($dir, 0750, true);
+            }
+        }
+        @chmod($dir, 0750);
         return $dir;
     }
 }
@@ -225,6 +266,12 @@ if (!function_exists('wa_midia_salvar_upload')) {
         $nomeOriginal = strval($file['name'] ?? '');
         if ($tmp === '' || !is_file($tmp)) {
             $erro = 'Arquivo temporário não encontrado.';
+            return null;
+        }
+        // Em requisições web o caminho precisa ser um upload real do PHP.
+        // O teste CLI continua permitindo um arquivo temporário controlado.
+        if (PHP_SAPI !== 'cli' && !is_uploaded_file($tmp)) {
+            $erro = 'Upload inválido.';
             return null;
         }
         $mime = wa_midia_detectar_mime($tmp, $nomeOriginal);

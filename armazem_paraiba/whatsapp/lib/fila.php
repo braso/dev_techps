@@ -169,7 +169,7 @@ if (!function_exists('wa_processar_item_fila')) {
             $envio = $provider->sendTemplate($telefone, $partes[0] ?? '', $partes[1] ?? 'pt_BR', array_slice($partes, 2));
         } else {
             $arquivo = strval($msg['msg_tx_arquivo'] ?? '');
-            $caminho = $arquivo !== '' ? realpath(__DIR__ . '/../arquivos/' . basename($arquivo)) : false;
+            $caminho = $arquivo !== '' ? realpath(wa_midia_pasta() . '/' . basename($arquivo)) : false;
             if (!$caminho || !is_file($caminho)) {
                 $envio = ['success' => false, 'error' => 'Arquivo de mídia não encontrado.'];
             } else {
@@ -282,7 +282,9 @@ if (!function_exists('wa_limpar_retencao')) {
             wa_log('retencao_desativada', 'Retenção desativada: 0 dias (nunca apagar).', [], 'info');
             return 0;
         }
-        $corte = date('Y-m-d H:i:s', strtotime('-' . $dias . ' days'));
+        $corte = (new DateTimeImmutable('-' . $dias . ' days'))
+            ->setTimezone(new DateTimeZone('UTC'))
+            ->format('Y-m-d H:i:s');
 
         $rs = query("SELECT msg_nb_id FROM wa_mensagem WHERE msg_dt_criacao < ? ORDER BY msg_nb_id ASC LIMIT 500", "s", [$corte]);
         $ids = [];
@@ -299,7 +301,7 @@ if (!function_exists('wa_limpar_retencao')) {
         while ($rsAnexos && ($a = mysqli_fetch_assoc($rsAnexos))) {
             $arquivo = basename(strval($a['anx_tx_arquivo'] ?? ''));
             if ($arquivo !== '') {
-                $caminho = __DIR__ . '/../arquivos/' . $arquivo;
+                $caminho = wa_midia_pasta() . '/' . $arquivo;
                 if (is_file($caminho)) {
                     @unlink($caminho);
                 }

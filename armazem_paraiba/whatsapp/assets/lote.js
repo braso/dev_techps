@@ -8,6 +8,7 @@
     var selecionados = {};
     var loteId = 0;
     var timerLote = null;
+    var prontas = [];
 
     function $(id) { return document.getElementById(id); }
     function esc(v) {
@@ -40,6 +41,79 @@
     }
 
     function totalSelecionados() { return Object.keys(selecionados).length; }
+
+    function preencherTitulosProntos() {
+        var select = $('loteProntaTitulo');
+        if (!select) return;
+        var titulos = [];
+        var vistos = {};
+        prontas.forEach(function (p) {
+            var t = String(p.mpr_tx_titulo || '');
+            if (t !== '' && !vistos[t]) {
+                vistos[t] = true;
+                titulos.push(t);
+            }
+        });
+        var html = '<option value="">Selecione o título...</option>';
+        titulos.forEach(function (t) {
+            html += '<option value="' + esc(t) + '">' + esc(t) + '</option>';
+        });
+        if (!titulos.length) {
+            html = '<option value="">Nenhuma mensagem pronta ativa</option>';
+        }
+        select.innerHTML = html;
+        var sub = $('loteProntaSubtitulo');
+        if (sub) {
+            sub.innerHTML = '<option value="">Selecione o título primeiro</option>';
+            sub.disabled = true;
+        }
+    }
+
+    function preencherSubtitulosProntos(titulo) {
+        var select = $('loteProntaSubtitulo');
+        if (!select) return;
+        if (!titulo) {
+            select.innerHTML = '<option value="">Selecione o título primeiro</option>';
+            select.disabled = true;
+            return;
+        }
+        var itens = prontas.filter(function (p) { return String(p.mpr_tx_titulo || '') === titulo; });
+        var html = '<option value="">Selecione o subtítulo...</option>';
+        itens.forEach(function (p) {
+            html += '<option value="' + parseInt(p.mpr_nb_id || 0, 10) + '">' + esc(p.mpr_tx_subtitulo || '') + '</option>';
+        });
+        select.innerHTML = html;
+        select.disabled = itens.length === 0;
+    }
+
+    function aplicarMensagemPronta(id) {
+        if (!id) return;
+        var pronta = null;
+        for (var i = 0; i < prontas.length; i++) {
+            if (parseInt(prontas[i].mpr_nb_id || 0, 10) === id) {
+                pronta = prontas[i];
+                break;
+            }
+        }
+        if (!pronta) return;
+        var campo = $('loteMensagem');
+        if (campo) {
+            campo.value = String(pronta.mpr_tx_mensagem || '');
+            ultimaPosicaoLote = campo.value.length;
+            montarPreview();
+            campo.focus();
+        }
+    }
+
+    function carregarMensagensProntas() {
+        apiGet({ acao: 'mensagens_prontas' }).then(function (data) {
+            prontas = data && data.success && Array.isArray(data.mensagens) ? data.mensagens : [];
+            preencherTitulosProntos();
+        }).catch(function () {
+            prontas = [];
+            preencherTitulosProntos();
+        });
+    }
 
     function atualizarIndicadores() {
         var total = totalSelecionados();
@@ -130,13 +204,53 @@
         if (!c) return texto;
         var nome = c.cont_tx_nome || '';
         var primeiro = nome.split(/\s+/)[0] || nome;
-        return String(texto || '')
-            .replace(/\{nome\}/g, nome)
-            .replace(/\{primeiro_nome\}/g, primeiro)
-            .replace(/\{setor\}/g, c.cont_tx_setor || '')
-            .replace(/\{cargo\}/g, c.cont_tx_cargo || '')
-            .replace(/\{empresa\}/g, c.cont_tx_empresa_nome || '')
-            .replace(/\{telefone\}/g, c.cont_tx_e164 || c.cont_tx_telefone || '');
+        var valores = {
+            nome: nome,
+            primeiro_nome: primeiro,
+            setor: c.cont_tx_setor || '',
+            cargo: c.cont_tx_cargo || '',
+            empresa: c.cont_tx_empresa_nome || '',
+            telefone: c.cont_tx_e164 || c.cont_tx_telefone || ''
+        };
+        var saida = String(texto || '');
+        Object.keys(valores).forEach(function (chave) {
+            saida = saida.split('{{' + chave + '}}').join(valores[chave]);
+        });
+        Object.keys(valores).forEach(function (chave) {
+            saida = saida.split('{' + chave + '}').join(valores[chave]);
+        });
+        return saida;
+    }
+
+    var campoMensagemLote = null;
+    var ultimaPosicaoLote = 0;
+
+    function guardarPosicaoLote() {
+        if (!campoMensagemLote) return;
+        if (typeof campoMensagemLote.selectionStart === 'number') {
+            ultimaPosicaoLote = campoMensagemLote.selectionStart;
+        }
+    }
+
+    function inserirVariavelLote(variavel) {
+        if (!campoMensagemLote || !variavel) return;
+        var valor = campoMensagemLote.value;
+        var focado = document.activeElement === campoMensagemLote;
+        var inicio = focado && typeof campoMensagemLote.selectionStart === 'number' ? campoMensagemLote.selectionStart : ultimaPosicaoLote;
+        var fim = focado && typeof campoMensagemLote.selectionEnd === 'number' ? campoMensagemLote.selectionEnd : inicio;
+        if (inicio < 0 || inicio > valor.length) inicio = valor.length;
+        if (fim < inicio || fim > valor.length) fim = inicio;
+        var novo = valor.slice(0, inicio) + variavel + valor.slice(fim);
+        if (novo.length > 4096) {
+            alert('A mensagem excede 4096 caracteres.');
+            return;
+        }
+        campoMensagemLote.value = novo;
+        var novaPosicao = inicio + variavel.length;
+        campoMensagemLote.focus();
+        if (campoMensagemLote.setSelectionRange) campoMensagemLote.setSelectionRange(novaPosicao, novaPosicao);
+        ultimaPosicaoLote = novaPosicao;
+        montarPreview();
     }
 
     function montarPreview() {
@@ -210,6 +324,14 @@
             return;
         }
         var permitir = $('lotePermitirOptout') && $('lotePermitirOptout').checked ? 1 : 0;
+        var justificativa = '';
+        if (permitir) {
+            justificativa = (window.prompt('Justificativa para enviar sem opt-in (mínimo 10 caracteres):') || '').trim();
+            if (justificativa.length < 10) {
+                alert('Informe uma justificativa com pelo menos 10 caracteres.');
+                return;
+            }
+        }
         var botao = $('loteAvancar');
         if (botao) { botao.disabled = true; botao.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Enviando...'; }
 
@@ -217,7 +339,8 @@
             ids: ids,
             titulo: ($('loteTitulo') || {}).value || '',
             mensagem: ($('loteMensagem') || {}).value || '',
-            permitir_optout: permitir
+            permitir_optout: permitir,
+            justificativa: justificativa
         }).then(function (data) {
             if (!data.success) {
                 alert(data.message || 'Não foi possível criar o lote.');
@@ -307,7 +430,31 @@
                 atualizarIndicadores();
             }
         });
-        if ($('loteMensagem')) $('loteMensagem').addEventListener('input', montarPreview);
+        campoMensagemLote = $('loteMensagem');
+        if (campoMensagemLote) {
+            ultimaPosicaoLote = campoMensagemLote.value.length;
+            ['click', 'keyup', 'input', 'select', 'blur'].forEach(function (evento) {
+                campoMensagemLote.addEventListener(evento, guardarPosicaoLote);
+            });
+            campoMensagemLote.addEventListener('input', montarPreview);
+        }
+        document.querySelectorAll('.wa-variavel').forEach(function (btn) {
+            btn.addEventListener('mousedown', function (e) { e.preventDefault(); });
+            btn.addEventListener('click', function () {
+                inserirVariavelLote(btn.getAttribute('data-variavel') || '');
+            });
+        });
+        if ($('loteProntaTitulo')) {
+            $('loteProntaTitulo').addEventListener('change', function () {
+                preencherSubtitulosProntos(this.value);
+            });
+        }
+        if ($('loteProntaSubtitulo')) {
+            $('loteProntaSubtitulo').addEventListener('change', function () {
+                aplicarMensagemPronta(parseInt(this.value || 0, 10));
+            });
+        }
+        carregarMensagensProntas();
 
         if ($('loteProcessarFila')) {
             $('loteProcessarFila').addEventListener('click', function () {

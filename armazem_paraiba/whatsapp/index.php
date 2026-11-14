@@ -6,7 +6,9 @@ verificaPermissao('/whatsapp/index.php');
 $usuarioId = (int)($_SESSION['user_nb_id'] ?? 0);
 $cfg = wa_config();
 $providerAtivo = wa_config_ativa();
+$chamadaAtiva = wa_calling_ativa();
 $erroContato = '';
+$origemFiltro = strval($_GET['origem'] ?? 'todas') === 'empresa' ? 'empresa' : 'todas';
 
 // Resolve atalhos vindos dos cadastros: ?entidade=, ?user= ou ?telefone=.
 $contatoSelecionado = null;
@@ -46,15 +48,18 @@ if ($contatoSelecionado) {
     }
 }
 
-$conversas = wa_conversa_listar(['filtro' => 'todas', 'usuario' => $usuarioId]);
+$conversas = wa_conversa_listar(['filtro' => 'todas', 'origem' => $origemFiltro, 'usuario' => $usuarioId]);
 $totalNaoLidas = 0;
 foreach ($conversas as $cv) {
     $totalNaoLidas += (int)($cv['conv_nb_nao_lidas'] ?? 0);
 }
+$totalConversasTodas = wa_conversa_contar('todas');
+$totalConversasEmpresa = wa_conversa_contar('empresa');
 $ultimoId = 0;
 foreach ($mensagens as $m) {
     $ultimoId = max($ultimoId, (int)$m['msg_nb_id']);
 }
+
 
 if (!function_exists('wa_render_status_msg')) {
     function wa_render_status_msg(string $status): string {
@@ -118,8 +123,7 @@ if (!function_exists('wa_render_mensagem')) {
         } elseif ($tipo !== 'texto' && $tipo !== 'template' && $tipo !== 'sistema') {
             $texto = '<em>' . wa_e($conteudo !== '' ? $conteudo : '[' . $tipo . ']') . '</em>';
         }
-        $data = strtotime(strval($m['msg_dt_criacao'] ?? ''));
-        $hora = $data ? date('d/m/Y H:i', $data) : '';
+        $hora = wa_data_utc_para_local($m['msg_dt_criacao'] ?? '');
         $status = $direcao === 'out' ? wa_render_status_msg(strval($m['msg_tx_status'] ?? 'pendente')) : '';
         $autor = $direcao === 'out'
             ? wa_e($m['usuario_nome'] ?? ($_SESSION['user_tx_nome'] ?? 'Você'))
@@ -134,7 +138,7 @@ if (!function_exists('wa_render_mensagem')) {
 
 cabecalho('CRM - TECHPS');
 ?>
-<link rel="stylesheet" href="<?= wa_e($CONTEX['path']) ?>/whatsapp/assets/whatsapp.css?v=9">
+<link rel="stylesheet" href="<?= wa_e($CONTEX['path']) ?>/whatsapp/assets/whatsapp.css?v=23">
 
 <div class="wa-app">
     <aside class="wa-sidebar">
@@ -156,6 +160,16 @@ cabecalho('CRM - TECHPS');
             <input type="text" id="waBusca" placeholder="Buscar por nome ou telefone..." autocomplete="off">
         </div>
 
+        <div class="wa-origem-filtros">
+            <span class="wa-origem-label">Conversas</span>
+            <a class="wa-origem-filtro <?= $origemFiltro === 'todas' ? 'active' : '' ?>" href="index.php?origem=todas">
+                <i class="fa fa-comments-o"></i> Todas <span class="wa-filtro-qtd"><?= (int)$totalConversasTodas ?></span>
+            </a>
+            <a class="wa-origem-filtro <?= $origemFiltro === 'empresa' ? 'active' : '' ?>" href="index.php?origem=empresa">
+                <i class="fa fa-building-o"></i> Da empresa <span class="wa-filtro-qtd"><?= (int)$totalConversasEmpresa ?></span>
+            </a>
+        </div>
+
         <div class="wa-filtros">
             <button type="button" class="wa-filtro active" data-filtro="todas">Todas</button>
             <button type="button" class="wa-filtro" data-filtro="nao_lidas">Não lidas</button>
@@ -174,11 +188,10 @@ cabecalho('CRM - TECHPS');
                     <?php
                     $cvId = (int)$cv['conv_nb_id'];
                     $naoLidas = (int)($cv['conv_nb_nao_lidas'] ?? 0);
-                    $dataCv = strtotime(strval($cv['ultima_data'] ?? $cv['conv_dt_ultima_atividade'] ?? ''));
-                    $horaCv = $dataCv ? date('d/m', $dataCv) : '';
+                    $horaCv = wa_data_utc_para_local($cv['ultima_data'] ?? $cv['conv_dt_ultima_atividade'] ?? '', 'd/m');
                     $ultima = strval($cv['ultima_msg'] ?? $cv['conv_tx_ultima_mensagem'] ?? '');
                     ?>
-                    <a class="wa-conversa <?= $conversaId === $cvId ? 'active' : '' ?>" href="index.php?contato=<?= (int)$cv['conv_nb_contato'] ?>" data-contato="<?= (int)$cv['conv_nb_contato'] ?>">
+                    <a class="wa-conversa <?= $conversaId === $cvId ? 'active' : '' ?>" href="index.php?contato=<?= (int)$cv['conv_nb_contato'] ?>&origem=<?= wa_e($origemFiltro) ?>" data-contato="<?= (int)$cv['conv_nb_contato'] ?>">
                         <div class="wa-avatar"><?= wa_e(mb_substr(strval($cv['cont_tx_nome'] ?? '?'), 0, 1)) ?></div>
                         <div class="wa-conversa-info">
                             <div class="wa-conversa-top">
@@ -222,6 +235,9 @@ cabecalho('CRM - TECHPS');
                     </div>
                 </div>
                 <div class="wa-chat-head-actions">
+                    <button type="button" class="btn btn-default btn-sm" id="waChamada" title="<?= $chamadaAtiva ? 'Ligar pelo WhatsApp' : 'Chamadas não configuradas. Ative em Configurações → Chamadas.' ?>" aria-label="Ligar" <?= $chamadaAtiva ? '' : 'disabled' ?>>
+                        <i class="fa fa-phone"></i>
+                    </button>
                     <button type="button" class="btn btn-default btn-sm" id="waExportar" title="Exportar conversa em CSV" aria-label="Exportar conversa em CSV">
                         <i class="fa fa-download"></i>
                     </button>
@@ -259,6 +275,7 @@ cabecalho('CRM - TECHPS');
                 </button>
                 <div class="wa-composer-main">
                     <textarea id="waTexto" class="form-control" rows="2" maxlength="4096" placeholder="Escreva uma mensagem... (Enter envia, Shift+Enter quebra linha)" <?= $providerAtivo ? '' : 'disabled' ?>></textarea>
+                    <div class="wa-prontas-menu" id="waProntasMenu"></div>
                     <div class="wa-gravacao-info" id="waGravacaoInfo" style="display:none;">
                         <span class="wa-gravacao-dot"></span>
                         <span>Gravando áudio <strong id="waGravacaoTempo">00:00</strong></span>
@@ -281,7 +298,8 @@ cabecalho('CRM - TECHPS');
             <div class="wa-empty">
                 <div class="wa-empty-icon"><i class="fa fa-whatsapp"></i></div>
                 <h3>Selecione uma conversa</h3>
-                <p>Escolha um contato na lista ao lado ou inicie um novo chat.</p>
+                <p>Escolha um contato na lista ao lado. Use as abas <strong>Todas</strong> e <strong>Da empresa</strong> acima da lista para ver todas as conversas ou somente funcionários/usuários cadastrados.</p>
+                <small class="wa-empty-hint">“Da empresa” mostra apenas contatos vinculados ao cadastro de funcionário/usuário. Números externos que chegam no aparelho aparecem em “Todas”.</small>
                 <button type="button" class="btn btn-success" id="waNovoChatEmpty"><i class="fa fa-plus"></i> Novo chat</button>
             </div>
         <?php endif; ?>
@@ -383,21 +401,58 @@ cabecalho('CRM - TECHPS');
     </div>
 </div>
 
+<div class="wa-call-modal" id="waChamadaModal" aria-hidden="true">
+    <div class="wa-call-box" role="dialog" aria-modal="true" aria-label="Chamada">
+        <div class="wa-call-icon"><i class="fa fa-phone"></i></div>
+        <h3 id="waCallTitle">Chamada</h3>
+        <p id="waCallSubtitle"></p>
+        <div class="wa-call-timer" id="waCallTimer">00:00</div>
+        <div class="wa-call-status" id="waCallStatus"></div>
+        <div class="wa-call-actions">
+            <button type="button" class="btn btn-success" id="waCallAceitar" style="display:none;"><i class="fa fa-phone"></i> Aceitar</button>
+            <button type="button" class="btn btn-danger" id="waCallRejeitar" style="display:none;"><i class="fa fa-phone"></i> Rejeitar</button>
+            <button type="button" class="btn btn-default" id="waCallPermitir" style="display:none;"><i class="fa fa-check"></i> Solicitar permissão</button>
+            <button type="button" class="btn btn-default" id="waCallMudo" style="display:none;"><i class="fa fa-microphone"></i> Mudo</button>
+            <button type="button" class="btn btn-danger" id="waCallEncerrar" style="display:none;"><i class="fa fa-phone"></i> Encerrar</button>
+            <button type="button" class="btn btn-default" id="waCallFechar" style="display:none;">Fechar</button>
+        </div>
+        <small class="wa-call-hint" id="waCallHint"></small>
+    </div>
+</div>
+
 <script>
 window.WA_CONFIG = {
-    api: <?= json_encode(wa_e($CONTEX['path']) . '/whatsapp/api.php') ?>,
-    csrf: <?= json_encode(wa_csrf_token()) ?>,
+    api: <?= wa_json_script(wa_e($CONTEX['path']) . '/whatsapp/api.php') ?>,
+    csrf: <?= wa_json_script(wa_csrf_token()) ?>,
     conversaId: <?= (int)$conversaId ?>,
     contatoId: <?= (int)($conversaSelecionada['cont_nb_id'] ?? 0) ?>,
     ultimoId: <?= (int)$ultimoId ?>,
     usuarioId: <?= (int)$usuarioId ?>,
     ativo: <?= $providerAtivo ? 'true' : 'false' ?>,
-    urlIndex: <?= json_encode(wa_e($CONTEX['path']) . '/whatsapp/index.php') ?>,
-    urlContatos: <?= json_encode(wa_e($CONTEX['path']) . '/whatsapp/contatos.php') ?>,
-    urlArquivo: <?= json_encode(wa_e($CONTEX['path']) . '/whatsapp/arquivo.php') ?>,
+    urlIndex: <?= wa_json_script(wa_e($CONTEX['path']) . '/whatsapp/index.php') ?>,
+    urlContatos: <?= wa_json_script(wa_e($CONTEX['path']) . '/whatsapp/contatos.php') ?>,
+    urlArquivo: <?= wa_json_script(wa_e($CONTEX['path']) . '/whatsapp/arquivo.php') ?>,
+    origemFiltro: <?= wa_json_script($origemFiltro) ?>,
+    contato: <?= wa_json_script([
+        'nome' => $conversaSelecionada['cont_tx_nome'] ?? '',
+        'setor' => $conversaSelecionada['cont_tx_setor'] ?? '',
+        'cargo' => $conversaSelecionada['cont_tx_cargo'] ?? '',
+        'empresa' => $conversaSelecionada['cont_tx_empresa_nome'] ?? '',
+        'telefone' => $conversaSelecionada['cont_tx_e164'] ?? ($conversaSelecionada['cont_tx_telefone'] ?? ''),
+    ]) ?>,
     maxMidia: <?= (int)wa_midia_limite_bytes() ?>,
-    limitesMidia: <?= json_encode(wa_midia_limites(), JSON_UNESCAPED_UNICODE) ?>
+    limitesMidia: <?= wa_json_script(wa_midia_limites()) ?>
+};
+window.WA_CHAMADA = {
+    api: <?= wa_json_script(wa_e($CONTEX['path']) . '/whatsapp/api.php') ?>,
+    csrf: <?= wa_json_script(wa_csrf_token()) ?>,
+    ativo: <?= $chamadaAtiva ? 'true' : 'false' ?>,
+    conversaId: <?= (int)$conversaId ?>,
+    contatoNome: <?= wa_json_script($conversaSelecionada['cont_tx_nome'] ?? '') ?>,
+    contatoTelefone: <?= wa_json_script($conversaSelecionada['cont_tx_e164'] ?? ($conversaSelecionada['cont_tx_telefone'] ?? '')) ?>,
+    usuarioNome: <?= wa_json_script($_SESSION['user_tx_nome'] ?? '') ?>
 };
 </script>
-<script src="<?= wa_e($CONTEX['path']) ?>/whatsapp/assets/whatsapp.js?v=9"></script>
+<script src="<?= wa_e($CONTEX['path']) ?>/whatsapp/assets/whatsapp.js?v=21"></script>
+<script src="<?= wa_e($CONTEX['path']) ?>/whatsapp/assets/chamadas.js?v=7"></script>
 <?php rodape(); ?>

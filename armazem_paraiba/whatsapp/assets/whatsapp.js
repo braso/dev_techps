@@ -24,6 +24,10 @@
     var gravacaoMime = '';
     var cameraStream = null;
     var cameraAberta = false;
+    var prontas = [];
+    var prontasCarregadas = false;
+    var prontasTituloAtual = '';
+    var prontasMenuAberto = false;
 
     function apiUrl(params) {
         var url = cfg.api;
@@ -148,7 +152,7 @@
         var status = direcao === 'out' ? statusIcon(m.msg_tx_status || 'pendente') : '';
         var autor = direcao === 'out' ? esc(m.usuario_nome || 'Você') : 'Contato';
         return '<div class="wa-msg wa-msg-' + direcao + '" data-id="' + parseInt(m.msg_nb_id || 0, 10) + '">' +
-            '<div class="wa-msg-meta"><strong>' + autor + '</strong><span>' + esc(formatarData(m.msg_dt_criacao)) + '</span></div>' +
+            '<div class="wa-msg-meta"><strong>' + autor + '</strong><span>' + esc(m.msg_dt_criacao_fmt || formatarData(m.msg_dt_criacao)) + '</span></div>' +
             '<div class="wa-msg-body">' + corpo + '</div>' +
             (status ? '<div class="wa-msg-status">' + status + '</div>' : '') +
             '</div>';
@@ -158,8 +162,8 @@
         var naoLidas = parseInt(c.conv_nb_nao_lidas || 0, 10);
         var ativa = parseInt(c.conv_nb_id || 0, 10) === conversaId;
         var ultima = c.ultima_msg || c.conv_tx_ultima_mensagem || 'Sem mensagens';
-        var data = formatarData(c.ultima_data || c.conv_dt_ultima_atividade);
-        if (data) data = data.substring(0, 5);
+        var data = c.ultima_data_fmt || formatarData(c.ultima_data || c.conv_dt_ultima_atividade);
+        if (data && !c.ultima_data_fmt) data = data.substring(0, 5);
         var inicial = esc((c.cont_tx_nome || '?').substring(0, 1));
         return '<a class="wa-conversa ' + (ativa ? 'active' : '') + '" href="' + esc(cfg.urlIndex) + '?contato=' + parseInt(c.conv_nb_contato || 0, 10) + '">' +
             '<div class="wa-avatar">' + inicial + '</div>' +
@@ -190,7 +194,7 @@
     function carregarConversas() {
         var lista = document.getElementById('waListaConversas');
         if (!lista) return;
-        apiGet({ acao: 'conversas', busca: buscaAtual, filtro: filtroAtual })
+        apiGet({ acao: 'conversas', busca: buscaAtual, filtro: filtroAtual, origem: cfg.origemFiltro || 'todas' })
             .then(function (data) {
                 if (!data.success) return;
                 var conversas = data.conversas || [];
@@ -606,6 +610,133 @@
         }
     }
 
+    function carregarProntas() {
+        if (prontasCarregadas) return Promise.resolve(prontas);
+        return apiGet({ acao: 'mensagens_prontas' }).then(function (data) {
+            prontas = data && data.success && Array.isArray(data.mensagens) ? data.mensagens : [];
+            prontasCarregadas = true;
+            return prontas;
+        }).catch(function () {
+            prontas = [];
+            prontasCarregadas = true;
+            return prontas;
+        });
+    }
+
+    function fecharMenuProntas() {
+        var menu = document.getElementById('waProntasMenu');
+        if (menu) {
+            menu.classList.remove('open');
+            menu.innerHTML = '';
+        }
+        prontasMenuAberto = false;
+        prontasTituloAtual = '';
+    }
+
+    function renderMenuProntas(titulo) {
+        var menu = document.getElementById('waProntasMenu');
+        if (!menu) return;
+        prontasTituloAtual = titulo || '';
+        prontasMenuAberto = true;
+        menu.classList.add('open');
+
+        if (!prontas.length) {
+            menu.innerHTML = '<div class="wa-prontas-vazio">Nenhuma mensagem pronta ativa. Cadastre em CRM - TECHPS → Mensagens Prontas.</div>';
+            return;
+        }
+
+        var html = '';
+        if (!titulo) {
+            var titulos = [];
+            var vistos = {};
+            prontas.forEach(function (p) {
+                var t = String(p.mpr_tx_titulo || '');
+                if (t !== '' && !vistos[t]) {
+                    vistos[t] = true;
+                    titulos.push(t);
+                }
+            });
+            html += '<div class="wa-prontas-menu-head"><strong>Mensagens prontas</strong><span style="font-size:9px;color:#94a3b8;">' + titulos.length + ' título(s)</span></div>';
+            titulos.forEach(function (t) {
+                var qtd = prontas.filter(function (p) { return String(p.mpr_tx_titulo || '') === t; }).length;
+                html += '<button type="button" class="wa-prontas-item" data-pronta-titulo="' + esc(t) + '">' +
+                    '<strong>' + esc(t) + '</strong>' +
+                    '<small>' + qtd + ' subtítulo(s)</small>' +
+                '</button>';
+            });
+        } else {
+            var itens = prontas.filter(function (p) { return String(p.mpr_tx_titulo || '') === titulo; });
+            html += '<div class="wa-prontas-menu-head"><strong>' + esc(titulo) + '</strong><button type="button" data-pronta-voltar="1">← Títulos</button></div>';
+            itens.forEach(function (p) {
+                var corpo = String(p.mpr_tx_mensagem || '').replace(/\s+/g, ' ').trim();
+                if (corpo.length > 90) corpo = corpo.substring(0, 90) + '...';
+                html += '<button type="button" class="wa-prontas-item" data-pronta-id="' + parseInt(p.mpr_nb_id || 0, 10) + '">' +
+                    '<strong>' + esc(p.mpr_tx_subtitulo || '') + '</strong>' +
+                    '<small>' + esc(corpo) + '</small>' +
+                '</button>';
+            });
+        }
+        menu.innerHTML = html;
+    }
+
+    function abrirMenuProntas() {
+        if (!conversaId || gravando || enviando) return;
+        var texto = document.getElementById('waTexto');
+        if (texto) {
+            var pos = typeof texto.selectionStart === 'number' ? texto.selectionStart : texto.value.length;
+            if (!/(^|\s)\/$/.test(texto.value.slice(0, pos))) return;
+        }
+        carregarProntas().then(function () {
+            renderMenuProntas('');
+        });
+    }
+
+    function personalizarPronta(texto) {
+        var c = cfg.contato || {};
+        var nome = String(c.nome || '');
+        var primeiro = nome.split(/\s+/)[0] || nome;
+        return String(texto || '')
+            .replace(/\{\{nome\}\}/g, nome)
+            .replace(/\{\{primeiro_nome\}\}/g, primeiro)
+            .replace(/\{\{setor\}\}/g, c.setor || '')
+            .replace(/\{\{cargo\}\}/g, c.cargo || '')
+            .replace(/\{\{empresa\}\}/g, c.empresa || '')
+            .replace(/\{\{telefone\}\}/g, c.telefone || '')
+            .replace(/\{nome\}/g, nome)
+            .replace(/\{primeiro_nome\}/g, primeiro)
+            .replace(/\{setor\}/g, c.setor || '')
+            .replace(/\{cargo\}/g, c.cargo || '')
+            .replace(/\{empresa\}/g, c.empresa || '')
+            .replace(/\{telefone\}/g, c.telefone || '');
+    }
+
+    function selecionarPronta(id) {
+        var pronta = null;
+        for (var i = 0; i < prontas.length; i++) {
+            if (parseInt(prontas[i].mpr_nb_id || 0, 10) === id) {
+                pronta = prontas[i];
+                break;
+            }
+        }
+        if (!pronta) return;
+        var texto = document.getElementById('waTexto');
+        if (!texto) return;
+        var valor = texto.value;
+        var pos = typeof texto.selectionStart === 'number' ? texto.selectionStart : valor.length;
+        var antes = valor.slice(0, pos);
+        var depois = valor.slice(pos);
+        var barra = antes.lastIndexOf('/');
+        var corpo = personalizarPronta(pronta.mpr_tx_mensagem);
+        if (barra >= 0) {
+            antes = antes.slice(0, barra);
+        }
+        texto.value = antes + corpo + depois;
+        fecharMenuProntas();
+        texto.focus();
+        var novaPos = (antes + corpo).length;
+        if (texto.setSelectionRange) texto.setSelectionRange(novaPos, novaPos);
+    }
+
     function enviarMidia(file, legenda) {
         var texto = document.getElementById('waTexto');
         var botao = document.getElementById('waEnviar');
@@ -661,6 +792,10 @@
         if (!texto || !botao || !conversaId || enviando || gravando) return;
         var mensagem = texto.value.trim();
         if (!mensagem && !arquivoSelecionado) return;
+        if (mensagem === '/') {
+            abrirMenuProntas();
+            return;
+        }
         if (arquivoSelecionado) {
             enviarMidia(arquivoSelecionado, mensagem);
             return;
@@ -763,12 +898,55 @@
         var texto = document.getElementById('waTexto');
         if (texto) {
             texto.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && prontasMenuAberto) {
+                    e.preventDefault();
+                    fecharMenuProntas();
+                    return;
+                }
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     enviar();
                 }
             });
+            texto.addEventListener('input', function () {
+                var valor = texto.value;
+                var pos = typeof texto.selectionStart === 'number' ? texto.selectionStart : valor.length;
+                var antes = valor.slice(0, pos);
+                if (/(^|\s)\/$/.test(antes)) {
+                    abrirMenuProntas();
+                } else if (prontasMenuAberto) {
+                    fecharMenuProntas();
+                }
+            });
         }
+
+        var menuProntas = document.getElementById('waProntasMenu');
+        if (menuProntas) {
+            menuProntas.addEventListener('click', function (e) {
+                // Impede que o clique chegue ao document depois que o menu
+                // for re-renderizado e o botão original sair do DOM.
+                e.stopPropagation();
+                var voltar = e.target.closest('[data-pronta-voltar]');
+                if (voltar) {
+                    renderMenuProntas('');
+                    return;
+                }
+                var titulo = e.target.closest('[data-pronta-titulo]');
+                if (titulo) {
+                    renderMenuProntas(titulo.getAttribute('data-pronta-titulo') || '');
+                    return;
+                }
+                var item = e.target.closest('[data-pronta-id]');
+                if (item) {
+                    selecionarPronta(parseInt(item.getAttribute('data-pronta-id') || '0', 10));
+                }
+            });
+        }
+        document.addEventListener('click', function (e) {
+            if (!prontasMenuAberto) return;
+            if (e.target.closest('#waProntasMenu') || e.target === texto) return;
+            fecharMenuProntas();
+        });
 
         var anexar = document.getElementById('waAnexar');
         var arquivoInput = document.getElementById('waArquivo');

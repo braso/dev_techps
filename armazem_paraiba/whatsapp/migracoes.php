@@ -146,11 +146,12 @@ if (!function_exists('wa_migrar_menu')) {
             ['Contatos', '/whatsapp/contatos.php', 'whatsapp-contatos', 2],
             ['Envio em Lote', '/whatsapp/lote.php', 'whatsapp-lote', 3],
             ['Configurações', '/whatsapp/configuracoes.php', 'whatsapp-config', 4],
+            ['Mensagens Prontas', '/whatsapp/mensagens_prontas.php', 'whatsapp-mensagens-prontas', 5],
         ];
         foreach ($itens as $item) {
             wa_menu_garantir_item($conn, $item[0], $item[1], $item[2], $item[3]);
         }
-        wa_meta_gravar($conn, 'menu_version', '1');
+        wa_meta_gravar($conn, 'menu_version', '2');
     }
 }
 
@@ -160,11 +161,11 @@ if (!function_exists('wa_migrar')) {
             return;
         }
 
-        $versaoAtual = 4;
+        $versaoAtual = 6;
         $versao = wa_meta_ler($conn, 'schema_version');
         $menuVersao = wa_meta_ler($conn, 'menu_version');
 
-        if (!$forcar && $versao !== null && (int)$versao >= $versaoAtual && $menuVersao === '1') {
+        if (!$forcar && $versao !== null && (int)$versao >= $versaoAtual && (int)$menuVersao >= 2) {
             return;
         }
 
@@ -189,6 +190,7 @@ if (!function_exists('wa_migrar')) {
                 cfg_tx_webhook_url VARCHAR(255) NULL,
                 cfg_tx_test_number VARCHAR(30) NULL,
                 cfg_nb_retencao_dias INT NOT NULL DEFAULT 0,
+                cfg_tx_call_status ENUM('ativo','inativo') NOT NULL DEFAULT 'inativo',
                 cfg_nb_userAtualiza INT NULL,
                 cfg_tx_dataAtualiza DATETIME NULL,
                 cfg_tx_dataCadastro DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -259,6 +261,51 @@ if (!function_exists('wa_migrar')) {
                 KEY idx_msg (anx_nb_msg)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+            wa_executar_sql($conn, "CREATE TABLE IF NOT EXISTS wa_mensagem_pronta (
+                mpr_nb_id INT AUTO_INCREMENT PRIMARY KEY,
+                mpr_tx_titulo VARCHAR(180) NOT NULL,
+                mpr_tx_subtitulo VARCHAR(180) NOT NULL,
+                mpr_tx_mensagem TEXT NOT NULL,
+                mpr_tx_status ENUM('ativo','inativo') DEFAULT 'ativo',
+                mpr_nb_ordem INT DEFAULT 0,
+                mpr_nb_userCadastro INT NULL,
+                mpr_dt_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+                mpr_dt_atualizacao DATETIME NULL,
+                UNIQUE KEY uk_titulo_subtitulo (mpr_tx_titulo, mpr_tx_subtitulo),
+                KEY idx_status_ordem (mpr_tx_status, mpr_nb_ordem)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+            wa_executar_sql($conn, "CREATE TABLE IF NOT EXISTS wa_chamada (
+                ch_nb_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                ch_tx_call_id VARCHAR(120) NULL,
+                ch_nb_conversa INT NOT NULL,
+                ch_nb_contato INT NOT NULL,
+                ch_tx_direcao ENUM('in','out') NOT NULL,
+                ch_tx_status ENUM('solicitando','tocando','conectada','encerrada','rejeitada','falhou') NOT NULL DEFAULT 'solicitando',
+                ch_tx_sdp_offer LONGTEXT NULL,
+                ch_tx_sdp_answer LONGTEXT NULL,
+                ch_tx_erro VARCHAR(255) NULL,
+                ch_nb_user INT NULL,
+                ch_tx_opaque VARCHAR(512) NULL,
+                ch_dt_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+                ch_dt_atualizacao DATETIME NULL,
+                ch_dt_inicio DATETIME NULL,
+                ch_dt_fim DATETIME NULL,
+                ch_nb_duracao INT NULL,
+                UNIQUE KEY uk_call_id (ch_tx_call_id),
+                KEY idx_status (ch_tx_status, ch_tx_direcao),
+                KEY idx_conversa (ch_nb_conversa)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+            wa_executar_sql($conn, "CREATE TABLE IF NOT EXISTS wa_chamada_evento (
+                che_nb_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                che_nb_chamada BIGINT NULL,
+                che_tx_evento VARCHAR(40) NULL,
+                che_tx_payload LONGTEXT NULL,
+                che_dt_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+                KEY idx_chamada (che_nb_chamada)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
             wa_executar_sql($conn, "CREATE TABLE IF NOT EXISTS wa_lote (
                 lote_nb_id INT AUTO_INCREMENT PRIMARY KEY,
                 lote_tx_titulo VARCHAR(150) NULL,
@@ -324,6 +371,7 @@ if (!function_exists('wa_migrar')) {
             // Colunas adicionadas em versões posteriores (idempotente).
             wa_garantir_coluna($conn, 'wa_config', 'cfg_tx_test_number', "VARCHAR(30) NULL");
             wa_garantir_coluna($conn, 'wa_config', 'cfg_nb_retencao_dias', "INT NOT NULL DEFAULT 0");
+            wa_garantir_coluna($conn, 'wa_config', 'cfg_tx_call_status', "ENUM('ativo','inativo') NOT NULL DEFAULT 'inativo'");
             // Mantém o default do banco alinhado ao "0 = nunca apagar".
             @mysqli_query($conn, "ALTER TABLE wa_config ALTER COLUMN cfg_nb_retencao_dias SET DEFAULT 0");
             wa_garantir_coluna($conn, 'wa_contato', 'cont_nb_empresa', "INT NULL");

@@ -203,9 +203,9 @@ cabecalho('Contatos - CRM - TECHPS');
 
 <script>
 window.WA_CONTATOS = {
-    api: <?= json_encode(wa_e($CONTEX['path']) . '/whatsapp/api.php') ?>,
-    csrf: <?= json_encode(wa_csrf_token()) ?>,
-    urlLote: <?= json_encode(wa_e($CONTEX['path']) . '/whatsapp/lote.php') ?>
+    api: <?= wa_json_script(wa_e($CONTEX['path']) . '/whatsapp/api.php') ?>,
+    csrf: <?= wa_json_script(wa_csrf_token()) ?>,
+    urlLote: <?= wa_json_script(wa_e($CONTEX['path']) . '/whatsapp/lote.php') ?>
 };
 </script>
 <script>

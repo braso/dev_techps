@@ -49,6 +49,11 @@ if ($raw === false || trim($raw) === '') {
     echo 'Bad Request';
     exit;
 }
+if (strlen($raw) > 8 * 1024 * 1024) {
+    http_response_code(413);
+    echo 'Payload Too Large';
+    exit;
+}
 
 $headers = function_exists('getallheaders') ? getallheaders() : [];
 $headers = is_array($headers) ? $headers : [];
@@ -56,7 +61,10 @@ $headers = is_array($headers) ? $headers : [];
 [$provider] = wa_config_provider();
 
 if (!$provider->verifyWebhook($headers, $raw)) {
-    wa_log('webhook_assinatura_invalida', 'Assinatura/token inválido.', ['provider' => $providerName], 'warning');
+    // Não grava evento no banco: requisições inválidas repetidas não devem
+    // inflar a tabela wa_evento (proteção contra log flooding).
+    error_log('[whatsapp][webhook] assinatura/token inválido provider=' . $providerName
+        . ' ip=' . strval($_SERVER['REMOTE_ADDR'] ?? ''));
     http_response_code(401);
     echo 'Unauthorized';
     exit;
@@ -101,6 +109,10 @@ try {
         } elseif ($tipoEvento === 'status') {
             wa_atualizar_status_provider(strval($item['provider_id'] ?? ''), strval($item['status'] ?? ''));
             $processados++;
+        } elseif ($tipoEvento === 'chamada_evento' || $tipoEvento === 'chamada_status') {
+            if (wa_chamada_processar_evento($item)) {
+                $processados++;
+            }
         }
     }
 

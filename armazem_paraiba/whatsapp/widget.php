@@ -72,9 +72,9 @@ $waWidgetCsrf = wa_csrf_token();
 
 <script>
 window.WA_WIDGET = {
-    api: <?= json_encode($waWidgetApi) ?>,
-    index: <?= json_encode($waWidgetIndex) ?>,
-    csrf: <?= json_encode($waWidgetCsrf) ?>
+    api: <?= wa_json_script($waWidgetApi) ?>,
+    index: <?= wa_json_script($waWidgetIndex) ?>,
+    csrf: <?= wa_json_script($waWidgetCsrf) ?>
 };
 </script>
 <script src="<?= wa_e($CONTEX['path']) ?>/whatsapp/assets/widget.js?v=2"></script>

@@ -72,6 +72,13 @@ if ($modo === 'datas') {
     $fim = $hoje->setTime(23, 59, 59);
 }
 
+// O banco grava em UTC; os limites escolhidos pelo usuário estão no fuso
+// do servidor. Converte antes de filtrar para não perder mensagens perto
+// da meia-noite.
+$tzUtc = new DateTimeZone('UTC');
+$inicioUtc = $inicio->setTimezone($tzUtc)->format('Y-m-d H:i:s');
+$fimUtc = $fim->setTimezone($tzUtc)->format('Y-m-d H:i:s');
+
 $rs = query(
     "SELECT m.msg_nb_id, m.msg_dt_criacao, m.msg_tx_direcao, m.msg_tx_tipo, m.msg_tx_conteudo,
             m.msg_tx_status, m.msg_tx_provider_id, m.msg_tx_mime, m.msg_tx_arquivo,
@@ -86,7 +93,7 @@ $rs = query(
      WHERE m.msg_nb_conversa = ? AND m.msg_dt_criacao BETWEEN ? AND ?
      ORDER BY m.msg_nb_id ASC",
     "iss",
-    [$conversaId, $inicio->format('Y-m-d H:i:s'), $fim->format('Y-m-d H:i:s')]
+    [$conversaId, $inicioUtc, $fimUtc]
 );
 
 $tipos = [
@@ -162,14 +169,14 @@ while ($rs && ($row = mysqli_fetch_assoc($rs))) {
     if ($conteudo === '' && $anexo !== '') {
         $conteudo = '[' . ($tipos[$tipo] ?? $tipo) . ']';
     }
-    $data = strtotime(strval($row['msg_dt_criacao'] ?? ''));
+    $dataFormatada = wa_data_utc_para_local($row['msg_dt_criacao'] ?? '', 'd/m/Y H:i:s');
     $usuario = $direcao === 'out'
         ? (trim(strval($row['usuario_nome'] ?? '')) !== '' ? strval($row['usuario_nome']) : 'Sistema/Celular')
         : 'Contato';
 
     fputcsv($saida, [
         (int)$row['msg_nb_id'],
-        $data ? date('d/m/Y H:i:s', $data) : '',
+        $dataFormatada,
         $direcoes[$direcao] ?? $direcao,
         $tipos[$tipo] ?? $tipo,
         $csvSeguro($conteudo),

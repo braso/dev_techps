@@ -98,10 +98,14 @@ class EvolutionProvider implements ProviderInterface {
             }
         }
 
-        // 3) Fallback: URL de mídia devolvida pelo webhook.
+        // 3) Fallback: URL de mídia devolvida pelo webhook. Só aceita
+        // HTTP/HTTPS, bloqueia destinos privados/reservados (SSRF) e limita
+        // o tamanho do download.
         $url = trim(strval($media['media_url'] ?? ''));
         if ($url !== '' && preg_match('#^https?://#i', $url)) {
-            $res = WaHttpClient::raw($url, $this->headers());
+            $hostBase = strval(parse_url($this->baseUrl, PHP_URL_HOST) ?? '');
+            $limite = function_exists('wa_midia_limite_bytes') ? wa_midia_limite_bytes() : (25 * 1024 * 1024);
+            $res = WaHttpClient::raw($url, $this->headers(), 45, $limite, [$hostBase]);
             if (!empty($res['ok']) && $res['body'] !== '') {
                 return [
                     'success' => true,
@@ -125,6 +129,10 @@ class EvolutionProvider implements ProviderInterface {
         if ($conteudo === false || $conteudo === '') {
             return ['success' => false, 'error' => 'Base64 de mídia inválido.'];
         }
+        $limite = function_exists('wa_midia_limite_bytes') ? wa_midia_limite_bytes() : (25 * 1024 * 1024);
+        if (strlen($conteudo) > $limite) {
+            return ['success' => false, 'error' => 'Mídia acima do limite permitido.'];
+        }
         return [
             'success' => true,
             'conteudo' => $conteudo,
@@ -135,6 +143,38 @@ class EvolutionProvider implements ProviderInterface {
 
     public function sendTemplate(string $to, string $template, string $language, array $params = []): array {
         return ['success' => false, 'error' => 'Templates são suportados apenas pela Cloud API.'];
+    }
+
+    public function getCallPermission(string $to): array {
+        return ['success' => false, 'error' => 'Chamadas oficiais exigem Cloud API.'];
+    }
+
+    public function sendCallPermissionRequest(string $to, string $text = ''): array {
+        return ['success' => false, 'error' => 'Chamadas oficiais exigem Cloud API.'];
+    }
+
+    public function initiateCall(string $to, string $sdpOffer, string $opaque = ''): array {
+        return ['success' => false, 'error' => 'A Evolution API não oferece chamadas oficiais pela Cloud API.'];
+    }
+
+    public function preAcceptCall(string $callId, string $sdpAnswer): array {
+        return ['success' => false, 'error' => 'Chamadas oficiais exigem Cloud API.'];
+    }
+
+    public function acceptCall(string $callId, string $sdpAnswer): array {
+        return ['success' => false, 'error' => 'Chamadas oficiais exigem Cloud API.'];
+    }
+
+    public function rejectCall(string $callId): array {
+        return ['success' => false, 'error' => 'Chamadas oficiais exigem Cloud API.'];
+    }
+
+    public function terminateCall(string $callId): array {
+        return ['success' => false, 'error' => 'Chamadas oficiais exigem Cloud API.'];
+    }
+
+    public function setCallingStatus(bool $enabled): array {
+        return ['success' => false, 'error' => 'Chamadas oficiais exigem Cloud API.'];
     }
 
     public function markRead(string $providerMessageId): void {
