@@ -53,8 +53,8 @@ $totalNaoLidas = 0;
 foreach ($conversas as $cv) {
     $totalNaoLidas += (int)($cv['conv_nb_nao_lidas'] ?? 0);
 }
-$totalConversasTodas = wa_conversa_contar('todas');
-$totalConversasEmpresa = wa_conversa_contar('empresa');
+$totalNaoLidasConversasTodas = wa_conversa_contar('todas', true);
+$totalNaoLidasConversasEmpresa = wa_conversa_contar('empresa', true);
 $ultimoId = 0;
 foreach ($mensagens as $m) {
     $ultimoId = max($ultimoId, (int)$m['msg_nb_id']);
@@ -161,12 +161,12 @@ cabecalho('CRM - TECHPS');
         </div>
 
         <div class="wa-origem-filtros">
-            <span class="wa-origem-label">Conversas</span>
+            <span class="wa-origem-label">Conversas não lidas</span>
             <a class="wa-origem-filtro <?= $origemFiltro === 'todas' ? 'active' : '' ?>" href="index.php?origem=todas">
-                <i class="fa fa-comments-o"></i> Todas <span class="wa-filtro-qtd"><?= (int)$totalConversasTodas ?></span>
+                <i class="fa fa-comments-o"></i> Todas <span class="wa-filtro-qtd" id="waQtdNaoLidasTodas" title="Conversas não lidas"><?= (int)$totalNaoLidasConversasTodas ?></span>
             </a>
             <a class="wa-origem-filtro <?= $origemFiltro === 'empresa' ? 'active' : '' ?>" href="index.php?origem=empresa">
-                <i class="fa fa-building-o"></i> Da empresa <span class="wa-filtro-qtd"><?= (int)$totalConversasEmpresa ?></span>
+                <i class="fa fa-building-o"></i> Da empresa <span class="wa-filtro-qtd" id="waQtdNaoLidasEmpresa" title="Conversas não lidas"><?= (int)$totalNaoLidasConversasEmpresa ?></span>
             </a>
         </div>
 
