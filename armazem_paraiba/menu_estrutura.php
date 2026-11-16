@@ -154,8 +154,15 @@
 					"/roleta/admin.php" => "Administrar Roleta",
 				],
 			];
+			$ehSuperAdmin = (
+				(function_exists('ehSuperAdmin') && ehSuperAdmin()) ||
+				stripos(strval($_SESSION["user_tx_nivel"] ?? ""), "super administrador") !== false ||
+				stripos(strval($nivel ?? ""), "super administrador") !== false ||
+				intval($_SESSION["user_nb_superadmin"] ?? 0) === 1
+			);
+
 			// Logs do Sistema: atalho apenas para Super Administrador, na aba de Relatórios.
-			if(stripos(strval($_SESSION["user_tx_nivel"] ?? ""), "Super Administrador") !== false){
+			if($ehSuperAdmin){
 				if(!isset($paginas["relatórios"])) $paginas["relatórios"] = [];
 				$paginas["relatórios"]["/logs_sistema.php"] = "Logs do Sistema";
 			}
@@ -172,8 +179,8 @@
 				$paginas["cadastros"]["/cadastro_comunicado.php"] = "Comunicado";
 			}
 
-			// Módulo CRM - TECHPS (WhatsApp): só aparece quando habilitado no .env do tenant.
-			if (trim(strval($_ENV["WHATSAPP_ENABLED"] ?? "")) !== "1") {
+			// Módulo CRM - TECHPS (WhatsApp): visível se habilitado no .env do tenant, e SEMPRE visível para Super Administrador.
+			if (!$ehSuperAdmin && trim(strval($_ENV["WHATSAPP_ENABLED"] ?? "")) !== "1") {
 				unset($paginas["whatsapp"]);
 			}
 
@@ -245,7 +252,7 @@
 						}
 					}
 					// Filtra filhos por permissões diretas do menu
-					if($perfilId > 0){
+					if($perfilId > 0 && !$ehSuperAdmin){
 						$nivelUser = $_SESSION["user_tx_nivel"] ?? "";
 						$isAdminUser = (is_int(strpos($nivelUser, "Administrador")) || is_int(strpos($nivelUser, "Super Administrador")));
 						if(function_exists('temPermissaoMenu') && !$isAdminUser){
@@ -282,9 +289,9 @@
 						];
 					}
 				}
-				// Se houver perfil vinculado, mostra a seção se houver filhos OU se o PAI estiver permitido
+				// Se houver perfil vinculado, mostra a seção se houver filhos OU se o PAI estiver permitido (sempre visível para Super Admin)
 				$showSection = true;
-				if($perfilId > 0){
+				if($perfilId > 0 && !$ehSuperAdmin){
 					$showSection = (!empty($itens) || $parentAllowed);
 				}
 				if($showSection){
@@ -311,7 +318,7 @@
 
 			$niveisOperacionais = ["Motorista", "Ajudante", "Funcionário", "Terceirizado"];
 			$isAdmin = is_int(strpos($nivel, "Administrador"));
-			$isSuperAdmin = is_int(strpos($nivel, "Super Administrador"));
+			$isSuperAdmin = $ehSuperAdmin || is_int(strpos($nivel, "Super Administrador"));
 			if ($isSuperAdmin) {
 				return $todas;
 			}

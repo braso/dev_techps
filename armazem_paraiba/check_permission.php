@@ -1,7 +1,22 @@
 <?php
+if (!function_exists('ehSuperAdmin')) {
+    function ehSuperAdmin(): bool {
+        if (intval($_SESSION["user_nb_superadmin"] ?? 0) === 1) {
+            return true;
+        }
+        $nivel = trim(strval($_SESSION["user_tx_nivel"] ?? ""));
+        return (stripos($nivel, "super administrador") !== false) || (bool)preg_match('/super\s*admin/i', $nivel);
+    }
+}
+
 function verificaPermissao($pathMenu)
 {
     global $conn;
+
+    // Super Administrador tem acesso total e irrestrito a todos os módulos
+    if (ehSuperAdmin()) {
+        return true;
+    }
 
     $permitido = false;
     $perfilId = 0;
@@ -81,6 +96,10 @@ function verificaPermissao($pathMenu)
  */
 function usuarioPodeAcessar($pathMenu)
 {
+    if (ehSuperAdmin()) {
+        return true;
+    }
+
     $nivel = trim($_SESSION["user_tx_nivel"] ?? "");
     $isAdmin = (
         preg_match('/administrador/i', $nivel) ||
@@ -98,6 +117,12 @@ function usuarioPodeAcessar($pathMenu)
 function temPermissaoMenu($pathMenu)
 {
     global $conn;
+
+    // Super Administrador tem acesso irrestrito mesmo sem perfil cadastrado
+    if (ehSuperAdmin()) {
+        return true;
+    }
+
     $perfilId = 0;
     if (!empty($_SESSION["user_nb_id"])) {
         $rsPerfil = query(

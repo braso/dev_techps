@@ -36,6 +36,12 @@ if (!function_exists('ia_e')) {
 
 if (!function_exists('ia_is_admin')) {
     function ia_is_admin(): bool {
+        if (function_exists('ehSuperAdmin') && ehSuperAdmin()) {
+            return true;
+        }
+        if (intval($_SESSION['user_nb_superadmin'] ?? 0) === 1) {
+            return true;
+        }
         $nivel = trim(strval($_SESSION['user_tx_nivel'] ?? ''));
         return (bool)preg_match('/administrador|super\s+admin|adminsitrador/i', $nivel);
     }
@@ -266,8 +272,9 @@ if (!function_exists('ia_sugestoes_por_tela')) {
 
 if (!function_exists('ia_settings')) {
     function ia_settings(): array {
+        $isSuper = (function_exists('ehSuperAdmin') && ehSuperAdmin()) || ia_is_admin();
         return [
-            'enabled' => ia_env('ASSISTENTE_ENABLED', '0') === '1',
+            'enabled' => $isSuper || ia_env('ASSISTENTE_ENABLED', '0') === '1',
             'provider' => ia_env('ASSISTENTE_PROVIDER', 'ollama'),
             'model' => ia_env('ASSISTENTE_MODEL', 'qwen2.5:1.5b'),
             'model_complex' => ia_env('ASSISTENTE_MODEL_COMPLEX', 'qwen2.5:3b'),

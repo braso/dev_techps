@@ -4,10 +4,16 @@
  * Incluído pelo menu.php apenas quando WHATSAPP_ENABLED=1 e o usuário tem permissão.
  */
 
-if (trim(strval($_ENV['WHATSAPP_ENABLED'] ?? '')) !== '1') {
+$ehSuperWaWidget = (
+    (function_exists('ehSuperAdmin') && ehSuperAdmin()) ||
+    stripos(strval($_SESSION['user_tx_nivel'] ?? ''), 'super administrador') !== false ||
+    intval($_SESSION['user_nb_superadmin'] ?? 0) === 1
+);
+
+if (!$ehSuperWaWidget && trim(strval($_ENV['WHATSAPP_ENABLED'] ?? '')) !== '1') {
     return;
 }
-if (!function_exists('usuarioPodeAcessar') || !usuarioPodeAcessar('/whatsapp/index.php')) {
+if (!$ehSuperWaWidget && (!function_exists('usuarioPodeAcessar') || !usuarioPodeAcessar('/whatsapp/index.php'))) {
     return;
 }
 if (!function_exists('wa_module_url')) {
