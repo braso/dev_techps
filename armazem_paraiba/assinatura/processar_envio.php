@@ -66,6 +66,7 @@ function ensureAssinaturaTables($conn): void {
             nome_arquivo_original VARCHAR(255),
             tipo_documento_id INT NULL,
             validar_icp ENUM('sim','nao') NOT NULL DEFAULT 'nao',
+            preservar_assinaturas ENUM('sim','nao') NOT NULL DEFAULT 'nao',
             data_solicitacao DATETIME DEFAULT CURRENT_TIMESTAMP,
             expires_at DATETIME NULL,
             status ENUM('pendente', 'em_progresso', 'concluido', 'assinado') DEFAULT 'pendente',
@@ -89,6 +90,11 @@ function ensureAssinaturaTables($conn): void {
         $checkIcp = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'validar_icp'");
         if(mysqli_num_rows($checkIcp) == 0){
             mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN validar_icp ENUM('sim','nao') NOT NULL DEFAULT 'nao'");
+        }
+
+        $checkPreservar = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'preservar_assinaturas'");
+        if(!$checkPreservar || mysqli_num_rows($checkPreservar) == 0){
+            mysqli_query($conn, "ALTER TABLE solicitacoes_assinatura ADD COLUMN preservar_assinaturas ENUM('sim','nao') NOT NULL DEFAULT 'nao'");
         }
 
         $checkModo = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE 'modo_envio'");
@@ -441,6 +447,7 @@ if($modo_envio === "funcionarios"){
     $enviados = 0;
     $erros = 0;
     $ignorados = 0;
+    $preservarAssinaturas = (strtolower(trim(strval($_POST["preservar_assinaturas"] ?? "nao"))) === "sim") ? "sim" : "nao";
 
     foreach($ids as $idEntidade){
         $err = $arquivos["error"][$idEntidade] ?? UPLOAD_ERR_NO_FILE;
@@ -496,14 +503,14 @@ if($modo_envio === "funcionarios"){
         $tokenMestre = bin2hex(random_bytes(32));
         $id_documento = 'DOC-' . date('YmdHis') . '-' . uniqid();
 
-        $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, modo_envio, prazo_expiracao_dias, expires_at, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY), 'pendente')";
+        $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, modo_envio, prazo_expiracao_dias, expires_at, status, preservar_assinaturas) VALUES (?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY), 'pendente', ?)";
         $stmt = mysqli_prepare($conn, $sql);
         if(!$stmt){
             @unlink($dest_path);
             $erros++;
             continue;
         }
-        mysqli_stmt_bind_param($stmt, "ssssssisi", $tokenMestre, $email, $nome, $dest_path, $original, $id_documento, $modo_envio, $prazoExpiracaoDias, $prazoExpiracaoDias);
+        mysqli_stmt_bind_param($stmt, "ssssssisis", $tokenMestre, $email, $nome, $dest_path, $original, $id_documento, $modo_envio, $prazoExpiracaoDias, $prazoExpiracaoDias, $preservarAssinaturas);
         if(!mysqli_stmt_execute($stmt)){
             @unlink($dest_path);
             $erros++;
@@ -579,6 +586,7 @@ if($modo_envio === "separar_paginas"){
 
     $validarIcp = strtolower(trim(strval($_POST["validar_icp"] ?? "nao")));
     $validarIcp = $validarIcp === "sim" ? "sim" : "nao";
+    $preservarAssinaturas = (strtolower(trim(strval($_POST["preservar_assinaturas"] ?? "nao"))) === "sim") ? "sim" : "nao";
     if($documentoAssinar !== "sim"){
         $validarIcp = "nao";
     }
@@ -613,6 +621,7 @@ if($modo_envio === "separar_paginas"){
     $enviados = 0;
     $erros = 0;
     $ignorados = 0;
+    $preservarAssinaturas = (strtolower(trim(strval($_POST["preservar_assinaturas"] ?? "nao"))) === "sim") ? "sim" : "nao";
     $agora = date("Y-m-d H:i:s");
 
     for($p = 1; $p <= $pages; $p++){
@@ -658,15 +667,15 @@ if($modo_envio === "separar_paginas"){
             $tokenMestre = bin2hex(random_bytes(32));
             $id_documento = 'DOC-' . date('YmdHis') . '-' . uniqid();
 
-            $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, modo_envio, prazo_expiracao_dias, expires_at, status)
-            VALUES (?, ?, ?, ?, ?, ?, NULLIF(?,0), ?, ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY), 'pendente')";
+            $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, modo_envio, prazo_expiracao_dias, expires_at, status, preservar_assinaturas)
+            VALUES (?, ?, ?, ?, ?, ?, NULLIF(?,0), ?, ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY), 'pendente', ?)";
             $stmt = mysqli_prepare($conn, $sql);
             if(!$stmt){
                 @unlink($dest_path);
                 $erros++;
                 continue;
             }
-            mysqli_stmt_bind_param($stmt, "ssssssissii", $tokenMestre, $email, $nome, $dest_path, $nomeArquivo, $id_documento, $tipoDocumentoId, $validarIcp, $modo_envio, $prazoExpiracaoDias, $prazoExpiracaoDias);
+            mysqli_stmt_bind_param($stmt, "ssssssissiis", $tokenMestre, $email, $nome, $dest_path, $nomeArquivo, $id_documento, $tipoDocumentoId, $validarIcp, $modo_envio, $prazoExpiracaoDias, $prazoExpiracaoDias, $preservarAssinaturas);
             if(!mysqli_stmt_execute($stmt)){
                 @unlink($dest_path);
                 $erros++;
@@ -815,6 +824,7 @@ if($modo_envio === "avulso" && $avulsoDestino === "todos"){
 
     $validarIcp = strtolower(trim(strval($_POST["validar_icp"] ?? "nao")));
     $validarIcp = $validarIcp === "sim" ? "sim" : "nao";
+    $preservarAssinaturas = (strtolower(trim(strval($_POST["preservar_assinaturas"] ?? "nao"))) === "sim") ? "sim" : "nao";
 
     $empresaFiltroId = intval($_POST["empresa_id"] ?? 0);
 
@@ -960,6 +970,7 @@ if($modo_envio === "avulso" && $avulsoDestino === "todos"){
     $enviados = 0;
     $erros = 0;
     $ignorados = 0;
+    $preservarAssinaturas = (strtolower(trim(strval($_POST["preservar_assinaturas"] ?? "nao"))) === "sim") ? "sim" : "nao";
 
     if($documentoAssinar === "nao"){
         $rootFunc = "";
@@ -1077,15 +1088,15 @@ if($modo_envio === "avulso" && $avulsoDestino === "todos"){
         $tokenMestre = bin2hex(random_bytes(32));
         $id_documento = 'DOC-' . date('YmdHis') . '-' . uniqid();
 
-        $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, modo_envio, grupo_envio, prazo_expiracao_dias, expires_at, status)
-            VALUES (?, ?, ?, ?, ?, ?, NULLIF(?,0), ?, ?, ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY), 'pendente')";
+        $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, modo_envio, grupo_envio, prazo_expiracao_dias, expires_at, status, preservar_assinaturas)
+            VALUES (?, ?, ?, ?, ?, ?, NULLIF(?,0), ?, ?, ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY), 'pendente', ?)";
         $stmt = mysqli_prepare($conn, $sql);
         if(!$stmt){
             @unlink($destInd);
             $erros++;
             continue;
         }
-        mysqli_stmt_bind_param($stmt, "ssssssisssii", $tokenMestre, $email, $nome, $destInd, $fileName, $id_documento, $tipoDocumentoId, $validarIcp, $modo_envio, $grupoEnvio, $prazoExpiracaoDias, $prazoExpiracaoDias);
+        mysqli_stmt_bind_param($stmt, "ssssssisssiis", $tokenMestre, $email, $nome, $destInd, $fileName, $id_documento, $tipoDocumentoId, $validarIcp, $modo_envio, $grupoEnvio, $prazoExpiracaoDias, $prazoExpiracaoDias, $preservarAssinaturas);
         if(!mysqli_stmt_execute($stmt)){
             @unlink($destInd);
             $erros++;
@@ -1301,6 +1312,7 @@ ensureAssinaturaTables($conn);
 $tipoDocumentoId = intval($_POST["tipo_documento"] ?? 0);
 $validarIcp = strtolower(trim(strval($_POST["validar_icp"] ?? "nao")));
 $validarIcp = $validarIcp === "sim" ? "sim" : "nao";
+$preservarAssinaturas = (strtolower(trim(strval($_POST["preservar_assinaturas"] ?? "nao"))) === "sim") ? "sim" : "nao";
 
 if(in_array($modo_envio, ["avulso", "governanca"], true) && $tipoDocumentoId <= 0){
     redirectTo($redirect_to, "error", "Selecione o tipo de documento.");
@@ -1414,10 +1426,10 @@ if(move_uploaded_file($fileTmpPath, $dest_path)) {
 
     $empresaIdSalvar = $salvarDocumentosEmpresa === "sim" ? intval($_POST["empresa_id"] ?? 0) : 0;
 
-    $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, modo_envio, empresa_id, salvar_documentos_empresa, prazo_expiracao_dias, expires_at, status)
-        VALUES (?, ?, ?, ?, ?, ?, NULLIF(?,0), ?, ?, NULLIF(?,0), ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY), 'pendente')";
+    $sql = "INSERT INTO solicitacoes_assinatura (token, email, nome, caminho_arquivo, nome_arquivo_original, id_documento, tipo_documento_id, validar_icp, modo_envio, empresa_id, salvar_documentos_empresa, prazo_expiracao_dias, expires_at, status, preservar_assinaturas)
+        VALUES (?, ?, ?, ?, ?, ?, NULLIF(?,0), ?, ?, NULLIF(?,0), ?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY), 'pendente', ?)";
     $stmt = mysqli_prepare($conn, $sql);
-    mysqli_stmt_bind_param($stmt, "ssssssisissii", $tokenMestre, $primeiroSignatario['email'], $primeiroSignatario['nome'], $dest_path, $fileName, $id_documento, $tipoDocumentoId, $validarIcp, $modo_envio, $empresaIdSalvar, $salvarDocumentosEmpresa, $prazoExpiracaoDias, $prazoExpiracaoDias);
+    mysqli_stmt_bind_param($stmt, "ssssssisissiis", $tokenMestre, $primeiroSignatario['email'], $primeiroSignatario['nome'], $dest_path, $fileName, $id_documento, $tipoDocumentoId, $validarIcp, $modo_envio, $empresaIdSalvar, $salvarDocumentosEmpresa, $prazoExpiracaoDias, $prazoExpiracaoDias, $preservarAssinaturas);
     
     if (mysqli_stmt_execute($stmt)) {
         $id_solicitacao = mysqli_insert_id($conn);

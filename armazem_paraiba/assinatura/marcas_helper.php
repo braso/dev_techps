@@ -938,6 +938,27 @@ if (!function_exists("assinaturaMarcas_aplicarNoPdf_interno")) {
 			return ["ok" => false, "caminho" => "", "aplicadas" => 0, "avisos" => [], "error" => "PDF não encontrado para aplicar os carimbos."];
 		}
 
+		/* Se o usuário ativou a flag para preservar assinaturas E o documento contiver assinatura digital prévia (ex: Gov.br / ICP),
+		   não passamos pelo FPDI, pois o FPDI destrói e remove a assinatura existente.
+		   Caso contrário (padrão), o sistema segue o fluxo normal. */
+		$preservarAtivo = false;
+		if ($idSolicitacao > 0 && ($conn instanceof mysqli)) {
+			$stmtCheckPres = mysqli_prepare($conn, "SELECT preservar_assinaturas FROM solicitacoes_assinatura WHERE id = ? LIMIT 1");
+			if ($stmtCheckPres) {
+				mysqli_stmt_bind_param($stmtCheckPres, "i", $idSolicitacao);
+				mysqli_stmt_execute($stmtCheckPres);
+				$resP = mysqli_stmt_get_result($stmtCheckPres);
+				$rowP = $resP ? mysqli_fetch_assoc($resP) : null;
+				mysqli_stmt_close($stmtCheckPres);
+				$preservarAtivo = (strtolower(trim(strval($rowP["preservar_assinaturas"] ?? "nao"))) === "sim");
+			}
+		}
+
+		require_once __DIR__ . "/assinatura_incremental_helper.php";
+		if ($preservarAtivo && assinatura_pdfTemAssinaturaDigital($entrada)) {
+			return ["ok" => true, "caminho" => $caminhoRelPdf, "aplicadas" => 0, "avisos" => ["Preservada assinatura prévia existente no documento conforme configuração."]];
+		}
+
 		$saidaRel = "docAssinado/marcado_" . $idSolicitacao . "_" . time() . "_" . bin2hex(random_bytes(4)) . ".pdf";
 		$desenho = assinaturaMarcas_desenharNoArquivo($marcas, $entrada, $baseDir . "/" . $saidaRel, $baseDir);
 		if (empty($desenho["ok"])) {

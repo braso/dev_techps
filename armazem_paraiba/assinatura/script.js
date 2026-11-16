@@ -243,35 +243,6 @@ document.addEventListener('DOMContentLoaded', function() {
             btnAssinar.textContent = "Processando e Carimbando...";
 
             try {
-                // 1. Modificar o PDF (Carimbar) usando pdf-lib
-                const { PDFDocument, rgb, StandardFonts } = PDFLib;
-                const pdfDoc = await PDFDocument.load(currentPdfBytes);
-                
-                // Carrega a logo
-                let logoImage;
-                try {
-                    const logoBytes = await fetch('assets/logo.png').then(res => res.arrayBuffer());
-                    logoImage = await pdfDoc.embedPng(logoBytes);
-                } catch (e) {
-                    console.warn("Logo não encontrada ou erro ao carregar:", e);
-                }
-
-                // Rubrica desenhada (PNG) para carimbar no PDF
-                let rubricaImage = null;
-                if (rubricaDataUrl) {
-                    try {
-                        const rb = await fetch(rubricaDataUrl).then(r => r.arrayBuffer());
-                        rubricaImage = await pdfDoc.embedPng(rb);
-                    } catch (e) {
-                        console.warn('Falha ao incorporar rubrica:', e);
-                    }
-                }
-
-                // Incorpora fonte
-                const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-                const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-                const courierFont = await pdfDoc.embedFont(StandardFonts.Courier);
-                
                 // Gera dados para consistência (Hash e Data)
                 const dataObj = new Date();
                 const dataHora = dataObj.toLocaleString('pt-BR');
@@ -280,6 +251,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Recupera nome original do arquivo
                 const nomeArquivoOriginalInput = document.getElementById('nome_arquivo_original');
                 const nomeArquivoOriginal = nomeArquivoOriginalInput ? nomeArquivoOriginalInput.value : currentFileName;
+                const nomeFinalArquivo = nomeArquivoOriginal.toLowerCase().endsWith('.pdf') 
+                    ? nomeArquivoOriginal 
+                    : nomeArquivoOriginal + '.pdf';
 
                 // Gera um ID de documento se não existir
                 let docId = document.getElementById('id_documento').value;
@@ -314,13 +288,45 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 const papelUsuario = document.getElementById('papel_usuario') ? document.getElementById('papel_usuario').value : 'Signatário';
 
-                const auditPrefix = 'TECHPS_AUDIT_V1:';
-                const safeB64Encode = (str) => {
-                    try { return btoa(unescape(encodeURIComponent(str))); } catch (e) { return ''; }
-                };
-                const safeB64Decode = (b64) => {
-                    try { return decodeURIComponent(escape(atob(b64))); } catch (e) { return ''; }
-                };
+                let pdfBlob;
+                let arquivoAssinado;
+
+                // 1. Modificar o PDF (Carimbar / Adicionar comprovantes) usando pdf-lib
+                const { PDFDocument, rgb, StandardFonts } = PDFLib;
+                const pdfDoc = await PDFDocument.load(currentPdfBytes);
+                    
+                    // Carrega a logo
+                    let logoImage;
+                    try {
+                        const logoBytes = await fetch('assets/logo.png').then(res => res.arrayBuffer());
+                        logoImage = await pdfDoc.embedPng(logoBytes);
+                    } catch (e) {
+                        console.warn("Logo não encontrada ou erro ao carregar:", e);
+                    }
+
+                    // Rubrica desenhada (PNG) para carimbar no PDF
+                    let rubricaImage = null;
+                    if (rubricaDataUrl) {
+                        try {
+                            const rb = await fetch(rubricaDataUrl).then(r => r.arrayBuffer());
+                            rubricaImage = await pdfDoc.embedPng(rb);
+                        } catch (e) {
+                            console.warn('Falha ao incorporar rubrica:', e);
+                        }
+                    }
+
+                    // Incorpora fonte
+                    const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+                    const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+                    const courierFont = await pdfDoc.embedFont(StandardFonts.Courier);
+
+                    const auditPrefix = 'TECHPS_AUDIT_V1:';
+                    const safeB64Encode = (str) => {
+                        try { return btoa(unescape(encodeURIComponent(str))); } catch (e) { return ''; }
+                    };
+                    const safeB64Decode = (b64) => {
+                        try { return decodeURIComponent(escape(atob(b64))); } catch (e) { return ''; }
+                    };
                 const readAuditState = () => {
                     let rawPacked = '';
                     try { rawPacked = String(pdfDoc.getSubject() || ''); } catch (e) { rawPacked = ''; }
@@ -604,12 +610,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
                 
                 // Cria um Blob para envio - Nome do arquivo original
-                const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
-                const nomeFinalArquivo = nomeArquivoOriginal.toLowerCase().endsWith('.pdf') 
-                    ? nomeArquivoOriginal 
-                    : nomeArquivoOriginal + '.pdf';
-                    
-                const arquivoAssinado = new File([pdfBlob], nomeFinalArquivo, { type: 'application/pdf' });
+                pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+                arquivoAssinado = new File([pdfBlob], nomeFinalArquivo, { type: 'application/pdf' });
 
                 // 2. Posições dos carimbos escolhidas no editor. Só coordenadas:
                 //    o conteúdo de cada marca é montado no servidor, e é lá que o
@@ -627,6 +629,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // 3. Enviar para o servidor
                 const formData = new FormData(form);
+                if (window.PRESERVAR_ASSINATURAS_DEFAULT) {
+                    formData.append('preservar_assinatura_existente', '1');
+                } else {
+                    formData.append('preservar_assinatura_existente', '0');
+                }
                 formData.append('arquivo_assinado', arquivoAssinado);
                 // Envia os dados gerados para consistência
                 formData.append('hash_assinatura', protocolHash);

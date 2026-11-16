@@ -739,6 +739,17 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                                 </div>
                             </div>
 
+                            <div class="mt-4">
+                                <div class="block text-xs font-semibold text-gray-700 mb-1">Múltiplas Assinaturas (opcional)</div>
+                                <label class="flex items-start gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white cursor-pointer hover:bg-gray-50 transition-colors">
+                                    <input type="checkbox" id="preservar_assinaturas_lote" name="preservar_assinaturas" value="sim" class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                    <div>
+                                        <div class="text-sm font-semibold text-gray-800">Preservar assinaturas existentes no PDF</div>
+                                        <div class="text-xs text-gray-500">Ative para manter assinaturas digitais anteriores já presentes no documento (como Gov.br / ICP), permitindo co-assinatura incremental. Se desmarcado, segue o fluxo normal.</div>
+                                    </div>
+                                </label>
+                            </div>
+
                             <?php if(empty($funcionarios)): ?>
                                 <div class="bg-yellow-50 border border-yellow-100 text-yellow-800 text-sm rounded-lg p-4">
                                     Nenhum funcionário ativo encontrado.
@@ -1152,6 +1163,17 @@ if($modoTela === "separar_paginas" && ($_SERVER["REQUEST_METHOD"] ?? "") === "PO
                             </div>
 
                             <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1" for="preservar_assinaturas_avulso">Múltiplas Assinaturas (opcional)</label>
+                                <label class="flex items-start gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white cursor-pointer hover:bg-gray-50 transition-colors">
+                                    <input type="checkbox" id="preservar_assinaturas_avulso" name="preservar_assinaturas" value="sim" class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                    <div>
+                                        <div class="text-sm font-semibold text-gray-800">Preservar assinaturas existentes no PDF</div>
+                                        <div class="text-xs text-gray-500">Ative para manter assinaturas digitais anteriores já presentes no documento (como Gov.br / ICP), permitindo co-assinatura incremental. Se desmarcado, segue o fluxo normal.</div>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1" for="prazo_expiracao_dias_avulso">Prazo de expiração do link</label>
                                 <div class="relative">
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -1358,6 +1380,17 @@ if($resEmpresas){
                                     <div>
                                         <div class="text-sm font-semibold text-gray-800">Validar com ICP-Brasil</div>
                                         <div class="text-xs text-gray-500">Aplica validação/carimbo do tempo ICP-Brasil, elevando o nível de confiança jurídica.</div>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <!-- Preservar Assinaturas Existentes -->
+                            <div>
+                                <label class="flex items-start gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white cursor-pointer hover:bg-gray-50 transition-colors">
+                                    <input type="checkbox" name="preservar_assinaturas" value="sim" class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                    <div>
+                                        <div class="text-sm font-semibold text-gray-800">Preservar assinaturas existentes no PDF</div>
+                                        <div class="text-xs text-gray-500">Ative para manter assinaturas digitais anteriores já presentes no documento (como Gov.br / ICP). Por padrão, segue o fluxo normal.</div>
                                     </div>
                                 </label>
                             </div>

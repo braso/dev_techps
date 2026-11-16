@@ -111,7 +111,8 @@ function ensureAssinaturaTables(mysqli $conn): void {
             "status_final" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN status_final VARCHAR(50) DEFAULT 'pendente'",
             "empresa_id" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN empresa_id INT NULL",
             "salvar_documentos_empresa" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN salvar_documentos_empresa ENUM('sim','nao') NOT NULL DEFAULT 'nao'",
-            "prazo_expiracao_dias" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN prazo_expiracao_dias INT NOT NULL DEFAULT 1"      
+            "prazo_expiracao_dias" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN prazo_expiracao_dias INT NOT NULL DEFAULT 1",
+            "preservar_assinaturas" => "ALTER TABLE solicitacoes_assinatura ADD COLUMN preservar_assinaturas ENUM('sim','nao') NOT NULL DEFAULT 'nao'"
         ];
         foreach ($cols as $col => $ddl) {
             $check = mysqli_query($conn, "SHOW COLUMNS FROM solicitacoes_assinatura LIKE '{$col}'");
@@ -445,6 +446,7 @@ if (($_SERVER["REQUEST_METHOD"] ?? "") !== "POST") {
 ensureAssinaturaTables($conn);
 require_once __DIR__ . "/tipo_assinatura_helper.php";
 require_once __DIR__ . "/marcas_helper.php";
+require_once __DIR__ . "/assinatura_incremental_helper.php";
 assinatura_garantirColunasRubrica($conn);
 assinaturaMarcas_garantirEstrutura($conn);
 
@@ -466,7 +468,7 @@ $marcasBrutas = strval($_POST["marcas"] ?? "");
 
 $arquivo = $_FILES["arquivo_assinado"] ?? null;
 
-$sql = "SELECT a.*, s.id as solicitacao_id, s.email as email_solicitacao, s.nome_arquivo_original, s.tipo_documento_id, s.validar_icp, s.caminho_arquivo, s.id_documento as doc_id_global, s.expires_at, s.modo_envio, s.empresa_id, s.salvar_documentos_empresa
+$sql = "SELECT a.*, s.id as solicitacao_id, s.email as email_solicitacao, s.nome_arquivo_original, s.tipo_documento_id, s.validar_icp, s.caminho_arquivo, s.id_documento as doc_id_global, s.expires_at, s.modo_envio, s.empresa_id, s.salvar_documentos_empresa, s.preservar_assinaturas
         FROM assinantes a
         JOIN solicitacoes_assinatura s ON a.id_solicitacao = s.id
         WHERE a.token = ?
@@ -494,6 +496,8 @@ $emailSolicitacao = trim(strval($row["email_solicitacao"] ?? ""));
 $nomeArquivoOriginal = trim(strval($row["nome_arquivo_original"] ?? ""));
 $tipoDocumentoId = intval($row["tipo_documento_id"] ?? 0);
 $validarIcp = strtolower(trim(strval($row["validar_icp"] ?? "nao"))) === "sim" ? "sim" : "nao";
+$devePreservar = (strtolower(trim(strval($row["preservar_assinaturas"] ?? "nao"))) === "sim");
+$preservarDbVal = $devePreservar ? "sim" : "nao";
 $modoEnvio = strtolower(trim(strval($row["modo_envio"] ?? "")));
 
 $statusAss = strtolower(trim(strval($row["status"] ?? "")));
@@ -644,6 +648,7 @@ if (!$jaAssinado) {
 
     $fileName = "assinado_" . time() . "_" . $protocolo . ".pdf";
     $destAbs = $dirAss . $fileName;
+
     if (!move_uploaded_file(strval($arquivo["tmp_name"] ?? ""), $destAbs)) {
         jsonError("Falha ao salvar o arquivo no servidor.");
     }
@@ -730,9 +735,9 @@ if (!$jaAssinado) {
         mysqli_query($conn, "UPDATE assinantes SET status = 'dispensado' WHERE id_solicitacao = {$idSolicitacao} AND LOWER(funcao) = 'responsável' AND status = 'pendente'");
     }
 
-    $stmtUpSol = mysqli_prepare($conn, "UPDATE solicitacoes_assinatura SET caminho_arquivo = ?, status = 'em_progresso' WHERE id = ? LIMIT 1");
+    $stmtUpSol = mysqli_prepare($conn, "UPDATE solicitacoes_assinatura SET caminho_arquivo = ?, status = 'em_progresso', preservar_assinaturas = ? WHERE id = ? LIMIT 1");
     if ($stmtUpSol) {
-        mysqli_stmt_bind_param($stmtUpSol, "si", $caminhoRel, $idSolicitacao);
+        mysqli_stmt_bind_param($stmtUpSol, "ssi", $caminhoRel, $preservarDbVal, $idSolicitacao);
         mysqli_stmt_execute($stmtUpSol);
         mysqli_stmt_close($stmtUpSol);
     }
@@ -826,9 +831,9 @@ if (!$ultimo) {
         }
     }
 } else {
-    $stmtDone = mysqli_prepare($conn, "UPDATE solicitacoes_assinatura SET status = 'assinado', data_assinatura = ? WHERE id = ? LIMIT 1");
+    $stmtDone = mysqli_prepare($conn, "UPDATE solicitacoes_assinatura SET status = 'assinado', data_assinatura = ?, preservar_assinaturas = ? WHERE id = ? LIMIT 1");
     if ($stmtDone) {
-        mysqli_stmt_bind_param($stmtDone, "si", $dataHora, $idSolicitacao);
+        mysqli_stmt_bind_param($stmtDone, "ssi", $dataHora, $preservarDbVal, $idSolicitacao);
         mysqli_stmt_execute($stmtDone);
         mysqli_stmt_close($stmtDone);
     }
