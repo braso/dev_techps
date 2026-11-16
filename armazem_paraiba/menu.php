@@ -189,11 +189,16 @@
     }
     */
 
-    // Widget flutuante do WhatsApp (somente com a flag ligada e permissão de chat).
-    if (trim(strval($_ENV["WHATSAPP_ENABLED"] ?? "")) === "1"
+    // Widget flutuante do WhatsApp (visível sempre para Super Administrador ou com a flag ligada e permissão de chat).
+    $ehSuperAdminMenu = (
+        (function_exists('ehSuperAdmin') && ehSuperAdmin()) ||
+        stripos(strval($_SESSION["user_tx_nivel"] ?? ""), "super administrador") !== false ||
+        intval($_SESSION["user_nb_superadmin"] ?? 0) === 1
+    );
+
+    if (($ehSuperAdminMenu || trim(strval($_ENV["WHATSAPP_ENABLED"] ?? "")) === "1")
         && strpos(strval($_SERVER["REQUEST_URI"] ?? ""), "/whatsapp/") === false
-        && function_exists("usuarioPodeAcessar")
-        && usuarioPodeAcessar("/whatsapp/index.php")
+        && ($ehSuperAdminMenu || (function_exists("usuarioPodeAcessar") && usuarioPodeAcessar("/whatsapp/index.php")))
     ) {
         include_once __DIR__ . "/whatsapp/widget.php";
     }

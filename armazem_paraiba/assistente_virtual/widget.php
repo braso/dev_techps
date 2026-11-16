@@ -11,10 +11,17 @@ define('IA_WIDGET_INCLUIDO', true);
 
 require_once __DIR__ . '/lib/config.php';
 
-if (ia_env('ASSISTENTE_ENABLED', '0') !== '1') {
+$ehSuperIaWidget = (
+    (function_exists('ehSuperAdmin') && ehSuperAdmin()) ||
+    (function_exists('ia_is_admin') && ia_is_admin()) ||
+    stripos(strval($_SESSION['user_tx_nivel'] ?? ''), 'super administrador') !== false ||
+    intval($_SESSION['user_nb_superadmin'] ?? 0) === 1
+);
+
+if (!$ehSuperIaWidget && ia_env('ASSISTENTE_ENABLED', '0') !== '1') {
     return;
 }
-if (!function_exists('usuarioPodeAcessar') || !ia_pode_usar()) {
+if (!$ehSuperIaWidget && (!function_exists('usuarioPodeAcessar') || !ia_pode_usar())) {
     return;
 }
 if (strpos(strval($_SERVER['REQUEST_URI'] ?? ''), '/assistente_virtual/') !== false) {
