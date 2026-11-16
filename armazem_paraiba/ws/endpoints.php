@@ -307,10 +307,17 @@
             $userId = $decoded->data->user_id;
         }
 
+        // Placa compartilhada aparece para funcionários de todas as empresas/filiais
+        $colCompartilhada = get_data("SHOW COLUMNS FROM placa LIKE 'plac_tx_compartilhada'");
+        if(empty($colCompartilhada)){
+            insert_data("ALTER TABLE placa ADD COLUMN plac_tx_compartilhada VARCHAR(3) NOT NULL DEFAULT 'nao'", []);
+        }
+
         $data = get_data(
             "SELECT p.plac_nb_id AS id, p.plac_tx_placa AS plate, p.plac_tx_modelo AS model
             FROM placa p
-            WHERE (
+            WHERE p.plac_tx_compartilhada = 'sim'
+            OR (
                 p.plac_nb_empresa IS NOT NULL
                 AND p.plac_nb_empresa = (
                     SELECT e.enti_nb_empresa FROM entidade e
