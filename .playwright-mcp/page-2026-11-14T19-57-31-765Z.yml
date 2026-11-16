@@ -1,0 +1,652 @@
+- generic [ref=e2]:
+  - banner [ref=e4]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - button "Guia" [active] [ref=e9] [cursor=pointer]
+        - generic [ref=e13]:
+          - link "Página inicial do YouTube" [ref=e14] [cursor=pointer]:
+            - /url: /
+          - generic [ref=e20]: BR
+        - button "Pular navegação" [ref=e24] [cursor=pointer]
+      - generic [ref=e28]:
+        - search [ref=e29]:
+          - generic [ref=e31]:
+            - generic [ref=e32]:
+              - combobox "Pesquisar" [expanded] [ref=e34]: sem pressa
+              - button [ref=e37] [cursor=pointer]
+              - button "Limpar consulta de enquete" [ref=e39] [cursor=pointer]
+            - button "Search" [ref=e46] [cursor=pointer]
+        - generic [ref=e51]:
+          - button "Pesquisar com sua voz" [ref=e53] [cursor=pointer]
+          - tooltip "tooltip"
+      - generic [ref=e58]:
+        - button "Configurações" [ref=e63] [cursor=pointer]
+        - link "Fazer login" [ref=e69] [cursor=pointer]:
+          - /url: https://accounts.google.com/ServiceLogin?service=youtube&uilel=3&passive=true&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26hl%3Dpt%26next%3Dhttps%253A%252F%252Fwww.youtube.com%252Fresults%253Fsearch_query%253Dsem%252Bpressa&hl=pt-BR&ec=65620
+  - navigation [ref=e73]:
+    - generic [ref=e74]:
+      - link "Início" [ref=e76] [cursor=pointer]:
+        - /url: /
+      - link "Shorts" [ref=e80] [cursor=pointer]:
+        - /url: /shorts/
+      - link "Inscrições" [ref=e84] [cursor=pointer]:
+        - /url: /feed/subscriptions
+      - link "Você" [ref=e88] [cursor=pointer]:
+        - /url: /feed/you
+  - generic [ref=e91]:
+    - main [ref=e92]:
+      - generic [ref=e93]:
+        - generic [ref=e95]:
+          - tablist [ref=e100]:
+            - tab "Tudo" [selected] [ref=e103] [cursor=pointer]
+            - tab "Shorts" [ref=e108] [cursor=pointer]
+            - tab "Não assistidos" [ref=e113] [cursor=pointer]
+            - tab "Vídeos" [ref=e118] [cursor=pointer]
+            - tab "Enviados recentemente" [ref=e123] [cursor=pointer]
+            - tab "Ao vivo" [ref=e128] [cursor=pointer]
+          - generic [ref=e132]:
+            - button "Filtros de enquete" [ref=e134] [cursor=pointer]:
+              - generic: Filtros
+            - tooltip "tooltip"
+        - generic [ref=e143]:
+          - generic [ref=e145]:
+            - link [aria-hidden] [ref=e147] [cursor=pointer]:
+              - /url: /watch?v=Tlr0VRzCTcU&list=RDTlr0VRzCTcU&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+              - img [ref=e152]:
+                - generic [aria-hidden] [ref=e156]: 2:32
+              - generic: Tocando agora
+            - generic [ref=e157] [cursor=pointer]:
+              - generic [ref=e158]:
+                - generic [ref=e159]:
+                  - heading [level=3] [ref=e160]:
+                    - link "Anitta - Sem Pressa (Official Lyric Video) 2 minutos e 32 segundos" [ref=e161]:
+                      - /url: /watch?v=Tlr0VRzCTcU&list=RDTlr0VRzCTcU&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+                      - text: Anitta - Sem Pressa (Official Lyric Video)
+                  - button "Menu de ações" [ref=e165]
+                - generic [ref=e171]:
+                  - generic [ref=e172]: 331 mil
+                  - generic [ref=e173]: •há 1 mês
+              - generic [ref=e174]:
+                - link "Acessar o canal Anitta" [ref=e175]:
+                  - /url: /channel/UCqjjyPUghDSSKFBABM_CXMw
+                - generic [ref=e177]:
+                  - link "Anitta" [ref=e181]:
+                    - /url: /channel/UCqjjyPUghDSSKFBABM_CXMw
+                  - img "Canal oficial do artista" [ref=e186]
+              - generic [ref=e190]:
+                - text: "SUBSCRIBE HERE ▷ https://www.youtube.com/channel/UCqjjyPUghDSSKFBABM_CXMw?sub_confirmation=1 ANITTA: Spotify ..."
+                - tooltip "tooltip"
+          - generic [ref=e192] [cursor=pointer]:
+            - link [aria-hidden] [ref=e193]:
+              - /url: /watch?v=Tlr0VRzCTcU&list=RDTlr0VRzCTcU&start_radio=1
+              - generic [ref=e195]: Mix
+            - generic [ref=e209]:
+              - generic [ref=e210]:
+                - heading [level=3] [ref=e211]:
+                  - link "Mix de Anitta - Sem Pressa (Official Lyric Video)" [ref=e212]:
+                    - /url: /watch?v=Tlr0VRzCTcU&list=RDTlr0VRzCTcU&start_radio=1
+                - generic [ref=e214]:
+                  - group [ref=e215]:
+                    - generic [ref=e216]: Anitta, MC Tha e outros
+                    - generic [ref=e217]: Playlist
+                  - group [ref=e218]
+                  - group [ref=e219]:
+                    - link "Anitta - Sem Pressa (Official Lyric Video) · 2:32" [ref=e221]:
+                      - /url: /watch?v=Tlr0VRzCTcU&list=RDTlr0VRzCTcU&start_radio=1
+                  - group [ref=e222]:
+                    - link "Anitta - Tudo Isso (Official Lyric Video) · 3:35" [ref=e224]:
+                      - /url: /watch?v=vwxYaR-G-rU&list=RDTlr0VRzCTcU&start_radio=1
+                  - group [ref=e225]:
+                    - generic [ref=e226]: Anitta, MC Tha e outros
+              - button "Mais ações" [ref=e229]
+          - generic [ref=e234]:
+            - link [aria-hidden] [ref=e236] [cursor=pointer]:
+              - /url: /watch?v=I4cQIuc_uws&list=RDI4cQIuc_uws&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+              - img [ref=e241]:
+                - generic [aria-hidden] [ref=e245]: 1:43
+              - generic: Tocando agora
+            - generic [ref=e246] [cursor=pointer]:
+              - generic [ref=e247]:
+                - generic [ref=e248]:
+                  - heading [level=3] [ref=e249]:
+                    - link "Anitta - Sem Pressa feat. MC Tha (Clipe Oficial) 1 minuto e 43 segundos" [ref=e250]:
+                      - /url: /watch?v=I4cQIuc_uws&list=RDI4cQIuc_uws&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+                      - text: Anitta - Sem Pressa feat. MC Tha (Clipe Oficial)
+                  - button "Menu de ações" [ref=e254]
+                - generic [ref=e260]:
+                  - generic [ref=e261]: 40 mil
+                  - generic [ref=e262]: •há 3 meses
+              - generic [ref=e263]:
+                - link "Acessar o canal EQUILIBRIVM II" [ref=e264]:
+                  - /url: /@EQUILIBRIVMII
+                - link "EQUILIBRIVM II" [ref=e270]:
+                  - /url: /@EQUILIBRIVMII
+          - generic [ref=e272]:
+            - link [aria-hidden] [ref=e274] [cursor=pointer]:
+              - /url: /watch?v=ABE9VLnVCUs&list=RDABE9VLnVCUs&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+            - generic [ref=e276] [cursor=pointer]:
+              - generic [ref=e277]:
+                - generic [ref=e278]:
+                  - heading [level=3] [ref=e279]:
+                    - link "SEM PRESSA - MC Ryan SP, MC Kadu, MC GP e MC Kanhoto (Caio Passos e Guh Mix) 5 minutos e 7 segundos" [ref=e280]:
+                      - /url: /watch?v=ABE9VLnVCUs&list=RDABE9VLnVCUs&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+                      - text: SEM PRESSA - MC Ryan SP, MC Kadu, MC GP e MC Kanhoto (Caio Passos e Guh Mix)
+                  - button "Menu de ações" [ref=e284]
+                - generic [ref=e290]:
+                  - generic [ref=e291]: 184 mil
+                  - generic [ref=e292]: •há 4 anos
+              - generic [ref=e293]:
+                - link "Acessar o canal START FUNK" [ref=e294]:
+                  - /url: /@STARTFUNKOFICIAL
+                - generic [ref=e296]:
+                  - link "START FUNK" [ref=e300]:
+                    - /url: /@STARTFUNKOFICIAL
+                  - img "Verificado" [ref=e305]
+              - generic [ref=e309]:
+                - text: Inscreva-se no canal e "ative as notificações" clicando no sino ao lado ✓ MELHOR OPÇÃO 2 - MC Ryan SP, MC Kadu, MC GP ...
+                - tooltip "tooltip"
+          - generic [ref=e311]:
+            - link [aria-hidden] [ref=e313] [cursor=pointer]:
+              - /url: /watch?v=wADJPo46Dq0&list=RDwADJPo46Dq0&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+            - generic [ref=e315] [cursor=pointer]:
+              - generic [ref=e316]:
+                - generic [ref=e317]:
+                  - heading [level=3] [ref=e318]:
+                    - link "'Sem Pressa'' Feat MC GP, MC Ryan SP, MC Kadu e MC Kanhoto 5 minutos e 31 segundos" [ref=e319]:
+                      - /url: /watch?v=wADJPo46Dq0&list=RDwADJPo46Dq0&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+                      - text: "'Sem Pressa'' Feat MC GP, MC Ryan SP, MC Kadu e MC Kanhoto"
+                  - button "Menu de ações" [ref=e323]
+                - generic [ref=e329]:
+                  - generic [ref=e330]: 98 mil
+                  - generic [ref=e331]: •há 4 anos
+              - generic [ref=e332]:
+                - link "Acessar o canal GC FUNK" [ref=e333]:
+                  - /url: /@gcfunk5854
+                - link "GC FUNK" [ref=e338]:
+                  - /url: /@gcfunk5854
+              - generic [ref=e339]:
+                - generic [ref=e340]: "Música: Sem Pressa Produção: Caio Passos e Guh Mix gr6 explode,gr6,funk,mc,musica,musica de funk,funk 2022,gr6 ..."
+                - tooltip "tooltip"
+          - generic [ref=e342]:
+            - link [aria-hidden] [ref=e344] [cursor=pointer]:
+              - /url: /watch?v=kkUeGaJz9zM&list=RDkkUeGaJz9zM&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+            - generic [ref=e346] [cursor=pointer]:
+              - generic [ref=e347]:
+                - generic [ref=e348]:
+                  - heading [level=3] [ref=e349]:
+                    - link "João Gomes Cantor - DEVAGAR, SEM PRESSA - João Gomes (DVD Meu Piseiro Brasileiro) 2 minutos e 48 segundos" [ref=e350]:
+                      - /url: /watch?v=kkUeGaJz9zM&list=RDkkUeGaJz9zM&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+                      - text: João Gomes Cantor - DEVAGAR, SEM PRESSA - João Gomes (DVD Meu Piseiro Brasileiro)
+                  - button "Menu de ações" [ref=e354]
+                - generic [ref=e360]:
+                  - generic [ref=e361]: 2 mi
+                  - generic [ref=e362]: •há 1 ano
+              - generic [ref=e363]:
+                - link "Acessar o canal João Gomes Cantor" [ref=e364]:
+                  - /url: /channel/UCIW4y9tEpVmx_iezUVA9blQ
+                - generic [ref=e365]:
+                  - link "João Gomes Cantor" [ref=e369]:
+                    - /url: /channel/UCIW4y9tEpVmx_iezUVA9blQ
+                  - img "Canal oficial do artista" [ref=e374]
+              - generic [ref=e378]:
+                - text: Essa música faz parte do meu DVD Gravado Ao Vivo nos Arcos da Lapa no Rio de Janeiro Escute agora em todos os apps ...
+                - tooltip "tooltip"
+              - img "4K" [ref=e383]:
+                - generic [aria-hidden] [ref=e384]: 4K
+          - generic [ref=e386]:
+            - link [aria-hidden] [ref=e388] [cursor=pointer]:
+              - /url: /watch?v=6Vxt9xR1JCA&pp=ygUKc2VtIHByZXNzYQ%3D%3D
+            - generic [ref=e390] [cursor=pointer]:
+              - generic [ref=e391]:
+                - generic [ref=e392]:
+                  - heading [level=3] [ref=e393]:
+                    - link "SEM PRESSA - TESTANDO COMIDA JAPONESA ( Coca Japonesa , Sampé ,Grogu Japonesa , Sumo Estranhu...) 31 minutos" [ref=e394]:
+                      - /url: /watch?v=6Vxt9xR1JCA&pp=ygUKc2VtIHByZXNzYQ%3D%3D
+                      - text: SEM PRESSA - TESTANDO COMIDA JAPONESA ( Coca Japonesa , Sampé ,Grogu Japonesa , Sumo Estranhu...)
+                  - button "Menu de ações" [ref=e398]
+                - generic [ref=e404]:
+                  - generic [ref=e405]: 45 mil
+                  - generic [ref=e406]: •há 2 anos
+              - generic [ref=e407]:
+                - link "Acessar o canal SEM PRESSA" [ref=e408]:
+                  - /url: /@SEMPRESSA300
+                - link "SEM PRESSA" [ref=e413]:
+                  - /url: /@SEMPRESSA300
+          - generic [ref=e415]:
+            - link [aria-hidden] [ref=e417] [cursor=pointer]:
+              - /url: /watch?v=rSvOtBWIujQ&list=RDrSvOtBWIujQ&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+            - generic [ref=e419] [cursor=pointer]:
+              - generic [ref=e420]:
+                - generic [ref=e421]:
+                  - heading [level=3] [ref=e422]:
+                    - link "SEM PRESSA 2 minutos e 33 segundos" [ref=e423]:
+                      - /url: /watch?v=rSvOtBWIujQ&list=RDrSvOtBWIujQ&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+                      - text: SEM PRESSA
+                  - button "Menu de ações" [ref=e427]
+                - generic [ref=e431]: 149 mil
+              - generic [ref=e435]:
+                - link "Acessar o canal CaLopes - Topic" [ref=e436]:
+                  - /url: /channel/UCT8Kyg-qijHoso4eyc7xAAw
+                - link "CaLopes - Topic" [ref=e441]:
+                  - /url: /channel/UCT8Kyg-qijHoso4eyc7xAAw
+              - generic [ref=e442]:
+                - generic [ref=e443]: "Provided to YouTube by CaLopes SEM PRESSA · CaLopes SEM PRESSA ℗ 2026 CaLopes Released on: 2026-04-29 Main ..."
+                - tooltip "tooltip"
+          - generic [ref=e445]:
+            - link [aria-hidden] [ref=e447] [cursor=pointer]:
+              - /url: /watch?v=RxtItoiJBHc&list=RDRxtItoiJBHc&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+            - generic [ref=e449] [cursor=pointer]:
+              - generic [ref=e450]:
+                - generic [ref=e451]:
+                  - heading [level=3] [ref=e452]:
+                    - link "Anitta, MC Tha - Sem Pressa (Official Audio) 2 minutos e 32 segundos" [ref=e453]:
+                      - /url: /watch?v=RxtItoiJBHc&list=RDRxtItoiJBHc&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+                      - text: Anitta, MC Tha - Sem Pressa (Official Audio)
+                  - button "Menu de ações" [ref=e457]
+                - generic [ref=e463]:
+                  - generic [ref=e464]: 5,4 mil
+                  - generic [ref=e465]: •há 3 meses
+              - generic [ref=e466]:
+                - link "Acessar o canal TubeShapt" [ref=e467]:
+                  - /url: /@TubeShapt
+                - link "TubeShapt" [ref=e472]:
+                  - /url: /@TubeShapt
+              - generic [ref=e473]:
+                - text: "Quer apoiar o canal? Faça uma doação de qualquer valor e ajude a apoiar nosso trabalho! ❤️ LivePix: ..."
+                - tooltip "tooltip"
+          - generic [ref=e475]:
+            - link [aria-hidden] [ref=e477] [cursor=pointer]:
+              - /url: /watch?v=KbGioepgdRQ&list=RDKbGioepgdRQ&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+            - generic [ref=e479] [cursor=pointer]:
+              - generic [ref=e480]:
+                - generic [ref=e481]:
+                  - heading [level=3] [ref=e482]:
+                    - link "Sem Pressa 3 minutos e 27 segundos" [ref=e483]:
+                      - /url: /watch?v=KbGioepgdRQ&list=RDKbGioepgdRQ&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+                      - text: Sem Pressa
+                  - button "Menu de ações" [ref=e487]
+                - generic [ref=e491]: 21 mil
+              - generic [ref=e495]:
+                - link "Acessar o canal Lulu Santos - Topic" [ref=e496]:
+                  - /url: /channel/UCJwX84TxnxhO-lAnIbLdoBw
+                - generic [ref=e497]:
+                  - link "Lulu Santos" [ref=e501]:
+                    - /url: /channel/UCJwX84TxnxhO-lAnIbLdoBw
+                  - img "Canal oficial do artista" [ref=e506]
+              - generic [ref=e510]:
+                - generic [ref=e511]: Provided to YouTube by Ariola Sem Pressa · Lulu Santos Bugalu ℗ 2003 SONY MUSIC ENTERTAINMENT Brasil Ltda. Released ...
+                - tooltip "tooltip"
+          - generic [ref=e513]:
+            - link [ref=e515] [cursor=pointer]:
+              - /url: /@SEMPRESSA300
+            - generic [ref=e518]:
+              - 'link "SEM PRESSA @SEMPRESSA300•199 mil inscritos FACEBOOK: SEM PRESSA : https://www.facebook.com/SEMPRESSATV/ - CONTACTO COMERCIAL ..." [ref=e519] [cursor=pointer]':
+                - /url: /@SEMPRESSA300
+                - generic [ref=e520]:
+                  - generic [ref=e521]: SEM PRESSA
+                  - generic [ref=e525]: "@SEMPRESSA300•199 mil inscritos"
+                  - generic [ref=e526]: "FACEBOOK: SEM PRESSA : https://www.facebook.com/SEMPRESSATV/ - CONTACTO COMERCIAL ..."
+              - link "Inscrever-se" [ref=e531] [cursor=pointer]:
+                - /url: https://accounts.google.com/ServiceLogin?service=youtube&uilel=3&passive=true&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26hl%3Dpt%26next%3D%252Fresults%253Fsearch_query%253Dsem%252Bpressa%26continue_action%3DQUlxb01IYnlCNTc4QzlJZmpUaHlWZnZDMVl5V3xBQnJ0NjltQUktb0IyTmhwMmZFaDBobWlOMUR1aDhoVVV5WnNMbjB0akFVekphY20tQzA1ZEExSkdJU3J0c1VqTnBNazlWTERRUnU0UXgxdUhOTmpvUG9PTTNjSml3VmpmQzRQYXJfaHpja2xOQjJ2VW1GZnF5UFJQT2tRLTVuV0RfYV9NRkF3NnUzcXhFNi16d0dDZ3RmOWxpbndhVmZSVlVJQ2EtZm9ZVGtnWWhmQmZxTzVxTFZla3Y4&hl=pt-BR
+          - generic [ref=e536]:
+            - link [aria-hidden] [ref=e538] [cursor=pointer]:
+              - /url: /watch?v=XLJASNQ16bY&list=RDXLJASNQ16bY&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+            - generic [ref=e540] [cursor=pointer]:
+              - generic [ref=e541]:
+                - generic [ref=e542]:
+                  - heading [level=3] [ref=e543]:
+                    - link "LENA D'ÁGUA - SEM PRESSA (VIDEOCLIPE OFICIAL) 4 minutos e 40 segundos" [ref=e544]:
+                      - /url: /watch?v=XLJASNQ16bY&list=RDXLJASNQ16bY&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+                      - text: LENA D'ÁGUA - SEM PRESSA (VIDEOCLIPE OFICIAL)
+                  - button "Menu de ações" [ref=e548]
+                - generic [ref=e554]:
+                  - generic [ref=e555]: 46 mil
+                  - generic [ref=e556]: •há 1 ano
+              - generic [ref=e557]:
+                - link "Acessar o canal Lena d'Agua" [ref=e558]:
+                  - /url: /channel/UCanJ7xPGMFGTjI-nGLvoEaQ
+                - generic [ref=e559]:
+                  - link "Lena d'Agua" [ref=e563]:
+                    - /url: /channel/UCanJ7xPGMFGTjI-nGLvoEaQ
+                  - img "Canal oficial do artista" [ref=e568]
+              - generic [ref=e572]:
+                - generic [ref=e573]: "SEM PRESSA LENA D'ÁGUA letra / música: Pedro da Silva Martins voz: Lena d'Água guitarra / coros: Pedro da Silva Martins ..."
+                - tooltip "tooltip"
+          - generic [ref=e575]:
+            - link [aria-hidden] [ref=e577] [cursor=pointer]:
+              - /url: /watch?v=h6TQFohTYYA&list=RDh6TQFohTYYA&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAdIHCQnHBwGHKiGM7w%3D%3D
+            - generic [ref=e579] [cursor=pointer]:
+              - generic [ref=e580]:
+                - generic [ref=e581]:
+                  - heading [level=3] [ref=e582]:
+                    - link "Gaab e MC Livinho - Sem Pressa (GR6 Filmes) 3 minutos e 43 segundos" [ref=e583]:
+                      - /url: /watch?v=h6TQFohTYYA&list=RDh6TQFohTYYA&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAdIHCQnHBwGHKiGM7w%3D%3D
+                      - text: Gaab e MC Livinho - Sem Pressa (GR6 Filmes)
+                  - button "Menu de ações" [ref=e587]
+                - generic [ref=e593]:
+                  - generic [ref=e594]: 11 mi
+                  - generic [ref=e595]: •há 8 anos
+              - generic [ref=e596]:
+                - link "Acessar o canal GR6 EXPLODE" [ref=e597]:
+                  - /url: /@gr6explode
+                - generic [ref=e598]:
+                  - link "GR6 EXPLODE" [ref=e602]:
+                    - /url: /@gr6explode
+                  - img "Verificado" [ref=e607]
+              - generic [ref=e611]:
+                - generic [ref=e612]: "Álbum \"U\" Spotify: https://spoti.fi/2AdAwuA Artista: Gaab e MC Livinho Musica: Sem Pressa Composição: Gaab/Junior Lord/Mc ..."
+                - tooltip "tooltip"
+              - img "4K" [ref=e617]:
+                - generic [aria-hidden] [ref=e618]: 4K
+          - generic [ref=e620]:
+            - link [aria-hidden] [ref=e622] [cursor=pointer]:
+              - /url: /watch?v=imw3NNH6mmM&list=RDimw3NNH6mmM&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+            - generic [ref=e624] [cursor=pointer]:
+              - generic [ref=e625]:
+                - generic [ref=e626]:
+                  - heading [level=3] [ref=e627]:
+                    - link "Anitta - 'Sem Pressa' (feat. MC Tha) (Letra/Lyrics) | Color Coded Lyrics 2 minutos e 32 segundos" [ref=e628]:
+                      - /url: /watch?v=imw3NNH6mmM&list=RDimw3NNH6mmM&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+                      - text: Anitta - 'Sem Pressa' (feat. MC Tha) (Letra/Lyrics) | Color Coded Lyrics
+                  - button "Menu de ações" [ref=e632]
+                - generic [ref=e638]:
+                  - generic [ref=e639]: 3,2 mil
+                  - generic [ref=e640]: •há 3 meses
+              - generic [ref=e641]:
+                - link "Acessar o canal Yakjeon" [ref=e642]:
+                  - /url: /@YakjeonMusic
+                - link "Yakjeon" [ref=e647]:
+                  - /url: /@YakjeonMusic
+              - generic [ref=e648]:
+                - generic [ref=e649]: "𔒮 ࣪ 𓈒 ꘎ ۪ ׁ Bem-vindos ao Yakjeon ׁ ۪ ꘎ 𓈒 ࣪ 𔒮 •────𔒮────☾︎────𔒮────• ➤ Música: Sem Pressa ..."
+                - tooltip "tooltip"
+              - img "4K" [ref=e654]:
+                - generic [aria-hidden] [ref=e655]: 4K
+          - generic [ref=e657]:
+            - link [aria-hidden] [ref=e659] [cursor=pointer]:
+              - /url: /watch?v=b_jJRv4pNA8&pp=ygUKc2VtIHByZXNzYQ%3D%3D
+            - generic [ref=e661] [cursor=pointer]:
+              - generic [ref=e662]:
+                - generic [ref=e663]:
+                  - heading [level=3] [ref=e664]:
+                    - link "VIDA SIMPLES SEM PRESSA NO RITMO DA NATUREZA / DONA ALZIRA 23 minutos" [ref=e665]:
+                      - /url: /watch?v=b_jJRv4pNA8&pp=ygUKc2VtIHByZXNzYQ%3D%3D
+                      - text: VIDA SIMPLES SEM PRESSA NO RITMO DA NATUREZA / DONA ALZIRA
+                  - button "Menu de ações" [ref=e669]
+                - generic [ref=e675]:
+                  - generic [ref=e676]: 10 mil
+                  - generic [ref=e677]: •há 4 h
+              - generic [ref=e678]:
+                - link "Acessar o canal AGRESTE VERDE" [ref=e679]:
+                  - /url: /@odairoliveira2852
+                - link "AGRESTE VERDE" [ref=e684]:
+                  - /url: /@odairoliveira2852
+              - generic [ref=e685]:
+                - text: Olá, sejam bem vindos Pessoal! No momento dona Alzira está na cidade com familiares recebendo auxílio médico, tratando um ...
+                - tooltip "tooltip"
+              - img "Novo" [ref=e690]:
+                - generic [aria-hidden] [ref=e691]: Novo
+          - generic [ref=e693]:
+            - link [aria-hidden] [ref=e695] [cursor=pointer]:
+              - /url: /watch?v=V3RRzgeakU8&list=RDV3RRzgeakU8&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+            - generic [ref=e697] [cursor=pointer]:
+              - generic [ref=e698]:
+                - generic [ref=e699]:
+                  - heading [level=3] [ref=e700]:
+                    - link "Anitta - Sem Pressa (Angélica Ao Vivo) 2 minutos e 30 segundos" [ref=e701]:
+                      - /url: /watch?v=V3RRzgeakU8&list=RDV3RRzgeakU8&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+                      - text: Anitta - Sem Pressa (Angélica Ao Vivo)
+                  - button "Menu de ações" [ref=e705]
+                - generic [ref=e711]:
+                  - generic [ref=e712]: 2,1 mil
+                  - generic [ref=e713]: •há 4 sem.
+              - generic [ref=e714]:
+                - link "Acessar o canal miranha" [ref=e715]:
+                  - /url: /@miramusiic
+                - link "miranha" [ref=e720]:
+                  - /url: /@miramusiic
+          - generic [ref=e722]:
+            - link [aria-hidden] [ref=e724] [cursor=pointer]:
+              - /url: /watch?v=cS78Ui3pJgI&list=RDcS78Ui3pJgI&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+            - generic [ref=e726] [cursor=pointer]:
+              - generic [ref=e727]:
+                - generic [ref=e728]:
+                  - heading [level=3] [ref=e729]:
+                    - link "Sem Pressa 3 minutos e 41 segundos" [ref=e730]:
+                      - /url: /watch?v=cS78Ui3pJgI&list=RDcS78Ui3pJgI&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+                      - text: Sem Pressa
+                  - button "Menu de ações" [ref=e734]
+                - generic [ref=e738]: 49 mil
+              - generic [ref=e742]:
+                - link "Acessar o canal Elias Muniz - Topic" [ref=e743]:
+                  - /url: /channel/UCw6cF4thuSwP4qPo_mk1rgA
+                - link "Elias Muniz - Topic" [ref=e748]:
+                  - /url: /channel/UCw6cF4thuSwP4qPo_mk1rgA
+              - generic [ref=e749]:
+                - generic [ref=e750]: "Provided to YouTube by ONErpm Sem Pressa · Elias Muniz · Elias Muniz Viver a Vida ℗ Elias Muniz Released on: 2022-03-11 ..."
+                - tooltip "tooltip"
+          - generic [ref=e752]:
+            - link [aria-hidden] [ref=e754] [cursor=pointer]:
+              - /url: /watch?v=Dk-7lk3Eq30&list=RDDk-7lk3Eq30&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+            - generic [ref=e756] [cursor=pointer]:
+              - generic [ref=e757]:
+                - heading [level=3] [ref=e759]:
+                  - link "Tudo Isso 3 minutos e 35 segundos" [ref=e760]:
+                    - /url: /watch?v=Dk-7lk3Eq30&list=RDDk-7lk3Eq30&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+                    - text: Tudo Isso
+                - generic [ref=e761]: 2,5 mi
+              - generic [ref=e765]:
+                - link "Acessar o canal Anitta - Topic" [ref=e766]:
+                  - /url: /channel/UCqjjyPUghDSSKFBABM_CXMw
+                - generic [ref=e767]:
+                  - link "Anitta" [ref=e771]:
+                    - /url: /channel/UCqjjyPUghDSSKFBABM_CXMw
+                  - img "Canal oficial do artista" [ref=e776]
+              - generic [ref=e780]:
+                - text: Provided to YouTube by Universal Music Group Tudo Isso · Anitta EQUILIBRIVM II ℗ 2026 Floresta Records Inc., under exclusive ...
+                - tooltip "tooltip"
+          - generic [ref=e781]:
+            - heading "Shorts" [level=2] [ref=e789]
+            - generic [ref=e791]:
+              - generic [ref=e794]:
+                - link [aria-hidden] [ref=e795] [cursor=pointer]:
+                  - /url: /shorts/lN1fR1do314
+                - generic [ref=e799] [cursor=pointer]:
+                  - generic [ref=e800]:
+                    - heading [level=3] [ref=e801]:
+                      - link "@anitta Anitta - Sem pressa 🏹" [ref=e802]:
+                        - /url: /shorts/lN1fR1do314
+                    - generic [aria-hidden] [ref=e803]: 2,3 mil visualizações
+                  - button "Mais ações" [ref=e805]
+              - generic [ref=e811]:
+                - link [aria-hidden] [ref=e812] [cursor=pointer]:
+                  - /url: /shorts/jH178HgsB4M
+                - generic [ref=e816] [cursor=pointer]:
+                  - generic [ref=e817]:
+                    - heading [level=3] [ref=e818]:
+                      - link "Anitta cantando ‘’Sem Pressa’’ em Porto Alegre" [ref=e819]:
+                        - /url: /shorts/jH178HgsB4M
+                    - generic [aria-hidden] [ref=e820]: 5,1 mil visualizações
+                  - button "Mais ações" [ref=e822]
+              - generic [ref=e828]:
+                - link [aria-hidden] [ref=e829] [cursor=pointer]:
+                  - /url: /shorts/bSZ_6O9eb8I
+                - generic [ref=e833] [cursor=pointer]:
+                  - generic [ref=e834]:
+                    - heading [level=3] [ref=e835]:
+                      - 'link "SEM PRESSA - Anitta ✨ #anitta #anittacy #musica #equilibrivm @anitta" [ref=e836]':
+                        - /url: /shorts/bSZ_6O9eb8I
+                    - generic [aria-hidden] [ref=e837]: 407 visualizações
+                  - button "Mais ações" [ref=e839]
+              - generic [ref=e845]:
+                - link [aria-hidden] [ref=e846] [cursor=pointer]:
+                  - /url: /shorts/hN3jtQTBjgA
+                - generic [ref=e850] [cursor=pointer]:
+                  - generic [ref=e851]:
+                    - heading [level=3] [ref=e852]:
+                      - link "sem pressa uai" [ref=e853]:
+                        - /url: /shorts/hN3jtQTBjgA
+                    - generic [aria-hidden] [ref=e854]: 23 mil visualizações
+                  - button "Mais ações" [ref=e856]
+              - generic [ref=e862]:
+                - link [aria-hidden] [ref=e863] [cursor=pointer]:
+                  - /url: /shorts/u1BwVy1rlqM
+                - generic [ref=e867] [cursor=pointer]:
+                  - generic [ref=e868]:
+                    - heading [level=3] [ref=e869]:
+                      - link "Sem pressa" [ref=e870]:
+                        - /url: /shorts/u1BwVy1rlqM
+                    - generic [aria-hidden] [ref=e871]: 292 visualizações
+                  - button "Mais ações" [ref=e873]
+          - generic [ref=e878]:
+            - link [aria-hidden] [ref=e880] [cursor=pointer]:
+              - /url: /watch?v=S-wu0qhaOE0&list=RDS-wu0qhaOE0&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+            - generic [ref=e882] [cursor=pointer]:
+              - generic [ref=e883]:
+                - heading [level=3] [ref=e885]:
+                  - link "Anitta - Sem pressa (Live Equilibrivm Tuor Studio Version) 2 minutos e 38 segundos" [ref=e886]:
+                    - /url: /watch?v=S-wu0qhaOE0&list=RDS-wu0qhaOE0&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+                    - text: Anitta - Sem pressa (Live Equilibrivm Tuor Studio Version)
+                - generic [ref=e889]:
+                  - generic [ref=e890]: 3,9 mil
+                  - generic [ref=e891]: •há 1 mês
+              - generic [ref=e892]:
+                - link "Acessar o canal Gabriel Morais" [ref=e893]:
+                  - /url: /@gmorais16
+                - link "Gabriel Morais" [ref=e898]:
+                  - /url: /@gmorais16
+              - generic [ref=e899]:
+                - generic [ref=e900]: SEM PRESSA - REMAKE | ANITTA✨ Este vídeo é um remake/cover não oficial da música “Sem Pressa”, de Anitta. Todos os ...
+                - tooltip "tooltip"
+              - img "4K" [ref=e905]:
+                - generic [aria-hidden] [ref=e906]: 4K
+          - generic [ref=e908]:
+            - link [aria-hidden] [ref=e910] [cursor=pointer]:
+              - /url: /watch?v=n-jAVv3z4fo&list=RDn-jAVv3z4fo&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+            - generic [ref=e912] [cursor=pointer]:
+              - generic [ref=e913]:
+                - heading [level=3] [ref=e915]:
+                  - link "Sem Pressa - Anitta, ft. MC Tha (Unofficial Lyric Video) 1 minuto e 47 segundos" [ref=e916]:
+                    - /url: /watch?v=n-jAVv3z4fo&list=RDn-jAVv3z4fo&start_radio=1&pp=ygUKc2VtIHByZXNzYaAHAQ%3D%3D
+                    - text: Sem Pressa - Anitta, ft. MC Tha (Unofficial Lyric Video)
+                - generic [ref=e919]:
+                  - generic [ref=e920]: "547"
+                  - generic [ref=e921]: •há 3 meses
+              - generic [ref=e922]:
+                - link "Acessar o canal Carlos • Edições." [ref=e923]:
+                  - /url: /@CaeduLyrics
+                - link "Carlos • Edições." [ref=e928]:
+                  - /url: /@CaeduLyrics
+              - img "4K" [ref=e933]:
+                - generic [aria-hidden] [ref=e934]: 4K
+          - generic [ref=e935]:
+            - heading "Shorts" [level=2] [ref=e943]
+            - generic [ref=e944]:
+              - generic [ref=e945]:
+                - generic [ref=e948]:
+                  - link [aria-hidden] [ref=e949] [cursor=pointer]:
+                    - /url: /shorts/PWeJgqeP3iA
+                  - generic [ref=e953] [cursor=pointer]:
+                    - generic [ref=e954]:
+                      - heading [level=3] [ref=e955]:
+                        - 'link "SEM PRESSA - Anitta ✨ #anitta #anittacy #musica #equilibrivm @anitta" [ref=e956]':
+                          - /url: /shorts/PWeJgqeP3iA
+                      - generic [aria-hidden] [ref=e957]: 193 visualizações
+                    - button "Mais ações" [ref=e959]
+                - generic [ref=e965]:
+                  - link [aria-hidden] [ref=e966] [cursor=pointer]:
+                    - /url: /shorts/Q35L7J53dR8
+                  - generic [ref=e970] [cursor=pointer]:
+                    - generic [ref=e971]:
+                      - heading [level=3] [ref=e972]:
+                        - link "@anitta Anitta - Sem pressa 🏹" [ref=e973]:
+                          - /url: /shorts/Q35L7J53dR8
+                      - generic [aria-hidden] [ref=e974]: 1,5 mil visualizações
+                    - button "Mais ações" [ref=e976]
+                - generic [ref=e982]:
+                  - link [aria-hidden] [ref=e983] [cursor=pointer]:
+                    - /url: /shorts/8NWuHpOD8pk
+                    - img [ref=e988]:
+                      - generic [aria-hidden] [ref=e989]: Novo
+                  - generic [ref=e990] [cursor=pointer]:
+                    - generic [ref=e991]:
+                      - heading [level=3] [ref=e992]:
+                        - link "Esse foi o nosso momento, Sem Pressa, Sem Pausa! 💍✨" [ref=e993]:
+                          - /url: /shorts/8NWuHpOD8pk
+                      - generic [aria-hidden] [ref=e994]: 1,4 mil visualizações
+                    - button "Mais ações" [ref=e996]
+                - generic [ref=e1002]:
+                  - link [aria-hidden] [ref=e1003] [cursor=pointer]:
+                    - /url: /shorts/C3KklMjFNK8
+                  - generic [ref=e1007] [cursor=pointer]:
+                    - generic [ref=e1008]:
+                      - heading [level=3] [ref=e1009]:
+                        - 'link "O aventureiro e seu doguinho! #curiosidades #rio#aventureiro#balsa" [ref=e1010]':
+                          - /url: /shorts/C3KklMjFNK8
+                      - generic [aria-hidden] [ref=e1011]: 318 mil visualizações
+                    - button "Mais ações" [ref=e1013]
+                - generic [ref=e1019]:
+                  - link [aria-hidden] [ref=e1020] [cursor=pointer]:
+                    - /url: /shorts/3mraXFgdNgE
+                  - generic [ref=e1024] [cursor=pointer]:
+                    - generic [ref=e1025]:
+                      - heading [level=3] [ref=e1026]:
+                        - link "SEM PRESSA TAQUEI COM ÓDIO - MC MENO K" [ref=e1027]:
+                          - /url: /shorts/3mraXFgdNgE
+                      - generic [aria-hidden] [ref=e1028]: 8,1 mil visualizações
+                    - button "Mais ações" [ref=e1030]
+              - generic [ref=e1034]:
+                - generic [ref=e1037]:
+                  - link [aria-hidden] [ref=e1038] [cursor=pointer]:
+                    - /url: /shorts/t9bDnIVka1o
+                  - generic [ref=e1042] [cursor=pointer]:
+                    - generic [ref=e1043]:
+                      - heading [level=3] [ref=e1044]:
+                        - link "Sem pressa" [ref=e1045]:
+                          - /url: /shorts/t9bDnIVka1o
+                      - generic [aria-hidden] [ref=e1046]: 86 visualizações
+                    - button "Mais ações" [ref=e1048]
+                - generic [ref=e1054]:
+                  - link [aria-hidden] [ref=e1055] [cursor=pointer]:
+                    - /url: /shorts/BLPAfphQxZI
+                  - generic [ref=e1059] [cursor=pointer]:
+                    - generic [ref=e1060]:
+                      - heading [level=3] [ref=e1061]:
+                        - link "PANACHER - Sem Pressa" [ref=e1062]:
+                          - /url: /shorts/BLPAfphQxZI
+                      - generic [aria-hidden] [ref=e1063]: 90 visualizações
+                    - button "Mais ações" [ref=e1065]
+                - generic [ref=e1071]:
+                  - link [aria-hidden] [ref=e1072] [cursor=pointer]:
+                    - /url: /shorts/nuOxlLEpSJc
+                  - generic [ref=e1076] [cursor=pointer]:
+                    - generic [ref=e1077]:
+                      - heading [level=3] [ref=e1078]:
+                        - link "Sem pressa" [ref=e1079]:
+                          - /url: /shorts/nuOxlLEpSJc
+                      - generic [aria-hidden] [ref=e1080]: 33 visualizações
+                    - button "Mais ações" [ref=e1082]
+                - generic [ref=e1088]:
+                  - link [aria-hidden] [ref=e1089] [cursor=pointer]:
+                    - /url: /shorts/sMOjqpZSQTk
+                    - img [ref=e1094]:
+                      - generic [aria-hidden] [ref=e1095]: Novo
+                  - generic [ref=e1096] [cursor=pointer]:
+                    - generic [ref=e1097]:
+                      - heading [level=3] [ref=e1098]:
+                        - link "Sem Pressa com Chagas Vieira" [ref=e1099]:
+                          - /url: /shorts/sMOjqpZSQTk
+                      - generic [aria-hidden] [ref=e1100]: 2 visualizações
+                    - button "Mais ações" [ref=e1102]
+                - generic [ref=e1108]:
+                  - link [aria-hidden] [ref=e1109] [cursor=pointer]:
+                    - /url: /shorts/ynH4MuLVtzs
+                  - generic [ref=e1113] [cursor=pointer]:
+                    - generic [ref=e1114]:
+                      - heading [level=3] [ref=e1115]:
+                        - link "Aventureiro sem pressa" [ref=e1116]:
+                          - /url: /shorts/ynH4MuLVtzs
+                      - generic [aria-hidden] [ref=e1117]: 10 mil visualizações
+                    - button "Mais ações" [ref=e1119]
+            - button "Mostrar mais" [ref=e1126] [cursor=pointer]
+    - text: •

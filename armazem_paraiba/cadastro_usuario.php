@@ -1001,11 +1001,19 @@ function index() {
                 "Deseja excluir o usuário código: {CÓDIGO}?"
             );
 
+            $acoesGrid["tags"][] = '<span class="glyphicon glyphicon-comment wa-grid-whatsapp" title="Abrir conversa no CRM - TECHPS" style="color:#25d366;cursor:pointer;margin-left:6px;"></span>';
             $gridFields["actions"] = $acoesGrid["tags"];
 
             // 2. Mesclamos o JS da utilitária com as regras dinâmicas da tela de Usuários
             $jsFunctions = $acoesGrid["js"] . "
-                
+                $(document).off('click', '.wa-grid-whatsapp').on('click', '.wa-grid-whatsapp', function(e){
+                    e.preventDefault();
+                    var row = $(this).closest('tr');
+                    var id = row.attr('data-row-id');
+                    if (!id) { id = row.children().first().text().trim(); }
+                    if (id) { window.open('whatsapp/index.php?user=' + encodeURIComponent(id), '_blank'); }
+                });
+
                 // FUNÇÃO RADAR: Descobre em qual índice numérico uma coluna está baseada no nome
                 const pegarIndiceColuna = function(nomeColuna) {
                     var index = -1;

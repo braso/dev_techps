@@ -469,6 +469,16 @@ include_once "componentes/layout_header.php";
                             </div>
                         </div>
                         <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase" for="preservar_assinaturas_governanca">Múltiplas Assinaturas (opcional)</label>
+                            <label class="flex items-start gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white cursor-pointer hover:bg-gray-50 transition-colors">
+                                <input type="checkbox" id="preservar_assinaturas_governanca" name="preservar_assinaturas" value="sim" class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <div>
+                                    <div class="text-sm font-semibold text-gray-800">Preservar assinaturas existentes no PDF</div>
+                                    <div class="text-xs text-gray-500">Ative para manter assinaturas digitais anteriores já presentes no documento (como Gov.br / ICP). Por padrão, segue o fluxo normal.</div>
+                                </div>
+                            </label>
+                        </div>
+                        <div>
                             <!-- Sem este campo o envio por governança caía sempre no padrão de 1 dia. -->
                             <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase" for="prazo_expiracao_dias_governanca">Prazo para assinar</label>
                             <div class="relative">

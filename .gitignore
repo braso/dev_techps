@@ -39,6 +39,25 @@ package.json
 HISTORICO_ALTERACOES.md
 HISTORICO_ALTERACOES.txt
 
+# Planos locais de desenvolvimento (nao versionar)
+PLANOS_DE_DESENVOLVIMENTO.md
+
+# Apresentacoes HTML locais (nao versionar)
+/html/
+
 # POPs locais do time de desenvolvimento (nao versionar)
 docs/pop/
+
+# Assistente virtual: plano e artefatos locais (nao versionar)
+/armazem_paraiba/assistente_virtual/PLANO_ASSISTENTE_VIRTUAL.md
+/armazem_paraiba/assistente_virtual/knowledge/manual_espelho_ponto.md
+/armazem_paraiba/assistente_virtual/uploads/*
+!/armazem_paraiba/assistente_virtual/uploads/.htaccess
+/armazem_paraiba/assistente_virtual/testes/criar_sessao*.php
+/armazem_paraiba/assistente_virtual/testes/diagnostico_*.php
+/armazem_paraiba/assistente_virtual/testes/teste_env*.php
+/armazem_paraiba/assistente_virtual/testes/teste_ini.php
+/armazem_paraiba/assistente_virtual/testes/teste_docx.php
+/armazem_paraiba/assistente_virtual/testes/teste_api_http.php
+/armazem_paraiba/assistente_virtual/testes/teste_api_funcionario.php
 

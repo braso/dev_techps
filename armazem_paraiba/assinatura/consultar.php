@@ -685,6 +685,11 @@ if (!empty($solicitacoes)) {
                                                     <i class="fas fa-file-signature mr-1"></i> Assinatura simples
                                                 </span>
                                             <?php endif; ?>
+                                            <?php if (strtolower(trim(strval($row["preservar_assinaturas"] ?? "nao"))) === "sim"): ?>
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200" title="Configurado para preservar assinaturas pré-existentes (Gov.br / ICP)">
+                                                    <i class="fas fa-layer-group mr-1"></i> Múltiplas assinaturas
+                                                </span>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 </div>

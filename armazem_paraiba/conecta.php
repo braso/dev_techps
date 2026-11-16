@@ -10,6 +10,16 @@
         ini_set('session.gc_maxlifetime', $lifetime);
     }
     if(empty(session_id())){
+        // Endurecimento do cookie de sessão (aplicado antes de session_start).
+        ini_set('session.use_only_cookies', '1');
+        ini_set('session.use_strict_mode', '1');
+        ini_set('session.cookie_httponly', '1');
+        ini_set('session.cookie_samesite', 'Lax');
+        $httpsSessao = (!empty($_SERVER['HTTPS']) && strtolower(strval($_SERVER['HTTPS'])) !== 'off')
+            || strtolower(strval($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
+        if ($httpsSessao) {
+            ini_set('session.cookie_secure', '1');
+        }
         session_start();
     }
 
@@ -32,9 +42,18 @@
 		if(
 			(empty($_SESSION['domain']) || $_SESSION['domain'] != $CONTEX['path'])	//Se não há login ou o login é relacionado a outro domínio
 		){
+			if (defined('WA_API_REQUEST') && WA_API_REQUEST) {
+				http_response_code(401);
+				header('Content-Type: application/json; charset=utf-8');
+				header('Cache-Control: no-store, private');
+				echo json_encode(['success' => false, 'message' => 'Não autenticado.'], JSON_UNESCAPED_UNICODE);
+				exit;
+			}
+			$sourcePage = htmlspecialchars(strval($_SERVER["REQUEST_URI"] ?? ''), ENT_QUOTES, 'UTF-8');
+			$logoutUrl = htmlspecialchars(strval($_ENV["URL_BASE"] ?? '') . $CONTEX['path'] . "/logout.php", ENT_QUOTES, 'UTF-8');
 			echo 
-				"<form action='".$_ENV["URL_BASE"].$CONTEX['path']."/logout.php' name='form_logout' method='post'>
-					<input name='sourcePage' type='hidden' value='".$_SERVER["REQUEST_URI"]."'>
+				"<form action='".$logoutUrl."' name='form_logout' method='post'>
+					<input name='sourcePage' type='hidden' value='".$sourcePage."'>
 				</form>"
 			;
 			echo "<script>document.form_logout.submit();</script>";

@@ -2317,7 +2317,7 @@ if(function_exists("index")){
 					input{$i}.type = 'hidden';
 					input{$i}.name = '".$a_campos[$i]."';
 					input{$i}.value = '".$a_valores[$i]."';
-					document.forms[0].appendChild(input{$i});
+					(document.forms['contex_form'] || document.forms[0]).appendChild(input{$i});
 					"
 				;
 			}
@@ -2327,7 +2327,7 @@ if(function_exists("index")){
 			echo 
 				"<script type='text/javascript'>
 				function criarGET() {
-					var form = document.forms[0];
+					var form = document.forms['contex_form'] || document.forms[0];
 					var elements = form.elements;
 					var values = [];
 					var primeiraAcao = '';

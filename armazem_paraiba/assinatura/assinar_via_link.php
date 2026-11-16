@@ -6,6 +6,7 @@ include "../conecta.php";
 include "email_config.php";
 include_once "tipo_assinatura_helper.php";
 include_once "marcas_helper.php";
+include_once "assinatura_incremental_helper.php";
 assinatura_expirarPendentes($conn);
 
 $token = isset($_GET['token']) ? $_GET['token'] : '';
@@ -284,7 +285,7 @@ $cadastro_ok = false;
    a empresa so pode ser descoberta pela solicitacao. Sem esta coluna o
    assinatura_obterTipoAssinatura recebia sempre 0 e caia no padrao cpf_rg,
    ignorando a configuracao de "rubrica" ou "ambos" da empresa. */
-$sqlAssinante = "SELECT a.*, s.caminho_arquivo, s.nome_arquivo_original, s.id_documento as doc_id_global, s.expires_at, s.prazo_expiracao_dias, s.modo_envio, s.empresa_id 
+$sqlAssinante = "SELECT a.*, s.caminho_arquivo, s.nome_arquivo_original, s.id_documento as doc_id_global, s.expires_at, s.prazo_expiracao_dias, s.modo_envio, s.empresa_id, s.preservar_assinaturas 
                  FROM assinantes a 
                  JOIN solicitacoes_assinatura s ON a.id_solicitacao = s.id 
                  WHERE a.token = ?";
@@ -437,6 +438,10 @@ if (!empty($assinante) && isset($assinante["id_solicitacao"])) {
         }
     }
 }
+
+$absDocAtual = assinatura_resolverArquivoAbs($caminho_arquivo);
+$temAssinaturaPrevia = ($absDocAtual !== "" && assinatura_pdfTemAssinaturaDigital($absDocAtual));
+$preservarAssinaturasDb = strtolower(trim(strval($solicitacao['preservar_assinaturas'] ?? ($assinante['preservar_assinaturas'] ?? 'nao'))));
 
 function assinatura_normalizarCpfDigits(string $cpf): string {
     return preg_replace('/\D+/', '', $cpf) ?? '';
@@ -1098,6 +1103,8 @@ $cadastro_ok = $exigeCpfRg ? $cadastro_cpf_rg_ok : true;
                             </div>
                         </div>
 
+
+
                         <!-- Campos ocultos -->
                         <input type="hidden" id="latitude" name="latitude">
                         <input type="hidden" id="longitude" name="longitude">
@@ -1125,6 +1132,8 @@ $cadastro_ok = $exigeCpfRg ? $cadastro_cpf_rg_ok : true;
                 window.ASSINATURA_AUTO = <?php echo (strval($_GET["auto"] ?? "") === "1") ? 'true' : 'false'; ?>;
                 window.ASSINATURA_NOME = <?php echo json_encode($nome_usuario); ?>;
                 window.MARCAS_URL = <?php echo json_encode("assinar_via_link.php?token=" . urlencode($token) . "&marcas=1"); ?>;
+                window.PDF_TEM_ASSINATURA_PREVIA = <?php echo $temAssinaturaPrevia ? 'true' : 'false'; ?>;
+                window.PRESERVAR_ASSINATURAS_DEFAULT = <?php echo ($preservarAssinaturasDb === 'sim') ? 'true' : 'false'; ?>;
             </script>
 
             <?php $editorV = @filemtime(__DIR__ . "/editor_marcas.js"); ?>

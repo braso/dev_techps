@@ -1,0 +1,720 @@
+/* Assistente Virtual TechPS — estilos escopados (.ia-*) */
+:root {
+    --ia-azul: #1f5fae;
+    --ia-azul-escuro: #143f75;
+    --ia-verde: #2f9e6f;
+    --ia-cinza: #f4f6f9;
+    --ia-borda: #dfe6ef;
+    --ia-texto: #1f2d3d;
+    --ia-suave: #6b7c93;
+    --ia-branco: #ffffff;
+    --ia-sombra: 0 18px 50px rgba(20, 63, 117, .22);
+}
+
+.ia-widget,
+.ia-widget *,
+.ia-page,
+.ia-page * {
+    box-sizing: border-box;
+}
+
+.ia-widget {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    z-index: 10560;
+    font-family: "Open Sans", Arial, sans-serif;
+}
+
+/* Quando o CRM - TECHPS está na mesma tela, coloca o assistente ao lado
+   do botão do WhatsApp para os dois ícones ficarem visíveis. */
+.wa-widget ~ .ia-widget {
+    right: 90px;
+    bottom: 22px;
+}
+
+.ia-widget-btn {
+    position: relative;
+    width: 58px;
+    height: 58px;
+    border: 0;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--ia-azul), var(--ia-azul-escuro));
+    color: #fff;
+    font-size: 22px;
+    cursor: pointer;
+    box-shadow: 0 10px 28px rgba(20, 63, 117, .35);
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.ia-widget-btn:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 14px 34px rgba(20, 63, 117, .45);
+}
+
+.ia-widget-badge {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--ia-verde);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .3px;
+}
+
+.ia-panel {
+    position: absolute;
+    right: 0;
+    bottom: 72px;
+    width: 390px;
+    height: 610px;
+    max-height: calc(100vh - 110px);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--ia-borda);
+    border-radius: 18px;
+    background: var(--ia-branco);
+    box-shadow: var(--ia-sombra);
+}
+
+.ia-panel.ia-aberto {
+    display: flex;
+    animation: ia-subir .18s ease-out;
+}
+
+@keyframes ia-subir {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.ia-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, var(--ia-azul), var(--ia-azul-escuro));
+    color: #fff;
+}
+
+.ia-panel-head strong {
+    display: block;
+    font-size: 15px;
+    line-height: 1.2;
+}
+
+.ia-panel-head small {
+    display: block;
+    margin-top: 3px;
+    color: rgba(255, 255, 255, .78);
+    font-size: 11px;
+}
+
+.ia-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ia-icon-btn {
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .14);
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.ia-icon-btn:hover {
+    background: rgba(255, 255, 255, .25);
+}
+
+.ia-messages {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 16px 14px 8px;
+    background:
+        radial-gradient(circle at 20% 0%, rgba(31, 95, 174, .06), transparent 45%),
+        var(--ia-cinza);
+    scroll-behavior: smooth;
+}
+
+.ia-msg {
+    display: flex;
+    margin-bottom: 12px;
+}
+
+.ia-msg.ia-user {
+    justify-content: flex-end;
+}
+
+.ia-bubble {
+    max-width: 86%;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: #fff;
+    color: var(--ia-texto);
+    font-size: 13px;
+    line-height: 1.5;
+    box-shadow: 0 2px 8px rgba(20, 63, 117, .08);
+    word-break: break-word;
+}
+
+.ia-msg.ia-user .ia-bubble {
+    background: var(--ia-azul);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+}
+
+.ia-msg.ia-assistant .ia-bubble {
+    border-bottom-left-radius: 4px;
+}
+
+.ia-bubble p {
+    margin: 0 0 8px;
+}
+
+.ia-bubble p:last-child {
+    margin-bottom: 0;
+}
+
+.ia-bubble ul,
+.ia-bubble ol {
+    margin: 4px 0 8px 18px;
+    padding: 0;
+}
+
+.ia-bubble li {
+    margin: 3px 0;
+}
+
+.ia-bubble code {
+    padding: 1px 5px;
+    border-radius: 5px;
+    background: rgba(31, 95, 174, .09);
+    color: var(--ia-azul-escuro);
+    font-size: 12px;
+}
+
+.ia-bubble a {
+    color: var(--ia-azul);
+    text-decoration: underline;
+}
+
+.ia-msg.ia-user .ia-bubble a {
+    color: #fff;
+}
+
+.ia-fontes {
+    margin-top: 9px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--ia-borda);
+    font-size: 11px;
+    color: var(--ia-suave);
+}
+
+.ia-fontes strong {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--ia-azul-escuro);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+}
+
+.ia-fontes a {
+    color: var(--ia-azul);
+}
+
+.ia-feedback {
+    display: flex;
+    gap: 6px;
+    margin-top: 7px;
+}
+
+.ia-feedback button {
+    border: 1px solid var(--ia-borda);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ia-suave);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 3px 7px;
+}
+
+.ia-feedback button:hover,
+.ia-feedback button.ia-ativo {
+    border-color: var(--ia-azul);
+    color: var(--ia-azul);
+}
+
+.ia-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 14px 10px;
+    background: var(--ia-cinza);
+}
+
+.ia-suggestion {
+    border: 1px solid var(--ia-borda);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--ia-azul-escuro);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 6px 10px;
+    transition: background .15s ease, border-color .15s ease;
+}
+
+.ia-suggestion:hover {
+    border-color: var(--ia-azul);
+    background: #eef4fb;
+}
+
+.ia-composer {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--ia-borda);
+    background: #fff;
+}
+
+.ia-composer textarea {
+    flex: 1 1 auto;
+    min-height: 38px;
+    max-height: 110px;
+    resize: none;
+    border: 1px solid var(--ia-borda);
+    border-radius: 12px;
+    padding: 9px 11px;
+    color: var(--ia-texto);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.35;
+    outline: none;
+}
+
+.ia-composer textarea:focus {
+    border-color: var(--ia-azul);
+    box-shadow: 0 0 0 3px rgba(31, 95, 174, .12);
+}
+
+.ia-send {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--ia-azul);
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.ia-send:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+.ia-panel-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 7px 12px 9px;
+    border-top: 1px solid var(--ia-borda);
+    background: #fff;
+    color: var(--ia-suave);
+    font-size: 10.5px;
+}
+
+.ia-panel-foot a {
+    color: var(--ia-azul);
+    text-decoration: none;
+}
+
+.ia-typing {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    padding: 4px 0;
+}
+
+.ia-typing span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ia-azul);
+    opacity: .45;
+    animation: ia-piscar 1s infinite ease-in-out;
+}
+
+.ia-typing span:nth-child(2) { animation-delay: .15s; }
+.ia-typing span:nth-child(3) { animation-delay: .3s; }
+
+@keyframes ia-piscar {
+    0%, 80%, 100% { opacity: .25; transform: translateY(0); }
+    40% { opacity: 1; transform: translateY(-2px); }
+}
+
+.ia-aviso {
+    margin: 8px 0;
+    padding: 8px 10px;
+    border: 1px solid #f0d38a;
+    border-radius: 10px;
+    background: #fff8e6;
+    color: #7a5a12;
+    font-size: 11.5px;
+}
+
+.ia-erro {
+    border-color: #f0b4b4;
+    background: #fff1f1;
+    color: #8a2c2c;
+}
+
+/* Página completa */
+.ia-page {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    gap: 16px;
+    max-width: 1280px;
+    margin: 18px auto 24px;
+    padding: 0 16px;
+    font-family: "Open Sans", Arial, sans-serif;
+}
+
+.ia-history {
+    display: flex;
+    flex-direction: column;
+    min-height: 620px;
+    padding: 14px;
+    border: 1px solid var(--ia-borda);
+    border-radius: 14px;
+    background: #fff;
+}
+
+.ia-history h3 {
+    margin: 0 0 10px;
+    color: var(--ia-azul-escuro);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+}
+
+.ia-history-list {
+    flex: 1 1 auto;
+    overflow-y: auto;
+}
+
+.ia-history-item {
+    width: 100%;
+    display: block;
+    margin-bottom: 5px;
+    padding: 8px 9px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--ia-texto);
+    cursor: pointer;
+    text-align: left;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.ia-history-item:hover,
+.ia-history-item.ia-ativo {
+    border-color: var(--ia-borda);
+    background: var(--ia-cinza);
+}
+
+.ia-history-item small {
+    display: block;
+    margin-top: 2px;
+    color: var(--ia-suave);
+    font-size: 10px;
+}
+
+.ia-chat {
+    display: flex;
+    flex-direction: column;
+    min-height: 620px;
+    overflow: hidden;
+    border: 1px solid var(--ia-borda);
+    border-radius: 14px;
+    background: #fff;
+}
+
+.ia-chat-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--ia-borda);
+    background: linear-gradient(135deg, #f7faff, #fff);
+}
+
+.ia-chat-head h2 {
+    margin: 0;
+    color: var(--ia-azul-escuro);
+    font-size: 16px;
+}
+
+.ia-chat-head p {
+    margin: 3px 0 0;
+    color: var(--ia-suave);
+    font-size: 11.5px;
+}
+
+.ia-chat .ia-messages {
+    min-height: 430px;
+    max-height: calc(100vh - 300px);
+}
+
+.ia-chat .ia-composer {
+    padding: 12px 16px;
+}
+
+.ia-chat .ia-suggestions {
+    padding: 0 16px 12px;
+}
+
+.ia-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--ia-borda);
+    border-radius: 9px;
+    background: #fff;
+    color: var(--ia-azul-escuro);
+    cursor: pointer;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.ia-btn:hover {
+    border-color: var(--ia-azul);
+    color: var(--ia-azul);
+    text-decoration: none;
+}
+
+.ia-btn-primario {
+    border-color: var(--ia-azul);
+    background: var(--ia-azul);
+    color: #fff;
+}
+
+.ia-btn-primario:hover {
+    background: var(--ia-azul-escuro);
+    color: #fff;
+}
+
+/* Admin */
+.ia-admin {
+    max-width: 1180px;
+    margin: 18px auto 30px;
+    padding: 0 16px;
+    font-family: "Open Sans", Arial, sans-serif;
+    color: var(--ia-texto);
+}
+
+.ia-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.ia-card {
+    padding: 14px 16px;
+    border: 1px solid var(--ia-borda);
+    border-radius: 12px;
+    background: #fff;
+}
+
+.ia-card span {
+    display: block;
+    color: var(--ia-suave);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+}
+
+.ia-card strong {
+    display: block;
+    margin-top: 5px;
+    color: var(--ia-azul-escuro);
+    font-size: 22px;
+}
+
+.ia-box {
+    margin-bottom: 18px;
+    padding: 16px;
+    border: 1px solid var(--ia-borda);
+    border-radius: 12px;
+    background: #fff;
+}
+
+.ia-box h3 {
+    margin: 0 0 12px;
+    color: var(--ia-azul-escuro);
+    font-size: 14px;
+}
+
+.ia-box table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.ia-box th,
+.ia-box td {
+    padding: 8px 9px;
+    border-bottom: 1px solid var(--ia-borda);
+    text-align: left;
+    vertical-align: top;
+}
+
+.ia-box th {
+    color: var(--ia-suave);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+}
+
+.ia-grid-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 10px;
+}
+
+.ia-grid-form label {
+    display: block;
+    color: var(--ia-suave);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.ia-grid-form input,
+.ia-grid-form select,
+.ia-grid-form textarea {
+    width: 100%;
+    margin-top: 4px;
+    padding: 8px 9px;
+    border: 1px solid var(--ia-borda);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 12px;
+}
+
+.ia-grid-form textarea {
+    min-height: 90px;
+    resize: vertical;
+}
+
+.ia-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+}
+
+.ia-tab {
+    border: 1px solid var(--ia-borda);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--ia-azul-escuro);
+    cursor: pointer;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.ia-tab.ia-ativo {
+    border-color: var(--ia-azul);
+    background: var(--ia-azul);
+    color: #fff;
+}
+
+.ia-tab-content {
+    display: none;
+}
+
+.ia-tab-content.ia-ativo {
+    display: block;
+}
+
+.ia-status {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: #e8f6ef;
+    color: #1f7a53;
+    font-size: 10.5px;
+    font-weight: 700;
+}
+
+.ia-status.ia-off {
+    background: #fdecec;
+    color: #a33;
+}
+
+.ia-muted {
+    color: var(--ia-suave);
+    font-size: 11.5px;
+}
+
+@media (max-width: 860px) {
+    .ia-page {
+        grid-template-columns: 1fr;
+    }
+
+    .ia-history {
+        min-height: 0;
+        max-height: 220px;
+    }
+
+    .ia-chat {
+        min-height: 540px;
+    }
+}
+
+@media (max-width: 480px) {
+    .ia-widget {
+        right: 12px;
+        bottom: 12px;
+    }
+
+    .wa-widget ~ .ia-widget {
+        right: 84px;
+        bottom: 14px;
+    }
+
+    .ia-panel {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        max-height: none;
+        border-radius: 0;
+    }
+
+    .ia-panel.ia-aberto {
+        display: flex;
+    }
+}

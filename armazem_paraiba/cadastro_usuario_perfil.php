@@ -320,7 +320,7 @@ function editarUsuarioPerfil(){
         foreach($grupo as $sec=>$labels){
             echo "<div class='row' style='margin-bottom:10px'>"
                 ."<div class='col-sm-12' style='display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; border-left:4px solid #4c6ef5; padding-left:8px'>"
-                ."<span>".htmlspecialchars(ucfirst($sec))."</span>"
+                ."<span>".htmlspecialchars($sec === 'whatsapp' ? 'CRM - TECHPS' : ucfirst($sec))."</span>"
                 ."</div>"
                 ."<div class='col-sm-12' style='display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:8px'>";
             foreach($labels as $lab){

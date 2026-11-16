@@ -1,0 +1,229 @@
+- generic [ref=e2]:
+  - banner [ref=e4]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - button "Guia" [ref=e9] [cursor=pointer]
+        - generic [ref=e13]:
+          - link "Página inicial do YouTube" [ref=e14] [cursor=pointer]:
+            - /url: /
+          - generic [ref=e20]: BR
+        - button "Pular navegação" [ref=e24] [cursor=pointer]
+      - generic [ref=e28]:
+        - search [ref=e29]:
+          - generic [ref=e31]:
+            - generic [ref=e32]:
+              - combobox "Pesquisar" [expanded] [ref=e34]: sem pressa
+              - button [ref=e37] [cursor=pointer]
+              - button "Limpar consulta de enquete" [ref=e39] [cursor=pointer]
+            - button "Search" [ref=e46] [cursor=pointer]
+        - generic [ref=e51]:
+          - button "Pesquisar com sua voz" [ref=e53] [cursor=pointer]
+          - tooltip "tooltip"
+      - generic [ref=e58]:
+        - button "Configurações" [ref=e63] [cursor=pointer]
+        - link "Fazer login" [ref=e69] [cursor=pointer]:
+          - /url: https://accounts.google.com/ServiceLogin?service=youtube&uilel=3&passive=true&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26hl%3Dpt%26next%3D%252Fwatch%253Fv%253DABE9VLnVCUs%2526list%253DRDABE9VLnVCUs%2526start_radio%253D1%2526pp%253DygUKc2VtIHByZXNzYaAHAQ%25253D%25253D&hl=pt-BR&ec=65620
+  - generic [ref=e91]:
+    - text: • • • • • • • • • • • • • •
+    - main [ref=e1182]:
+      - generic [ref=e1183]:
+        - generic [ref=e1185]:
+          - generic [ref=e1188]:
+            - generic [aria-hidden] [ref=e1191] [cursor=pointer]
+            - complementary [ref=e1192]:
+              - generic "Player de vídeo do YouTube" [active] [ref=e1195]:
+                - generic [ref=e1197]:
+                  - generic:
+                    - generic [ref=e1199] [cursor=pointer]:
+                      - generic [ref=e1201]:
+                        - generic "Frete mais barato para seu negócio" [ref=e1202]
+                        - generic "superfrete.com" [ref=e1203]
+                      - link "Acessar o site This link opens in new tab" [ref=e1204]:
+                        - generic: Acessar o site
+                    - generic [ref=e1205]:
+                      - generic "Patrocinado" [ref=e1207]
+                      - button "Minha central de anúncios" [ref=e1209] [cursor=pointer]
+                      - generic [ref=e1211]:
+                        - text: •
+                        - generic "1 de 2" [ref=e1212]
+                      - link "superfrete.com This link opens in new tab" [ref=e1213]:
+                        - generic [ref=e1214] [cursor=pointer]: superfrete.com
+                - generic: Precisando
+                - generic [ref=e1221]:
+                  - slider "Botão deslizante de busca" [disabled] [ref=e1223]
+                  - generic [ref=e1233]:
+                    - generic [ref=e1234]:
+                      - button "Pausa (k)" [ref=e1235] [cursor=pointer]
+                      - button "Anterior (SHIFT+p)" [ref=e1236] [cursor=pointer]
+                      - button "Próximo (SHIFT+n)" [ref=e1237] [cursor=pointer]
+                      - generic [ref=e1238]:
+                        - button "Sem áudio (m)" [ref=e1240] [cursor=pointer]
+                        - slider "Volume":
+                          - generic [ref=e1241] [cursor=pointer]
+                      - button "0 Minutos 0 Segundos de 0 Minutos 38 Segundos" [ref=e1244] [cursor=pointer]: 0:00 / 0:38
+                    - generic [ref=e1245]:
+                      - generic [ref=e1246]:
+                        - button "Não há legendas/legendas descritivas disponíveis" [pressed] [ref=e1247] [cursor=pointer]
+                        - button "Detalhes" [ref=e1249] [cursor=pointer]
+                      - generic [ref=e1250]:
+                        - button "Modo Teatro (t)" [ref=e1251] [cursor=pointer]
+                        - button "Tela inteira (f)" [ref=e1252] [cursor=pointer]
+          - generic [ref=e1254]:
+            - generic [ref=e1256]:
+              - heading "SEM PRESSA - MC Ryan SP, MC Kadu, MC GP e MC Kanhoto (Caio Passos e Guh Mix)" [level=1] [ref=e1259]
+              - generic [ref=e1260]:
+                - generic [ref=e1261]:
+                  - generic [ref=e1262]:
+                    - link [ref=e1263] [cursor=pointer]:
+                      - /url: /@STARTFUNKOFICIAL
+                    - generic [ref=e1265]:
+                      - generic [ref=e1266]:
+                        - generic "START FUNK" [ref=e1269]:
+                          - link "START FUNK" [ref=e1270] [cursor=pointer]:
+                            - /url: /@STARTFUNKOFICIAL
+                        - img "Verificado" [ref=e1275]
+                      - generic "2,14 milhões de inscritos" [ref=e1279]: 2,14 mi de inscritos
+                  - button "Inscreva-se em START FUNK." [ref=e1285] [cursor=pointer]:
+                    - generic: Inscrever-se
+                - generic [ref=e1292]:
+                  - generic [ref=e1293]:
+                    - generic [ref=e1297]:
+                      - button "marcar este vídeo como \"Gostei\" com mais 2.717 pessoas" [ref=e1301] [cursor=pointer]:
+                        - generic: 2,7 mil
+                      - button "Não gostei deste vídeo" [ref=e1308] [cursor=pointer]
+                    - button "Compartilhar" [ref=e1314] [cursor=pointer]
+                  - button "Salvar na playlist" [ref=e1321] [cursor=pointer]
+                  - button "Mais ações" [ref=e1326] [cursor=pointer]
+              - generic [ref=e1332] [cursor=pointer]:
+                - generic [ref=e1333]:
+                  - generic [ref=e1335]:
+                    - text: 184 mil visualizações há 4 anos
+                    - link "#GR6EXPLODE" [ref=e1336]:
+                      - /url: /hashtag/gr6explode
+                    - link "#MCGP" [ref=e1337]:
+                      - /url: /hashtag/mcgp
+                    - link "#MCRYANSP" [ref=e1338]:
+                      - /url: /hashtag/mcryansp
+                  - tooltip "tooltip"
+                - generic [ref=e1339]:
+                  - generic [ref=e1340]:
+                    - generic [ref=e1341]: Inscreva-se no canal e "ative as notificações" clicando no sino ao lado 🔔✔ MELHOR OPÇÃO 2 - MC Ryan SP, MC Kadu, MC GP e MC Kanhoto (Caio Passos e Guh Mix)
+                    - generic: …
+                  - button "mais" [ref=e1344]
+            - text: •
+        - generic [ref=e1346]:
+          - generic [ref=e1348]:
+            - generic [ref=e1351]:
+              - generic [ref=e1354] [cursor=pointer]
+              - generic [ref=e1355]:
+                - generic "Patrocinado - Frete mais barato para seu negócio superfrete.com" [ref=e1357]:
+                  - generic [ref=e1364]:
+                    - generic [ref=e1365]: Frete mais barato para seu negócio
+                    - generic [ref=e1366]:
+                      - generic [ref=e1368]:
+                        - generic [ref=e1369]: Patrocinado
+                        - text: ·
+                      - generic [ref=e1370]: superfrete.com
+                - button "Minha central de anúncios" [ref=e1373] [cursor=pointer]
+                - button [ref=e1380] [cursor=pointer]
+            - generic [ref=e1387]:
+              - generic [ref=e1389]:
+                - generic [ref=e1391] [cursor=pointer]:
+                  - generic [ref=e1392]: Emitir frete com desconto
+                  - generic [ref=e1393]:
+                    - generic [ref=e1394]: Fretes até 80% mais baratos
+                    - generic [ref=e1395]: Sem mensalidades e taxas escondidas
+                - generic [ref=e1397] [cursor=pointer]:
+                  - generic [ref=e1398]: Integre seu E-commerce
+                  - generic [ref=e1399]:
+                    - generic [ref=e1400]: Integre e ganhe R$ 100 em fretes
+                    - generic [ref=e1401]: Integre seu site com a SuperFrete
+              - link "Acessar o site" [ref=e1404] [cursor=pointer]:
+                - /url: https://www.googleadservices.com/pagead/aclk?sa=L&ai=CRIaxOb34ave-LIOy5OUP9eeNwQq5idH2igHg38DB8RWxkB8QASAAYM2AgICgA4IBF2NhLXB1Yi02MjE5ODExNzQ3MDQ5MzcxoAG2nNT-AqkC4GMxUPu1hz6oAwTIAwqqBNUDT9CkFa-qukK6kxSdjHdCaD2pci-0Z3Q1Pqk4yrg4dPYr6QWUl5g6N9wt62Anu2RQJmYZpo3vt_hJ6rcKKkwwCNN23fispldeV2L783obJJVPiJuZ-yMpprnKgGxUL1Q6E1_a7I6AGY0JM8BUXiV5sBkR8VTPVlO04bkVgRcEsdNRj4G1cUlJFkInxoWix4PwpIa99L-hbCBVGK0Z7-MwJjbYVO5q-xaMQh_N5iHqsyPK5Fvvqa_ihUInpn21o2Ta5FZcj6SSR6GyOTUIjOvz4Jby9cmpMY_rQIyN0wvGYZZxIu8XqeCFZm0vwD8A85jsP_S1EGs7cVw-HNpwNeetwJEh5F3hAbvFAb_M2T9Ptd8kVUmpCFg9bfl0qviX_V9fIdXXE9Bin2R_h5PsJM__DQxNerkps8dmFNIGMO3La3IJZ_eYdJuQ-WqqvkOoyIndhhzCwlkiuZsmSa3FHm89yiQ9Nd2iEaDcxqqz7pNSzOKySfcV6oA3CGlPCI7IoQV_cGHbzfnstNDU5Cy2STJbRzxCYpUyoor6z35X8MkU5mLG-IbyDf4iq0Iu9xSiWDJbuxM8F-nxEwk11FGsPAkugEvmhRqJnerXxD__owp1xHQ0IQe-yYgF0dDfsVigBqEBgAey46uBAZAHBKgH6u6xAqgHpc-xAqgH552xAqgH6J2xAqgHg_axAqgH-dOxAqgHydqxAqgHqeCxAqgHqNIbqAewm7ECqAf9srECqAfIz7ECqAfJz7ECqAf81bECqAf71bECqAeM1rECqAeL1rECqAea4rECqAeb4rECqAee6rECqAef6rECqAf467ECqAe86rECqAfv8bECqAf8r7ECqAe-2bECqAec3BuoB7ehsQKoB9WpsQKoB-fasQKoB961sQKoB-qxsQKoB763sQKoB5m1sQKoB4XBsQKoB-ulsQKoB8qpsQKSCAtQUlVWYVFsUVBaQagIAdIILgiAQRABGF4yAoICOg-AQoDAgICAgICAAqqAgBhI2aDSNVAUWJiw6KqfiJgDYAHyCB9jYS15dC1ob3N0LXB1Yi05ODE5MzcyOTQ0NDExODQ2mgkyaHR0cHM6Ly9zdXBlcmZyZXRlLmNvbS9jb250ZXVkby9jb25oZWNhLXN1cGVyZnJldGWxCffj7uQGuRmKyAkDyAkYyAmPAcgJwgHICZcCmAsBoQsHH6BrkzUnFroLQggBEAEYBCABKAEwEEABSAFgAGgAcAKIAQCYAQGiARIKABgAIABYAWAAcAGoAgHYAgLYAQGAAgGIAga6AwV2aXNjbNALEqIMMmIWChRwcm8ucGF5aXQuY2FsY3VsYXRvcmoTChFwcm8ucGF5aXQuZnJlaWdodHgAiAEA0gwCEAHaDCYKCxDAzb228aXZyaEBEgIBAxoNGNHQ37FYIMnY5KDkBUABSgIQH5oNARKqDQJCUsgNAdIN2gJodHRwczovL3N1cGVyZnJldGUuY29tL2NvbnRldWRvL2NvbmhlY2Etc3VwZXJmcmV0ZT91dG1fdGVybT0mdXRtX2NhbXBhaWduPUFXUislN0MrV0VCKyU3QytHT09HTEVfRElTUExBWSslN0MrREVNQU5EK0dFTislN0MrVE9QTyZ1dG1fc291cmNlPWFkd29yZHMmdXRtX21lZGl1bT1wcGMmaHNhX2FjYz02ODgzMTQ2NDc4JmhzYV9jYW09MjM3MjY2NDczNzcmaHNhX2dycD0xOTg3MTA5OTYwNDEmaHNhX2FkPTgwNDIwMzkzMzUwNiZoc2Ffc3JjPXl0aXMmaHNhX3RndD0maHNhX2t3PSZoc2FfbXQ9JmhzYV9uZXQ9YWR3b3JkcyZoc2FfdmVyPTMmZ2FkX3NvdXJjZT0yJmdhZF9jYW1wYWlnbmlkPTIzNzI2NjQ3Mzc3uBP___________8BiBQCsBQBwBXJgIBA0BUB2BUBkBYBmBYB4hYCCAGAFwGKFxgIAxgBIAEoATABOAFAAUgBUAFYAWACaAGgFwGpF0o1LMVU9Mq2uhcGKAAwADgB0BgB8BgBwhkCCAE&ase=2&gclid=EAIaIQobChMIt7_oqp-ImAMVAxm5Bh31cyOoEAEYASAAEgIZXvD_BwE&num=1&cid=CAASwgHkaMUCh31_RZAUSjRgYN4IHjcnzAL9sPa-KpZzLbL699ra03wZ9XANH19R_3roOE7fZEbFvHpvhhahzE3AbDlmlp1NZHaOA_AmJLeUjD-OaN-XMxxmo7IUzfS1GRin1_Oa6uhfbPTzmhJ15V_1PRZduu-vZVerxfsTf6AlIRYJQDdoYTBXsTWBhM_Wl9-gv0OgNfLBgKDooDVD7bLrrTybiqDsZknk2xfp0aVif8Yp4okSNL5PMb3m1TZ-UPWtaiP8pg&ad_cpn=%5BAD_CPN%5D&sig=AOD64_2fnNXjQsjb7TDnLBqv-QAeW6KNvg&label=video_click_to_advertiser_site&ctype=110&ms=%5BCLICK_MS%5D&adclksrc=%5BCLICK_SOURCE%5D
+          - generic [ref=e1412]:
+            - generic [ref=e1413]:
+              - 'heading "Avançar: DJ Boy, Oldilla ''''VÊ SE ME ACHA'''' MC Cebezinho, MC Kanhoto, MC Kadu e MC IG (Clipe Oficial) 4 minutos e 47 segundos" [level=3] [ref=e1414]':
+                - generic [ref=e1415]: "Avançar:"
+                - generic "DJ Boy, Oldilla ''VÊ SE ME ACHA'' MC Cebezinho, MC Kanhoto, MC Kadu e MC IG (Clipe Oficial) 4 minutos e 47 segundos" [ref=e1416]: DJ Boy, Oldilla ''VÊ SE ME ACHA'' MC Cebezinho, MC Kanhoto, MC Kadu e MC IG (Clipe Oficial)
+              - generic [ref=e1417]:
+                - generic "Mix de SEM PRESSA - MC Ryan SP, MC Kadu, MC GP e MC Kanhoto (Caio Passos e Guh Mix)" [ref=e1418]
+                - text: "-"
+            - button "Expandir" [ref=e1420] [cursor=pointer]
+          - generic [ref=e1428]:
+            - generic [ref=e1430] [cursor=pointer]:
+              - link [aria-hidden] [ref=e1431]:
+                - /url: /watch?v=sBhRH-ql3TU&list=RDsBhRH-ql3TU&start_radio=1&pp=oAcB
+                - img [ref=e1437]:
+                  - generic [aria-hidden] [ref=e1441]: 8:31
+              - generic [ref=e1443]:
+                - generic [ref=e1444]:
+                  - heading [level=3] [ref=e1445]:
+                    - link "MC IG, MC RYAN SP, MC PH - FERNANDO DE NORONHA (DJ GLENNER) [FAIXA 11 MNNEI %] 8 minutos e 31 segundos" [ref=e1446]:
+                      - /url: /watch?v=sBhRH-ql3TU&list=RDsBhRH-ql3TU&start_radio=1&pp=oAcB
+                      - text: MC IG, MC RYAN SP, MC PH - FERNANDO DE NORONHA (DJ GLENNER) [FAIXA 11 MNNEI %]
+                  - generic [ref=e1448]:
+                    - group [ref=e1449]:
+                      - generic [ref=e1450]: MC IG 🔺
+                      - generic "Canal oficial do artista" [ref=e1451]
+                    - group [ref=e1454]:
+                      - generic "51 milhões de visualizações" [ref=e1458]: 51 mi
+                      - generic "há 3 anos" [ref=e1459]
+                - button "Mais ações" [ref=e1462]
+            - generic [ref=e1467] [cursor=pointer]:
+              - link [aria-hidden] [ref=e1468]:
+                - /url: /watch?v=EOmwH_7J-oI&list=PLfkLdKRVYV6Hqdlh6_UsPu1_FZMcb-a8a&pp=8AUB
+                - generic [ref=e1470]: 27 vídeos
+              - generic [ref=e1482]:
+                - generic [ref=e1483]:
+                  - heading [level=3] [ref=e1484]:
+                    - link "Funk" [ref=e1485]:
+                      - /url: /watch?v=EOmwH_7J-oI&list=PLfkLdKRVYV6Hqdlh6_UsPu1_FZMcb-a8a&pp=8AUB
+                  - generic [ref=e1487]:
+                    - group [ref=e1488]:
+                      - link "mtfee07" [ref=e1491]:
+                        - /url: /@Mtfee07
+                      - link "Playlist" [ref=e1494]:
+                        - /url: /@Mtfee07
+                    - group [ref=e1495]:
+                      - link "Ver playlist completa" [ref=e1498]:
+                        - /url: /playlist?list=PLfkLdKRVYV6Hqdlh6_UsPu1_FZMcb-a8a
+                - button "Mais ações" [ref=e1501]
+            - generic [ref=e1506] [cursor=pointer]:
+              - link [aria-hidden] [ref=e1507]:
+                - /url: /watch?v=zG5gWncAhls&list=PLIo3x0ZLxMpdbA7ygFf5ibwMmr9_glYIp&pp=8AUB
+                - generic [ref=e1509]: 37 vídeos
+              - generic [ref=e1521]:
+                - generic [ref=e1522]:
+                  - heading [level=3] [ref=e1523]:
+                    - link "lets" [ref=e1524]:
+                      - /url: /watch?v=zG5gWncAhls&list=PLIo3x0ZLxMpdbA7ygFf5ibwMmr9_glYIp&pp=8AUB
+                  - generic [ref=e1526]:
+                    - group [ref=e1527]:
+                      - link "Gustavo Henrique" [ref=e1530]:
+                        - /url: /@GustavoHenrique-gv7kp
+                      - link "Playlist" [ref=e1533]:
+                        - /url: /@GustavoHenrique-gv7kp
+                    - group [ref=e1534]:
+                      - link "Ver playlist completa" [ref=e1537]:
+                        - /url: /playlist?list=PLIo3x0ZLxMpdbA7ygFf5ibwMmr9_glYIp
+                - button "Mais ações" [ref=e1540]
+            - generic [ref=e1545] [cursor=pointer]:
+              - link [aria-hidden] [ref=e1546]:
+                - /url: /watch?v=eCcyXxvkLDk&list=RDeCcyXxvkLDk&start_radio=1&pp=oAcB
+                - img [ref=e1552]:
+                  - generic [aria-hidden] [ref=e1556]: 9:54
+              - generic [ref=e1558]:
+                - generic [ref=e1559]:
+                  - heading [level=3] [ref=e1560]:
+                    - link "SET WESLEY ALEMÃO - Lipi, Paulin da Capital, Lemos, Paiva, Lele, Piedro e Ryan (GM e Oldilla) 9 minutos e 54 segundos" [ref=e1561]:
+                      - /url: /watch?v=eCcyXxvkLDk&list=RDeCcyXxvkLDk&start_radio=1&pp=oAcB
+                      - text: SET WESLEY ALEMÃO - Lipi, Paulin da Capital, Lemos, Paiva, Lele, Piedro e Ryan (GM e Oldilla)
+                  - generic [ref=e1563]:
+                    - group [ref=e1564]:
+                      - generic [ref=e1565]: Love Funk
+                      - generic "Verificado" [ref=e1566]
+                      - generic [ref=e1569]: e mais 3
+                    - group [ref=e1570]:
+                      - generic "123 milhões de visualizações" [ref=e1574]: 123 mi
+                      - generic "há 4 anos" [ref=e1575]
+                - button "Mais ações" [ref=e1578]

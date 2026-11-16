@@ -302,12 +302,40 @@ function assinatura_finalizar_documento_icp($conn, int $idDocumento, array $opts
     $outputPdfPath = $outputDir . $outputFileName;
 
     if (!$alreadyFinalized) {
-        try {
-        $certStore = [];
-        $pfxContent = @file_get_contents($pfxPathToUse);
-        if ($pfxContent === false || !openssl_pkcs12_read($pfxContent, $certStore, $pfxPasswordToUse)) {
-            throw new Exception("Não foi possível ler o certificado PFX. Verifique se a senha está correta.");
-        }
+        require_once __DIR__ . "/assinatura_incremental_helper.php";
+
+        $preservarAssinaturas = (strtolower(trim(strval($doc["preservar_assinaturas"] ?? "nao"))) === "sim");
+
+        if ($preservarAssinaturas && assinatura_pdfTemAssinaturaDigital($inputPdfPath)) {
+            // FLUXO INCREMENTAL PAdES (Preserva assinaturas digitais pré-existentes como Gov.br / ICP):
+            $resInc = assinatura_executarAssinaturaIncremental(
+                $inputPdfPath,
+                $outputPdfPath,
+                $pfxPathToUse,
+                $pfxPasswordToUse,
+                [
+                    "id_documento" => $idDocumento,
+                    "url" => "https://validar.iti.gov.br/"
+                ]
+            );
+
+            if (empty($resInc["ok"])) {
+                if ($isTempFile && $pfxPathToUse && file_exists($pfxPathToUse)) {
+                    @unlink($pfxPathToUse);
+                }
+                if (file_exists($outputPdfPath)) {
+                    @unlink($outputPdfPath);
+                }
+                return ["ok" => false, "error" => "Erro na assinatura digital incremental: " . ($resInc["error"] ?? "Erro desconhecido")];
+            }
+        } else {
+            // FLUXO ORIGINAL 100% INALTERADO (quando desmarcado ou não possui assinatura pré-existente):
+            try {
+                $certStore = [];
+                $pfxContent = @file_get_contents($pfxPathToUse);
+                if ($pfxContent === false || !openssl_pkcs12_read($pfxContent, $certStore, $pfxPasswordToUse)) {
+                    throw new Exception("Não foi possível ler o certificado PFX. Verifique se a senha está correta.");
+                }
 
         $cert = $certStore["cert"] ?? null;
         $pkey = $certStore["pkey"] ?? null;
@@ -450,6 +478,7 @@ function assinatura_finalizar_documento_icp($conn, int $idDocumento, array $opts
             @unlink($outputPdfPath);
         }
         return ["ok" => false, "error" => "Erro na assinatura digital: " . $e->getMessage()];
+        }
         }
     } else {
         $outputPdfPath = $existingAbs;
