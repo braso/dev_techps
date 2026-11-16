@@ -2,6 +2,25 @@
 include_once "../conecta.php";
 include_once "componentes/layout_header.php";
 
+/* Base do link de assinatura.
+   Vem do mesmo assinatura_getBaseUrl() que o processar_envio.php e o
+   renovar_link.php usam para montar o link do e-mail. Montar o endereco
+   aqui "na mao" daria uma tela mostrando um link e o signatario tendo
+   recebido outro — que e exatamente o problema que esta tela resolve.
+   O email_helper.php so declara funcoes; nao dispara envio ao ser incluido. */
+require_once __DIR__ . "/email_helper.php";
+
+/* Telefone no padrao do WhatsApp (55 + DDD + numero, so digitos).
+   O modulo de WhatsApp ja tem essa regra pronta, com validacao de DDD e
+   corte do zero de discagem; escrever outra aqui daria duas regras para o
+   mesmo problema, divergindo com o tempo. So declara funcoes. */
+require_once __DIR__ . "/../whatsapp/lib/telefone.php";
+
+$baseUrlAssinatura = rtrim(assinatura_getBaseUrl(), "/");
+if ($baseUrlAssinatura === "" && defined("BASE_URL_ASSINATURA")) {
+    $baseUrlAssinatura = rtrim((string)BASE_URL_ASSINATURA, "/");
+}
+
 if (function_exists('mysqli_report')) {
     mysqli_report(MYSQLI_REPORT_OFF);
 }
@@ -237,10 +256,13 @@ if (!empty($idsSolicitacoes)) {
             a.ordem,
             a.nome,
             a.email,
+            a.token,
             a.funcao,
             a.status,
             a.data_assinatura,
             a.enti_nb_id,
+            e.enti_tx_fone1,
+            e.enti_tx_fone2,
             e.enti_setor_id,
             g.grup_tx_nome AS setor_nome,
             e.enti_subSetor_id,
@@ -756,17 +778,15 @@ if (!empty($solicitacoes)) {
                                                 <i class="far fa-clock mr-1"></i><?php echo $nomeSig; ?>
                                             </span>
                                         <?php endif; ?>
-                                        <?php if ($totalSig > 1): ?>
-                                            <button type="button"
-                                                class="text-xs text-blue-600 hover:text-blue-800 underline"
-                                                onclick="tpOpenModal('<?php echo $modalId; ?>')">
-                                                Ver todos (<?php echo $totalSig; ?>)
-                                            </button>
-                                        <?php endif; ?>
+                                        <button type="button"
+                                            class="text-xs text-blue-600 hover:text-blue-800 underline"
+                                            onclick="tpOpenModal('<?php echo $modalId; ?>')">
+                                            <?php echo $totalSig > 1 ? "Ver todos (" . $totalSig . ")" : "Ver / copiar link"; ?>
+                                        </button>
                                     <?php endif; ?>
                                 </div>
 
-                                <?php if ($totalSig > 1): ?>
+                                <?php if ($totalSig >= 1): ?>
                                     <div id="<?php echo $modalId; ?>" class="tp-modal hidden fixed inset-0 z-50">
                                         <div class="absolute inset-0 bg-black/40" onclick="tpCloseModal('<?php echo $modalId; ?>')"></div>
                                         <div class="relative mx-auto my-10 w-[95%] max-w-3xl bg-white rounded-xl shadow-xl border border-gray-200">
@@ -831,6 +851,91 @@ if (!empty($solicitacoes)) {
                                                                     <div class="mt-2 text-xs text-gray-500"><?php echo htmlspecialchars($dataFmt, ENT_QUOTES, "UTF-8"); ?></div>
                                                                 </div>
                                                             </div>
+
+                                                            <?php
+                                                            /* O link e a credencial de assinatura: quem o tem assina no
+                                                               lugar da pessoa. Por isso so aparece para quem ainda nao
+                                                               assinou — depois de assinado ele nao serve para nada — e
+                                                               so dentro desta tela, que ja exige login.
+                                                               O id do campo leva o id do modal junto: no envio agrupado
+                                                               o mesmo signatario aparece em mais de um cartao, e id
+                                                               repetido faria o botao copiar sempre o primeiro. */
+                                                            $tokenA = trim(strval($a["token"] ?? ""));
+                                                            $linkA = ($tokenA !== "" && $baseUrlAssinatura !== "")
+                                                                ? $baseUrlAssinatura . "/assinar_via_link.php?token=" . rawurlencode($tokenA)
+                                                                : "";
+                                                            $campoLinkId = $modalId . "-lnk-" . intval($a["assinante_id"] ?? 0);
+                                                            $docWa = trim(strval($row["nome_arquivo_original"] ?? ""));
+                                                            $textoWa = "Ola " . strval($a["nome"] ?? "") . ", segue o link para assinar"
+                                                                . ($docWa !== "" ? " o documento " . $docWa : "") . ":\n" . $linkA;
+
+                                                            /* Telefone do cadastro do funcionario. O fone2 entra como
+                                                               segunda tentativa porque em boa parte das bases o celular
+                                                               foi digitado ali.
+                                                               Signatario externo nao tem enti_nb_id e, portanto, nao tem
+                                                               telefone: nesse caso o botao cai no seletor de contato do
+                                                               proprio WhatsApp, que e o comportamento util e nao um erro. */
+                                                            $foneWa = "";
+                                                            foreach ([$a["enti_tx_fone1"] ?? "", $a["enti_tx_fone2"] ?? ""] as $foneBruto) {
+                                                                $e164 = wa_normalizar_telefone(strval($foneBruto));
+                                                                if ($e164 !== null && $e164 !== "") { $foneWa = $e164; break; }
+                                                            }
+                                                            $foneWaLegivel = $foneWa !== "" ? wa_formatar_telefone($foneWa) : "";
+                                                            $urlWa = "https://wa.me/" . ($foneWa !== "" ? $foneWa : "")
+                                                                . "?text=" . rawurlencode($textoWa);
+                                                            ?>
+
+                                                            <?php if ($stA === "assinado"): ?>
+                                                                <div class="mt-3 pt-3 border-t border-gray-100 text-[11px] text-gray-500">
+                                                                    <i class="fas fa-check mr-1 text-green-500"></i>
+                                                                    Ja assinou: o link nao vale mais.
+                                                                </div>
+                                                            <?php elseif ($linkA === ""): ?>
+                                                                <div class="mt-3 pt-3 border-t border-gray-100 text-[11px] text-gray-500">
+                                                                    <i class="fas fa-triangle-exclamation mr-1 text-amber-500"></i>
+                                                                    Sem link: este signatario ainda nao tem token gravado.
+                                                                    Use "Dar mais prazo" para gerar um.
+                                                                </div>
+                                                            <?php else: ?>
+                                                                <div class="mt-3 pt-3 border-t border-gray-100">
+                                                                    <div class="text-[11px] font-semibold text-gray-700 mb-1">
+                                                                        <i class="fas fa-link mr-1 text-gray-400"></i>
+                                                                        Link de assinatura — o mesmo que foi no e-mail
+                                                                    </div>
+                                                                    <div class="flex items-center gap-2">
+                                                                        <input type="text" readonly
+                                                                               id="<?php echo htmlspecialchars($campoLinkId, ENT_QUOTES, "UTF-8"); ?>"
+                                                                               value="<?php echo htmlspecialchars($linkA, ENT_QUOTES, "UTF-8"); ?>"
+                                                                               onclick="this.select();"
+                                                                               class="flex-1 min-w-0 text-xs px-2 py-1.5 border border-gray-300 rounded bg-gray-50 text-gray-700">
+                                                                        <button type="button"
+                                                                                class="px-2.5 py-1.5 text-xs rounded border border-gray-300 hover:bg-gray-50 whitespace-nowrap"
+                                                                                onclick="tpCopiarLink('<?php echo htmlspecialchars($campoLinkId, ENT_QUOTES, "UTF-8"); ?>', this)">
+                                                                            <i class="far fa-copy mr-1"></i> Copiar
+                                                                        </button>
+                                                                        <a href="<?php echo htmlspecialchars($urlWa, ENT_QUOTES, "UTF-8"); ?>"
+                                                                           target="_blank" rel="noopener"
+                                                                           title="<?php echo $foneWa !== ""
+                                                                               ? "Abre a conversa com o telefone do cadastro. Confira antes de enviar."
+                                                                               : "Sem telefone no cadastro: o WhatsApp vai pedir o contato."; ?>"
+                                                                           class="px-2.5 py-1.5 text-xs rounded border border-green-300 text-green-700 hover:bg-green-50 whitespace-nowrap">
+                                                                            <i class="fab fa-whatsapp mr-1"></i>
+                                                                            <?php echo $foneWaLegivel !== ""
+                                                                                ? htmlspecialchars($foneWaLegivel, ENT_QUOTES, "UTF-8")
+                                                                                : "WhatsApp"; ?>
+                                                                        </a>
+                                                                        <?php if ($foneWa !== ""): ?>
+                                                                            <?php /* Saida quando o numero do cadastro esta velho. */ ?>
+                                                                            <a href="https://wa.me/?text=<?php echo rawurlencode($textoWa); ?>"
+                                                                               target="_blank" rel="noopener"
+                                                                               title="Escolher outro contato no WhatsApp"
+                                                                               class="px-2 py-1.5 text-xs rounded border border-gray-300 text-gray-600 hover:bg-gray-50 whitespace-nowrap">
+                                                                                outro
+                                                                            </a>
+                                                                        <?php endif; ?>
+                                                                    </div>
+                                                                </div>
+                                                            <?php endif; ?>
                                                         </div>
                                                     <?php endforeach; ?>
                                                 </div>
@@ -1401,6 +1506,39 @@ if (isset($hasEnvPaths) && $hasEnvPaths) {
 
     atualizarBarra();
 })();
+
+    /* Copiar o link.
+       O navigator.clipboard so existe em contexto seguro (https ou
+       localhost). Em cliente que abre o sistema por http num IP da rede
+       interna ele nao existe, e sem o execCommand antigo o botao nao faria
+       nada — justamente para quem o e-mail falhou e precisa do link. */
+    function tpCopiarLink(campoId, botao){
+        const campo = document.getElementById(campoId);
+        if(!campo) return;
+        const texto = campo.value;
+
+        const avisar = function(ok){
+            if(!botao) return;
+            const antes = botao.innerHTML;
+            botao.innerHTML = ok
+                ? '<i class="fas fa-check mr-1 text-green-600"></i> Copiado'
+                : '<i class="fas fa-xmark mr-1 text-red-600"></i> Copie a mao';
+            if(!ok){ campo.select(); }
+            setTimeout(function(){ botao.innerHTML = antes; }, 2000);
+        };
+
+        if(navigator.clipboard && window.isSecureContext){
+            navigator.clipboard.writeText(texto).then(function(){ avisar(true); },
+                                                      function(){ avisar(false); });
+            return;
+        }
+
+        campo.select();
+        campo.setSelectionRange(0, 99999);
+        let ok = false;
+        try { ok = document.execCommand("copy"); } catch(e) { ok = false; }
+        avisar(ok);
+    }
 
     function tpOpenModal(id){
         const el = document.getElementById(id);

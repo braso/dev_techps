@@ -1511,6 +1511,276 @@ function runnerEscalaDsrCalculoTests(array &$summary): void
     }, $summary);
 }
 
+/**
+ * Selo TechPS no canto superior direito da rubrica.
+ *
+ * Nao precisa de banco: o desenho das marcas e uma funcao de arquivo para
+ * arquivo. Quando nao ha PDF nem rubrica de amostra na pasta, o caso de
+ * desenho e pulado em vez de falhar — checkout limpo nao traz esses arquivos.
+ */
+function runnerSeloRubricaTests(array &$summary): void
+{
+    global $appDir;
+
+    $assinatura = $appDir . '/assinatura';
+    require_once $assinatura . '/marcas_helper.php';
+
+    runnerRunCase('selo', 'a logo do selo e encontrada e nao esta deitada', function () use ($assinatura): void {
+        $selo = assinaturaMarcas_seloArquivo();
+        runnerAssertTrue($selo['caminho'] !== '', 'assinaturaMarcas_seloArquivo nao achou a logo.');
+        runnerAssertTrue($selo['proporcao'] > 1, 'A logo deveria ser mais larga que alta.');
+    }, $summary);
+
+    runnerRunCase('selo', 'o fundo branco da logo vira transparente', function (): void {
+        $selo = assinaturaMarcas_seloArquivo();
+        if (strlen($selo['caminho']) === 0 || $selo['caminho'][0] !== '@') {
+            runnerSkip('GD indisponivel: o selo caiu no arquivo original, com fundo branco.');
+            return;
+        }
+        /* Fundo opaco estampado por cima do documento apagaria o texto de
+           baixo. Confere no PNG gerado, nao no arquivo de origem. */
+        $img = @imagecreatefromstring(substr($selo['caminho'], 1));
+        runnerAssertTrue($img !== false, 'O PNG do selo nao pode ser lido de volta.');
+        $canto = imagecolorat($img, 0, 0);
+        $alfa = ($canto >> 24) & 0x7F;
+        imagedestroy($img);
+        runnerAssertSame(127, $alfa, 'O canto do selo deveria ser totalmente transparente.');
+    }, $summary);
+
+    runnerRunCase('selo', 'a caixa do selo fica no canto superior direito da marca', function (): void {
+        $x = 30.0;
+        $y = 100.0;
+        $w = 0.16 * 210;
+        $h = 0.045 * 297;
+        $prop = 4.617;
+
+        $c = assinaturaMarcas_seloCaixa($x, $y, $w, $h, $prop);
+        runnerAssertTrue($c['w'] > 0, 'Rubrica de tamanho padrao deveria receber selo.');
+        runnerAssertTrue($c['x'] >= $x, 'Selo saiu pela esquerda da marca.');
+        runnerAssertTrue(($c['x'] + $c['w']) <= $x + $w + 0.001, 'Selo saiu pela direita da marca.');
+        runnerAssertTrue($c['y'] >= $y, 'Selo saiu por cima da marca.');
+        runnerAssertTrue(($c['y'] + $c['h']) <= $y + $h + 0.001, 'Selo saiu por baixo da marca.');
+
+        $folgaDireita = ($x + $w) - ($c['x'] + $c['w']);
+        $folgaEsquerda = $c['x'] - $x;
+        runnerAssertTrue($folgaDireita < $folgaEsquerda, 'Selo deveria estar encostado na direita.');
+
+        $folgaTopo = $c['y'] - $y;
+        $folgaBaixo = ($y + $h) - ($c['y'] + $c['h']);
+        runnerAssertTrue($folgaTopo < $folgaBaixo, 'Selo deveria estar encostado no topo.');
+
+        runnerAssertTrue(abs(($c['w'] / $c['h']) - $prop) < 0.01, 'Selo saiu deformado.');
+        runnerAssertTrue($c['w'] <= $w * 0.31, 'Selo passou de 30% da largura da marca.');
+    }, $summary);
+
+    runnerRunCase('selo', 'marca pequena demais dispensa o selo', function (): void {
+        /* Abaixo de 4 mm de largura a logo vira borrao: melhor nenhum selo
+           que um carimbo ilegivel no documento assinado. */
+        $minima = assinaturaMarcas_seloCaixa(0, 0, 0.03 * 210, 0.012 * 297, 4.617);
+        runnerAssertSame(0.0, $minima['w'], 'Marca minima nao deveria receber selo.');
+
+        $semProporcao = assinaturaMarcas_seloCaixa(0, 0, 50, 10, 0);
+        runnerAssertSame(0.0, $semProporcao['w'], 'Proporcao invalida nao deveria desenhar.');
+    }, $summary);
+
+    runnerRunCase('selo', 'so a rubrica leva selo, a assinatura nao', function () use ($assinatura): void {
+        $fonte = runnerReadFile($assinatura . '/marcas_helper.php');
+        runnerAssertTrue(
+            preg_match('/\$fonte === "imagem" && \$tipo === "rubrica"/', $fonte) === 1,
+            'O desenho do selo deveria estar preso ao tipo rubrica.'
+        );
+        /* Fora do try da rubrica: falha do selo nao pode virar rubrica em texto. */
+        $posSelo = strpos($fonte, 'assinaturaMarcas_seloArquivo();');
+        $posCatch = strpos($fonte, '"); usei o texto";');
+        runnerAssertTrue(
+            $posSelo !== false && $posCatch !== false && $posSelo > $posCatch,
+            'O selo deveria ser desenhado depois do try/catch da rubrica.'
+        );
+    }, $summary);
+
+    runnerRunCase('selo', 'a tela e o PDF usam as mesmas medidas', function () use ($assinatura): void {
+        /* Se a tela mostrar o selo num canto e o PDF estampar noutro, o
+           signatario assina uma coisa e recebe outra. */
+        $editor = runnerReadFile($assinatura . '/editor_marcas.js');
+        runnerAssertContains('top:6%', $editor, 'A margem de topo do selo sumiu do editor.');
+        runnerAssertContains('right:4%', $editor, 'A margem da direita do selo sumiu do editor.');
+        runnerAssertContains('width:30%', $editor, 'A largura do selo sumiu do editor.');
+        runnerAssertContains('marca.tipo === "rubrica"', $editor, 'O editor deveria selar so a rubrica.');
+
+        $fonte = runnerReadFile($assinatura . '/marcas_helper.php');
+        runnerAssertContains('$w * 0.30', $fonte, 'A largura de 30% sumiu do PHP.');
+        runnerAssertContains('$w * 0.04', $fonte, 'A margem da direita sumiu do PHP.');
+        runnerAssertContains('$h * 0.06', $fonte, 'A margem do topo sumiu do PHP.');
+    }, $summary);
+
+    runnerRunCase('selo', 'o PDF sai com a rubrica e o selo, e so a rubrica os tem', function () use ($assinatura): void {
+        $rubricas = glob($assinatura . '/rubricas/*.png') ?: [];
+        $pdfs = glob($assinatura . '/uploads/*.pdf') ?: [];
+        if (empty($rubricas) || empty($pdfs)) {
+            runnerSkip('Sem PDF ou rubrica de amostra na pasta para desenhar.');
+            return;
+        }
+
+        $tmp = sys_get_temp_dir() . '/selo_teste_' . getmypid();
+        @mkdir($tmp, 0777, true);
+
+        $marca = [
+            'tipo' => 'rubrica', 'pagina' => 1,
+            'pos_x' => 0.10, 'pos_y' => 0.20,
+            'larg' => 0.16, 'alt' => 0.045,
+            'rotacao' => 0, 'conteudo' => '',
+            'caminho_imagem' => 'rubricas/' . basename($rubricas[0]),
+        ];
+
+        /* O PDF de origem tem imagem propria: o que vale e a diferenca para
+           uma passada sem marca nenhuma. */
+        $semMarca = $tmp . '/base.pdf';
+        $comRubrica = $tmp . '/rubrica.pdf';
+        $comAssinatura = $tmp . '/assinatura.pdf';
+
+        assinaturaMarcas_desenharNoArquivo([], $pdfs[0], $semMarca, $assinatura);
+        $r = assinaturaMarcas_desenharNoArquivo([$marca], $pdfs[0], $comRubrica, $assinatura);
+        $r2 = assinaturaMarcas_desenharNoArquivo(
+            [array_merge($marca, ['tipo' => 'assinatura'])], $pdfs[0], $comAssinatura, $assinatura
+        );
+
+        runnerAssertTrue(!empty($r['ok']), 'Desenho da rubrica falhou: ' . strval($r['error'] ?? ''));
+        runnerAssertSame([], $r['avisos'] ?? [], 'O desenho da rubrica reclamou de alguma coisa.');
+
+        $conta = function (string $arquivo): int {
+            $bruto = @file_get_contents($arquivo);
+            if ($bruto === false) { return -1; }
+            $texto = '';
+            if (preg_match_all('/stream\r?\n(.*?)\r?\nendstream/s', $bruto, $m)) {
+                foreach ($m[1] as $s) {
+                    $d = @gzuncompress($s);
+                    if ($d === false) { $d = @gzinflate($s); }
+                    if ($d !== false && strpos($d, ' Do') !== false) { $texto .= $d . "\n"; }
+                }
+            }
+            return preg_match_all('/[\d.\-]+ 0 0 [\d.\-]+ [\d.\-]+ [\d.\-]+ cm\s*\/[A-Za-z0-9_]+ Do/', $texto);
+        };
+
+        $base = $conta($semMarca);
+        runnerAssertSame(2, $conta($comRubrica) - $base, 'A rubrica deveria acrescentar rubrica E selo.');
+        runnerAssertSame(1, $conta($comAssinatura) - $base, 'A assinatura nao deveria levar selo.');
+
+        foreach ([$semMarca, $comRubrica, $comAssinatura] as $f) { @unlink($f); }
+        @rmdir($tmp);
+    }, $summary);
+}
+
+/**
+ * Link de assinatura copiavel na tela de consulta.
+ *
+ * O link e a credencial de quem assina. Estes casos cobrem as duas coisas
+ * que nao podem sair erradas: o endereco tem de ser o MESMO que foi no
+ * e-mail, e o link nao pode aparecer para quem ja assinou.
+ */
+function runnerLinkConsultaTests(array &$summary): void
+{
+    global $appDir;
+
+    $consulta = $appDir . '/assinatura/consultar.php';
+
+    runnerRunCase('link-consulta', 'o link sai da mesma funcao que monta o do e-mail', function () use ($consulta): void {
+        $fonte = runnerReadFile($consulta);
+
+        /* Endereco montado "na mao" daria uma tela mostrando um link e o
+           signatario tendo recebido outro. */
+        runnerAssertContains('require_once __DIR__ . "/email_helper.php";', $fonte,
+            'A consulta deveria incluir o email_helper.php.');
+        runnerAssertContains('assinatura_getBaseUrl()', $fonte,
+            'O link deveria vir do assinatura_getBaseUrl(), como o do e-mail.');
+        runnerAssertContains('"/assinar_via_link.php?token=" . rawurlencode($tokenA)', $fonte,
+            'O link deveria apontar para o assinar_via_link.php com o token do signatario.');
+
+        /* O mesmo formato do processar_envio.php / renovar_link.php. */
+        $email = runnerReadFile(dirname($consulta) . '/email_assinatura.php');
+        runnerAssertContains('"/assinar_via_link.php?token=" . urlencode((string)$token)', $email,
+            'O e-mail mudou o formato do link; a consulta ficou para tras.');
+    }, $summary);
+
+    runnerRunCase('link-consulta', 'o token vem do banco e some depois de assinado', function () use ($consulta): void {
+        $fonte = runnerReadFile($consulta);
+
+        runnerAssertMatches('/a\.token,/', $fonte,
+            'A consulta do assinantes deveria trazer a.token.');
+
+        /* O bloco do link e o ramo "else" de quem NAO assinou. */
+        $posAssinado = strpos($fonte, '<?php if ($stA === "assinado"): ?>');
+        $posLink = strpos($fonte, 'Link de assinatura');
+        runnerAssertTrue($posAssinado !== false, 'Sumiu o desvio para quem ja assinou.');
+        runnerAssertTrue($posLink !== false, 'Sumiu o bloco do link.');
+        runnerAssertTrue($posAssinado < $posLink,
+            'O link deveria estar no ramo de quem ainda nao assinou.');
+        runnerAssertContains('Ja assinou: o link nao vale mais.', $fonte,
+            'Quem ja assinou deveria ver o aviso no lugar do link.');
+    }, $summary);
+
+    runnerRunCase('link-consulta', 'envio com um signatario so tambem mostra o link', function () use ($consulta): void {
+        /* O modal era criado so com mais de um signatario, e avulso com um
+           signatario e o caso comum: sem esta mudanca justamente ele ficaria
+           sem link. */
+        $fonte = runnerReadFile($consulta);
+        runnerAssertContains('<?php if ($totalSig >= 1): ?>', $fonte,
+            'O modal de signatarios deveria existir tambem com um signatario.');
+        runnerAssertTrue(
+            strpos($fonte, '<?php if ($totalSig > 1): ?>') === false,
+            'Ainda ha bloco preso a mais de um signatario escondendo o link.'
+        );
+        runnerAssertContains('Ver / copiar link', $fonte,
+            'O botao que abre o modal deveria ter rotulo proprio para um signatario.');
+    }, $summary);
+
+    runnerRunCase('link-consulta', 'o WhatsApp usa o telefone do cadastro', function () use ($consulta): void {
+        $fonte = runnerReadFile($consulta);
+
+        /* Regra de telefone ha uma so no projeto: a do modulo de WhatsApp.
+           Uma segunda copia aqui divergiria da primeira com o tempo. */
+        runnerAssertContains('require_once __DIR__ . "/../whatsapp/lib/telefone.php";', $fonte,
+            'A consulta deveria reusar o normalizador do modulo de WhatsApp.');
+        runnerAssertContains('wa_normalizar_telefone(', $fonte,
+            'O numero deveria passar pelo wa_normalizar_telefone().');
+        runnerAssertContains('e.enti_tx_fone1,', $fonte,
+            'O telefone do funcionario deveria vir na consulta dos assinantes.');
+        runnerAssertContains('e.enti_tx_fone2,', $fonte,
+            'O fone2 deveria entrar como segunda tentativa.');
+
+        /* Signatario externo nao tem cadastro, logo nao tem telefone: o
+           botao tem de continuar funcionando, caindo no seletor de contato. */
+        runnerAssertContains('"https://wa.me/" . ($foneWa !== "" ? $foneWa : "")', $fonte,
+            'Sem telefone, o link deveria cair no seletor de contato do WhatsApp.');
+    }, $summary);
+
+    runnerRunCase('link-consulta', 'o normalizador devolve E.164 do jeito que o wa.me pede', function (): void {
+        global $appDir;
+        require_once $appDir . '/whatsapp/lib/telefone.php';
+
+        runnerAssertSame('5521984763488', wa_normalizar_telefone('(21) 98476-3488'),
+            'Celular com mascara deveria virar 55 + DDD + numero.');
+        runnerAssertSame('5521984763488', wa_normalizar_telefone('5521984763488'),
+            'Numero que ja vem com 55 nao deveria ganhar outro.');
+        runnerAssertSame('5521984763488', wa_normalizar_telefone('021 98476-3488'),
+            'O zero de discagem deveria sair.');
+        runnerAssertSame(null, wa_normalizar_telefone(''),
+            'Cadastro sem telefone nao deveria virar numero.');
+        runnerAssertSame(null, wa_normalizar_telefone('12345'),
+            'Numero curto demais nao deveria virar link.');
+    }, $summary);
+
+    runnerRunCase('link-consulta', 'copiar funciona fora de contexto seguro', function () use ($consulta): void {
+        /* Cliente que abre o sistema por http num IP interno nao tem o
+           navigator.clipboard — e e justamente quem mais precisa do botao. */
+        $fonte = runnerReadFile($consulta);
+        runnerAssertContains('function tpCopiarLink', $fonte, 'Sumiu o helper de copiar.');
+        runnerAssertContains('window.isSecureContext', $fonte,
+            'O copiar deveria conferir o contexto seguro antes de usar o clipboard.');
+        runnerAssertContains('document.execCommand("copy")', $fonte,
+            'Falta a alternativa de copia para http.');
+    }, $summary);
+}
+
 function runnerPrintSummary(array $summary, bool $jsonMode): void
 {
     if ($jsonMode) {
@@ -1546,6 +1816,12 @@ runnerRunCase('source-contracts', 'arquivos principais mantem contratos sensivei
 
 runnerPrintLine('Executando testes de funcoes puras...');
 runnerCoreFunctionTests($summary);
+
+runnerPrintLine('Executando testes do selo da rubrica...');
+runnerSeloRubricaTests($summary);
+
+runnerPrintLine('Executando testes do link na consulta...');
+runnerLinkConsultaTests($summary);
 
 if (isset($argumentos['integration'])) {
     runnerPrintLine('Executando testes de integracao...');

@@ -668,6 +668,167 @@ if (!function_exists("assinaturaMarcas_listarDoRemetente_interno")) {
 	}
 }
 
+if (!function_exists("assinaturaMarcas_seloArquivo")) {
+	/**
+	 * Caminho e proporção da logo TechPS estampada na rubrica.
+	 *
+	 * Usa __DIR__ e não o $baseDir que chega por parâmetro porque cada pasta de
+	 * cliente tem a sua cópia de assets/logo.png: o selo sai com a logo da pasta
+	 * que está gerando o documento, e não com a de outra.
+	 *
+	 * A proporção vem do arquivo, não de número fixo: quem trocar a logo por uma
+	 * de outro formato não precisa mexer no código para o selo não deformar.
+	 *
+	 * O "caminho" pode vir como bytes no formato "@" do TCPDF quando o fundo
+	 * branco foi removido — o Image() aceita os dois, e quem chama não precisa
+	 * saber qual dos dois recebeu.
+	 *
+	 * @return array{caminho: string, proporcao: float}
+	 */
+	function assinaturaMarcas_seloArquivo(): array {
+		static $cache = null;
+		if ($cache !== null) {
+			return $cache;
+		}
+
+		$cache = ["caminho" => "", "proporcao" => 0.0];
+
+		$abs = __DIR__ . "/assets/logo.png";
+		if (!is_file($abs)) {
+			return $cache;
+		}
+
+		$tam = @getimagesize($abs);
+		if (!is_array($tam) || empty($tam[0]) || empty($tam[1])) {
+			return $cache;
+		}
+
+		$cache = [
+			"caminho"   => assinaturaMarcas_seloSemFundo($abs),
+			"proporcao" => floatval($tam[0]) / floatval($tam[1]),
+		];
+		return $cache;
+	}
+}
+
+if (!function_exists("assinaturaMarcas_seloSemFundo")) {
+	/**
+	 * Devolve a logo com o fundo branco transparente, pronta para o Image().
+	 *
+	 * A assets/logo.png foi feita para fundo branco de tela: dois terços dela
+	 * são branco opaco. Estampada por cima do documento, esse branco apagaria
+	 * o que estivesse embaixo — e a rubrica costuma cair perto de texto.
+	 *
+	 * Devolve no formato "@" do TCPDF, que recebe os bytes da imagem em vez do
+	 * caminho: assim não precisa de pasta com permissão de escrita no servidor,
+	 * que em cliente de hospedagem compartilhada nem sempre existe.
+	 *
+	 * Sem GD, ou se qualquer passo falhar, devolve o caminho original: selo com
+	 * fundo branco é pior que selo transparente, e melhor que documento sem
+	 * selo ou finalização quebrada.
+	 */
+	function assinaturaMarcas_seloSemFundo(string $abs) {
+		if (!function_exists("imagecreatefrompng") || !function_exists("imagesavealpha")) {
+			return $abs;
+		}
+
+		$origem = @imagecreatefrompng($abs);
+		if (!$origem) {
+			return $abs;
+		}
+
+		$w = imagesx($origem);
+		$h = imagesy($origem);
+		$destino = @imagecreatetruecolor($w, $h);
+		if (!$destino) {
+			imagedestroy($origem);
+			return $abs;
+		}
+
+		imagealphablending($destino, false);
+		imagesavealpha($destino, true);
+		imagefill($destino, 0, 0, imagecolorallocatealpha($destino, 255, 255, 255, 127));
+
+		/* O branco não é cortado a seco: o pixel vai ficando transparente
+		   conforme clareia. Corte seco deixaria serrilha branca em volta das
+		   letras, que num selo de 10 mm aparece como sujeira. */
+		for ($y = 0; $y < $h; $y++) {
+			for ($x = 0; $x < $w; $x++) {
+				$cor = imagecolorat($origem, $x, $y);
+				$r = ($cor >> 16) & 0xFF;
+				$g = ($cor >> 8) & 0xFF;
+				$b = $cor & 0xFF;
+				$jaTransparente = ($cor >> 24) & 0x7F;
+
+				$claro = min($r, $g, $b);
+				if ($claro >= 250) {
+					$alfa = 127;
+				} elseif ($claro >= 235) {
+					$alfa = intval(round(127 * ($claro - 235) / 15));
+				} else {
+					$alfa = 0;
+				}
+				$alfa = max($alfa, $jaTransparente);
+
+				imagesetpixel($destino, $x, $y, imagecolorallocatealpha($destino, $r, $g, $b, $alfa));
+			}
+		}
+		imagedestroy($origem);
+
+		ob_start();
+		$ok = @imagepng($destino);
+		$dados = ob_get_clean();
+		imagedestroy($destino);
+
+		if (!$ok || $dados === "" || $dados === false) {
+			return $abs;
+		}
+		return "@" . $dados;
+	}
+}
+
+if (!function_exists("assinaturaMarcas_seloCaixa")) {
+	/**
+	 * Onde o selo entra dentro da área da rubrica: canto superior direito.
+	 *
+	 * O tamanho acompanha a marca em vez de ser fixo em milímetros porque o
+	 * signatário redimensiona a rubrica arrastando na tela — selo de tamanho
+	 * fixo ficaria maior que a própria rubrica numa marca pequena.
+	 *
+	 * A proporção da logo é respeitada: o lado que estoura primeiro manda e o
+	 * outro sai dele. Esticar a logo para preencher a caixa a deforma.
+	 *
+	 * Devolve caixa vazia quando a marca é pequena demais para caber um selo
+	 * legível — abaixo de 4 mm de largura a logo vira um borrão, e borrão no
+	 * documento assinado é pior que selo nenhum.
+	 *
+	 * @param float $proporcao largura/altura da logo
+	 * @return array{x: float, y: float, w: float, h: float} em mm, vazia se não cabe
+	 */
+	function assinaturaMarcas_seloCaixa(float $x, float $y, float $w, float $h, float $proporcao): array {
+		$vazio = ["x" => 0.0, "y" => 0.0, "w" => 0.0, "h" => 0.0];
+		if ($proporcao <= 0 || $w <= 0 || $h <= 0) {
+			return $vazio;
+		}
+
+		/* 30% da área da rubrica: o bastante para ler a marca, pouco o bastante
+		   para a rubrica continuar sendo o que se vê primeiro. */
+		$selW = min($w * 0.30, $h * 0.30 * $proporcao);
+		$selH = $selW / $proporcao;
+
+		if ($selW < 4.0) {
+			return $vazio;
+		}
+
+		return [
+			"x" => $x + $w - ($w * 0.04) - $selW,
+			"y" => $y + ($h * 0.06),
+			"w" => $selW,
+			"h" => $selH,
+		];
+	}
+}
+
 if (!function_exists("assinaturaMarcas_desenharUma")) {
 	/**
 	 * Desenha uma marca na página que está aberta no TCPDF.
@@ -729,6 +890,29 @@ if (!function_exists("assinaturaMarcas_desenharUma")) {
 					   finalização inteira. */
 					$aviso = "rubrica não pôde ser embutida (" . $e->getMessage() . "); usei o texto";
 					$fonte = "texto";
+				}
+			}
+
+			/* Selo TechPS no canto superior direito da própria área da rubrica.
+			   Fica dentro do StartTransform aberto acima, então acompanha a marca
+			   quando o signatário a girou.
+			   Vale para a rubrica e não para a assinatura: são duas marcas de
+			   imagem, e o pedido foi selar a rubrica.
+			   Fora do try de cima de propósito: falha do selo não pode transformar
+			   a rubrica em texto. */
+			if ($fonte === "imagem" && $tipo === "rubrica") {
+				$selo = assinaturaMarcas_seloArquivo();
+				if ($selo["caminho"] !== "") {
+					$caixa = assinaturaMarcas_seloCaixa($x, $y, $w, $h, $selo["proporcao"]);
+					if ($caixa["w"] > 0) {
+						try {
+							$pdf->Image($selo["caminho"], $caixa["x"], $caixa["y"], $caixa["w"], $caixa["h"], "", "", "", false, 300, "", false, false, 0, "", false, false);
+						} catch (Throwable $e) {
+							/* Selo é enfeite: documento sem ele vale, documento que
+							   não finaliza não vale nada. */
+							$aviso = "selo TechPS não pôde ser embutido (" . $e->getMessage() . ")";
+						}
+					}
 				}
 			}
 		}

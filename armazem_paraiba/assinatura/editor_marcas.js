@@ -138,6 +138,12 @@
 				img.src = ST.rubricaDataUrl;
 				img.style.cssText = "width:100%;height:100%;object-fit:contain;pointer-events:none;";
 				corpo.appendChild(img);
+				if (marca.tipo === "rubrica") {
+					/* position no corpo porque o .marca-corpo do CSS não tem: sem
+					   isso o selo se ancora na página, não na marca. */
+					corpo.style.position = "relative";
+					corpo.appendChild(seloTechps());
+				}
 			} else {
 				corpo.innerHTML = "<span class='marca-aviso'>Desenhe sua rubrica</span>";
 			}
@@ -145,6 +151,23 @@
 		}
 
 		corpo.textContent = textoDaMarca(marca);
+	}
+
+	/* Selo TechPS no canto superior direito da rubrica.
+	   As medidas são as do assinaturaMarcas_seloCaixa() no PHP — 30% da área,
+	   margem de 4% na direita e 6% no topo — para a tela mostrar onde o PDF vai
+	   estampar. Se mudar lá, muda aqui.
+	   O PHP desiste do selo abaixo de 4 mm de largura; aqui não dá para saber o
+	   milímetro, então a tela mostra sempre — errar mostrando é melhor que o
+	   signatário ser surpreendido pelo selo no documento final. */
+	function seloTechps() {
+		var selo = el("img");
+		selo.src = window.ASSINATURA_LOGO_URL || "assets/logo.png";
+		selo.alt = "TechPS";
+		selo.style.cssText = "position:absolute; top:6%; right:4%;"
+			+ " width:30%; max-height:30%; object-fit:contain; pointer-events:none;";
+		selo.onerror = function () { selo.style.display = "none"; };
+		return selo;
 	}
 
 	function textoDaMarca(marca) {
