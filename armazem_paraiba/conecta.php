@@ -64,11 +64,16 @@
 	$_SESSION['last_activity'] = time();
 	
 	//CONEXÃO BASE DE DADOS{
+		$dbHost = $_ENV["DB_HOST"] ?? getenv("DB_HOST");
+		$dbUser = $_ENV["DB_USER"] ?? getenv("DB_USER");
+		$dbPass = $_ENV["DB_PASSWORD"] ?? getenv("DB_PASSWORD");
+		$dbName = $_ENV["DB_NAME"] ?? getenv("DB_NAME");
+
 		$conn = mysqli_connect(
-			$_ENV["DB_HOST"],
-			$_ENV["DB_USER"],
-			$_ENV["DB_PASSWORD"],
-			$_ENV["DB_NAME"]
+			$dbHost,
+			$dbUser,
+			$dbPass,
+			$dbName
 		) or die("Connection failed: ".mysqli_connect_error());
 		$conn->set_charset("utf8mb4");
 	//}
