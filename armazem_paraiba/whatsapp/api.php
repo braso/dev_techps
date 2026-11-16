@@ -89,7 +89,14 @@ try {
                 );
             }
             unset($conversa);
-            wa_json(['success' => true, 'conversas' => $lista]);
+            wa_json([
+                'success' => true,
+                'conversas' => $lista,
+                'contadores' => [
+                    'todas' => wa_conversa_contar('todas', true),
+                    'empresa' => wa_conversa_contar('empresa', true),
+                ],
+            ]);
 
         case 'mensagens':
             wa_api_permissao('/whatsapp/index.php');

@@ -386,6 +386,9 @@ window.WA_CONFIG_PAGE = {
             mostrarResultado('waResultadoConexao', data.message || 'QR Code gerado.', true);
             if (alvo) {
                 alvo.innerHTML = '';
+                if (data.connected) {
+                    return;
+                }
                 var src = String(data.base64 || '');
                 if (src && !/^data:image\/(png|jpe?g|webp);base64,/i.test(src)) {
                     src = 'data:image/png;base64,' + src.replace(/^data:[^,]*,/, '');
@@ -402,7 +405,9 @@ window.WA_CONFIG_PAGE = {
                     var p = document.createElement('p');
                     p.style.fontSize = '11px';
                     p.style.color = '#64748b';
-                    p.textContent = 'Código: ' + String(data.code || '');
+                    p.textContent = String(data.code || '') !== ''
+                        ? 'Código: ' + String(data.code)
+                        : 'A Evolution não retornou QR Code. Verifique o estado da instância e tente novamente.';
                     alvo.appendChild(p);
                 }
             }

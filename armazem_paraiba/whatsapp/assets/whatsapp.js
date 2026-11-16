@@ -191,6 +191,14 @@
         }
     }
 
+    function atualizarContadoresOrigem(contadores) {
+        if (!contadores) return;
+        var todas = document.getElementById('waQtdNaoLidasTodas');
+        var empresa = document.getElementById('waQtdNaoLidasEmpresa');
+        if (todas) todas.textContent = String(parseInt(contadores.todas || 0, 10));
+        if (empresa) empresa.textContent = String(parseInt(contadores.empresa || 0, 10));
+    }
+
     function carregarConversas() {
         var lista = document.getElementById('waListaConversas');
         if (!lista) return;
@@ -198,6 +206,7 @@
             .then(function (data) {
                 if (!data.success) return;
                 var conversas = data.conversas || [];
+                atualizarContadoresOrigem(data.contadores);
                 atualizarTotalNaoLidas(conversas);
                 if (!conversas.length) {
                     lista.innerHTML = '<div class="wa-vazio-lista"><i class="fa fa-comments-o"></i><p>Nenhuma conversa.</p><small>Ajuste a busca ou inicie um novo chat.</small></div>';

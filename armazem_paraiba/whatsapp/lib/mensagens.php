@@ -198,10 +198,19 @@ if (!function_exists('wa_mensagem_registrar')) {
 }
 
 if (!function_exists('wa_conversa_contar')) {
-    function wa_conversa_contar(string $origem = 'todas'): int {
-        $where = $origem === 'empresa'
-            ? " WHERE (c.cont_nb_entidade IS NOT NULL OR c.cont_nb_user IS NOT NULL OR c.cont_tx_origem IN ('entidade','user'))"
-            : '';
+    /**
+     * Conta conversas. Com $apenasNaoLidas = true, conta somente as que têm
+     * mensagens não lidas (usado nos badges de "Todas" e "Da empresa").
+     */
+    function wa_conversa_contar(string $origem = 'todas', bool $apenasNaoLidas = false): int {
+        $filtros = [];
+        if ($origem === 'empresa') {
+            $filtros[] = "(c.cont_nb_entidade IS NOT NULL OR c.cont_nb_user IS NOT NULL OR c.cont_tx_origem IN ('entidade','user'))";
+        }
+        if ($apenasNaoLidas) {
+            $filtros[] = 'cv.conv_nb_nao_lidas > 0';
+        }
+        $where = $filtros ? ' WHERE ' . implode(' AND ', $filtros) : '';
         $rs = query(
             "SELECT COUNT(*) AS total FROM wa_conversa cv JOIN wa_contato c ON c.cont_nb_id = cv.conv_nb_contato{$where}"
         );

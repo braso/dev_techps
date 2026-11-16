@@ -237,7 +237,7 @@ Use para diagnosticar webhook, assinatura inválida e falhas de processamento.
 - Botão **Novo** para buscar contato ou cadastrar um número.
 - Polling de 5 segundos para novas mensagens.
 - Atalhos nas grids de funcionário/usuário abrem a conversa correspondente.
-- Acima da lista de conversas, o filtro **Todas** mostra todas as conversas, inclusive números externos que chegam no aparelho; **Da empresa** mostra apenas contatos vinculados ao cadastro de funcionário/usuário.
+- Acima da lista de conversas, o filtro **Todas** mostra todas as conversas, inclusive números externos que chegam no aparelho; **Da empresa** mostra apenas contatos vinculados ao cadastro de funcionário/usuário. Os contadores ao lado desses dois filtros mostram a quantidade de conversas com mensagens não lidas em cada grupo.
 
 ### 10.1.1 Mídias
 

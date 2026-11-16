@@ -116,7 +116,7 @@ O cadastro fica em **CRM - TECHPS → Mensagens Prontas**. Cada registro tem:
 No chat, digite `/` no campo de mensagem para abrir os títulos; escolha o título e depois o subtítulo. O texto é inserido com as variáveis do contato já substituídas.
 No envio em lote, use os campos **Mensagem pré-pronta → Título/Subtítulo** para preencher o texto. Na etapa de mensagem, os botões de variáveis também inserem `{nome}`, `{primeiro_nome}`, `{setor}`, `{cargo}`, `{empresa}` e `{telefone}` na posição do cursor.
 
-A lista de conversas tem o filtro **Todas** / **Da empresa**: “Da empresa” mostra somente contatos vinculados ao cadastro de funcionário/usuário; “Todas” também inclui números externos que chegam no aparelho. O filtro é aplicado na lista e preservado ao abrir uma conversa.
+A lista de conversas tem o filtro **Todas** / **Da empresa**: “Da empresa” mostra somente contatos vinculados ao cadastro de funcionário/usuário; “Todas” também inclui números externos que chegam no aparelho. O filtro é aplicado na lista e preservado ao abrir uma conversa. Os contadores ao lado de **Todas** e **Da empresa** mostram a quantidade de conversas com mensagens não lidas em cada grupo.
 
 ## Horários das mensagens
 

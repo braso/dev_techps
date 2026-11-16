@@ -351,8 +351,29 @@ class EvolutionProvider implements ProviderInterface {
         if (!$res['ok']) {
             return ['success' => false, 'message' => 'Não foi possível obter o QR Code: ' . $res['error']];
         }
-        $base64 = strval($res['data']['base64'] ?? '');
-        $code = strval($res['data']['code'] ?? '');
+
+        // Instância já conectada: a Evolution devolve apenas o estado, sem QR.
+        $estado = strtolower(strval($res['data']['instance']['state'] ?? $res['data']['state'] ?? ''));
+        if (in_array($estado, ['open', 'connected', 'conectado'], true)) {
+            return [
+                'success' => true,
+                'connected' => true,
+                'state' => $estado,
+                'base64' => '',
+                'code' => '',
+                'message' => 'A instância já está conectada. Não é necessário ler o QR Code. Para conectar outro número, desconecte a instância primeiro.',
+            ];
+        }
+
+        $base64 = strval($res['data']['base64'] ?? $res['data']['qrcode']['base64'] ?? '');
+        $code = strval($res['data']['code'] ?? $res['data']['qrcode']['code'] ?? '');
+        if ($base64 === '' && $code === '') {
+            return [
+                'success' => false,
+                'message' => 'A Evolution não retornou QR Code. Verifique o estado da instância e tente novamente.',
+                'state' => $estado,
+            ];
+        }
         return ['success' => true, 'base64' => $base64, 'code' => $code, 'message' => 'QR Code gerado.'];
     }
 
