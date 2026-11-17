@@ -43,6 +43,7 @@ deployment:
     - export SAMBAIBA=/home/tech1694/public_html/gestaodeponto/sambaiba
     - export HELENA=/home/tech1694/public_html/gestaodeponto/helena_transportes_ltda
     - export RCM=/home/tech1694/public_html/gestaodeponto/rcm_transportadora_ltda
+    - export TIGRE=/home/tech1694/public_html/gestaodeponto/tigre_transportes_ltda
 
 
 
@@ -85,5 +86,6 @@ deployment:
     - /bin/cp -R $DOMAIN $SAMBAIBA
     - /bin/cp -R $DOMAIN $HELENA
     - /bin/cp -R $DOMAIN $RCM
+    - /bin/cp -R $DOMAIN $TIGRE
       
 
