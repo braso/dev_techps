@@ -253,7 +253,8 @@ if (!function_exists('assinatura_incrementalDisponivel')) {
         // Testa se o pyhanko está instalado no python encontrado
         $out = [];
         $code = 1;
-        $testCmd = escapeshellarg($python) . ' -c "import pyhanko; print(\'OK\')" 2>&1';
+        $testSnippet = 'import site, sys, os; p = site.getusersitepackages(); sys.path.insert(0, p) if (p and os.path.exists(p)) else None; import pyhanko; print("OK")';
+        $testCmd = escapeshellarg($python) . ' -c ' . escapeshellarg($testSnippet) . ' 2>&1';
         $ok = assinatura_executarComandoCli($testCmd, $out, $code);
         $outputStr = implode(" ", $out);
 

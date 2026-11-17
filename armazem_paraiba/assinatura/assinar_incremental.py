@@ -13,6 +13,19 @@ import json
 from datetime import datetime
 from fractions import Fraction
 
+# Garante carregamento de bibliotecas instaladas com --user (cPanel / ~/.local)
+try:
+    import site
+    usp = site.getusersitepackages()
+    if usp and os.path.exists(usp) and usp not in sys.path:
+        sys.path.insert(0, usp)
+    home_dir = os.path.expanduser("~")
+    local_p = os.path.join(home_dir, ".local", "lib", f"python{sys.version_info.major}.{sys.version_info.minor}", "site-packages")
+    if os.path.exists(local_p) and local_p not in sys.path:
+        sys.path.insert(0, local_p)
+except Exception:
+    pass
+
 try:
     from pyhanko.pdf_utils import layout
     from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
