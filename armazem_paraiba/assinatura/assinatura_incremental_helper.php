@@ -58,48 +58,218 @@ if (!function_exists('assinatura_pdfTemAssinaturaDigital')) {
     }
 }
 
+if (!function_exists('assinatura_executarComandoCli')) {
+    /**
+     * Executa um comando no sistema operacional com suporte a múltiplos métodos,
+     * respeitando as restrições de disable_functions do php.ini (ex: hospedagens cPanel).
+     *
+     * @param string $cmd Comando a ser executado.
+     * @param array &$out Linhas de saída do comando.
+     * @param int &$exitCode Código de retorno do comando.
+     * @return bool True se conseguiu invocar algum mecanismo de execução, false se todos estiverem desabilitados.
+     */
+    function assinatura_executarComandoCli(string $cmd, array &$out = [], int &$exitCode = 1): bool {
+        $out = [];
+        $exitCode = 1;
+
+        // 1. Tenta exec() se disponível
+        if (function_exists('exec')) {
+            @exec($cmd, $out, $exitCode);
+            return true;
+        }
+
+        // 2. Tenta proc_open() se disponível
+        if (function_exists('proc_open')) {
+            $descriptors = [
+                0 => ['pipe', 'r'],
+                1 => ['pipe', 'w'],
+                2 => ['pipe', 'w']
+            ];
+            $process = @proc_open($cmd, $descriptors, $pipes);
+            if (is_resource($process)) {
+                fclose($pipes[0]);
+                $stdout = stream_get_contents($pipes[1]);
+                fclose($pipes[1]);
+                $stderr = stream_get_contents($pipes[2]);
+                fclose($pipes[2]);
+                $exitCode = proc_close($process);
+                $combined = trim($stdout . ($stderr ? "\n" . $stderr : ""));
+                $out = ($combined !== '') ? explode("\n", $combined) : [];
+                return true;
+            }
+        }
+
+        // 3. Tenta shell_exec() se disponível
+        if (function_exists('shell_exec')) {
+            $saida = @shell_exec($cmd . ' 2>&1');
+            if ($saida !== null) {
+                $saida = trim($saida);
+                $out = ($saida !== '') ? explode("\n", $saida) : [];
+                $exitCode = 0;
+                return true;
+            }
+        }
+
+        // 4. Tenta popen() se disponível
+        if (function_exists('popen')) {
+            $handle = @popen($cmd . ' 2>&1', 'r');
+            if (is_resource($handle)) {
+                $buffer = '';
+                while (!feof($handle)) {
+                    $buffer .= fread($handle, 4096);
+                }
+                $exitCode = pclose($handle);
+                $buffer = trim($buffer);
+                $out = ($buffer !== '') ? explode("\n", $buffer) : [];
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
 if (!function_exists('assinatura_encontrarPython')) {
     /**
      * Localiza o executável do Python no ambiente do servidor.
+     * Prioriza caminhos diretos do sistema de arquivos para evitar invocar CLI se desabilitada.
      *
      * @return string|null Caminho do executável do Python ou null se não encontrado.
      */
     function assinatura_encontrarPython(): ?string {
-        $candidatos = [
-            'python3',
-            'python',
-            '/usr/bin/python3',
-            '/usr/local/bin/python3',
-            'C:\\Users\\Ornilio Neto\\AppData\\Local\\Python\\pythoncore-3.14-64\\python.exe'
-        ];
+        static $cached = null;
+        if ($cached !== null) {
+            return ($cached === '') ? null : $cached;
+        }
 
         $isWindows = (PHP_OS_FAMILY ?? "") === "Windows" || DIRECTORY_SEPARATOR === "\\";
 
-        foreach ($candidatos as $cmd) {
-            $out = [];
-            $code = 1;
+        // 0. Verifica se há caminho configurado explicitamente no config_pfx.php
+        $configFile = __DIR__ . "/config_pfx.php";
+        if (file_exists($configFile)) {
+            $cfg = @include($configFile);
+            if (is_array($cfg) && !empty($cfg["python_path"]) && file_exists($cfg["python_path"])) {
+                $cached = $cfg["python_path"];
+                return $cached;
+            }
+        }
 
+        $candidatos = [
+            '/usr/bin/python3',
+            '/usr/local/bin/python3',
+            '/bin/python3',
+            '/usr/bin/python3.12',
+            '/usr/bin/python3.11',
+            '/usr/bin/python3.10',
+            '/usr/bin/python3.9',
+            '/usr/bin/python3.8',
+            '/opt/alt/python311/bin/python3',
+            '/opt/alt/python310/bin/python3',
+            '/opt/alt/python39/bin/python3',
+            '/usr/local/cpanel/3rdparty/bin/python3',
+            '/usr/bin/python',
+            '/usr/local/bin/python',
+            '/bin/python',
+            'C:\\Users\\Ornilio Neto\\AppData\\Local\\Python\\pythoncore-3.14-64\\python.exe'
+        ];
+
+        // 1. Primeiro verifica caminhos absolutos diretos (sem precisar de exec/which)
+        foreach ($candidatos as $cmd) {
             if ($isWindows) {
                 if (file_exists($cmd) && is_file($cmd)) {
+                    $cached = $cmd;
                     return $cmd;
                 }
-                @exec("where " . escapeshellarg($cmd) . " 2>NUL", $out, $code);
             } else {
-                if (file_exists($cmd) && is_executable($cmd)) {
+                if (strpos($cmd, '/') !== false && file_exists($cmd) && is_executable($cmd)) {
+                    $cached = $cmd;
                     return $cmd;
-                }
-                @exec("which " . escapeshellarg($cmd) . " 2>/dev/null", $out, $code);
-            }
-
-            if ($code === 0 && !empty($out)) {
-                $path = trim(strval($out[0]));
-                if ($path !== "") {
-                    return $path;
                 }
             }
         }
 
+        // 2. Se não encontrou por caminho absoluto, tenta resolver dinamicamente via CLI se disponível
+        if (function_exists('exec') || function_exists('proc_open') || function_exists('shell_exec') || function_exists('popen')) {
+            foreach (['python3', 'python'] as $cmd) {
+                $out = [];
+                $code = 1;
+                $whichCmd = $isWindows ? "where " . escapeshellarg($cmd) . " 2>NUL" : "which " . escapeshellarg($cmd) . " 2>/dev/null";
+                if (assinatura_executarComandoCli($whichCmd, $out, $code) && $code === 0 && !empty($out)) {
+                    $path = trim(strval($out[0]));
+                    if ($path !== "" && ($isWindows ? is_file($path) : is_executable($path))) {
+                        $cached = $path;
+                        return $path;
+                    }
+                }
+            }
+        }
+
+        $cached = '';
         return null;
+    }
+}
+
+if (!function_exists('assinatura_incrementalDisponivel')) {
+    /**
+     * Verifica se o ambiente do servidor suporta a assinatura incremental via pyHanko.
+     * Valida suporte a CLI, interpretador Python e presença da biblioteca pyHanko.
+     *
+     * @return array{disponivel: bool, motivo?: string, python?: string}
+     */
+    function assinatura_incrementalDisponivel(): array {
+        static $statusCache = null;
+        if ($statusCache !== null) {
+            return $statusCache;
+        }
+
+        // Verifica se há alguma função de execução externa habilitada no PHP
+        $hasCli = function_exists('exec') || function_exists('proc_open') || function_exists('shell_exec') || function_exists('popen');
+        if (!$hasCli) {
+            $statusCache = [
+                "disponivel" => false,
+                "motivo" => "Funções de execução de comando (exec/proc_open) desabilitadas no php.ini (disable_functions)."
+            ];
+            return $statusCache;
+        }
+
+        $python = assinatura_encontrarPython();
+        if (!$python) {
+            $statusCache = [
+                "disponivel" => false,
+                "motivo" => "Interpretador Python 3 não localizado no servidor."
+            ];
+            return $statusCache;
+        }
+
+        $scriptPython = __DIR__ . "/assinar_incremental.py";
+        if (!file_exists($scriptPython)) {
+            $statusCache = [
+                "disponivel" => false,
+                "motivo" => "Script assinar_incremental.py não encontrado."
+            ];
+            return $statusCache;
+        }
+
+        // Testa se o pyhanko está instalado no python encontrado
+        $out = [];
+        $code = 1;
+        $testCmd = escapeshellarg($python) . ' -c "import pyhanko; print(\'OK\')" 2>&1';
+        $ok = assinatura_executarComandoCli($testCmd, $out, $code);
+        $outputStr = implode(" ", $out);
+
+        if (!$ok || $code !== 0 || strpos($outputStr, 'OK') === false) {
+            $statusCache = [
+                "disponivel" => false,
+                "motivo" => "Biblioteca pyHanko não disponível no Python do servidor (" . ($outputStr ?: "código $code") . ")."
+            ];
+            return $statusCache;
+        }
+
+        $statusCache = [
+            "disponivel" => true,
+            "python" => $python
+        ];
+        return $statusCache;
     }
 }
 
@@ -129,7 +299,12 @@ if (!function_exists('assinatura_executarAssinaturaIncremental')) {
             return ["ok" => false, "error" => "Certificado PFX não encontrado."];
         }
 
-        $python = assinatura_encontrarPython();
+        $disp = assinatura_incrementalDisponivel();
+        if (!$disp["disponivel"]) {
+            return ["ok" => false, "error" => $disp["motivo"] ?? "Ambiente não suporta assinatura incremental."];
+        }
+
+        $python = $disp["python"] ?? assinatura_encontrarPython();
         if (!$python) {
             return ["ok" => false, "error" => "Interpretador Python não encontrado no servidor."];
         }
@@ -159,7 +334,11 @@ if (!function_exists('assinatura_executarAssinaturaIncremental')) {
 
         $out = [];
         $exitCode = 1;
-        @exec($cmd, $out, $exitCode);
+        $executou = assinatura_executarComandoCli($cmd, $out, $exitCode);
+
+        if (!$executou) {
+            return ["ok" => false, "error" => "Falha ao invocar processo CLI de assinatura."];
+        }
 
         $saidaTexto = implode("\n", $out);
         $resJson = @json_decode($saidaTexto, true);

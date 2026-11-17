@@ -1140,7 +1140,10 @@ if (!function_exists("assinaturaMarcas_aplicarNoPdf_interno")) {
 
 		require_once __DIR__ . "/assinatura_incremental_helper.php";
 		if ($preservarAtivo && assinatura_pdfTemAssinaturaDigital($entrada)) {
-			return ["ok" => true, "caminho" => $caminhoRelPdf, "aplicadas" => 0, "avisos" => ["Preservada assinatura prévia existente no documento conforme configuração."]];
+			$dispInc = function_exists("assinatura_incrementalDisponivel") ? assinatura_incrementalDisponivel() : ["disponivel" => false];
+			if (!empty($dispInc["disponivel"])) {
+				return ["ok" => true, "caminho" => $caminhoRelPdf, "aplicadas" => 0, "avisos" => ["Preservada assinatura prévia existente no documento conforme configuração."]];
+			}
 		}
 
 		$saidaRel = "docAssinado/marcado_" . $idSolicitacao . "_" . time() . "_" . bin2hex(random_bytes(4)) . ".pdf";

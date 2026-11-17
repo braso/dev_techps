@@ -87,12 +87,32 @@ armazem_paraiba/assinatura/
 ### 6. `processar_finalizacao.php`
 * Verifica se `preservar_assinaturas === 'sim'` E se `assinatura_pdfTemAssinaturaDigital($inputPdfPath)` é `true`:
   * **Se a flag for `nao` (padrão):** Executa o fluxo original com TCPDF e FPDI (100% mantido).
-  * **Se a flag for `sim` E houver assinatura prévia:** Executa `assinatura_executarAssinaturaIncremental()` via pyHanko, gravando o arquivo em `docFinalizado/final_...pdf` com ambas as assinaturas válidas preservadas.
+  * **Se a flag for `sim` E houver assinatura prévia:** Verifica se o ambiente do servidor suporta a execução incremental via `assinatura_incrementalDisponivel()`.
+    * **Com suporte (Python 3 + pyHanko + CLI ativa):** Executa `assinatura_executarAssinaturaIncremental()` via pyHanko, gravando o arquivo em `docFinalizado/final_...pdf` com ambas as assinaturas válidas preservadas.
+    * **Sem suporte (ex: hospedagem compartilhada/cPanel com `disable_functions` no php.ini ou sem pyHanko):** O sistema realiza **fallback gracioso e automático** para o fluxo padrão de assinatura ICP, garantindo que o fluxo de assinatura do documento nunca falhe ou cause erro 500 para o usuário.
 * O arquivo finalizado é copiado para `arquivos/Funcionarios/{entidadeId}/`, e o registro em `documento_funcionario` é atualizado como `docu_tx_assinado = 'sim'`.
 
 ---
 
-## 4. Resultado dos Testes End-to-End
+## 4. Compatibilidade com Ambientes de Hospedagem (cPanel / Apache / CLI)
+
+Em ambientes de hospedagem compartilhada (como cPanel), certas funções PHP podem estar desabilitadas no `php.ini` por diretiva de segurança (`disable_functions = exec,system,...`).
+
+Para garantir estabilidade máxima e nenhuma quebra:
+1. **Detecção Dinâmica de CLI (`assinatura_executarComandoCli`):**
+   * O sistema testa em cascata `exec()`, `proc_open()`, `shell_exec()` e `popen()`, utilizando apenas a que estiver habilitada no PHP.
+2. **Localização Direta de Python (`assinatura_encontrarPython`):**
+   * O sistema inspeciona os caminhos físicos do servidor (`/usr/bin/python3`, `/usr/local/bin/python3`, `/opt/alt/python...`, etc.) via `is_file()` e `is_executable()` sem depender de chamadas a `which` no shell.
+   * Permite também definir `'python_path'` explicitamente no arquivo `config_pfx.php` se necessário.
+3. **Fallback Automático:**
+   * Se nenhuma função de execução de processo estiver liberada no PHP ou a biblioteca `pyhanko` não estiver instalada, o sistema assina normalmente pelo fluxo ICP tradicional (FPDI/TCPDF), evitando travamentos ou erros na tela do usuário.
+4. **Como habilitar Múltiplas Assinaturas no cPanel (Opcional):**
+   * No painel do cPanel, acesse **Select PHP Version** > **Opções (Options)** > remova `proc_open` ou `exec` da diretiva `disable_functions`.
+   * Instale o pacote Python via terminal cPanel ou módulo Python: `pip install pyhanko` (ou `pip3 install pyhanko`).
+
+---
+
+## 5. Resultado dos Testes End-to-End
 
 ### Cenário 1: Flag Desmarcada (`preservar_assinaturas = 'nao'`) - Padrão do Sistema
 * **Comportamento verificado:** Execução 100% via fluxo original TCPDF/FPDI.
