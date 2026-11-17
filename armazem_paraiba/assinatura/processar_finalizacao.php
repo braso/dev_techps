@@ -305,31 +305,38 @@ function assinatura_finalizar_documento_icp($conn, int $idDocumento, array $opts
         require_once __DIR__ . "/assinatura_incremental_helper.php";
 
         $preservarAssinaturas = (strtolower(trim(strval($doc["preservar_assinaturas"] ?? "nao"))) === "sim");
+        $executouIncremental = false;
 
         if ($preservarAssinaturas && assinatura_pdfTemAssinaturaDigital($inputPdfPath)) {
-            // FLUXO INCREMENTAL PAdES (Preserva assinaturas digitais pré-existentes como Gov.br / ICP):
-            $resInc = assinatura_executarAssinaturaIncremental(
-                $inputPdfPath,
-                $outputPdfPath,
-                $pfxPathToUse,
-                $pfxPasswordToUse,
-                [
-                    "id_documento" => $idDocumento,
-                    "url" => "https://validar.iti.gov.br/"
-                ]
-            );
+            $dispInc = function_exists("assinatura_incrementalDisponivel") ? assinatura_incrementalDisponivel() : ["disponivel" => false];
+            if (!empty($dispInc["disponivel"])) {
+                // FLUXO INCREMENTAL PAdES (Preserva assinaturas digitais pré-existentes como Gov.br / ICP):
+                $resInc = assinatura_executarAssinaturaIncremental(
+                    $inputPdfPath,
+                    $outputPdfPath,
+                    $pfxPathToUse,
+                    $pfxPasswordToUse,
+                    [
+                        "id_documento" => $idDocumento,
+                        "url" => "https://validar.iti.gov.br/"
+                    ]
+                );
 
-            if (empty($resInc["ok"])) {
-                if ($isTempFile && $pfxPathToUse && file_exists($pfxPathToUse)) {
-                    @unlink($pfxPathToUse);
+                if (!empty($resInc["ok"]) && file_exists($outputPdfPath) && filesize($outputPdfPath) > 0) {
+                    $executouIncremental = true;
+                } else {
+                    if (file_exists($outputPdfPath)) {
+                        @unlink($outputPdfPath);
+                    }
+                    error_log("Assinatura incremental falhou: " . ($resInc["error"] ?? "Erro desconhecido") . ". Aplicando fallback para fluxo padrão.");
                 }
-                if (file_exists($outputPdfPath)) {
-                    @unlink($outputPdfPath);
-                }
-                return ["ok" => false, "error" => "Erro na assinatura digital incremental: " . ($resInc["error"] ?? "Erro desconhecido")];
+            } else {
+                error_log("Assinatura incremental indisponível no servidor: " . ($dispInc["motivo"] ?? "") . ". Aplicando fallback para fluxo padrão.");
             }
-        } else {
-            // FLUXO ORIGINAL 100% INALTERADO (quando desmarcado ou não possui assinatura pré-existente):
+        }
+
+        if (!$executouIncremental) {
+            // FLUXO ORIGINAL 100% INALTERADO (quando desmarcado, não possui assinatura pré-existente ou servidor sem suporte CLI/pyHanko):
             try {
                 $certStore = [];
                 $pfxContent = @file_get_contents($pfxPathToUse);
