@@ -280,7 +280,20 @@ const consultarRegistros = function(){
         dataType: 'json',
         success: function(response) {
             if(!response || !Array.isArray(response.rows)){
+                /* Antes isso so ia para o console: a grid ficava vazia, sem
+                   dizer nada, e parecia que a tabela e que estava sem
+                   registro. O erro do banco precisa chegar a quem olha. */
                 console.error('Resposta inválida da API:', response);
+                const motivo = (response && response.error)? response.error: 'resposta inválida do servidor';
+                try{
+                    $('#result tbody')[0].innerHTML =
+                        '<tr><td colspan="99" style="padding:14px; color:#a94442; background:#f2dede;">'
+                        + '<strong>Não foi possível carregar a lista.</strong><br>'
+                        + $('<div>').text(motivo).html()
+                        + '</td></tr>';
+                    $('.total-registros').html('');
+                    $('.tab-pagination').html('');
+                }catch(e){}
                 $('.table-loading-icon')[0].innerHTML = '';
                 return;
             }

@@ -307,17 +307,21 @@
             $userId = $decoded->data->user_id;
         }
 
-        // Placa compartilhada aparece para funcionários de todas as empresas/filiais
+        /* Placa compartilhada aparece para funcionarios de todas as empresas.
+           Se o ALTER nao passar (banco sem permissao), a clausula fica de
+           fora: melhor o app listar so as placas da empresa do que a consulta
+           quebrar e o motorista ficar sem placa nenhuma para escolher. */
         $colCompartilhada = get_data("SHOW COLUMNS FROM placa LIKE 'plac_tx_compartilhada'");
         if(empty($colCompartilhada)){
             insert_data("ALTER TABLE placa ADD COLUMN plac_tx_compartilhada VARCHAR(3) NOT NULL DEFAULT 'nao'", []);
+            $colCompartilhada = get_data("SHOW COLUMNS FROM placa LIKE 'plac_tx_compartilhada'");
         }
+        $filtroCompartilhada = empty($colCompartilhada)? "": "p.plac_tx_compartilhada = 'sim' OR ";
 
         $data = get_data(
             "SELECT p.plac_nb_id AS id, p.plac_tx_placa AS plate, p.plac_tx_modelo AS model
             FROM placa p
-            WHERE p.plac_tx_compartilhada = 'sim'
-            OR (
+            WHERE {$filtroCompartilhada}(
                 p.plac_nb_empresa IS NOT NULL
                 AND p.plac_nb_empresa = (
                     SELECT e.enti_nb_empresa FROM entidade e

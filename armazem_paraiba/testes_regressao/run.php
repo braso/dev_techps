@@ -1781,6 +1781,91 @@ function runnerLinkConsultaTests(array &$summary): void
     }, $summary);
 }
 
+/**
+ * Cadastro de placas: a coluna da placa compartilhada nao pode derrubar a lista.
+ *
+ * O que aconteceu: o SELECT da grid passou a citar plac_tx_compartilhada e a
+ * criacao da coluna ficou solta no corpo do arquivo, depois do include do
+ * conecta.php — que nunca roda, porque o funcoes.php chama index() e da exit
+ * de dentro desse include. Resultado: em banco sem a coluna a consulta morria
+ * inteira e o cadastro mostrava zero placa.
+ */
+function runnerPlacaGridTests(array &$summary): void
+{
+    global $appDir;
+
+    $cadastro = $appDir . '/cadastro_placa.php';
+    $endpoints = $appDir . '/ws/endpoints.php';
+
+    runnerRunCase('placa-grid', 'criar a coluna nao fica solta depois do include', function () use ($cadastro): void {
+        $fonte = runnerReadFile($cadastro);
+
+        $posFuncao = strpos($fonte, 'function placaTemColunaCompartilhada');
+        runnerAssertTrue($posFuncao !== false,
+            'Sumiu a funcao que confere/cria a coluna.');
+
+        /* O ALTER tem de morar dentro da funcao. Solto no corpo do arquivo
+           ele nunca executa: o include do conecta.php ja chama index() e sai. */
+        $posAlter = strpos($fonte, 'ALTER TABLE placa ADD COLUMN plac_tx_compartilhada');
+        runnerAssertTrue($posAlter !== false, 'Sumiu a criacao da coluna.');
+        runnerAssertTrue($posAlter > $posFuncao,
+            'O ALTER esta fora da funcao; ali ele nao roda.');
+        runnerAssertSame(1, substr_count($fonte, 'ALTER TABLE placa ADD COLUMN plac_tx_compartilhada'),
+            'Ha mais de um lugar criando a coluna.');
+
+        /* Chamada solta no corpo do arquivo e codigo morto e engana quem le. */
+        runnerAssertTrue(
+            !runnerMatchesLinha($fonte, '/^\s{0,8}placaTemColunaCompartilhada\(\);\s*$/m'),
+            'Ha chamada solta no corpo do arquivo, que nunca executa.'
+        );
+    }, $summary);
+
+    runnerRunCase('placa-grid', 'a grid so cita a coluna depois de conferir', function () use ($cadastro): void {
+        $fonte = runnerReadFile($cadastro);
+
+        $posIf = strpos($fonte, 'if(placaTemColunaCompartilhada()){');
+        runnerAssertTrue($posIf !== false,
+            'A montagem da grid deveria conferir a coluna antes de cita-la.');
+
+        /* A unica mencao a coluna no SELECT tem de estar depois da conferencia. */
+        $posColuna = strpos($fonte, '"COMPARTILHADA" => "IF(plac_tx_compartilhada');
+        runnerAssertTrue($posColuna !== false, 'Sumiu a coluna da grid.');
+        runnerAssertTrue($posColuna > $posIf,
+            'A coluna entra no SELECT sem conferir se existe no banco.');
+
+        /* O formulario e o INSERT tambem. */
+        runnerAssertSame(3, substr_count($fonte, 'if(placaTemColunaCompartilhada()){'),
+            'Grid, formulario e gravacao deveriam conferir a coluna — um deles nao confere.');
+    }, $summary);
+
+    runnerRunCase('placa-grid', 'o /plates do app nao quebra sem a coluna', function () use ($endpoints): void {
+        $fonte = runnerReadFile($endpoints);
+        runnerAssertContains('$filtroCompartilhada', $fonte,
+            'O /plates deveria montar o filtro so quando a coluna existe.');
+        runnerAssertContains('WHERE {$filtroCompartilhada}(', $fonte,
+            'O WHERE do /plates deveria usar o filtro condicional.');
+        runnerAssertTrue(
+            strpos($fonte, "WHERE p.plac_tx_compartilhada = 'sim'") === false,
+            'O /plates ainda cita a coluna direto no WHERE.'
+        );
+    }, $summary);
+
+    runnerRunCase('placa-grid', 'grid avisa na tela quando a consulta falha', function () use ($appDir): void {
+        /* Antes o erro so ia para o console: a tela ficava vazia e parecia
+           que nao havia registro, que foi o que atrasou achar este bug. */
+        $js = runnerReadFile(dirname($appDir) . '/contex20/js/grid_dinamico.js');
+        runnerAssertContains('Não foi possível carregar a lista.', $js,
+            'A grid deveria mostrar o motivo quando a consulta falha.');
+        runnerAssertContains('response.error', $js,
+            'A grid deveria ler o campo error da resposta.');
+    }, $summary);
+}
+
+function runnerMatchesLinha(string $texto, string $regex): bool
+{
+    return preg_match($regex, $texto) === 1;
+}
+
 function runnerPrintSummary(array $summary, bool $jsonMode): void
 {
     if ($jsonMode) {
@@ -1822,6 +1907,9 @@ runnerSeloRubricaTests($summary);
 
 runnerPrintLine('Executando testes do link na consulta...');
 runnerLinkConsultaTests($summary);
+
+runnerPrintLine('Executando testes do cadastro de placas...');
+runnerPlacaGridTests($summary);
 
 if (isset($argumentos['integration'])) {
     runnerPrintLine('Executando testes de integracao...');

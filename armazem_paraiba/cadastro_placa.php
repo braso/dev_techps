@@ -13,10 +13,40 @@
     include_once "conecta.php";
     mysqli_query($conn, "SET time_zone = '-3:00'");
 
-    // Placa compartilhada: aparece no app para funcionários de todas as empresas/filiais
-    $rsCompartilhada = query("SHOW COLUMNS FROM placa LIKE 'plac_tx_compartilhada'");
-    if($rsCompartilhada && !mysqli_fetch_assoc($rsCompartilhada)){
+    /**
+     * A coluna da placa compartilhada existe e pode ser usada?
+     *
+     * Tenta criar quando falta, mas NAO confia que conseguiu: em hospedagem
+     * compartilhada o usuario do banco costuma nao ter ALTER, e ai o ALTER
+     * falha calado. Se a tela montasse o SELECT com a coluna assim mesmo, a
+     * consulta inteira morreria com "Unknown column" e a grid ficaria vazia —
+     * o cadastro pararia de mostrar placa nenhuma por causa de uma coluna a
+     * mais. Entao quem pergunta aqui monta a tela com ou sem o campo.
+     *
+     * ATENCAO: nao adianta chamar isto no corpo do arquivo. O funcoes.php,
+     * que o conecta.php inclui no fim, ja chama index() e da exit de dentro
+     * do include da linha 12 — o PHP compila o arquivo inteiro antes, entao
+     * index() ja existe nessa hora. Resultado: nenhuma linha solta depois do
+     * include chega a rodar. Por isso a criacao da coluna mora aqui dentro e
+     * e chamada pelas funcoes (index, layout_placa, cadastrar).
+     */
+    function placaTemColunaCompartilhada(): bool{
+        static $tem = null;
+        if($tem !== null){
+            return $tem;
+        }
+
+        $existe = function(){
+            $rs = query("SHOW COLUMNS FROM placa LIKE 'plac_tx_compartilhada'");
+            return $rs && mysqli_fetch_assoc($rs);
+        };
+
+        if($existe()){
+            return $tem = true;
+        }
+
         query("ALTER TABLE placa ADD COLUMN plac_tx_compartilhada VARCHAR(3) NOT NULL DEFAULT 'nao'");
+        return $tem = (bool)$existe();
     }
 
     function cadastrar(){
@@ -54,9 +84,12 @@
             "plac_tx_modelo" => $_POST["veiculo_like"],
             "plac_nb_empresa" => $_POST["empresa"],
             "plac_nb_entidade" => $_POST["motorista"],
-            "plac_tx_compartilhada" => (($_POST["compartilhada"] ?? "") === "sim")? "sim": "nao",
             "plac_tx_dataAtualiza" => date("Y-m-d H:i:s")
         ];
+
+        if(placaTemColunaCompartilhada()){
+            $novaPlaca["plac_tx_compartilhada"] = (($_POST["compartilhada"] ?? "") === "sim")? "sim": "nao";
+        }
 
         
         if(!empty($_POST["id"])){
@@ -113,9 +146,12 @@
             campo("Placa*", "placa_like", !empty($placa["plac_tx_placa"])? $placa["plac_tx_placa"]: "", 1, "MASCARA_PLACA", "required"),
             campo("Veículo/Frota", "veiculo_like", !empty($placa["plac_tx_modelo"])? $placa["plac_tx_modelo"]: "", 1, "", ""),
             combo_net("Empresa*", "empresa", !empty($placa["plac_nb_empresa"])? $placa["plac_nb_empresa"]: "", 3, 'empresa', "required"),
-            combo_net("Motorista", "motorista", !empty($placa["plac_nb_entidade"])? $placa["plac_nb_entidade"]: "", 3, 'entidade', ""),
-            combo("Compartilhar com todas as empresas/filiais", "compartilhada", $placa["plac_tx_compartilhada"] ?? "nao", 3, ["nao" => "Não", "sim" => "Sim"])
+            combo_net("Motorista", "motorista", !empty($placa["plac_nb_entidade"])? $placa["plac_nb_entidade"]: "", 3, 'entidade', "")
         ];
+
+        if(placaTemColunaCompartilhada()){
+            $campos[] = combo("Compartilhar com todas as empresas/filiais", "compartilhada", $placa["plac_tx_compartilhada"] ?? "nao", 3, ["nao" => "Não", "sim" => "Sim"]);
+        }
 
         $botoes = 
             empty($_POST["id"])?
@@ -169,10 +205,16 @@
             "VEÍCULO" => "plac_tx_modelo",
             "MOTORISTA" => "enti_tx_nome",
             "EMPRESA" => "empr_tx_nome",
-            "COMPARTILHADA" => "IF(plac_tx_compartilhada = 'sim', 'Sim', 'Não') AS plac_tx_compartilhada",
             "DATA DE CADASTRO" => "DATE_FORMAT(plac_tx_dataCadastro, '%d/%m/%Y %H:%i:%s')",
             "DATA DE ALTERAÇÃO" => "DATE_FORMAT(plac_tx_dataAtualiza, '%d/%m/%Y %H:%i:%s')"
         ];
+
+        if(placaTemColunaCompartilhada()){
+            /* Entra antes das datas, que e onde a coluna foi desenhada. */
+            $gridFields = array_slice($gridFields, 0, 5, true)
+                + ["COMPARTILHADA" => "IF(plac_tx_compartilhada = 'sim', 'Sim', 'Não') AS plac_tx_compartilhada"]
+                + array_slice($gridFields, 5, null, true);
+        }
 
         $camposBusca = [
             "busca_placa_like"       => "plac_tx_placa",
