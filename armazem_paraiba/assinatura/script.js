@@ -600,18 +600,30 @@ document.addEventListener('DOMContentLoaded', function() {
                     return pdfDoc.getPageCount();
                 };
 
-                const beforePages = pdfDoc.getPageCount();
-                const afterPages = renderAuditPages();
-                const auditPagesCreated = Math.max(0, afterPages - beforePages);
-                writeAuditState({ entries, audit_pages: auditPagesCreated });
+                const devePreservarAssinatura = Boolean(window.PRESERVAR_ASSINATURAS_DEFAULT && window.PDF_TEM_ASSINATURA_PREVIA);
 
-                // Salva o PDF modificado
-                // useObjectStreams: false é crucial para compatibilidade com FPDI (evita erro de compressão)
-                const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
-                
-                // Cria um Blob para envio - Nome do arquivo original
-                pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
-                arquivoAssinado = new File([pdfBlob], nomeFinalArquivo, { type: 'application/pdf' });
+                if (devePreservarAssinatura) {
+                    // Quando a preservação de assinaturas pré-existentes (Gov.br / ICP) estiver ativa,
+                    // NÃO podemos re-salvar o documento no navegador via pdf-lib, pois o pdf-lib
+                    // reescreve a estrutura inteira do PDF e corrompe o /ByteRange da assinatura anterior.
+                    // Enviamos os bytes originais intocados; o carimbo visual e a nova assinatura digital
+                    // serão inseridos no servidor via Incremental Update (pyHanko).
+                    pdfBlob = new Blob([currentPdfBytes], { type: 'application/pdf' });
+                    arquivoAssinado = new File([pdfBlob], nomeFinalArquivo, { type: 'application/pdf' });
+                } else {
+                    const beforePages = pdfDoc.getPageCount();
+                    const afterPages = renderAuditPages();
+                    const auditPagesCreated = Math.max(0, afterPages - beforePages);
+                    writeAuditState({ entries, audit_pages: auditPagesCreated });
+
+                    // Salva o PDF modificado
+                    // useObjectStreams: false é crucial para compatibilidade com FPDI (evita erro de compressão)
+                    const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
+                    
+                    // Cria um Blob para envio - Nome do arquivo original
+                    pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+                    arquivoAssinado = new File([pdfBlob], nomeFinalArquivo, { type: 'application/pdf' });
+                }
 
                 // 2. Posições dos carimbos escolhidas no editor. Só coordenadas:
                 //    o conteúdo de cada marca é montado no servidor, e é lá que o

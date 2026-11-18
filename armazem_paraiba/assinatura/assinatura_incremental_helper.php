@@ -333,6 +333,28 @@ if (!function_exists('assinatura_executarAssinaturaIncremental')) {
             $cmd .= " " . $noStamp;
         }
 
+        $signerName = trim(strval($opts["signer_name"] ?? ""));
+        $signerCpf = trim(strval($opts["signer_cpf"] ?? ""));
+        $signerRg = trim(strval($opts["signer_rg"] ?? ""));
+        $rubricaPath = trim(strval($opts["rubrica_path"] ?? ""));
+        $marcasJson = trim(strval($opts["marcas_json"] ?? ""));
+
+        if ($signerName !== "") {
+            $cmd .= " --signer-name " . escapeshellarg($signerName);
+        }
+        if ($signerCpf !== "") {
+            $cmd .= " --signer-cpf " . escapeshellarg($signerCpf);
+        }
+        if ($signerRg !== "") {
+            $cmd .= " --signer-rg " . escapeshellarg($signerRg);
+        }
+        if ($rubricaPath !== "" && file_exists($rubricaPath)) {
+            $cmd .= " --rubrica " . escapeshellarg($rubricaPath);
+        }
+        if ($marcasJson !== "" && $marcasJson !== "[]") {
+            $cmd .= " --marcas-json " . escapeshellarg($marcasJson);
+        }
+
         $out = [];
         $exitCode = 1;
         $executou = assinatura_executarComandoCli($cmd, $out, $exitCode);
