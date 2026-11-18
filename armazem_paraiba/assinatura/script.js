@@ -600,7 +600,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     return pdfDoc.getPageCount();
                 };
 
-                const devePreservarAssinatura = Boolean(window.PRESERVAR_ASSINATURAS_DEFAULT && window.PDF_TEM_ASSINATURA_PREVIA);
+                const devePreservarAssinatura = Boolean(window.PDF_TEM_ASSINATURA_PREVIA || window.PRESERVAR_ASSINATURAS_DEFAULT);
 
                 if (devePreservarAssinatura) {
                     // Quando a preservação de assinaturas pré-existentes (Gov.br / ICP) estiver ativa,
@@ -641,7 +641,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // 3. Enviar para o servidor
                 const formData = new FormData(form);
-                if (window.PRESERVAR_ASSINATURAS_DEFAULT) {
+                if (devePreservarAssinatura) {
                     formData.append('preservar_assinatura_existente', '1');
                 } else {
                     formData.append('preservar_assinatura_existente', '0');

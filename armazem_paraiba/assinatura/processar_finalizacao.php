@@ -305,9 +305,10 @@ function assinatura_finalizar_documento_icp($conn, int $idDocumento, array $opts
         require_once __DIR__ . "/assinatura_incremental_helper.php";
 
         $preservarAssinaturas = (strtolower(trim(strval($doc["preservar_assinaturas"] ?? "nao"))) === "sim");
+        $temAssinaturaPrevia = assinatura_pdfTemAssinaturaDigital($inputPdfPath);
         $executouIncremental = false;
 
-        if ($preservarAssinaturas && assinatura_pdfTemAssinaturaDigital($inputPdfPath)) {
+        if ($preservarAssinaturas || $temAssinaturaPrevia) {
             $dispInc = function_exists("assinatura_incrementalDisponivel") ? assinatura_incrementalDisponivel() : ["disponivel" => false];
             if (!empty($dispInc["disponivel"])) {
                 $signerName = "";
@@ -386,10 +387,18 @@ function assinatura_finalizar_documento_icp($conn, int $idDocumento, array $opts
                     if (file_exists($outputPdfPath)) {
                         @unlink($outputPdfPath);
                     }
-                    error_log("Assinatura incremental falhou: " . ($resInc["error"] ?? "Erro desconhecido") . ". Aplicando fallback para fluxo padrão.");
+                    $errMsg = $resInc["error"] ?? "Erro desconhecido";
+                    error_log("Assinatura incremental falhou: " . $errMsg);
+                    if ($temAssinaturaPrevia) {
+                        return ["ok" => false, "error" => "Falha na assinatura digital incremental: " . $errMsg];
+                    }
                 }
             } else {
-                error_log("Assinatura incremental indisponível no servidor: " . ($dispInc["motivo"] ?? "") . ". Aplicando fallback para fluxo padrão.");
+                $motivo = $dispInc["motivo"] ?? "";
+                error_log("Assinatura incremental indisponível no servidor: " . $motivo);
+                if ($temAssinaturaPrevia) {
+                    return ["ok" => false, "error" => "Servidor não possui suporte à assinatura incremental pyHanko (" . $motivo . ")."];
+                }
             }
         }
 

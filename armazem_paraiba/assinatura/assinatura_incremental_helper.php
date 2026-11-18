@@ -155,17 +155,18 @@ if (!function_exists('assinatura_encontrarPython')) {
         }
 
         $candidatos = [
-            '/usr/bin/python3',
-            '/usr/local/bin/python3',
-            '/bin/python3',
+            '/opt/alt/python311/bin/python3',
+            '/opt/alt/python310/bin/python3',
+            '/opt/alt/python39/bin/python3',
+            '/opt/alt/python38/bin/python3',
             '/usr/bin/python3.12',
             '/usr/bin/python3.11',
             '/usr/bin/python3.10',
             '/usr/bin/python3.9',
             '/usr/bin/python3.8',
-            '/opt/alt/python311/bin/python3',
-            '/opt/alt/python310/bin/python3',
-            '/opt/alt/python39/bin/python3',
+            '/usr/local/bin/python3',
+            '/usr/bin/python3',
+            '/bin/python3',
             '/usr/local/cpanel/3rdparty/bin/python3',
             '/usr/bin/python',
             '/usr/local/bin/python',
@@ -250,11 +251,12 @@ if (!function_exists('assinatura_incrementalDisponivel')) {
             return $statusCache;
         }
 
-        // Testa se o pyhanko está instalado no python encontrado
+        // Testa se o pyhanko está instalado no python encontrado (usa base64 para evitar quebra de aspas pelo OS)
         $out = [];
         $code = 1;
         $testSnippet = 'import site, sys, os; p = site.getusersitepackages(); sys.path.insert(0, p) if (p and os.path.exists(p)) else None; import pyhanko; print("OK")';
-        $testCmd = escapeshellarg($python) . ' -c ' . escapeshellarg($testSnippet) . ' 2>&1';
+        $b64Snippet = base64_encode($testSnippet);
+        $testCmd = escapeshellarg($python) . ' -c "import base64; exec(base64.b64decode(\'' . $b64Snippet . '\'))" 2>&1';
         $ok = assinatura_executarComandoCli($testCmd, $out, $code);
         $outputStr = implode(" ", $out);
 
