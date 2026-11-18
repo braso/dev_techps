@@ -441,7 +441,12 @@ if (!empty($assinante) && isset($assinante["id_solicitacao"])) {
 
 $absDocAtual = assinatura_resolverArquivoAbs($caminho_arquivo);
 $temAssinaturaPrevia = ($absDocAtual !== "" && assinatura_pdfTemAssinaturaDigital($absDocAtual));
-$preservarAssinaturasDb = strtolower(trim(strval($solicitacao['preservar_assinaturas'] ?? ($assinante['preservar_assinaturas'] ?? 'nao'))));
+$preservarAssinaturasDb = ($temAssinaturaPrevia || strtolower(trim(strval($solicitacao['preservar_assinaturas'] ?? ($assinante['preservar_assinaturas'] ?? 'nao')))) === 'sim') ? 'sim' : 'nao';
+
+if ($temAssinaturaPrevia && intval($solicitacao['id_solicitacao'] ?? ($solicitacao['id'] ?? 0)) > 0) {
+    $idSolAuto = intval($solicitacao['id_solicitacao'] ?? ($solicitacao['id'] ?? 0));
+    @mysqli_query($conn, "UPDATE solicitacoes_assinatura SET preservar_assinaturas = 'sim' WHERE id = {$idSolAuto} AND preservar_assinaturas != 'sim' LIMIT 1");
+}
 
 function assinatura_normalizarCpfDigits(string $cpf): string {
     return preg_replace('/\D+/', '', $cpf) ?? '';

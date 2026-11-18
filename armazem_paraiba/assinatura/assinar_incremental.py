@@ -200,22 +200,23 @@ def assinar_pdf_incremental(
                 # Se for certificado landscape ou tiver assinatura prévia/nome na P0
                 if p0_has_sig or signer_on_p0 or (pw0 > ph0 and page_count <= 2):
                     target_idx = 0
-                    stamp_w = 200
-                    stamp_h = 55
                     if sig1_rect:
-                        # Alinha perfeitamente com a altura da assinatura pré-existente (ex: Carlos Castilho), no lado do aluno
-                        y1 = max(10, sig1_rect[1] - 4)
-                        y2 = min(ph0 - 10, y1 + stamp_h)
-                        x1 = max(pw0 * 0.48, 385)
-                        x2 = min(pw0 - 15, x1 + stamp_w)
+                        # Alinha perfeitamente com a altura e proporção da assinatura pré-existente (Gov.br do instrutor), no lado do aluno
+                        y1 = sig1_rect[1]
+                        y2 = sig1_rect[3]
+                        sig_w = max(165, sig1_rect[2] - sig1_rect[0])
+                        x1 = 404
+                        x2 = x1 + sig_w
                         sig_box = (x1, y1, x2, y2)
                     elif pw0 > ph0:
-                        x1 = max(pw0 * 0.48, 385)
-                        x2 = min(pw0 - 15, x1 + stamp_w)
-                        y1 = 93
-                        y2 = y1 + stamp_h
+                        x1 = max(pw0 * 0.5, 404)
+                        x2 = min(pw0 - 15, x1 + 165)
+                        y1 = 102
+                        y2 = y1 + 45
                         sig_box = (x1, y1, x2, y2)
                     else:
+                        stamp_w = 200
+                        stamp_h = 50
                         x1 = max(10, pw0 - stamp_w - 15)
                         y1 = 15
                         x2 = min(pw0 - 15, x1 + stamp_w)
@@ -225,8 +226,8 @@ def assinar_pdf_incremental(
                     # Fallback padrão: canto inferior direito da última página
                     target_idx = max(0, page_count - 1)
                     pw, ph = get_page_dimensions(w, target_idx)
-                    stamp_w = 210
-                    stamp_h = 55
+                    stamp_w = 200
+                    stamp_h = 50
                     x1 = max(10, pw - stamp_w - 15)
                     y1 = 15
                     x2 = min(pw - 15, x1 + stamp_w)
@@ -253,26 +254,23 @@ def assinar_pdf_incremental(
 
             if visible_stamp:
                 font_engine = SimpleFontEngineFactory.default_factory()
-                tb_style = TextBoxStyle(font=font_engine, font_size=5.8)
+                tb_style = TextBoxStyle(font=font_engine, font_size=5.0)
 
-                lines = ["ASSINADO DIGITALMENTE VIA TECHPS"]
+                lines = ["ASSINADO DIGITALMENTE"]
                 display_name = signer_name.strip() if signer_name else cert_signer_name
                 if display_name:
-                    lines.append(display_name[:40])
+                    lines.append(display_name[:35])
                 if signer_cpf:
-                    cpf_line = f"CPF: {signer_cpf}"
-                    if signer_rg:
-                        cpf_line += f" • RG: {signer_rg}"
-                    lines.append(cpf_line)
+                    lines.append(f"CPF: {signer_cpf}")
                 lines.append("Data: %(ts)s")
-                lines.append("Valide em: %(url)s")
+                lines.append("Valide: %(url)s")
 
                 stamp_text = "\n".join(lines)
 
                 bg_img = None
                 if rubrica_path and os.path.isfile(rubrica_path):
                     try:
-                        bg_img = PdfImage(rubrica_path, opacity=0.35)
+                        bg_img = PdfImage(rubrica_path, opacity=0.30)
                     except Exception:
                         pass
 
@@ -280,7 +278,7 @@ def assinar_pdf_incremental(
                     stamp_text=stamp_text,
                     text_box_style=tb_style,
                     background=bg_img,
-                    border_width=1,
+                    border_width=0,
                     innsep=2
                 )
                 appearance_params = {"url": url_validador}

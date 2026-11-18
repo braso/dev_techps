@@ -497,7 +497,10 @@ $nomeArquivoOriginal = trim(strval($row["nome_arquivo_original"] ?? ""));
 $tipoDocumentoId = intval($row["tipo_documento_id"] ?? 0);
 $validarIcp = strtolower(trim(strval($row["validar_icp"] ?? "nao"))) === "sim" ? "sim" : "nao";
 $postPreservar = trim(strval($_POST["preservar_assinatura_existente"] ?? ""));
-$devePreservar = (strtolower(trim(strval($row["preservar_assinaturas"] ?? "nao"))) === "sim") || ($postPreservar === "1");
+$caminhoOrigRow = trim(strval($row["caminho_arquivo"] ?? ""));
+$origAbs = function_exists("assinatura_resolverArquivoAbs") ? assinatura_resolverArquivoAbs($caminhoOrigRow) : "";
+$origTemAssinatura = ($origAbs !== "" && file_exists($origAbs) && function_exists("assinatura_pdfTemAssinaturaDigital") && assinatura_pdfTemAssinaturaDigital($origAbs));
+$devePreservar = $origTemAssinatura || (strtolower(trim(strval($row["preservar_assinaturas"] ?? "nao"))) === "sim") || ($postPreservar === "1");
 $preservarDbVal = $devePreservar ? "sim" : "nao";
 $modoEnvio = strtolower(trim(strval($row["modo_envio"] ?? "")));
 
@@ -652,6 +655,11 @@ if (!$jaAssinado) {
 
     if (!move_uploaded_file(strval($arquivo["tmp_name"] ?? ""), $destAbs)) {
         jsonError("Falha ao salvar o arquivo no servidor.");
+    }
+
+    if (file_exists($destAbs) && function_exists("assinatura_pdfTemAssinaturaDigital") && assinatura_pdfTemAssinaturaDigital($destAbs)) {
+        $devePreservar = true;
+        $preservarDbVal = "sim";
     }
 
     $caminhoRel = "docAssinado/" . $fileName;
