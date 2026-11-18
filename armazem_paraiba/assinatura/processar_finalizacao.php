@@ -305,10 +305,11 @@ function assinatura_finalizar_documento_icp($conn, int $idDocumento, array $opts
         require_once __DIR__ . "/assinatura_incremental_helper.php";
 
         $preservarAssinaturas = (strtolower(trim(strval($doc["preservar_assinaturas"] ?? "nao"))) === "sim");
+        $validarIcp = (strtolower(trim(strval($doc["validar_icp"] ?? "nao"))) === "sim");
         $temAssinaturaPrevia = assinatura_pdfTemAssinaturaDigital($inputPdfPath);
         $executouIncremental = false;
 
-        if ($preservarAssinaturas || $temAssinaturaPrevia) {
+        if ($preservarAssinaturas && $temAssinaturaPrevia) {
             $dispInc = function_exists("assinatura_incrementalDisponivel") ? assinatura_incrementalDisponivel() : ["disponivel" => false];
             if (!empty($dispInc["disponivel"])) {
                 $signerName = "";
@@ -364,22 +365,104 @@ function assinatura_finalizar_documento_icp($conn, int $idDocumento, array $opts
                     }
                 }
 
+                $ipAssinatura = "127.0.0.1";
+                $hashAssinatura = "";
+                $userAgentAssinatura = "";
+                $dataHoraAssinatura = date("d/m/Y H:i:s");
+
+                $stmtAe = mysqli_prepare($conn, "SELECT ip_address, user_agent, hash_assinatura, data_assinatura FROM assinatura_eletronica WHERE id_documento = ? ORDER BY id DESC LIMIT 1");
+                if ($stmtAe) {
+                    mysqli_stmt_bind_param($stmtAe, "i", $idDocumento);
+                    mysqli_stmt_execute($stmtAe);
+                    $resAe = mysqli_stmt_get_result($stmtAe);
+                    if ($resAe && ($rowAe = mysqli_fetch_assoc($resAe))) {
+                        $ipAssinatura = trim(strval($rowAe["ip_address"] ?? $ipAssinatura));
+                        $userAgentAssinatura = trim(strval($rowAe["user_agent"] ?? $userAgentAssinatura));
+                        $hashAssinatura = trim(strval($rowAe["hash_assinatura"] ?? ""));
+                        if (!empty($rowAe["data_assinatura"])) {
+                            $dataHoraAssinatura = date("d/m/Y H:i:s", strtotime($rowAe["data_assinatura"]));
+                        }
+                    }
+                    mysqli_stmt_close($stmtAe);
+                }
+
+                $certStore = [];
+                $certSignerName = "TECH PS LTDA:42390531000188";
+                $issuerName = "AC SyngularID Multipla";
+                $pfxContent = @file_get_contents($pfxPathToUse);
+                if ($pfxContent !== false && openssl_pkcs12_read($pfxContent, $certStore, $pfxPasswordToUse)) {
+                    $certData = openssl_x509_parse($certStore["cert"] ?? "");
+                    if (!empty($certData["subject"]["CN"])) {
+                        $certSignerName = is_array($certData["subject"]["CN"]) ? implode(", ", $certData["subject"]["CN"]) : $certData["subject"]["CN"];
+                    }
+                    if (!empty($certData["issuer"]["CN"])) {
+                        $issuerName = is_array($certData["issuer"]["CN"]) ? implode(", ", $certData["issuer"]["CN"]) : $certData["issuer"]["CN"];
+                    }
+                }
+
+                $auditTmpPath = $outputDir . "audit_tmp_" . time() . "_" . uniqid() . ".pdf";
+                $nomeDocOriginal = trim(strval($doc["nome_arquivo_original"] ?? ""));
+                $docHash = hash_file("sha256", $inputPdfPath);
+                $shortHash = substr($docHash, 0, 20) . "...";
+                $verificationCode = strtoupper(substr(md5($outputFileName . $dataHoraAssinatura . $idDocumento), 0, 16));
+
+                $dadosAudit = [
+                    "nome_documento" => $nomeDocOriginal !== "" ? $nomeDocOriginal : basename($inputPdfPath),
+                    "id_documento" => $idDocumento,
+                    "signer_name" => $signerName,
+                    "signer_cpf" => $signerCpf,
+                    "signer_rg" => $signerRg,
+                    "data_hora" => $dataHoraAssinatura,
+                    "ip" => $ipAssinatura,
+                    "hash" => $hashAssinatura !== "" ? $hashAssinatura : $docHash,
+                    "user_agent" => $userAgentAssinatura,
+                    "rubrica_path" => $rubricaAbsPath,
+                    "cert_signer_name" => $certSignerName,
+                    "cert_issuer" => $issuerName,
+                    "short_hash" => $shortHash,
+                    "verification_code" => $verificationCode
+                ];
+
+                $appendPathParaUsar = "";
+                if ($validarIcp) {
+                    // Regra 4: Validade ICP-Brasil e Múltiplas Assinaturas marcados.
+                    // Mantém assinaturas anteriores, adiciona assinatura digital e no fim do documento a folha com carimbo ICP-Brasil.
+                    if (function_exists("assinatura_gerarFolhaComprovantesPdf") && assinatura_gerarFolhaComprovantesPdf($auditTmpPath, $dadosAudit)) {
+                        $appendPathParaUsar = $auditTmpPath;
+                    }
+                } else {
+                    // Regra 3: Apenas Múltiplas Assinaturas marcado.
+                    // Mantém assinaturas anteriores, adiciona a assinatura digital SEM a folha com carimbo ICP-Brasil no fim.
+                    if (file_exists($auditTmpPath)) {
+                        @unlink($auditTmpPath);
+                    }
+                }
+
                 // FLUXO INCREMENTAL PAdES (Preserva assinaturas digitais pré-existentes como Gov.br / ICP):
+                $optsInc = [
+                    "id_documento" => $idDocumento,
+                    "url" => "https://validar.iti.gov.br/",
+                    "signer_name" => $signerName,
+                    "signer_cpf" => $signerCpf,
+                    "signer_rg" => $signerRg,
+                    "rubrica_path" => $rubricaAbsPath,
+                    "marcas_json" => $marcasJson
+                ];
+                if ($appendPathParaUsar !== "") {
+                    $optsInc["append_page"] = $appendPathParaUsar;
+                }
+
                 $resInc = assinatura_executarAssinaturaIncremental(
                     $inputPdfPath,
                     $outputPdfPath,
                     $pfxPathToUse,
                     $pfxPasswordToUse,
-                    [
-                        "id_documento" => $idDocumento,
-                        "url" => "https://validar.iti.gov.br/",
-                        "signer_name" => $signerName,
-                        "signer_cpf" => $signerCpf,
-                        "signer_rg" => $signerRg,
-                        "rubrica_path" => $rubricaAbsPath,
-                        "marcas_json" => $marcasJson
-                    ]
+                    $optsInc
                 );
+
+                if ($appendPathParaUsar !== "" && file_exists($appendPathParaUsar)) {
+                    @unlink($appendPathParaUsar);
+                }
 
                 if (!empty($resInc["ok"]) && file_exists($outputPdfPath) && filesize($outputPdfPath) > 0) {
                     $executouIncremental = true;
@@ -389,14 +472,14 @@ function assinatura_finalizar_documento_icp($conn, int $idDocumento, array $opts
                     }
                     $errMsg = $resInc["error"] ?? "Erro desconhecido";
                     error_log("Assinatura incremental falhou: " . $errMsg);
-                    if ($temAssinaturaPrevia) {
+                    if ($temAssinaturaPrevia && $preservarAssinaturas) {
                         return ["ok" => false, "error" => "Falha na assinatura digital incremental: " . $errMsg];
                     }
                 }
             } else {
                 $motivo = $dispInc["motivo"] ?? "";
                 error_log("Assinatura incremental indisponível no servidor: " . $motivo);
-                if ($temAssinaturaPrevia) {
+                if ($temAssinaturaPrevia && $preservarAssinaturas) {
                     return ["ok" => false, "error" => "Servidor não possui suporte à assinatura incremental pyHanko (" . $motivo . ")."];
                 }
             }
@@ -459,86 +542,88 @@ function assinatura_finalizar_documento_icp($conn, int $idDocumento, array $opts
         $shortHash = substr($docHash, 0, 20) . "...";
         $verificationCode = strtoupper(substr(md5($outputFileName . $signDate . $idDocumento), 0, 16));
 
-        $iti_url = "https://validar.iti.gov.br/";
-        $qrSize = 24;
-        $w = 150;
-        $h = 36;
-        $margin = 10;
-        $linkH = 6;
+        if ($validarIcp) {
+            $iti_url = "https://validar.iti.gov.br/";
+            $qrSize = 24;
+            $w = 150;
+            $h = 36;
+            $margin = 10;
+            $linkH = 6;
 
-        $pdf->SetAutoPageBreak(false);
+            $pdf->SetAutoPageBreak(false);
 
-        $x = $pdf->getPageWidth() - $w - $margin;
-        $y = $pdf->getPageHeight() - $h - $linkH - $margin;
+            $x = $pdf->getPageWidth() - $w - $margin;
+            $y = $pdf->getPageHeight() - $h - $linkH - $margin;
 
-        $pdf->SetAlpha(1);
-        $pdf->SetFillColor(255, 255, 255);
-        $pdf->SetLineStyle(["width" => 0.2, "cap" => "butt", "join" => "miter", "dash" => 0, "color" => [0, 0, 0]]);
-        $pdf->RoundedRect($x, $y, $w, $h, 2, "1111", "DF");
+            $pdf->SetAlpha(1);
+            $pdf->SetFillColor(255, 255, 255);
+            $pdf->SetLineStyle(["width" => 0.2, "cap" => "butt", "join" => "miter", "dash" => 0, "color" => [0, 0, 0]]);
+            $pdf->RoundedRect($x, $y, $w, $h, 2, "1111", "DF");
 
-        $logoPath = $baseDir . "/assets/icp.png";
-        if (file_exists($logoPath)) {
-            $pdf->Image($logoPath, $x + 2, $y + 4, 18, 0, "PNG");
+            $logoPath = $baseDir . "/assets/icp.png";
+            if (file_exists($logoPath)) {
+                $pdf->Image($logoPath, $x + 2, $y + 4, 18, 0, "PNG");
+            }
+
+            $textX = $x + 30;
+            $textW = $w - 32 - $qrSize - 4;
+            $currentY = $y + 3;
+
+            $pdf->SetFont("helvetica", "B", 7);
+            $pdf->SetTextColor(0, 0, 0);
+            $pdf->SetXY($textX, $currentY);
+            $pdf->Cell(0, 0, "ASSINADO DIGITALMENTE", 0, 1, "L");
+
+            $currentY += 4;
+            $pdf->SetFont("helvetica", "B", 8);
+            $pdf->SetXY($textX, $currentY);
+            $pdf->Cell($textW, 0, substr(strtoupper(strval($signerName)), 0, 40), 0, 1, "L");
+
+            $currentY += 4;
+            $pdf->SetFont("helvetica", "", 6);
+            $pdf->SetXY($textX, $currentY);
+            $pdf->Cell($textW, 0, "Data: " . $signDate, 0, 1, "L");
+
+            $currentY += 3;
+            $pdf->SetXY($textX, $currentY);
+            $pdf->Cell($textW, 0, "Emissor: " . substr(strval($issuerName), 0, 45), 0, 1, "L");
+
+            $currentY += 3;
+            $pdf->SetXY($textX, $currentY);
+            $pdf->Cell($textW, 0, "Hash Doc: " . $shortHash, 0, 1, "L");
+
+            $currentY += 3;
+            $pdf->SetFont("helvetica", "B", 6);
+            $pdf->SetXY($textX, $currentY);
+            $pdf->Cell($textW, 0, "Cód. Verificação: " . $verificationCode, 0, 1, "L");
+
+            $pdf->SetFont("helvetica", "", 5);
+            $pdf->SetTextColor(80, 80, 80);
+            $pdf->SetXY($x + 2, $y + $h - 7);
+            $pdf->MultiCell($textW + 28, 8, "Documento assinado digitalmente conforme MP 2.200-2/2001 e Lei 14.063/2020.\nValidade jurídica assegurada.", 0, "L");
+
+            // QR code com link do validador ITI dentro do carimbo
+            $qrX = $x + $w - $qrSize - 3;
+            $qrY = $y + ($h - $qrSize) / 2;
+            $qrStyle = [
+                "border" => false,
+                "vpadding" => 0,
+                "hpadding" => 0,
+                "fgcolor" => [0, 0, 0],
+                "bgcolor" => [255, 255, 255],
+                "module_width" => 1,
+                "module_height" => 1,
+            ];
+            $pdf->write2DBarcode($iti_url, "QRCODE,H", $qrX, $qrY, $qrSize, $qrSize, $qrStyle, "N");
+
+            // Linha separadora e link clicável abaixo do carimbo
+            $pdf->SetLineStyle(["width" => 0.1, "color" => [180, 180, 180]]);
+            $linkY = $y + $h + 1;
+            $pdf->SetFont("helvetica", "", 5.5);
+            $pdf->SetTextColor(30, 80, 180);
+            $pdf->SetXY($x, $linkY);
+            $pdf->Cell($w, $linkH, "Valide o documento: " . $iti_url, 0, 1, "C", false, $iti_url);
         }
-
-        $textX = $x + 30;
-        $textW = $w - 32 - $qrSize - 4;
-        $currentY = $y + 3;
-
-        $pdf->SetFont("helvetica", "B", 7);
-        $pdf->SetTextColor(0, 0, 0);
-        $pdf->SetXY($textX, $currentY);
-        $pdf->Cell(0, 0, "ASSINADO DIGITALMENTE", 0, 1, "L");
-
-        $currentY += 4;
-        $pdf->SetFont("helvetica", "B", 8);
-        $pdf->SetXY($textX, $currentY);
-        $pdf->Cell($textW, 0, substr(strtoupper(strval($signerName)), 0, 40), 0, 1, "L");
-
-        $currentY += 4;
-        $pdf->SetFont("helvetica", "", 6);
-        $pdf->SetXY($textX, $currentY);
-        $pdf->Cell($textW, 0, "Data: " . $signDate, 0, 1, "L");
-
-        $currentY += 3;
-        $pdf->SetXY($textX, $currentY);
-        $pdf->Cell($textW, 0, "Emissor: " . substr(strval($issuerName), 0, 45), 0, 1, "L");
-
-        $currentY += 3;
-        $pdf->SetXY($textX, $currentY);
-        $pdf->Cell($textW, 0, "Hash Doc: " . $shortHash, 0, 1, "L");
-
-        $currentY += 3;
-        $pdf->SetFont("helvetica", "B", 6);
-        $pdf->SetXY($textX, $currentY);
-        $pdf->Cell($textW, 0, "Cód. Verificação: " . $verificationCode, 0, 1, "L");
-
-        $pdf->SetFont("helvetica", "", 5);
-        $pdf->SetTextColor(80, 80, 80);
-        $pdf->SetXY($x + 2, $y + $h - 7);
-        $pdf->MultiCell($textW + 28, 8, "Documento assinado digitalmente conforme MP 2.200-2/2001 e Lei 14.063/2020.\nValidade jurídica assegurada.", 0, "L");
-
-        // QR code com link do validador ITI dentro do carimbo
-        $qrX = $x + $w - $qrSize - 3;
-        $qrY = $y + ($h - $qrSize) / 2;
-        $qrStyle = [
-            "border" => false,
-            "vpadding" => 0,
-            "hpadding" => 0,
-            "fgcolor" => [0, 0, 0],
-            "bgcolor" => [255, 255, 255],
-            "module_width" => 1,
-            "module_height" => 1,
-        ];
-        $pdf->write2DBarcode($iti_url, "QRCODE,H", $qrX, $qrY, $qrSize, $qrSize, $qrStyle, "N");
-
-        // Linha separadora e link clicável abaixo do carimbo
-        $pdf->SetLineStyle(["width" => 0.1, "color" => [180, 180, 180]]);
-        $linkY = $y + $h + 1;
-        $pdf->SetFont("helvetica", "", 5.5);
-        $pdf->SetTextColor(30, 80, 180);
-        $pdf->SetXY($x, $linkY);
-        $pdf->Cell($w, $linkH, "Valide o documento: " . $iti_url, 0, 1, "C", false, $iti_url);
 
         $pdf->Output($outputPdfPath, "F");
         if (!file_exists($outputPdfPath)) {

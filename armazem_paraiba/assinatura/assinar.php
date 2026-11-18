@@ -500,8 +500,9 @@ $postPreservar = trim(strval($_POST["preservar_assinatura_existente"] ?? ""));
 $caminhoOrigRow = trim(strval($row["caminho_arquivo"] ?? ""));
 $origAbs = function_exists("assinatura_resolverArquivoAbs") ? assinatura_resolverArquivoAbs($caminhoOrigRow) : "";
 $origTemAssinatura = ($origAbs !== "" && file_exists($origAbs) && function_exists("assinatura_pdfTemAssinaturaDigital") && assinatura_pdfTemAssinaturaDigital($origAbs));
-$devePreservar = $origTemAssinatura || (strtolower(trim(strval($row["preservar_assinaturas"] ?? "nao"))) === "sim") || ($postPreservar === "1");
-$preservarDbVal = $devePreservar ? "sim" : "nao";
+$preservarConfig = (strtolower(trim(strval($row["preservar_assinaturas"] ?? "nao"))) === "sim") || ($postPreservar === "1");
+$devePreservar = ($preservarConfig && $origTemAssinatura);
+$preservarDbVal = (strtolower(trim(strval($row["preservar_assinaturas"] ?? "nao"))) === "sim") ? "sim" : "nao";
 $modoEnvio = strtolower(trim(strval($row["modo_envio"] ?? "")));
 
 $statusAss = strtolower(trim(strval($row["status"] ?? "")));
@@ -655,11 +656,6 @@ if (!$jaAssinado) {
 
     if (!move_uploaded_file(strval($arquivo["tmp_name"] ?? ""), $destAbs)) {
         jsonError("Falha ao salvar o arquivo no servidor.");
-    }
-
-    if (file_exists($destAbs) && function_exists("assinatura_pdfTemAssinaturaDigital") && assinatura_pdfTemAssinaturaDigital($destAbs)) {
-        $devePreservar = true;
-        $preservarDbVal = "sim";
     }
 
     $caminhoRel = "docAssinado/" . $fileName;
@@ -870,9 +866,12 @@ if (!$ultimo) {
         $warning = strval($resMarcas["error"]);
     }
 
-    // O ICP é aplicado quando a solicitação foi criada com validar_icp = sim
-    // ou quando devePreservar = true (preservação de assinaturas pré-existentes como Gov.br via Incremental pyHanko).
-    if (($validarIcp === "sim" || $devePreservar) && function_exists("assinatura_finalizar_documento_icp")) {
+    // Finalização e assinatura digital do documento conforme as 4 regras do módulo:
+    // - Regra 1 (sem ICP, sem preservar): FPDI descarta assinaturas anteriores e assina digitalmente sem carimbo ICP.
+    // - Regra 2 (com ICP, sem preservar): FPDI descarta assinaturas anteriores e assina digitalmente com carimbo ICP.
+    // - Regra 3 (sem ICP, com preservar): pyHanko preserva assinaturas anteriores e assina digitalmente sem folha ICP.
+    // - Regra 4 (com ICP, com preservar): pyHanko preserva assinaturas anteriores e assina digitalmente com folha ICP.
+    if (function_exists("assinatura_finalizar_documento_icp")) {
         $res = assinatura_finalizar_documento_icp($conn, $idSolicitacao, ["send_email" => false]);
         if (!empty($res["ok"]) && !empty($res["caminho_arquivo"])) {
             $caminhoFinal = strval($res["caminho_arquivo"]);

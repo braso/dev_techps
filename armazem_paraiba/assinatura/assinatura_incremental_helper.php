@@ -356,6 +356,10 @@ if (!function_exists('assinatura_executarAssinaturaIncremental')) {
         if ($marcasJson !== "" && $marcasJson !== "[]") {
             $cmd .= " --marcas-json " . escapeshellarg($marcasJson);
         }
+        $appendPage = trim(strval($opts["append_page"] ?? ""));
+        if ($appendPage !== "" && file_exists($appendPage)) {
+            $cmd .= " --append-page " . escapeshellarg($appendPage);
+        }
 
         $out = [];
         $exitCode = 1;
@@ -377,5 +381,235 @@ if (!function_exists('assinatura_executarAssinaturaIncremental')) {
             : ($saidaTexto !== "" ? $saidaTexto : "Falha na execução do processo de assinatura (código {$exitCode}).");
 
         return ["ok" => false, "error" => $erro];
+    }
+}
+
+if (!function_exists('assinatura_gerarFolhaComprovantesPdf')) {
+    /**
+     * Gera uma folha PDF avulsa contendo os Comprovantes de Assinatura Eletrônica,
+     * pronta para ser anexada ao documento final via append incremental do pyHanko.
+     *
+     * @param string $caminhoSaidaPdf Caminho do arquivo PDF temporário a ser gerado.
+     * @param array $dados Metadados do documento e signatário.
+     * @return bool True se o arquivo foi gerado com sucesso, false caso contrário.
+     */
+    function assinatura_gerarFolhaComprovantesPdf(string $caminhoSaidaPdf, array $dados): bool {
+        if (!class_exists('TCPDF')) {
+            $tcpdfVendor = __DIR__ . '/vendor/tecnickcom/tcpdf/tcpdf.php';
+            $tcpdfLegacy = dirname(__DIR__) . '/tcpdf/tcpdf.php';
+            if (file_exists($tcpdfVendor)) {
+                require_once $tcpdfVendor;
+            } elseif (file_exists($tcpdfLegacy)) {
+                require_once $tcpdfLegacy;
+            } else {
+                return false;
+            }
+        }
+
+        $docNome = trim(strval($dados['nome_documento'] ?? 'documento.pdf'));
+        $docId = trim(strval($dados['id_documento'] ?? ''));
+        $signerNome = trim(strval($dados['signer_name'] ?? 'Signatário'));
+        $signerCpf = trim(strval($dados['signer_cpf'] ?? ''));
+        $signerRg = trim(strval($dados['signer_rg'] ?? ''));
+        $signDate = trim(strval($dados['data_hora'] ?? date('d/m/Y H:i:s')));
+        $ip = trim(strval($dados['ip'] ?? '127.0.0.1'));
+        $hash = trim(strval($dados['hash'] ?? ''));
+        $userAgent = trim(strval($dados['user_agent'] ?? ''));
+        $rubricaPath = trim(strval($dados['rubrica_path'] ?? ''));
+
+        $pdf = new TCPDF('P', 'pt', 'A4', true, 'UTF-8', false);
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+        $pdf->SetMargins(36, 36, 36);
+        $pdf->SetAutoPageBreak(false);
+        $pdf->AddPage('P', [595.28, 841.89]);
+
+        $logoPath = __DIR__ . '/assets/logo.png';
+        if (file_exists($logoPath)) {
+            $pdf->Image($logoPath, 36, 30, 60, 0, 'PNG');
+        }
+
+        // Cabeçalho
+        $pdf->SetFont('helvetica', 'B', 12);
+        $pdf->SetTextColor(0, 0, 0);
+        $pdf->SetXY(file_exists($logoPath) ? 105 : 36, 36);
+        $pdf->Cell(0, 16, 'COMPROVANTES DE ASSINATURA ELETRÔNICA', 0, 1, 'L');
+
+        $pdf->SetFont('helvetica', '', 8.5);
+        $pdf->SetTextColor(30, 30, 30);
+        $pdf->SetXY(36, 60);
+        $pdf->Cell(0, 12, 'Documento: ' . substr($docNome, 0, 75), 0, 1, 'L');
+        $pdf->SetFont('helvetica', '', 7.5);
+        $pdf->SetTextColor(90, 90, 90);
+        $pdf->SetXY(36, 72);
+        $pdf->Cell(0, 12, 'ID: ' . ($docId !== '' ? 'DOC-' . $docId : 'N/A'), 0, 1, 'L');
+
+        $pdf->SetLineStyle(['width' => 0.5, 'color' => [200, 200, 200]]);
+        $pdf->Line(36, 88, 595.28 - 36, 88);
+
+        // Card do Signatário
+        $cardY = 98;
+        $cardW = 595.28 - 72;
+        $cardH = 125;
+        $pdf->SetFillColor(250, 250, 250);
+        $pdf->SetDrawColor(220, 220, 220);
+        $pdf->Rect(36, $cardY, $cardW, $cardH, 'DF');
+
+        $pdf->SetFont('helvetica', 'B', 9);
+        $pdf->SetTextColor(0, 0, 0);
+        $pdf->SetXY(46, $cardY + 8);
+        $pdf->Cell(0, 12, '1. ' . $signerNome . ' (Signatário)', 0, 1, 'L');
+
+        $pdf->SetFont('helvetica', '', 7.5);
+        $pdf->SetTextColor(50, 50, 50);
+        $cpfRgParts = [];
+        if ($signerCpf !== '') $cpfRgParts[] = 'CPF: ' . $signerCpf;
+        if ($signerRg !== '') $cpfRgParts[] = 'RG: ' . $signerRg;
+        $cpfRgParts[] = 'CPF/RG + rubrica';
+        $pdf->SetXY(46, $cardY + 24);
+        $pdf->Cell(0, 10, implode(' • ', $cpfRgParts), 0, 1, 'L');
+        $pdf->SetXY(46, $cardY + 36);
+        $pdf->Cell(0, 10, 'Data/Hora: ' . $signDate, 0, 1, 'L');
+        $pdf->SetXY(46, $cardY + 48);
+        $pdf->Cell(0, 10, 'IP: ' . $ip, 0, 1, 'L');
+        $pdf->SetXY(46, $cardY + 60);
+        $pdf->Cell(0, 10, 'Hash: ' . ($hash !== '' ? $hash : 'N/A'), 0, 1, 'L');
+
+        $pdf->SetFont('helvetica', 'I', 7);
+        $pdf->SetTextColor(100, 100, 100);
+        $pdf->SetXY(46, $cardY + 76);
+        $pdf->MultiCell($cardW - 160, 20, 'Declaração: O(s) signatário(s) declarou(aram) ter lido e concordado com o teor do documento. Validade jurídica assegurada pela MP nº 2.200-2/2001.', 0, 'L');
+
+        // Imagem da Rubrica dentro do card
+        if ($rubricaPath !== '' && file_exists($rubricaPath)) {
+            $rubricaBoxW = 135;
+            $rubricaBoxH = 95;
+            $rubricaBoxX = 36 + $cardW - $rubricaBoxW - 10;
+            $rubricaBoxY = $cardY + 10;
+            $pdf->SetFillColor(255, 255, 255);
+            $pdf->SetDrawColor(200, 200, 200);
+            $pdf->Rect($rubricaBoxX, $rubricaBoxY, $rubricaBoxW, $rubricaBoxH, 'DF');
+
+            $pdf->SetFont('helvetica', 'B', 6);
+            $pdf->SetTextColor(100, 100, 100);
+            $pdf->SetXY($rubricaBoxX + 6, $rubricaBoxY + 4);
+            $pdf->Cell(0, 8, 'RUBRICA', 0, 1, 'L');
+
+            @$pdf->Image($rubricaPath, $rubricaBoxX + 10, $rubricaBoxY + 12, $rubricaBoxW - 20, 45, '', '', '', false, 300, '', false, false, 0, 'CM');
+
+            $pdf->SetLineStyle(['width' => 0.5, 'color' => [210, 210, 210]]);
+            $pdf->Line($rubricaBoxX + 6, $rubricaBoxY + 62, $rubricaBoxX + $rubricaBoxW - 6, $rubricaBoxY + 62);
+
+            $pdf->SetFont('helvetica', 'B', 6.5);
+            $pdf->SetTextColor(30, 30, 30);
+            $pdf->SetXY($rubricaBoxX + 6, $rubricaBoxY + 65);
+            $pdf->Cell($rubricaBoxW - 12, 8, substr($signerNome, 0, 30), 0, 1, 'L');
+
+            $pdf->SetFont('helvetica', '', 6);
+            $pdf->SetTextColor(80, 80, 80);
+            $pdf->SetXY($rubricaBoxX + 6, $rubricaBoxY + 74);
+            $pdf->Cell($rubricaBoxW - 12, 7, 'CPF: ' . $signerCpf, 0, 1, 'L');
+            $pdf->SetXY($rubricaBoxX + 6, $rubricaBoxY + 82);
+            $pdf->Cell($rubricaBoxW - 12, 7, 'RG: ' . $signerRg, 0, 1, 'L');
+        }
+
+        // Rodapé
+        $pdf->SetLineStyle(['width' => 0.5, 'color' => [230, 230, 230]]);
+        $pdf->Line(36, 841.89 - 30, 595.28 - 36, 841.89 - 30);
+        $pdf->SetFont('helvetica', 'B', 7.5);
+        $pdf->SetTextColor(100, 100, 100);
+        $pdf->SetXY(36, 841.89 - 22);
+        $pdf->Cell(0, 10, 'TechPS - Tecnologia e Sistemas', 0, 1, 'L');
+        $pdf->SetFont('helvetica', '', 7.5);
+        $pdf->SetXY(200, 841.89 - 22);
+        $pdf->Cell(0, 10, 'Gerado em: ' . $signDate, 0, 1, 'L');
+
+        // === CARIMBO ICP-BRASIL NO CANTO INFERIOR DIREITO ===
+        // Conversão de mm para pt (1 mm = 72 / 25.4 pt) para manter as mesmas proporções do fluxo padrão
+        $mmToPt = 72.0 / 25.4;
+        $certSignerName = trim(strval($dados['cert_signer_name'] ?? 'TECH PS LTDA:42390531000188'));
+        $issuerName = trim(strval($dados['cert_issuer'] ?? 'AC SyngularID Multipla'));
+        $shortHash = trim(strval($dados['short_hash'] ?? (substr($hash, 0, 20) . '...')));
+        $verificationCode = trim(strval($dados['verification_code'] ?? strtoupper(substr(md5($docNome . $signDate . $docId), 0, 16))));
+
+        $iti_url = "https://validar.iti.gov.br/";
+        $qrSize = 24.0 * $mmToPt;
+        $w = 150.0 * $mmToPt;
+        $h = 36.0 * $mmToPt;
+        $margin = 10.0 * $mmToPt;
+        $linkH = 6.0 * $mmToPt;
+
+        $x = $pdf->getPageWidth() - $w - $margin;
+        $y = $pdf->getPageHeight() - $h - $linkH - $margin;
+
+        $pdf->SetAlpha(1);
+        $pdf->SetFillColor(255, 255, 255);
+        $pdf->SetLineStyle(["width" => 0.2 * $mmToPt, "cap" => "butt", "join" => "miter", "dash" => 0, "color" => [0, 0, 0]]);
+        $pdf->RoundedRect($x, $y, $w, $h, 2 * $mmToPt, "1111", "DF");
+
+        $icpLogo = __DIR__ . "/assets/icp.png";
+        if (file_exists($icpLogo)) {
+            $pdf->Image($icpLogo, $x + (2.0 * $mmToPt), $y + (4.0 * $mmToPt), 18.0 * $mmToPt, 0, "PNG");
+        }
+
+        $textX = $x + (30.0 * $mmToPt);
+        $textW = $w - (32.0 * $mmToPt) - $qrSize - (4.0 * $mmToPt);
+        $currentY = $y + (3.0 * $mmToPt);
+
+        $pdf->SetFont("helvetica", "B", 7);
+        $pdf->SetTextColor(0, 0, 0);
+        $pdf->SetXY($textX, $currentY);
+        $pdf->Cell(0, 0, "ASSINADO DIGITALMENTE", 0, 1, "L");
+
+        $currentY += 4.0 * $mmToPt;
+        $pdf->SetFont("helvetica", "B", 8);
+        $pdf->SetXY($textX, $currentY);
+        $pdf->Cell($textW, 0, substr(strtoupper(strval($certSignerName)), 0, 40), 0, 1, "L");
+
+        $currentY += 4.0 * $mmToPt;
+        $pdf->SetFont("helvetica", "", 6);
+        $pdf->SetXY($textX, $currentY);
+        $pdf->Cell($textW, 0, "Data: " . $signDate, 0, 1, "L");
+
+        $currentY += 3.0 * $mmToPt;
+        $pdf->SetXY($textX, $currentY);
+        $pdf->Cell($textW, 0, "Emissor: " . substr(strval($issuerName), 0, 45), 0, 1, "L");
+
+        $currentY += 3.0 * $mmToPt;
+        $pdf->SetXY($textX, $currentY);
+        $pdf->Cell($textW, 0, "Hash Doc: " . $shortHash, 0, 1, "L");
+
+        $currentY += 3.0 * $mmToPt;
+        $pdf->SetFont("helvetica", "B", 6);
+        $pdf->SetXY($textX, $currentY);
+        $pdf->Cell($textW, 0, "Cód. Verificação: " . $verificationCode, 0, 1, "L");
+
+        $pdf->SetFont("helvetica", "", 5);
+        $pdf->SetTextColor(80, 80, 80);
+        $pdf->SetXY($x + (2.0 * $mmToPt), $y + $h - (7.0 * $mmToPt));
+        $pdf->MultiCell($textW + (28.0 * $mmToPt), 8.0 * $mmToPt, "Documento assinado digitalmente conforme MP 2.200-2/2001 e Lei 14.063/2020.\nValidade jurídica assegurada.", 0, "L");
+
+        $qrX = $x + $w - $qrSize - (3.0 * $mmToPt);
+        $qrY = $y + ($h - $qrSize) / 2.0;
+        $qrStyle = [
+            "border" => false,
+            "vpadding" => 0,
+            "hpadding" => 0,
+            "fgcolor" => [0, 0, 0],
+            "bgcolor" => [255, 255, 255],
+            "module_width" => 1,
+            "module_height" => 1,
+        ];
+        $pdf->write2DBarcode($iti_url, "QRCODE,H", $qrX, $qrY, $qrSize, $qrSize, $qrStyle, "N");
+
+        $pdf->SetLineStyle(["width" => 0.1 * $mmToPt, "color" => [180, 180, 180]]);
+        $linkY = $y + $h + (1.0 * $mmToPt);
+        $pdf->SetFont("helvetica", "", 5.5);
+        $pdf->SetTextColor(30, 80, 180);
+        $pdf->SetXY($x, $linkY);
+        $pdf->Cell($w, $linkH, "Valide o documento: " . $iti_url, 0, 1, "C", false, $iti_url);
+
+        @$pdf->Output($caminhoSaidaPdf, 'F');
+        return file_exists($caminhoSaidaPdf) && filesize($caminhoSaidaPdf) > 0;
     }
 }
