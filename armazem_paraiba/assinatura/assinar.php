@@ -496,7 +496,8 @@ $emailSolicitacao = trim(strval($row["email_solicitacao"] ?? ""));
 $nomeArquivoOriginal = trim(strval($row["nome_arquivo_original"] ?? ""));
 $tipoDocumentoId = intval($row["tipo_documento_id"] ?? 0);
 $validarIcp = strtolower(trim(strval($row["validar_icp"] ?? "nao"))) === "sim" ? "sim" : "nao";
-$devePreservar = (strtolower(trim(strval($row["preservar_assinaturas"] ?? "nao"))) === "sim");
+$postPreservar = trim(strval($_POST["preservar_assinatura_existente"] ?? ""));
+$devePreservar = (strtolower(trim(strval($row["preservar_assinaturas"] ?? "nao"))) === "sim") || ($postPreservar === "1");
 $preservarDbVal = $devePreservar ? "sim" : "nao";
 $modoEnvio = strtolower(trim(strval($row["modo_envio"] ?? "")));
 
@@ -861,10 +862,9 @@ if (!$ultimo) {
         $warning = strval($resMarcas["error"]);
     }
 
-    // O ICP só é aplicado quando a solicitação foi criada com validar_icp = sim.
-    // O auto_sign do config_pfx.php serve apenas para usar o certificado configurado
-    // automaticamente nesse momento; não deve forçar ICP em assinaturas eletrônicas.
-    if ($validarIcp === "sim" && function_exists("assinatura_finalizar_documento_icp")) {
+    // O ICP é aplicado quando a solicitação foi criada com validar_icp = sim
+    // ou quando devePreservar = true (preservação de assinaturas pré-existentes como Gov.br via Incremental pyHanko).
+    if (($validarIcp === "sim" || $devePreservar) && function_exists("assinatura_finalizar_documento_icp")) {
         $res = assinatura_finalizar_documento_icp($conn, $idSolicitacao, ["send_email" => false]);
         if (!empty($res["ok"]) && !empty($res["caminho_arquivo"])) {
             $caminhoFinal = strval($res["caminho_arquivo"]);

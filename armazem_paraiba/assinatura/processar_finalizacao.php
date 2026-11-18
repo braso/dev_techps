@@ -310,6 +310,59 @@ function assinatura_finalizar_documento_icp($conn, int $idDocumento, array $opts
         if ($preservarAssinaturas && assinatura_pdfTemAssinaturaDigital($inputPdfPath)) {
             $dispInc = function_exists("assinatura_incrementalDisponivel") ? assinatura_incrementalDisponivel() : ["disponivel" => false];
             if (!empty($dispInc["disponivel"])) {
+                $signerName = "";
+                $signerCpf = "";
+                $signerRg = "";
+                $rubricaAbsPath = "";
+
+                // Busca dados do signatário (prioriza quem assinou mais recente / funcionário / aluno)
+                $stmtSigner = mysqli_prepare($conn, "SELECT nome, cpf, metadados, rubrica_path FROM assinantes WHERE id_solicitacao = ? AND LOWER(status) IN ('assinado', 'dispensado') ORDER BY id DESC LIMIT 1");
+                if ($stmtSigner) {
+                    mysqli_stmt_bind_param($stmtSigner, "i", $idDocumento);
+                    mysqli_stmt_execute($stmtSigner);
+                    $resSigner = mysqli_stmt_get_result($stmtSigner);
+                    if ($resSigner && ($rowSigner = mysqli_fetch_assoc($resSigner))) {
+                        $signerName = trim(strval($rowSigner["nome"] ?? ""));
+                        $signerCpf = trim(strval($rowSigner["cpf"] ?? ""));
+                        $rubRel = trim(strval($rowSigner["rubrica_path"] ?? ""));
+                        
+                        $meta = [];
+                        $metaRaw = strval($rowSigner["metadados"] ?? "");
+                        if ($metaRaw !== "") {
+                            $metaDec = @json_decode($metaRaw, true);
+                            if (is_array($metaDec)) {
+                                $meta = $metaDec;
+                            }
+                        }
+                        $signerRg = trim(strval($meta["rg"] ?? ""));
+                        if ($rubRel === "" && !empty($meta["rubrica_path"])) {
+                            $rubRel = trim(strval($meta["rubrica_path"]));
+                        }
+                        if ($rubRel !== "") {
+                            $rubCands = [
+                                $baseDir . "/" . ltrim(str_replace("\\", "/", $rubRel), "/"),
+                                __DIR__ . "/" . ltrim(str_replace("\\", "/", $rubRel), "/"),
+                                dirname(__DIR__) . "/" . ltrim(str_replace("\\", "/", $rubRel), "/")
+                            ];
+                            foreach ($rubCands as $rc) {
+                                if (file_exists($rc) && is_file($rc)) {
+                                    $rubricaAbsPath = $rc;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    mysqli_stmt_close($stmtSigner);
+                }
+
+                $marcasJson = "[]";
+                if (function_exists("assinaturaMarcas_listar")) {
+                    $marcasList = assinaturaMarcas_listar($conn, $idDocumento);
+                    if (!empty($marcasList)) {
+                        $marcasJson = json_encode($marcasList, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    }
+                }
+
                 // FLUXO INCREMENTAL PAdES (Preserva assinaturas digitais pré-existentes como Gov.br / ICP):
                 $resInc = assinatura_executarAssinaturaIncremental(
                     $inputPdfPath,
@@ -318,7 +371,12 @@ function assinatura_finalizar_documento_icp($conn, int $idDocumento, array $opts
                     $pfxPasswordToUse,
                     [
                         "id_documento" => $idDocumento,
-                        "url" => "https://validar.iti.gov.br/"
+                        "url" => "https://validar.iti.gov.br/",
+                        "signer_name" => $signerName,
+                        "signer_cpf" => $signerCpf,
+                        "signer_rg" => $signerRg,
+                        "rubrica_path" => $rubricaAbsPath,
+                        "marcas_json" => $marcasJson
                     ]
                 );
 
