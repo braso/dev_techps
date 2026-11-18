@@ -89,7 +89,8 @@ def assinar_pdf_incremental(
     signer_cpf: str = "",
     signer_rg: str = "",
     rubrica_path: str = "",
-    marcas_json: str = ""
+    marcas_json: str = "",
+    append_page: str = ""
 ) -> dict:
     if not os.path.isfile(input_path):
         return {"ok": False, "error": f"Arquivo de entrada não encontrado: {input_path}"}
@@ -130,8 +131,54 @@ def assinar_pdf_incremental(
             target_idx = None
             sig_box = None
 
-            # 1. Posições definidas pelas marcas (se existirem)
-            if marcas_json:
+            # Anexa folha de comprovantes/auditoria se fornecida
+            if append_page and os.path.isfile(append_page):
+                try:
+                    from pyhanko.pdf_utils.reader import PdfFileReader
+                    from pyhanko.pdf_utils import generic
+                    audit_reader = PdfFileReader(open(append_page, "rb"), strict=False)
+                    xobj_ref = w.import_page_as_xobject(audit_reader, page_ix=0)
+
+                    audit_p0 = audit_reader.root['/Pages']['/Kids'][0].get_object()
+                    mb = audit_p0.get('/MediaBox', None)
+                    if mb is None:
+                        mb = generic.ArrayObject([
+                            generic.FloatObject(0), generic.FloatObject(0),
+                            generic.FloatObject(595.28), generic.FloatObject(841.89)
+                        ])
+
+                    content_ref = w.add_object(generic.StreamObject(stream_data=b'q /Audit Do Q'))
+                    new_page = generic.DictionaryObject({
+                        generic.pdf_name('/Type'): generic.pdf_name('/Page'),
+                        generic.pdf_name('/MediaBox'): mb,
+                        generic.pdf_name('/Resources'): generic.DictionaryObject({
+                            generic.pdf_name('/XObject'): generic.DictionaryObject({
+                                generic.pdf_name('/Audit'): xobj_ref
+                            })
+                        }),
+                        generic.pdf_name('/Contents'): content_ref
+                    })
+                    w.insert_page(new_page)
+
+                    orig_count = page_count
+                    page_count = orig_count + 1
+                    target_idx = orig_count
+
+                    pw_a = float(mb[2]) - float(mb[0])
+                    stamp_w = 195
+                    stamp_h = 55
+                    x1 = max(10, pw_a - stamp_w - 20)
+                    x2 = max(x1 + stamp_w, pw_a - 20)
+                    y1 = 18
+                    y2 = y1 + stamp_h
+                    sig_box = (x1, y1, x2, y2)
+                    # A página anexada já possui o carimbo visual oficial renderizado pelo TCPDF
+                    visible_stamp = False
+                except Exception:
+                    pass
+
+            # 1. Posições definidas pelas marcas (se existirem e não houver folha anexada)
+            if marcas_json and target_idx is None:
                 try:
                     marcas_list = json.loads(marcas_json)
                     if isinstance(marcas_list, list) and len(marcas_list) > 0:
@@ -333,6 +380,7 @@ def main():
     parser.add_argument("--signer-rg", default="", help="RG do signatário")
     parser.add_argument("--rubrica", default="", help="Caminho da imagem de rubrica")
     parser.add_argument("--marcas-json", default="", help="JSON de marcas e coordenadas")
+    parser.add_argument("--append-page", default="", help="Caminho do PDF com folha de comprovantes a anexar")
 
     args = parser.parse_args()
 
@@ -349,7 +397,8 @@ def main():
         signer_cpf=args.signer_cpf,
         signer_rg=args.signer_rg,
         rubrica_path=args.rubrica,
-        marcas_json=args.marcas_json
+        marcas_json=args.marcas_json,
+        append_page=args.append_page
     )
 
     print(json.dumps(res, ensure_ascii=False))

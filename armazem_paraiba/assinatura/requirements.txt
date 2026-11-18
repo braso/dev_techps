@@ -1,0 +1,11 @@
+# Dependências do Módulo de Assinatura Digital e Co-Assinatura Incremental (PAdES / pyHanko)
+# Compatível com Python 3.8+ (Recomendado: Python 3.10 no CloudLinux / cPanel)
+#
+# Comando para instalar no servidor (usuário sem root / cPanel):
+# /opt/alt/python310/bin/python3 -m pip install --user -r requirements.txt
+
+pyHanko[image-support]>=0.20.0
+pyhanko-certvalidator>=0.24.0
+cryptography>=3.4.0
+qrcode>=7.0
+Pillow>=9.0.0
