@@ -23,8 +23,24 @@ function ia_sessao(string $nivel, int $userId): void {
     $_SESSION['domain'] = '/braso/armazem_paraiba';
 }
 
+$adminId = (int)(ia_db_val(
+    "SELECT user_nb_id FROM user
+      WHERE user_tx_status='ativo' AND user_tx_nivel LIKE '%Administrador%'
+      ORDER BY (user_tx_nivel='Super Administrador') DESC, user_nb_id ASC LIMIT 1"
+) ?? 0);
+$funcId = (int)(ia_db_val(
+    "SELECT u.user_nb_id FROM user u
+       JOIN usuario_perfil up ON up.user_nb_id=u.user_nb_id AND up.ativo=1
+      WHERE u.user_tx_status='ativo' AND u.user_tx_nivel='Funcionário' AND up.perfil_nb_id=2
+      ORDER BY u.user_nb_id ASC LIMIT 1"
+) ?? 0);
+if ($adminId <= 0 || $funcId <= 0) {
+    echo "FAIL: admin ou funcionário de teste não encontrado.\n";
+    exit(1);
+}
+
 // Administrador: vê a FAQ administrativa.
-ia_sessao('Super Administrador', 138);
+ia_sessao('Super Administrador', $adminId);
 $telasAdmin = ia_telas_permitidas();
 $faqAdmin = ia_busca_faq('Como cadastrar um funcionário?', null);
 ia_check('admin encontra FAQ de cadastro', $faqAdmin !== null);
@@ -36,7 +52,7 @@ if ($faqAdmin) {
 }
 
 // Funcionário: não vê a FAQ administrativa.
-ia_sessao('Funcionário', 206);
+ia_sessao('Funcionário', $funcId);
 $telasFunc = ia_telas_permitidas();
 $faqFunc = ia_busca_faq('Como cadastrar um funcionário?', null);
 ia_check('funcionário encontra a pergunta, mas ela é restrita', $faqFunc !== null && !ia_pode_ver_chunk([

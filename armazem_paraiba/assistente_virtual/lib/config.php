@@ -98,7 +98,8 @@ if (!function_exists('ia_pode_usar')) {
      * Acesso ao assistente controlado pelo perfil de acesso.
      * Em beta, não há liberação automática por nível operacional: o perfil
      * precisa ter o item "Assistente Virtual" marcado em Cadastro de Perfil
-     * de Acesso. Administradores e Super Administradores têm acesso direto.
+     * de Acesso. O Super Administrador sempre tem acesso; a visibilidade do
+     * widget é controlada por ia_pode_ver_assistente().
      */
     function ia_pode_usar(): bool {
         if (ia_is_admin()) {
@@ -106,6 +107,20 @@ if (!function_exists('ia_pode_usar')) {
         }
         return function_exists('usuarioPodeAcessar')
             && usuarioPodeAcessar('/assistente_virtual/index.php');
+    }
+}
+
+if (!function_exists('ia_pode_ver_assistente')) {
+    /**
+     * Visibilidade do chat. O Super Administrador sempre vê, porque não tem
+     * perfil de acesso para marcar o item. Os demais precisam do flag do
+     * tenant e da permissão no perfil.
+     */
+    function ia_pode_ver_assistente(): bool {
+        if (function_exists('ehSuperAdmin') && ehSuperAdmin()) {
+            return true;
+        }
+        return ia_env('ASSISTENTE_ENABLED', '0') === '1' && ia_pode_usar();
     }
 }
 
@@ -275,7 +290,7 @@ if (!function_exists('ia_settings')) {
         $isSuper = (function_exists('ehSuperAdmin') && ehSuperAdmin()) || ia_is_admin();
         return [
             'enabled' => $isSuper || ia_env('ASSISTENTE_ENABLED', '0') === '1',
-            'provider' => ia_env('ASSISTENTE_PROVIDER', 'ollama'),
+            'provider' => strtolower(ia_env('ASSISTENTE_PROVIDER', 'ollama')),
             'model' => ia_env('ASSISTENTE_MODEL', 'qwen2.5:1.5b'),
             'model_complex' => ia_env('ASSISTENTE_MODEL_COMPLEX', 'qwen2.5:3b'),
             'router' => ia_env('ASSISTENTE_ROUTER', '1') === '1',
@@ -293,5 +308,12 @@ if (!function_exists('ia_settings')) {
             'num_thread' => max(0, (int)ia_env('ASSISTENTE_NUM_THREAD', '0')),
             'keep_alive' => ia_env('ASSISTENTE_KEEP_ALIVE', '30m'),
         ];
+    }
+}
+
+if (!function_exists('ia_llm_ativo')) {
+    /** Ollama é opcional. Em "extrativo" o assistente usa FAQ + trechos da base. */
+    function ia_llm_ativo(): bool {
+        return (ia_settings()['provider'] ?? 'ollama') === 'ollama';
     }
 }

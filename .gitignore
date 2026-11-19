@@ -49,8 +49,9 @@ PLANOS_DE_DESENVOLVIMENTO.md
 docs/pop/
 
 # Assistente virtual: plano e artefatos locais (nao versionar)
+# O manual_espelho_ponto.md é versionado de propósito: é a fonte de fallback
+# da ingestão em produção quando o DOCX não pode ser lido no servidor.
 /armazem_paraiba/assistente_virtual/PLANO_ASSISTENTE_VIRTUAL.md
-/armazem_paraiba/assistente_virtual/knowledge/manual_espelho_ponto.md
 /armazem_paraiba/assistente_virtual/uploads/*
 !/armazem_paraiba/assistente_virtual/uploads/.htaccess
 /armazem_paraiba/assistente_virtual/testes/criar_sessao*.php

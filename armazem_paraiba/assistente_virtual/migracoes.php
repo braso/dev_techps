@@ -274,12 +274,32 @@ if (!function_exists('ia_migrar_menu')) {
         // Fase beta: acesso explícito por perfil. Administradores recebem os
         // dois itens; os demais perfis ficam sem acesso até o administrador
         // marcar "Assistente Virtual" em Cadastro de Perfil de Acesso.
+        //
+        // O nome do perfil varia por tenant ("Administrador", "ADM - Gerência",
+        // "TI"...). Por isso a liberação considera também os usuários ativos
+        // com nível administrativo, não apenas o nome do perfil.
+        $perfisAdmin = [];
+        $rsAdmins = @mysqli_query(
+            $conn,
+            "SELECT DISTINCT up.perfil_nb_id
+               FROM user u
+               JOIN usuario_perfil up ON up.user_nb_id = u.user_nb_id AND up.ativo = 1
+              WHERE u.user_tx_status = 'ativo'
+                AND (u.user_tx_nivel LIKE '%Administrador%' OR u.user_tx_nivel LIKE '%Super%')"
+        );
+        if ($rsAdmins instanceof mysqli_result) {
+            while ($a = mysqli_fetch_assoc($rsAdmins)) {
+                $perfisAdmin[(int)($a['perfil_nb_id'] ?? 0)] = true;
+            }
+        }
+
         $rsPerfis = @mysqli_query($conn, "SELECT perfil_nb_id, perfil_tx_nome FROM perfil_acesso");
         if ($rsPerfis instanceof mysqli_result) {
             while ($p = mysqli_fetch_assoc($rsPerfis)) {
                 $perfilId = (int)($p['perfil_nb_id'] ?? 0);
                 $nome = strval($p['perfil_tx_nome'] ?? '');
-                $isAdmin = stripos($nome, 'Administrador') !== false;
+                $isAdmin = isset($perfisAdmin[$perfilId])
+                    || stripos($nome, 'Administrador') !== false;
                 if ($isAdmin) {
                     ia_menu_liberar_perfil($conn, $perfilId, $menuIndex);
                     ia_menu_liberar_perfil($conn, $perfilId, $menuAdmin);
@@ -289,7 +309,7 @@ if (!function_exists('ia_migrar_menu')) {
                 }
             }
         }
-        ia_meta_gravar($conn, 'menu_version', '2');
+        ia_meta_gravar($conn, 'menu_version', '3');
     }
 }
 
