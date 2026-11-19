@@ -41,7 +41,7 @@ if (!function_exists('ia_ollama_chat')) {
     function ia_ollama_chat(array $mensagens, bool $stream = false, ?callable $onDelta = null, ?string $modelo = null): array {
         $s = ia_settings();
         if (($s['provider'] ?? 'ollama') !== 'ollama') {
-            return ['ok' => false, 'erro' => 'Provedor não suportado nesta versão: ' . $s['provider'], 'http' => 0];
+            return ['ok' => false, 'erro' => 'Modo sem LLM ativo (ASSISTENTE_PROVIDER=' . $s['provider'] . ').', 'http' => 0];
         }
         $modelo = ($modelo !== null && trim($modelo) !== '') ? trim($modelo) : $s['model'];
         $url = ia_ollama_base() . '/api/chat';
@@ -124,6 +124,9 @@ if (!function_exists('ia_ollama_chat')) {
 
 if (!function_exists('ia_ollama_modelos')) {
     function ia_ollama_modelos(): array {
+        if (!ia_llm_ativo()) {
+            return [];
+        }
         $url = ia_ollama_base() . '/api/tags';
         $ch = curl_init($url);
         curl_setopt_array($ch, [
@@ -156,6 +159,18 @@ if (!function_exists('ia_gerar_resposta')) {
         $modelo = ia_escolher_modelo($pergunta);
         $fontes = ia_fontes($chunks);
         if (empty($chunks)) {
+            if (function_exists('ia_base_vazia') && ia_base_vazia()) {
+                return [
+                    'ok' => true,
+                    'resposta' => "A base de conhecimento do sistema está sendo atualizada. Tente novamente em alguns instantes. Se persistir, abra um chamado de suporte.",
+                    'modo' => 'base_vazia',
+                    'fontes' => [],
+                    'tokens_entrada' => 0,
+                    'tokens_saida' => 0,
+                    'latencia_ms' => (int)round((microtime(true) - $inicio) * 1000),
+                    'modelo' => $modelo,
+                ];
+            }
             return [
                 'ok' => true,
                 'resposta' => "Não encontrei essa informação no manual do sistema. Posso abrir um chamado de suporte para você?",
@@ -181,6 +196,20 @@ if (!function_exists('ia_gerar_resposta')) {
                 'tokens_saida' => 0,
                 'latencia_ms' => (int)round((microtime(true) - $inicio) * 1000),
                 'modelo' => $modelo,
+            ];
+        }
+
+        if (!ia_llm_ativo()) {
+            return [
+                'ok' => true,
+                'resposta' => ia_resposta_extrativa($chunks, $pergunta),
+                'modo' => 'extrativo',
+                'fontes' => $fontes,
+                'tokens_entrada' => 0,
+                'tokens_saida' => 0,
+                'latencia_ms' => (int)round((microtime(true) - $inicio) * 1000),
+                'modelo' => 'extrativo',
+                'aviso' => 'Modo sem LLM: resposta extraída da base.',
             ];
         }
 

@@ -82,6 +82,48 @@ php ingestao.php --limpar-retencao
 
 A ingestão é idempotente por hash: o mesmo conteúdo não é duplicado. Quando um documento muda, a versão antiga é desativada e a nova entra.
 
+### Recuperação da base
+
+A consulta em tempo de execução é feita nas tabelas MySQL `ia_documento`, `ia_chunk` e `ia_faq`. O `knowledge/manual_espelho_ponto.md` é apenas a fonte usada na ingestão; ele não é lido a cada pergunta.
+
+Se o banco for restaurado de um backup anterior à ingestão, essas três tabelas voltam vazias e o assistente passa a responder “não encontrei”. Nesse caso:
+
+1. Acesse o assistente ou o painel admin. Na primeira requisição, o módulo detecta a base vazia e reindexa automaticamente a partir dos arquivos locais.
+2. Se preferir forçar, rode `php armazem_paraiba/assistente_virtual/ingestao.php --all`.
+3. Confira com `php armazem_paraiba/assistente_virtual/ingestao.php --status`.
+
+Evite `--reset` sem rodar a ingestão em seguida: ele limpa as tabelas antes de reconstruir. O painel admin também mostra um aviso quando a base está vazia.
+
+## Deploy em produção (multi-tenant)
+
+Cada cliente tem uma pasta e um banco MySQL próprios. O código é o mesmo, mas a migração e a ingestão rodam **dentro da pasta de cada cliente**, usando o ambiente efetivo daquele tenant. Não existe uma base central.
+
+1. Publique o código normalmente pelo `.cpanel.yml`. Ele copia `armazem_paraiba/*` para cada pasta de cliente.
+2. Confira no **ambiente efetivo** de cada cliente (`TECHPS_ENV_FILE`, `techps.env` fora do `public_html` ou `.env` da pasta):
+   ```ini
+   ASSISTENTE_ENABLED = 1
+   ASSISTENTE_PROVIDER = extrativo
+   ```
+   Com `extrativo`, não é preciso Ollama nem modelos. Se um dia quiser usar o LLM local:
+   ```ini
+   ASSISTENTE_PROVIDER = ollama
+   ASSISTENTE_OLLAMA_URL = http://127.0.0.1:11434
+   ```
+   e mantenha o Ollama rodando com os modelos `qwen2.5:1.5b` e `qwen2.5:3b`.
+   Enquanto `ASSISTENTE_ENABLED = 0`, o widget não aparece para os usuários; o **Super Administrador sempre vê**, porque não tem perfil de acesso para marcar o item. Para liberar um beta tester não-admin, defina `1` no ambiente efetivo daquele tenant e marque o perfil dele em **Cadastros > Perfil de Acesso > Assistente Virtual**.
+3. Depois do deploy, na raiz do deploy (`/home/tech1694/public_html/gestaodeponto`), rode uma vez o script que percorre os tenants:
+   ```bash
+   bash deploy_assistente_tenants.sh
+   # ou somente quem já está com ASSISTENTE_ENABLED=1:
+   bash deploy_assistente_tenants.sh --enabled-only
+   ```
+   Ele entra em cada pasta, roda `migrar.php` e `ingestao.php --all`, e grava o log em `~/deploy_assistente.log`.
+4. Se preferir não rodar o script, o primeiro acesso ao assistente em cada tenant já cria as tabelas e reconstrói a base automaticamente. O script só evita a primeira requisição lenta e mostra erros por cliente.
+
+O `knowledge/manual_espelho_ponto.md` é versionado de propósito: se o servidor não conseguir ler o DOCX, a ingestão usa esse espelho. O DOCX oficial continua em `docs/` e é a fonte preferencial.
+
+Para liberar os beta testers em cada tenant: **Cadastros > Perfil de Acesso > Assistente Virtual**. O Super Administrador sempre vê o assistente. A migração libera o item de menu para os perfis que têm usuários de nível Administrador/Super Administrador; os demais perfis precisam ser marcados manualmente.
+
 ### Cron de retenção
 
 Para aplicar a retenção de conversas e logs, agende no cPanel:
@@ -99,7 +141,7 @@ A migração registra:
 - `/assistente_virtual/index.php` — **Assistente Virtual** (acesso beta controlado por perfil).
 - `/assistente_virtual/admin.php` — **Base de Conhecimento (IA)** (perfis administrativos).
 
-**Beta:** o acesso ao chat é controlado em **Cadastros > Perfil de Acesso > Assistente Virtual**. Administradores e Super Administradores têm acesso automático; os demais perfis precisam ser liberados individualmente. Não há liberação automática por nível operacional. O conteúdo continua filtrado por `menu_path` e `chk_tx_perfis`; uma rotina administrativa não é respondida para um funcionário.
+**Beta:** o Super Administrador sempre vê o assistente, pois não possui perfil de acesso para marcar o item. Para os demais usuários, o widget só aparece com `ASSISTENTE_ENABLED=1` e o item **Assistente Virtual** marcado no perfil. Não há liberação automática por nível operacional. O conteúdo continua filtrado por `menu_path` e `chk_tx_perfis`; uma rotina administrativa não é respondida para um funcionário.
 
 Quando o **CRM - TECHPS** também está ativo, o botão do assistente fica ao lado do botão do WhatsApp, sem sobrepor os ícones. O painel do assistente abre acima dos dois botões.
 
@@ -113,6 +155,28 @@ Quando o **CRM - TECHPS** também está ativo, o botão do assistente fica ao la
 6. Se houver base, monta o contexto e chama o Ollama local com streaming.
 7. A interface exibe as fontes (documento, seção e caminho da tela).
 
+## FAQs e modo sem Ollama
+
+As FAQs aprovadas ficam na tabela **`ia_faq`** do banco de cada tenant. O arquivo `knowledge/faq_seed.md` é a carga inicial; o admin pode criar, editar e desativar FAQs em **Base de Conhecimento (IA)**. A resposta por FAQ é determinística: se a pergunta do usuário for suficientemente próxima, o assistente devolve o texto aprovado, sem passar pelo LLM. As FAQs também são indexadas em `ia_documento`/`ia_chunk` para a busca geral.
+
+O Ollama é opcional. Para operar sem LLM:
+
+```ini
+ASSISTENTE_PROVIDER = extrativo
+```
+
+Em produção, defina isso no **arquivo de ambiente efetivo do tenant**: `TECHPS_ENV_FILE`, `techps.env` fora do `public_html` ou o `.env` da pasta do cliente (nessa ordem de busca do `load_env.php`).
+
+Nesse modo:
+
+- Perguntas com FAQ aprovada recebem a resposta literal.
+- As demais perguntas retornam os trechos mais relevantes do manual/documentação, com as fontes.
+- Não há geração de texto por IA; as respostas são mais literais e podem ser mais longas.
+- O painel admin mostra **Determinística (sem LLM)** e não tenta conectar no Ollama.
+- Nenhuma chamada externa é feita.
+
+É o modo indicado quando o servidor não tem GPU/RAM para o Ollama ou quando o cliente não quer instalar o modelo.
+
 ## Desempenho
 
 - **FAQ aprovada:** resposta instantânea, sem LLM.
@@ -123,7 +187,7 @@ Quando o **CRM - TECHPS** também está ativo, o botão do assistente fica ao la
 - No admin, o card **Ollama** mostra **Conectado/Desconectado** e o botão **Testar conexão com o Ollama** mede a latência.
 - Para produção, o caminho é GPU + 7B/14B.
 
-**Base inicial:** 26 documentos, 298 trechos e 28 FAQs.
+**Base inicial:** 27 documentos, 305 trechos e 28 FAQs.
 
 ## Segurança
 

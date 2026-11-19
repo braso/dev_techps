@@ -48,7 +48,7 @@ if (isset($conn) && $conn instanceof mysqli) {
     if (!$schemaOk) {
         ia_criar_tabelas($conn);
     }
-    if (ia_meta_ler($conn, 'menu_version') !== '2') {
+    if (ia_meta_ler($conn, 'menu_version') !== '3') {
         ia_migrar_menu($conn);
     }
 }
@@ -61,6 +61,13 @@ require_once __DIR__ . '/lib/ingest.php';
 require_once __DIR__ . '/lib/retrieval.php';
 require_once __DIR__ . '/lib/provider.php';
 require_once __DIR__ . '/lib/audit.php';
+
+// Se a base foi zerada por uma restauração de backup/reset, reconstrói a
+// partir das fontes locais antes de atender a requisição. Em CLI a ingestão
+// é sempre explícita (ingestao.php), então não roda aqui.
+if (PHP_SAPI !== 'cli' && function_exists('ia_garantir_base')) {
+    ia_garantir_base();
+}
 
 if (PHP_SAPI !== 'cli' && !headers_sent()) {
     header('X-Content-Type-Options: nosniff');

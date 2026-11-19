@@ -119,8 +119,9 @@ $cobertura = ia_relatorio_cobertura();
 $docs = ia_db_all("SELECT * FROM ia_documento ORDER BY doc_nb_id DESC LIMIT 100");
 $faqs = ia_db_all("SELECT * FROM ia_faq WHERE faq_tx_status='ativo' ORDER BY faq_nb_id DESC LIMIT 100");
 $semResposta = ia_perguntas_sem_resposta(15);
-$modelos = ia_ollama_modelos();
 $config = ia_settings();
+$modoLlm = (($config['provider'] ?? 'ollama') === 'ollama');
+$modelos = $modoLlm ? ia_ollama_modelos() : [];
 $modeloAtivo = in_array($config['model'], $modelos, true);
 $modeloComplexoAtivo = in_array($config['model_complex'], $modelos, true);
 
@@ -138,14 +139,24 @@ cabecalho('Base de Conhecimento (IA)');
     </div>
 
     <div class="ia-aviso">
-        <strong>Beta:</strong> o acesso ao chat é controlado em <strong>Cadastros &gt; Perfil de Acesso &gt; Assistente Virtual</strong>. Administradores e Super Administradores têm acesso automático; os demais perfis precisam ser liberados individualmente.
+        <strong>Beta:</strong> o Super Administrador sempre vê o assistente, pois não possui perfil de acesso para marcar o item. Para os demais usuários, o widget só aparece com <code>ASSISTENTE_ENABLED=1</code>; perfis não administrativos também precisam do item <strong>Assistente Virtual</strong> em <strong>Cadastros &gt; Perfil de Acesso</strong>.
     </div>
+
+    <?php if ((int)$stats['chunks'] === 0): ?>
+        <div class="ia-aviso ia-erro">
+            <strong>Base vazia:</strong> não há trechos indexados. Isso acontece quando o banco é restaurado de um backup anterior à ingestão. Clique em <strong>Reindexar manual + docs + menu</strong> abaixo; o assistente também tenta reconstruir automaticamente ao receber uma pergunta.
+        </div>
+    <?php endif; ?>
 
     <?php if ($msg !== ''): ?>
         <div class="ia-aviso <?= $msgTipo === 'erro' ? 'ia-erro' : '' ?>"><?= ia_e($msg) ?></div>
     <?php endif; ?>
 
-    <?php if (empty($modelos)): ?>
+    <?php if (!$modoLlm): ?>
+        <div class="ia-aviso">
+            <strong>Modo sem LLM ativo.</strong> O assistente responde com as FAQs aprovadas e com os trechos mais relevantes da base. Não há geração de texto por IA nem chamada ao Ollama.
+        </div>
+    <?php elseif (empty($modelos)): ?>
         <div class="ia-aviso ia-erro">
             O Ollama não respondeu em <strong><?= ia_e($config['ollama_url']) ?></strong>. Verifique se o serviço está rodando e se o modelo <code><?= ia_e($config['model']) ?></code> foi baixado.
         </div>
@@ -167,21 +178,23 @@ cabecalho('Base de Conhecimento (IA)');
         <div class="ia-card"><span>Sem resposta hoje</span><strong><?= (int)$stats['sem_resposta'] ?></strong></div>
         <div class="ia-card"><span>Feedback 👍 / 👎</span><strong><?= (int)$stats['feedback_positivo'] ?> / <?= (int)$stats['feedback_negativo'] ?></strong></div>
         <div class="ia-card">
-            <span>Ollama</span>
-            <strong style="font-size:16px;color:<?= empty($modelos) ? '#a33' : ($modeloAtivo ? '#1f7a53' : '#7a5a12') ?>;">
-                <?= empty($modelos) ? 'Desconectado' : ($modeloAtivo ? 'Conectado' : 'Modelo ausente') ?>
+            <span>Geração</span>
+            <strong style="font-size:16px;color:<?= !$modoLlm ? '#1f7a53' : (empty($modelos) ? '#a33' : ($modeloAtivo ? '#1f7a53' : '#7a5a12')) ?>;">
+                <?= !$modoLlm ? 'Determinística (sem LLM)' : (empty($modelos) ? 'Ollama desconectado' : ($modeloAtivo ? 'Ollama conectado' : 'Modelo ausente')) ?>
             </strong>
             <small class="ia-muted">
-                <?= ia_e($config['model']) ?><?= !empty($config['router']) ? ' • complexo: ' . ia_e($config['model_complex']) . ($modeloComplexoAtivo ? ' ✓' : ' (ausente)') : '' ?>
+                <?= !$modoLlm ? 'FAQ + trechos da base' : ia_e($config['model']) . (!empty($config['router']) ? ' • complexo: ' . ia_e($config['model_complex']) . ($modeloComplexoAtivo ? ' ✓' : ' (ausente)') : '') ?>
             </small>
         </div>
     </div>
 
-    <form method="post" style="margin-bottom:14px;">
-        <input type="hidden" name="csrf" value="<?= ia_e(ia_csrf_token()) ?>">
-        <input type="hidden" name="ia_acao" value="testar_ollama">
-        <button class="ia-btn" type="submit"><i class="fa fa-plug"></i> Testar conexão com o Ollama</button>
-    </form>
+    <?php if ($modoLlm): ?>
+        <form method="post" style="margin-bottom:14px;">
+            <input type="hidden" name="csrf" value="<?= ia_e(ia_csrf_token()) ?>">
+            <input type="hidden" name="ia_acao" value="testar_ollama">
+            <button class="ia-btn" type="submit"><i class="fa fa-plug"></i> Testar conexão com o Ollama</button>
+        </form>
+    <?php endif; ?>
 
     <div class="ia-tabs">
         <button type="button" class="ia-tab ia-ativo" data-tab="visao">Visão geral</button>

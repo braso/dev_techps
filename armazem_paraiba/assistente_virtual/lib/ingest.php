@@ -562,6 +562,57 @@ if (!function_exists('ia_reindexar_tudo')) {
     }
 }
 
+if (!function_exists('ia_base_vazia')) {
+    /**
+     * Verdadeiro quando não há nenhum trecho ativo nem FAQ ativa.
+     * Uma restauração de backup anterior à ingestão zera as tabelas ia_*;
+     * nesse estado o assistente não tem o que recuperar.
+     */
+    function ia_base_vazia(): bool {
+        $chunks = (int)(ia_db_val("SELECT COUNT(*) FROM ia_chunk WHERE chk_bl_ativo=1") ?? 0);
+        if ($chunks > 0) {
+            return false;
+        }
+        $faqs = (int)(ia_db_val("SELECT COUNT(*) FROM ia_faq WHERE faq_tx_status='ativo'") ?? 0);
+        return $faqs === 0;
+    }
+}
+
+if (!function_exists('ia_garantir_base')) {
+    /**
+     * Auto-recuperação da base. Se as tabelas foram zeradas por restauração
+     * de backup/reset, reindexa a partir dos arquivos locais (manual MD/DOCX,
+     * documentação, mapa de telas e FAQ). O cooldown evita tentar de novo a
+     * cada requisição quando a fonte estiver indisponível.
+     */
+    function ia_garantir_base(int $cooldownMin = 10): bool {
+        if (!ia_base_vazia()) {
+            return false;
+        }
+        global $conn;
+        if (!($conn instanceof mysqli)) {
+            return false;
+        }
+
+        $ultima = ia_meta_ler($conn, 'auto_reindex_at');
+        if ($ultima) {
+            $ts = strtotime($ultima);
+            if ($ts !== false && (time() - $ts) < $cooldownMin * 60) {
+                return false;
+            }
+        }
+
+        // Marca antes de executar para impedir que requisições concorrentes
+        // disparem a mesma ingestão ao mesmo tempo.
+        ia_meta_gravar($conn, 'auto_reindex_at', date('Y-m-d H:i:s'));
+        $r = ia_reindexar_tudo(false);
+        $ok = !empty($r['manual']['ok']) || !empty($r['faq']['documento']['ok']);
+        ia_meta_gravar($conn, 'auto_reindex_result', json_encode($r, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        error_log('[assistente][auto-reindex] ' . ($ok ? 'ok' : 'falha') . ' ' . json_encode($r, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        return $ok;
+    }
+}
+
 if (!function_exists('ia_resetar_base')) {
     function ia_resetar_base(): void {
         ia_db_query("DELETE FROM ia_chunk");

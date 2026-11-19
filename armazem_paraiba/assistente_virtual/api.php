@@ -12,7 +12,7 @@ ini_set('log_errors', '1');
 
 require_once __DIR__ . '/bootstrap.php';
 
-if (!function_exists('usuarioPodeAcessar') || !ia_pode_usar()) {
+if (!ia_pode_ver_assistente()) {
     ia_json_out(['ok' => false, 'erro' => 'Sem permissão para usar o assistente.'], 403);
 }
 
@@ -220,7 +220,7 @@ if ($stream) {
         ia_sse_delta($delta);
     };
     $r = ia_gerar_resposta($pergunta, $chunks, $historico, $onDelta, true, false);
-    if (($r['modo'] ?? '') === 'sem_base') {
+    if (in_array(($r['modo'] ?? ''), ['sem_base', 'base_vazia', 'extrativo'], true)) {
         ia_sse_delta(strval($r['resposta'] ?? ''));
     }
     $msgId = ia_salvar_mensagem(

@@ -4,7 +4,7 @@
  */
 require_once __DIR__ . '/bootstrap.php';
 
-if (!ia_pode_usar()) {
+if (!ia_pode_ver_assistente()) {
     header('Location: ' . rtrim(strval($CONTEX['path'] ?? ''), '/') . paginaInicialPermitida());
     exit;
 }

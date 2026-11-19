@@ -51,6 +51,9 @@ if (!function_exists('ia_boost_chunks')) {
                 if (strpos($conteudo, $t) !== false) { $hitConteudo++; }
             }
             $boost = 0.65 * ($hitTitulo / $qtd) + 0.35 * ($hitConteudo / $qtd);
+            // Cobertura dos termos relevantes: evita que palavras comuns
+            // ("como", "qual", "da") façam um trecho irrelevante passar.
+            $r['_cobertura'] = max($hitTitulo, $hitConteudo) / $qtd;
             $modulo = ia_normalizar_busca(strval($r['doc_tx_modulo'] ?? ''));
             if ($modulo !== '') {
                 foreach ($termos as $t) {
@@ -260,6 +263,12 @@ if (!function_exists('ia_busca_chunks')) {
         foreach ($rows as $r) {
             $id = (int)($r['chk_nb_id'] ?? 0);
             if ($id <= 0 || isset($vistos[$id])) { continue; }
+            // Cobertura baixa só elimina trechos de score baixo. Perguntas
+            // válidas com paráfrase (ex.: "batida esquecida" vs. "não
+            // conformidade") podem ter cobertura parcial, mas score alto.
+            $scoreRow = (float)($r['score'] ?? 0);
+            $coberturaRow = (float)($r['_cobertura'] ?? 1);
+            if ($coberturaRow < 0.6 && $scoreRow < 6.0) { continue; }
             if (!ia_pode_ver_chunk($r, $telas)) { continue; }
             $vistos[$id] = true;
             $out[] = $r;
@@ -379,14 +388,48 @@ if (!function_exists('ia_montar_mensagens')) {
 }
 
 if (!function_exists('ia_resposta_extrativa')) {
+    /**
+     * Resposta sem LLM: usa os trechos mais relevantes da base.
+     * É mais literal que a resposta do Ollama, mas funciona 100% offline.
+     */
     function ia_resposta_extrativa(array $chunks, string $pergunta = ''): string {
         if (empty($chunks)) {
             return "Não encontrei essa informação no manual do sistema. Posso abrir um chamado de suporte para você?";
         }
-        $c = $chunks[0];
-        $texto = trim(strval($c['chk_tx_conteudo'] ?? ''));
-        $texto = ia_limitar_chars($texto, 1800);
-        return $texto . "\n\n_Resposta extraída do manual._";
+        $partes = [];
+        $total = 0;
+        $reserva = null;
+        $titulosTecnicos = ['estrutura tecnica', 'estrutura técnica', 'arquivos', 'banco de dados', 'implementacao', 'implementação', 'deployment', 'deploy', 'referencias', 'referências'];
+        foreach (array_slice($chunks, 0, 6) as $c) {
+            $titulo = trim(strval($c['chk_tx_titulo'] ?? ''));
+            $docTitulo = trim(strval($c['doc_tx_titulo'] ?? ''));
+            $texto = trim(strval($c['chk_tx_conteudo'] ?? ''));
+            if ($texto === '') { continue; }
+            if ($titulo !== '' && in_array(ia_normalizar_busca($titulo), $titulosTecnicos, true)) {
+                continue;
+            }
+            $texto = ia_limpar_resposta_llm($texto);
+            if ($texto === '') { continue; }
+            $bloco = ($titulo !== '' ? $titulo . "\n" : '') . $texto;
+            if ($reserva === null) { $reserva = $bloco; }
+            // Evita abrir a resposta com a introdução do documento quando
+            // existe uma seção mais específica na sequência.
+            if ($titulo !== '' && $docTitulo !== ''
+                && ia_normalizar_busca($titulo) === ia_normalizar_busca($docTitulo)) {
+                continue;
+            }
+            if ($total + mb_strlen($bloco, 'UTF-8') > 1800 && !empty($partes)) { break; }
+            $partes[] = $bloco;
+            $total += mb_strlen($bloco, 'UTF-8');
+            break;
+        }
+        if (empty($partes) && $reserva !== null) {
+            $partes[] = $reserva;
+        }
+        if (empty($partes)) {
+            return "Não encontrei essa informação no manual do sistema. Posso abrir um chamado de suporte para você?";
+        }
+        return implode("\n\n", $partes) . "\n\n_Resposta extraída da base de conhecimento._";
     }
 }
 
@@ -402,6 +445,18 @@ if (!function_exists('ia_limpar_resposta_llm')) {
         $texto = preg_replace('/\[([^\]]+)\]\((?:https?:\/\/|\/)[^)]+\)/i', '$1', $texto);
         $texto = preg_replace('/\s*\((?:https?:\/\/|\/)[^)]+\)/i', '', $texto);
         $texto = preg_replace('/(?:https?:\/\/|\/)[a-z0-9_\/.-]+\.php\b[^\s,;)]*/i', '', $texto);
+        // Restos técnicos que o modelo ou o próprio manual possam ter trazido.
+        $texto = preg_replace('/`([^`]+)`/', '$1', $texto);
+        $texto = preg_replace('/\b[a-z0-9_-]+\.php\b[^\s,;)]*/i', '', $texto);
+        $texto = preg_replace('/\b[a-z0-9]+(?:_[a-z0-9]+)+\b/i', '', $texto);
+        $texto = preg_replace('/^\s*#{1,6}\s*/m', '', $texto);
+        $texto = preg_replace('/^\s*Commit de refer[eê]ncia:.*$/mi', '', $texto);
+        // Linhas com URL, placeholder ou caminho técnico não ajudam o usuário leigo.
+        $texto = preg_replace('/^\s*.*(?:https?:\/\/|\.\.\.\/|<dominio>|<>|endpoint|deployment|backend|reposit[oó]rio|ambiente de desenvolvimento).*$/mi', '', $texto);
+        $texto = preg_replace('/^\s*`+.*$/m', '', $texto);
+        $texto = preg_replace('/^\s*-{3,}\s*$/m', '', $texto);
+        $texto = preg_replace('/\(\s*\)/', '', $texto);
+        $texto = preg_replace('/[ \t]{2,}/', ' ', $texto);
         $texto = preg_replace("/\n{3,}/", "\n\n", $texto);
         return trim($texto);
     }
