@@ -15,6 +15,23 @@ if(typeof orderCol === 'undefined'){
 }
 
 const camposBd = Object.values(fields);
+
+/* Nome da coluna como o banco devolve.
+   Com apelido ("... AS algo"), a chave e o apelido, e dele se tiram as
+   aspas/crases que as vezes vem junto.
+   SEM apelido, o MySQL usa a EXPRESSAO INTEIRA como nome da coluna, aspas
+   inclusive: "DATE_FORMAT(feri_tx_data, '%d/%m/%Y')". Tirar as aspas aqui
+   fazia a procura errar a chave e a celula sair vazia — foi assim que as
+   datas sumiram de todas as grids. Tambem quebraria o ORDER BY, que usa
+   esta mesma string. */
+const chaveDaColuna = function(expressao){
+    const txt = String(expressao == null? '': expressao);
+    const pos = txt.indexOf(' AS ');
+    if(pos >= 0){
+        return txt.substring(pos + 4).replace(/[`'"]/g, '').trim();
+    }
+    return txt.trim();
+};
 const escapeHtmlAttr = (value) => {
     const s = String(value ?? '');
     return s
@@ -316,11 +333,7 @@ const consultarRegistros = function(){
                     if(camposBd[key] != null && camposBd[key].indexOf('status') >= 0){
                         statusCol = key;
                     }
-                    camposBd[key] = camposBd[key].indexOf(' AS ') >= 0? 
-                        camposBd[key].substring(camposBd[key].indexOf(' AS ')+4):
-                        camposBd[key]
-                    ;
-                    camposBd[key] = camposBd[key].replace(/[`'"]/g, '').trim();
+                    camposBd[key] = chaveDaColuna(camposBd[key]);
                     
                     header[key] =
                         '<th colspan="1" rowspan="1" class="table-col-head" value="'+key+'">'
@@ -360,11 +373,7 @@ const consultarRegistros = function(){
                     // row = '<td>'+dataArray.join('</td><td>')+'</td>';
                     row = '';
                     colKeys.forEach(function(colLabel){
-                        let dbKey = fields[colLabel];
-                        if(dbKey.indexOf(' AS ') >= 0){
-                            dbKey = dbKey.substring(dbKey.indexOf(' AS ')+4);
-                        }
-                        dbKey = dbKey.replace(/[`'"]/g, '').trim();
+                        const dbKey = chaveDaColuna(fields[colLabel]);
                         row += '<td>'+(dataArray[dbKey] != null? dataArray[dbKey]: '')+'</td>';
                     });
                     

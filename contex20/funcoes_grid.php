@@ -401,7 +401,7 @@
 			<script>
 				{$jsFunctions}
 			</script>
-			<script src='{$_ENV["APP_PATH"]}/contex20/js/grid_dinamico.js?v=4'></script>
+			<script src='{$_ENV["APP_PATH"]}/contex20/js/grid_dinamico.js?v=5'></script>
 			
 			<!-- Modal Config Grid -->
 			<div id='modalConfigGrid' class='modal fade' role='dialog' style='z-index: 10052;'>

@@ -1866,6 +1866,58 @@ function runnerMatchesLinha(string $texto, string $regex): bool
     return preg_match($regex, $texto) === 1;
 }
 
+/**
+ * Nome da coluna na grid: com apelido e sem apelido.
+ *
+ * Sem apelido o MySQL usa a expressao inteira como nome da coluna, aspas
+ * inclusive. A grid tirava as aspas antes de procurar o valor, errava a
+ * chave e a celula saia vazia — foi assim que a DATA sumiu de 14 telas.
+ */
+function runnerGridColunaTests(array &$summary): void
+{
+    global $appDir;
+
+    $js = dirname($appDir) . '/contex20/js/grid_dinamico.js';
+
+    runnerRunCase('grid-coluna', 'aspas so saem do apelido, nunca da expressao', function () use ($js): void {
+        $fonte = runnerReadFile($js);
+
+        runnerAssertContains('const chaveDaColuna = function', $fonte,
+            'Sumiu a funcao que resolve o nome da coluna.');
+
+        /* Duas copias da regra divergem com o tempo: a montagem do cabecalho
+           e a das celulas tem de usar a mesma funcao. */
+        runnerAssertContains('camposBd[key] = chaveDaColuna(camposBd[key]);', $fonte,
+            'O cabecalho/ordenacao deveria usar a chaveDaColuna.');
+        runnerAssertContains('const dbKey = chaveDaColuna(fields[colLabel]);', $fonte,
+            'As celulas deveriam usar a chaveDaColuna.');
+
+        /* A limpeza cega era o bug: fora da funcao ela nao pode voltar. */
+        runnerAssertSame(1, substr_count($fonte, "replace(/[`'\"]/g, '')"),
+            'Ha limpeza de aspas fora da chaveDaColuna; ela esvazia coluna sem apelido.');
+    }, $summary);
+
+    runnerRunCase('grid-coluna', 'a DATA do cadastro de feriado tem como ser achada', function () use ($appDir, $js): void {
+        /* Reproduz em PHP o que a chaveDaColuna faz, e confere contra a
+           expressao que a tela declara de verdade. */
+        $fonteTela = runnerReadFile($appDir . '/cadastro_feriado.php');
+        runnerAssertMatches('/"DATA"\s*=>\s*"(DATE_FORMAT\([^"]*)"/', $fonteTela,
+            'A tela de feriado deveria declarar a DATA como DATE_FORMAT.');
+        preg_match('/"DATA"\s*=>\s*"(DATE_FORMAT\([^"]*)"/', $fonteTela, $m);
+        $expressao = $m[1];
+
+        /* Sem " AS " a chave e a expressao inteira, intacta. */
+        runnerAssertTrue(strpos($expressao, ' AS ') === false,
+            'A DATA ganhou apelido; o teste precisa ser revisto.');
+        runnerAssertTrue(strpos($expressao, "'") !== false,
+            'A expressao da DATA deveria ter aspas — e o que quebrava.');
+
+        $fonteJs = runnerReadFile($js);
+        runnerAssertContains('return txt.trim();', $fonteJs,
+            'Sem apelido a expressao deveria voltar intacta, so com trim.');
+    }, $summary);
+}
+
 function runnerPrintSummary(array $summary, bool $jsonMode): void
 {
     if ($jsonMode) {
@@ -1910,6 +1962,9 @@ runnerLinkConsultaTests($summary);
 
 runnerPrintLine('Executando testes do cadastro de placas...');
 runnerPlacaGridTests($summary);
+
+runnerPrintLine('Executando testes do nome das colunas da grid...');
+runnerGridColunaTests($summary);
 
 if (isset($argumentos['integration'])) {
     runnerPrintLine('Executando testes de integracao...');
